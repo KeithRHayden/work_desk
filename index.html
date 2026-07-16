@@ -645,6 +645,10 @@
       padding: 14px 12px 10px;
       z-index: 500;
       min-width: 216px;
+      max-width: calc(100vw - 16px);
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+      box-sizing: border-box;
     }
     .theme-picker.hidden { display: none; }
     .theme-picker-label {
@@ -3350,6 +3354,12 @@
       .board-column { margin-bottom: 12px; }
     }
   </style>
+  <link rel="manifest" href="/work_desk/manifest.json" />
+  <meta name="theme-color" content="#1a1025" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Work Desk" />
+  <link rel="apple-touch-icon" href="/work_desk/icon-192.png" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
@@ -3599,97 +3609,110 @@
       <div class="help-modal-body">
         <h3>Quick start</h3>
         <ol>
+          <li>Sign in with your email to enable cloud sync across devices.</li>
           <li>Pick a day on the calendar, or use the arrows at the top of the desk.</li>
           <li>Choose <strong>Task</strong> or <strong>Note</strong>, type your entry, and click <strong>Add</strong>.</li>
-          <li>Everything saves automatically in your browser.</li>
+          <li>Everything saves automatically and syncs to the cloud within a few seconds.</li>
         </ol>
-        <p>To move your data to another computer, use <strong>Export backup</strong> in the sidebar (under <strong>More</strong>) and <strong>Import backup</strong> on the new machine.</p>
 
         <h3>What it does</h3>
         <ul>
-          <li><strong>Daily desk</strong> — tasks and notes organized by day in New / Active / Done columns</li>
+          <li><strong>Daily desk</strong> — tasks and notes organized by day in New / Active / Done / Shelved columns</li>
           <li><strong>Work &amp; Personal</strong> — separate lists, toggled in the sidebar</li>
-          <li><strong>Search</strong> — find tasks and notes; focus the search box and use the <strong>Both</strong> chip to search Work and Personal together</li>
+          <li><strong>Search</strong> — find tasks and notes across any day; use the <strong>Both</strong> chip to search Work and Personal together</li>
           <li><strong>Carry forward</strong> — bring unfinished tasks into today; use the <strong>▾</strong> menu on the carry button to turn on <strong>Auto carry each day</strong></li>
-          <li><strong>Recurring tasks</strong> — templates that auto-add on schedule</li>
-          <li><strong>Insights</strong> — weekly, monthly, and yearly stats</li>
-          <li><strong>Archive</strong> — export older days to JSON files to keep the app fast</li>
-          <li><strong>Themes</strong> — light and dark presets; Synthwave, Cyberpunk, Outrun, and Vaporwave each have both variants</li>
-          <li><strong>Backup / restore</strong> — export or import your full data as JSON</li>
+          <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define</li>
+          <li><strong>Insights</strong> — weekly, monthly, and yearly stats with a daily breakdown chart and activity heatmap</li>
+          <li><strong>Archive</strong> — export older days to JSON to keep the app fast</li>
+          <li><strong>Themes</strong> — light and dark presets including Synthwave, Cyberpunk, Outrun, Vaporwave, Forest, and more</li>
+          <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to</li>
+          <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
         </ul>
 
-        <h3>Working with tasks</h3>
+        <h3>Task &amp; note cards</h3>
         <ul>
-          <li><strong>Shelving</strong> — drag a task to <em>Shelved</em> when it isn't done but isn't today's focus; unshelf it later from the same column</li>
-          <li><strong>Comments</strong> — click the speech-bubble icon to add notes, updates, or links without changing the task title</li>
-          <li><strong>Move to another day</strong> — use the calendar icon to reschedule; the task leaves today and appears on the date you pick</li>
-          <li><strong>Send to Work / Personal</strong> — the arrow icon moves a task or note to the other list</li>
-          <li><strong>Notes vs tasks</strong> — notes are plain entries for the day; only tasks use the New / Active / Done board</li>
+          <li><strong>Hamburger menu (≡)</strong> — click the icon in the bottom-right of any card to reveal all actions: edit, convert, move, send, shelve, comment, delete</li>
+          <li><strong>Comments indicator</strong> — if a task has comments, a speech-bubble badge appears next to the hamburger showing the count; click it to open comments directly</li>
+          <li><strong>Convert</strong> — use the convert icon (⇄) in the card menu to switch a task into a note or vice versa</li>
+          <li><strong>Shelving</strong> — move a task to Shelved when it isn't done but isn't today's focus; unshelf it later from the Done/Shelved column</li>
+          <li><strong>Comments</strong> — add notes, updates, or links to a task without changing the title; supports bold, italic, and underline formatting</li>
+          <li><strong>Move to another day</strong> — reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
+          <li><strong>Send to Work / Personal</strong> — moves a task or note to the other context list</li>
+          <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough; hover to see them clearly</li>
+        </ul>
+
+        <h3>Board layout</h3>
+        <ul>
+          <li><strong>Card density</strong> — use the view options button (⊞) near the date to switch between <em>Comfortable</em> and <em>Compact</em> layouts</li>
+          <li><strong>Left accent bar</strong> — each card has a colored left border matching its column (New = accent, Active = hover accent, Done = done color, Notes = muted)</li>
+          <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
+          <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
+          <li>Drag tasks between columns or reorder within a column (desktop)</li>
         </ul>
 
         <h3>Navigation</h3>
         <ul>
           <li><strong>Calendar</strong> — pick any day; dots mean data exists; red badges on past days show open tasks left behind</li>
           <li><strong>Arrow buttons</strong> — step day by day at the top of the desk</li>
-          <li><strong>Today</strong> — click <strong>Back to today</strong> beside the date to return; a <strong>Today</strong> badge shows when you're on the current date; a <strong>Work</strong> or <strong>Personal</strong> badge shows which list you're viewing</li>
-          <li><strong>Week strip</strong> — on narrower screens, a compact week picker appears above the board</li>
-          <li><strong>Progress bar</strong> — shows task mix for the day; colored labels under the bar explain each segment</li>
+          <li><strong>Today</strong> — click <strong>Back to today</strong> beside the date to return instantly</li>
+          <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board</li>
         </ul>
 
         <h3>Recurring tasks</h3>
         <ul>
-          <li>Open via the <strong>Recurring</strong> tab next to Task and Note</li>
-          <li>Templates auto-add on the schedule you set (daily, weekly, on specific days, etc.)</li>
+          <li>Open via the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
+          <li>Templates auto-add on the schedule you set (daily, weekly, specific days, etc.)</li>
           <li>Injected tasks show a <strong>🔁</strong> badge on the card</li>
-          <li>Edit or delete templates in the recurring panel; changes apply to future injections, not past copies</li>
+          <li>Edit or delete templates from the recurring panel; changes apply to future injections only</li>
         </ul>
 
-        <h3>Archive &amp; backup</h3>
+        <h3>Insights</h3>
         <ul>
-          <li><strong>Backup</strong> — a full snapshot of all your data; use when moving machines or keeping a safety copy</li>
-          <li><strong>Archive</strong> — exports days older than 6 months to JSON and removes them from the app to keep it fast; runs automatically when you open the app if anything is eligible</li>
-          <li>Archived data isn't lost, but no longer appears in daily search until you restore it manually</li>
-          <li><strong>Import</strong> — <em>Merge</em> combines with existing data; <em>Replace</em> wipes current data first (use with care)</li>
+          <li>Switch between <strong>Week</strong>, <strong>Month</strong>, and <strong>Year</strong> views</li>
+          <li>Bar chart shows completed, shelved, open (new today), and open (carried over) per period</li>
+          <li><strong>Activity heatmap</strong> (year view) — GitHub-style grid showing completion intensity by day; color adapts to your active theme</li>
+          <li>Day-by-day detail table shows full breakdown including carried-over and newly created counts</li>
         </ul>
 
-        <h3>Data &amp; privacy</h3>
-        <p>Everything stays in your browser (<code>localStorage</code>) unless you export or archive it. Clearing site data for this page will remove your tasks.</p>
+        <h3>Cloud sync &amp; data</h3>
         <ul>
-          <li>Data is <strong>per browser, per device</strong> — Work on this PC and Work on your laptop are separate unless you export/import</li>
-          <li><strong>Don't clear site data</strong> for this page unless you've exported first</li>
-          <li>Opening the file directly (<code>file://</code>) works; bookmark the page so you can return to the same data</li>
+          <li>Sign in with email to enable sync; your data is stored securely in the cloud</li>
+          <li>The <strong>☁️</strong> icon in the top of the sidebar shows sync status — 🔄 syncing, ✓ saved, ! error</li>
+          <li>Use the <strong>↪</strong> button next to the cloud icon to sign out</li>
+          <li>Data syncs automatically 2–3 seconds after any change</li>
+          <li>Opening on a new device: sign in and your full history loads automatically</li>
+          <li><strong>Backup / restore</strong> (in sidebar More menu) — export or import your full data as JSON for a local safety copy</li>
+          <li><strong>Archive</strong> — exports days older than 6 months and removes them from the app to keep it fast; archived data can be re-imported manually</li>
         </ul>
 
-        <h3>Mobile &amp; touch</h3>
+        <h3>Mobile &amp; PWA</h3>
         <ul>
-          <li>Task text gets the full width; action icons sit in a row below (like comments)</li>
-          <li>Tap <strong>Start</strong> on New tasks, or <strong>press and drag</strong> a task into another column</li>
-          <li>Tap the <strong>checkbox</strong> to complete a task</li>
-          <li>Tap the <strong>pencil</strong> icon to edit — double-tap is unreliable on touch screens</li>
-          <li>The <strong>week strip</strong> above the board replaces the sidebar calendar on narrower screens</li>
+          <li>Install as a home screen app: on Chrome/Edge tap <strong>Install and create shortcut</strong> (or address bar install icon on desktop)</li>
+          <li>On iPhone/Safari: tap <strong>Share → Add to Home Screen</strong></li>
+          <li>Once installed, opens in its own window without browser chrome and works offline</li>
+          <li>Tap the <strong>hamburger (≡)</strong> icon on any card to access all actions</li>
+          <li>Tap the <strong>checkbox</strong> to complete a task; tap the <strong>pencil</strong> in the card menu to edit</li>
+          <li>The week strip above the board replaces the sidebar calendar on smaller screens</li>
         </ul>
 
         <h3>Tips</h3>
         <ul>
-          <li>Double-click an item to edit it (desktop); on touch, tap the <strong>pencil</strong> icon</li>
-          <li>Drag tasks between columns or reorder within a column (desktop)</li>
-          <li>On desktop, hover a task row to reveal action icons; on touch they are always shown</li>
-          <li>Click <strong>Aa</strong> next to the input to show bold, italic, and underline formatting.</li>
-          <li>Use <strong>Ctrl+B</strong>, <strong>Ctrl+I</strong>, and <strong>Ctrl+U</strong> (or <strong>Cmd</strong> on Mac) while editing.</li>
-          <li>Press <strong>Escape</strong> to cancel an edit.</li>
-          <li>After deleting, click <strong>Undo</strong> in the toast before it disappears (deletes ask for confirmation first)</li>
-          <li>Press <strong>Ctrl+Enter</strong> or <strong>Cmd+Enter</strong> in the add box to submit without clicking Add</li>
-          <li>Use the sidebar collapse button to give the board more room.</li>
-          <li>Completed tasks show a small confetti burst.</li>
+          <li>Double-click a task to edit it on desktop; use the card menu on touch</li>
+          <li>Click <strong>Aa</strong> next to the input box to show bold, italic, and underline formatting buttons</li>
+          <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
+          <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box to submit without clicking Add</li>
+          <li>Use the sidebar collapse button (‹) to give the board more room</li>
+          <li>Completing a task triggers a small confetti burst</li>
+          <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors</li>
         </ul>
 
         <h3>Keyboard shortcuts</h3>
         <ul>
-          <li><strong>Add task/note</strong> — Ctrl/Cmd + Enter (in the add box)</li>
+          <li><strong>Add task/note</strong> — Ctrl/Cmd + Enter</li>
           <li><strong>Bold</strong> — Ctrl/Cmd + B</li>
           <li><strong>Italic</strong> — Ctrl/Cmd + I</li>
           <li><strong>Underline</strong> — Ctrl/Cmd + U</li>
-          <li><strong>Cancel edit</strong> — Escape</li>
+          <li><strong>Cancel edit / close menu</strong> — Escape</li>
         </ul>
       </div>
       <div class="help-modal-footer">
@@ -4056,7 +4079,10 @@
       renderThemeSwatches();
       const rect = els.themeToggle.getBoundingClientRect();
       elThemePicker.style.top  = (rect.bottom + 8) + 'px';
-      elThemePicker.style.left = rect.left + 'px';
+      // Clamp left so the picker never overflows the right edge of the viewport
+      const pickerW = Math.max(216, Math.min(window.innerWidth - 16, elThemePicker.offsetWidth || 216));
+      const clampedLeft = Math.min(rect.left, window.innerWidth - pickerW - 8);
+      elThemePicker.style.left = Math.max(8, clampedLeft) + 'px';
       elThemePicker.classList.remove('hidden');
     }
 
@@ -8229,6 +8255,12 @@
     });
 
     sbStartSync(); // cloud sync — non-blocking, runs after first render
+
+    // Register service worker for PWA / offline support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/work_desk/sw.js', { scope: '/work_desk/' })
+        .catch(e => console.warn('[sw] registration failed:', e));
+    }
   </script>
 </body>
 </html>
