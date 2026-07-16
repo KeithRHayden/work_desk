@@ -705,6 +705,14 @@
     .sb-sync-status[data-status="ok"]      { opacity: 0.8; color: #4ade80; }
     .sb-sync-status[data-status="error"]   { opacity: 1;   color: #f87171; }
     @keyframes sb-spin { to { transform: rotate(360deg); } }
+    .sb-signout-btn {
+      background: transparent; border: none; cursor: pointer;
+      font-size: 0.85rem; color: var(--sidebar-muted);
+      opacity: 0.5; padding: 2px 4px; border-radius: 4px;
+      transition: opacity 0.15s, color 0.15s;
+    }
+    .sb-signout-btn:hover { opacity: 1; color: var(--text-muted); }
+    .sb-signout-btn.hidden { display: none; }
 
     .theme-toggle {
       width: 36px;
@@ -1185,6 +1193,56 @@
     .modal-btn.danger:hover { background: var(--danger-surface-hover); }
     .modal-btn.ghost { color: var(--text-muted); }
     .modal-btn.ghost:hover { background: var(--bg); }
+
+    /* ── Auth modal ──────────────────────────────────────────────── */
+    .auth-modal {
+      position: fixed; inset: 0;
+      background: var(--modal-overlay, rgba(0,0,0,0.6));
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(6px);
+    }
+    .auth-modal.hidden { display: none; }
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px 28px;
+      width: 100%; max-width: 360px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .auth-logo { text-align: center; }
+    .auth-logo-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+    .auth-logo-title { font-size: 1.4rem; font-weight: 700; color: var(--text); margin: 0; }
+    .auth-logo-sub { font-size: 0.82rem; color: var(--text-muted); margin: 4px 0 0; }
+    .auth-fields { display: flex; flex-direction: column; gap: 10px; }
+    .auth-input {
+      width: 100%; padding: 10px 14px;
+      background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 0.93rem;
+      outline: none; box-sizing: border-box;
+      transition: border-color 0.15s;
+    }
+    .auth-input:focus { border-color: var(--accent); }
+    .auth-actions { display: flex; flex-direction: column; gap: 8px; }
+    .auth-btn {
+      width: 100%; padding: 10px;
+      border-radius: 8px; border: none;
+      font-size: 0.93rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s, background 0.15s;
+    }
+    .auth-btn.primary  { background: var(--accent); color: #fff; }
+    .auth-btn.primary:hover  { opacity: 0.88; }
+    .auth-btn.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .auth-btn.secondary:hover { background: var(--accent-light); }
+    .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .auth-error {
+      background: var(--danger-surface, #3b0f0f); border: 1px solid var(--danger-border, #7f1d1d);
+      color: #fca5a5; border-radius: 8px; padding: 10px 14px; font-size: 0.83rem;
+    }
+    .auth-error.hidden { display: none; }
+    .auth-hint { text-align: center; font-size: 0.75rem; color: var(--text-muted); margin: 0; }
 
     .toast {
       position: fixed; bottom: 24px; right: 24px;
@@ -3295,6 +3353,27 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
+
+  <!-- Auth gate — shown when not signed in -->
+  <div id="auth-modal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-label="Sign in">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="auth-logo-icon">📋</span>
+        <h1 class="auth-logo-title">Work Desk</h1>
+        <p class="auth-logo-sub">Daily tasks &amp; notes</p>
+      </div>
+      <div id="auth-error" class="auth-error hidden"></div>
+      <div class="auth-fields">
+        <input id="auth-email"    class="auth-input" type="email"    placeholder="Email"    autocomplete="email" />
+        <input id="auth-password" class="auth-input" type="password" placeholder="Password" autocomplete="current-password" />
+      </div>
+      <div class="auth-actions">
+        <button id="auth-signin-btn" class="auth-btn primary" type="button">Sign in</button>
+        <button id="auth-signup-btn" class="auth-btn secondary" type="button">Create account</button>
+      </div>
+      <p class="auth-hint">Your data is private and encrypted in the cloud.</p>
+    </div>
+  </div>
   <div class="app">
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -3303,6 +3382,7 @@
           <p id="logo-sub" class="logo-sub">Daily tasks &amp; notes</p>
         </div>
         <span id="sb-sync-status" class="sb-sync-status" title="Cloud sync ready" data-status="idle">☁️</span>
+        <button id="sb-signout-btn" class="sb-signout-btn hidden" type="button" title="Sign out">↪</button>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Choose theme">
           <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
             <circle cx="5" cy="5" r="2.5" fill="currentColor"/>
@@ -5159,24 +5239,128 @@
     }
 
     // ── Supabase cloud sync ───────────────────────────────────────
-    const SB_URL  = 'https://vfpoxsvosltaupoxvzac.supabase.co';
-    const SB_KEY  = 'sb_publishable_CBXoXz67hk8IWGfwXRNIDQ_Pvk50PjT';
-    const SB_TS_KEY = 'work-desk-sb-updated-at'; // tracks last remote write
+    const SB_URL    = 'https://vfpoxsvosltaupoxvzac.supabase.co';
+    const SB_KEY    = 'sb_publishable_CBXoXz67hk8IWGfwXRNIDQ_Pvk50PjT';
+    const SB_TS_KEY = 'work-desk-sb-updated-at';
 
-    let sbClient = null;
+    let sbClient   = null;
     let sbSyncTimer = null;
-    let sbSynced = false; // true once we've done the initial pull
+    let sbSynced   = false;
+
+    function buildSbPayload() {
+      const get = key => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(_){ return null; } };
+      return {
+        personal: get('work-desk-data-personal') || { days: {} },
+        work:     get('work-desk-data-work')     || { days: {} },
+      };
+    }
+
+    function sbSetStatus(status) {
+      const el = document.getElementById('sb-sync-status');
+      if (!el) return;
+      const icons = { idle: '☁️', syncing: '🔄', ok: '✓', error: '!' };
+      const tips  = { idle: 'Cloud sync ready', syncing: 'Syncing…', ok: 'Saved to cloud', error: 'Sync error — check console' };
+      el.textContent = icons[status] ?? '☁️';
+      el.title = tips[status] ?? '';
+      el.dataset.status = status;
+    }
 
     async function sbInit() {
-      if (!window.supabase) return;
+      if (!window.supabase) { console.warn('[sync] Supabase SDK not loaded'); return; }
       try {
         sbClient = window.supabase.createClient(SB_URL, SB_KEY);
         const { data: { session } } = await sbClient.auth.getSession();
-        if (!session) await sbClient.auth.signInAnonymously();
-        sbSetStatus('idle');
+        if (session) {
+          sbSetStatus('idle');
+          hideAuthModal();
+        } else {
+          showAuthModal();
+        }
       } catch (e) {
-        console.warn('[sync] init failed', e);
+        console.warn('[sync] init failed:', e.message);
+        sbClient = null;
+        showAuthModal();
       }
+    }
+
+    function showAuthModal() {
+      document.getElementById('auth-modal').classList.remove('hidden');
+    }
+    function hideAuthModal() {
+      document.getElementById('auth-modal').classList.add('hidden');
+      document.getElementById('sb-signout-btn').classList.remove('hidden');
+    }
+    function setAuthError(msg) {
+      const el = document.getElementById('auth-error');
+      if (!msg) { el.classList.add('hidden'); return; }
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function setAuthBusy(busy) {
+      ['auth-signin-btn','auth-signup-btn','auth-email','auth-password']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = busy; });
+    }
+
+    async function sbSignIn() {
+      const email    = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) { setAuthError('Please enter your email and password.'); return; }
+      setAuthError(''); setAuthBusy(true);
+      try {
+        const { error } = await sbClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        hideAuthModal();
+        await sbPostAuthSync();
+      } catch (e) {
+        setAuthError(e.message);
+      } finally {
+        setAuthBusy(false);
+      }
+    }
+
+    async function sbSignUp() {
+      const email    = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) { setAuthError('Please enter an email and password.'); return; }
+      if (password.length < 6) { setAuthError('Password must be at least 6 characters.'); return; }
+      setAuthError(''); setAuthBusy(true);
+      try {
+        const { data, error } = await sbClient.auth.signUp({ email, password });
+        if (error) throw error;
+        if (data.session) {
+          // Email confirmation is off — signed in immediately
+          hideAuthModal();
+          await sbPostAuthSync();
+        } else {
+          setAuthError('Check your email for a confirmation link, then sign in.');
+          setAuthBusy(false);
+        }
+      } catch (e) {
+        setAuthError(e.message);
+        setAuthBusy(false);
+      }
+    }
+
+    async function sbPostAuthSync() {
+      sbSetStatus('idle');
+      const remote  = await sbPull();
+      const localTs = localStorage.getItem(SB_TS_KEY);
+      if (remote && remote.data) {
+        const remoteNewer = !localTs || new Date(remote.updated_at) > new Date(localTs);
+        if (remoteNewer) {
+          ['personal', 'work'].forEach(ctx => {
+            if (remote.data[ctx]) localStorage.setItem(`work-desk-data-${ctx}`, JSON.stringify(remote.data[ctx]));
+          });
+          localStorage.setItem(SB_TS_KEY, remote.updated_at);
+          state.data = loadData();
+          render();
+          showToast('Synced from cloud ☁️');
+        }
+      } else {
+        await sbPush();
+        showToast('Data backed up to cloud ☁️');
+      }
+      sbSynced = true;
     }
 
     async function sbPull() {
@@ -5186,95 +5370,48 @@
         if (error) throw error;
         return data;
       } catch (e) {
-        console.warn('[sync] pull failed', e);
+        console.warn('[sync] pull failed:', e.message);
         return null;
       }
     }
 
-    async function sbPush(payload) {
+    async function sbPush() {
       if (!sbClient) return;
       try {
         sbSetStatus('syncing');
         const { data: { user } } = await sbClient.auth.getUser();
-        if (!user) return;
+        if (!user) { console.warn('[sync] no user session'); sbSetStatus('error'); return; }
         const { error } = await sbClient.from('user_data').upsert({
           id: user.id,
           user_id: user.id,
-          data: payload,
+          data: buildSbPayload(),
           updated_at: new Date().toISOString(),
         });
         if (error) throw error;
         localStorage.setItem(SB_TS_KEY, new Date().toISOString());
         sbSetStatus('ok');
       } catch (e) {
-        console.warn('[sync] push failed', e);
+        console.warn('[sync] push failed:', e.message);
         sbSetStatus('error');
       }
     }
 
     function sbSchedulePush() {
       clearTimeout(sbSyncTimer);
-      sbSyncTimer = setTimeout(() => sbPush(state.data), 2500);
+      sbSyncTimer = setTimeout(sbPush, 2500);
     }
 
-    // Startup sync: prefer remote if it's newer than local
     async function sbStartSync() {
       await sbInit();
+      // If user is already signed in, sbInit skips the modal and we sync immediately
       if (!sbClient) return;
-
-      const remote = await sbPull();
-      const localTs = localStorage.getItem(SB_TS_KEY);
-
-      if (remote && remote.data) {
-        const remoteNewer = !localTs || new Date(remote.updated_at) > new Date(localTs);
-        if (remoteNewer) {
-          // Load remote data into both state and localStorage
-          ['personal', 'work'].forEach(ctx => {
-            const key = ctx === 'personal' ? 'work-desk-data-personal' : 'work-desk-data-work';
-            if (remote.data[ctx]) localStorage.setItem(key, JSON.stringify(remote.data[ctx]));
-          });
-          localStorage.setItem(SB_TS_KEY, remote.updated_at);
-          state.data = loadData();
-          render();
-          showToast('Synced from cloud ☁️');
-        }
-      } else {
-        // No remote data yet — push local data up
-        const payload = buildSbPayload();
-        if (Object.keys(payload.personal?.days || {}).length || Object.keys(payload.work?.days || {}).length) {
-          await sbPush(payload);
-          showToast('Data backed up to cloud ☁️');
-        }
-      }
-      sbSynced = true;
-    }
-
-    function buildSbPayload() {
-      // Package both contexts into one object for storage
-      const personal = (() => { try { return JSON.parse(localStorage.getItem('work-desk-data-personal') || 'null'); } catch(_){return null;} })();
-      const work     = (() => { try { return JSON.parse(localStorage.getItem('work-desk-data-work')     || 'null'); } catch(_){return null;} })();
-      return { personal: personal || { days: {} }, work: work || { days: {} } };
-    }
-
-    // Tiny sync indicator in the sidebar footer
-    function sbSetStatus(status) {
-      const el = document.getElementById('sb-sync-status');
-      if (!el) return;
-      const icons = { idle: '☁️', syncing: '🔄', ok: '✓', error: '!' };
-      const tips  = { idle: 'Cloud sync ready', syncing: 'Syncing…', ok: 'Saved to cloud', error: 'Sync error — will retry' };
-      el.textContent = icons[status] || '';
-      el.title = tips[status] || '';
-      el.dataset.status = status;
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (session) await sbPostAuthSync();
     }
 
     function saveData() {
       localStorage.setItem(getStorageKey(), JSON.stringify(state.data));
       if (sbSynced) sbSchedulePush();
-    }
-    // Override sbPush to always send both contexts
-    const _sbPushOriginal = sbPush;
-    async function sbPush(payload) {
-      return _sbPushOriginal(buildSbPayload());
     }
 
     function clearPendingUndo() {
@@ -8075,6 +8212,22 @@
     injectDueTemplates();
     maybeAutoCarryForward();
     render();
+    // Auth modal buttons
+    document.getElementById('auth-signin-btn').addEventListener('click', sbSignIn);
+    document.getElementById('auth-signup-btn').addEventListener('click', sbSignUp);
+    document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') sbSignIn(); });
+    document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') sbSignIn(); });
+
+    // Sign-out button
+    document.getElementById('sb-signout-btn').addEventListener('click', async () => {
+      if (!sbClient) return;
+      await sbClient.auth.signOut();
+      sbSynced = false;
+      sbSetStatus('idle');
+      document.getElementById('sb-signout-btn').classList.add('hidden');
+      showAuthModal();
+    });
+
     sbStartSync(); // cloud sync — non-blocking, runs after first render
   </script>
 </body>
