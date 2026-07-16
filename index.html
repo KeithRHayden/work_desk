@@ -693,6 +693,19 @@
     .logo { font-size: 1.35rem; font-weight: 700; color: var(--sidebar-active); letter-spacing: -0.02em; }
     .logo-sub { font-size: 0.8rem; margin-top: 2px; }
 
+    .sb-sync-status {
+      font-size: 0.78rem;
+      opacity: 0.55;
+      cursor: default;
+      user-select: none;
+      transition: opacity 0.2s;
+      line-height: 1;
+    }
+    .sb-sync-status[data-status="syncing"] { opacity: 1; animation: sb-spin 1s linear infinite; }
+    .sb-sync-status[data-status="ok"]      { opacity: 0.8; color: #4ade80; }
+    .sb-sync-status[data-status="error"]   { opacity: 1;   color: #f87171; }
+    @keyframes sb-spin { to { transform: rotate(360deg); } }
+
     .theme-toggle {
       width: 36px;
       height: 36px;
@@ -3279,6 +3292,7 @@
       .board-column { margin-bottom: 12px; }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -3288,6 +3302,7 @@
           <h1 class="logo">Work Desk</h1>
           <p id="logo-sub" class="logo-sub">Daily tasks &amp; notes</p>
         </div>
+        <span id="sb-sync-status" class="sb-sync-status" title="Cloud sync ready" data-status="idle">☁️</span>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Choose theme">
           <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
             <circle cx="5" cy="5" r="2.5" fill="currentColor"/>
@@ -5143,8 +5158,123 @@
       return { days: {} };
     }
 
+    // ── Supabase cloud sync ───────────────────────────────────────
+    const SB_URL  = 'https://vfpoxsvosltaupoxvzac.supabase.co';
+    const SB_KEY  = 'sb_publishable_CBXoXz67hk8IWGfwXRNIDQ_Pvk50PjT';
+    const SB_TS_KEY = 'work-desk-sb-updated-at'; // tracks last remote write
+
+    let sbClient = null;
+    let sbSyncTimer = null;
+    let sbSynced = false; // true once we've done the initial pull
+
+    async function sbInit() {
+      if (!window.supabase) return;
+      try {
+        sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+        const { data: { session } } = await sbClient.auth.getSession();
+        if (!session) await sbClient.auth.signInAnonymously();
+        sbSetStatus('idle');
+      } catch (e) {
+        console.warn('[sync] init failed', e);
+      }
+    }
+
+    async function sbPull() {
+      if (!sbClient) return null;
+      try {
+        const { data, error } = await sbClient.from('user_data').select('data, updated_at').maybeSingle();
+        if (error) throw error;
+        return data;
+      } catch (e) {
+        console.warn('[sync] pull failed', e);
+        return null;
+      }
+    }
+
+    async function sbPush(payload) {
+      if (!sbClient) return;
+      try {
+        sbSetStatus('syncing');
+        const { data: { user } } = await sbClient.auth.getUser();
+        if (!user) return;
+        const { error } = await sbClient.from('user_data').upsert({
+          id: user.id,
+          user_id: user.id,
+          data: payload,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) throw error;
+        localStorage.setItem(SB_TS_KEY, new Date().toISOString());
+        sbSetStatus('ok');
+      } catch (e) {
+        console.warn('[sync] push failed', e);
+        sbSetStatus('error');
+      }
+    }
+
+    function sbSchedulePush() {
+      clearTimeout(sbSyncTimer);
+      sbSyncTimer = setTimeout(() => sbPush(state.data), 2500);
+    }
+
+    // Startup sync: prefer remote if it's newer than local
+    async function sbStartSync() {
+      await sbInit();
+      if (!sbClient) return;
+
+      const remote = await sbPull();
+      const localTs = localStorage.getItem(SB_TS_KEY);
+
+      if (remote && remote.data) {
+        const remoteNewer = !localTs || new Date(remote.updated_at) > new Date(localTs);
+        if (remoteNewer) {
+          // Load remote data into both state and localStorage
+          ['personal', 'work'].forEach(ctx => {
+            const key = ctx === 'personal' ? 'work-desk-data-personal' : 'work-desk-data-work';
+            if (remote.data[ctx]) localStorage.setItem(key, JSON.stringify(remote.data[ctx]));
+          });
+          localStorage.setItem(SB_TS_KEY, remote.updated_at);
+          state.data = loadData();
+          render();
+          showToast('Synced from cloud ☁️');
+        }
+      } else {
+        // No remote data yet — push local data up
+        const payload = buildSbPayload();
+        if (Object.keys(payload.personal?.days || {}).length || Object.keys(payload.work?.days || {}).length) {
+          await sbPush(payload);
+          showToast('Data backed up to cloud ☁️');
+        }
+      }
+      sbSynced = true;
+    }
+
+    function buildSbPayload() {
+      // Package both contexts into one object for storage
+      const personal = (() => { try { return JSON.parse(localStorage.getItem('work-desk-data-personal') || 'null'); } catch(_){return null;} })();
+      const work     = (() => { try { return JSON.parse(localStorage.getItem('work-desk-data-work')     || 'null'); } catch(_){return null;} })();
+      return { personal: personal || { days: {} }, work: work || { days: {} } };
+    }
+
+    // Tiny sync indicator in the sidebar footer
+    function sbSetStatus(status) {
+      const el = document.getElementById('sb-sync-status');
+      if (!el) return;
+      const icons = { idle: '☁️', syncing: '🔄', ok: '✓', error: '!' };
+      const tips  = { idle: 'Cloud sync ready', syncing: 'Syncing…', ok: 'Saved to cloud', error: 'Sync error — will retry' };
+      el.textContent = icons[status] || '';
+      el.title = tips[status] || '';
+      el.dataset.status = status;
+    }
+
     function saveData() {
       localStorage.setItem(getStorageKey(), JSON.stringify(state.data));
+      if (sbSynced) sbSchedulePush();
+    }
+    // Override sbPush to always send both contexts
+    const _sbPushOriginal = sbPush;
+    async function sbPush(payload) {
+      return _sbPushOriginal(buildSbPayload());
     }
 
     function clearPendingUndo() {
@@ -7945,6 +8075,7 @@
     injectDueTemplates();
     maybeAutoCarryForward();
     render();
+    sbStartSync(); // cloud sync — non-blocking, runs after first render
   </script>
 </body>
 </html>
