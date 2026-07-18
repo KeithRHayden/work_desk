@@ -1740,10 +1740,33 @@
 
     .desk-board-area { min-height: 120px; }
 
-    .week-strip {
+    .week-strip-row {
       display: none;
+      align-items: center;
       gap: 4px;
       margin-bottom: 16px;
+    }
+    .week-strip-nav {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+    .week-strip-nav:hover { background: var(--surface); color: var(--text); }
+
+    .week-strip {
+      display: flex;
+      flex: 1;
+      gap: 4px;
       padding: 4px 0;
       overflow-x: auto;
       scrollbar-width: none;
@@ -3371,7 +3394,7 @@
 
     @media (max-width: 1024px) {
       .sprint-board { grid-template-columns: 1fr; }
-      .week-strip { display: flex; }
+      .week-strip-row { display: flex; }
       .sidebar-calendar { display: none; }
     }
 
@@ -3499,7 +3522,7 @@
 
       .header-today-icon { display: none; }
 
-      .week-strip { margin-bottom: 10px; }
+      .week-strip-row { margin-bottom: 10px; }
 
       .board-column { margin-bottom: 12px; }
     }
@@ -3697,7 +3720,11 @@
         </div>
 
         <div class="desk-board-area">
-          <nav id="week-strip" class="week-strip desk-only" aria-label="Week"></nav>
+          <div id="week-strip-row" class="week-strip-row desk-only">
+            <button id="week-prev-btn" class="week-strip-nav" type="button" aria-label="Previous week">‹</button>
+            <nav id="week-strip" class="week-strip" aria-label="Week"></nav>
+            <button id="week-next-btn" class="week-strip-nav" type="button" aria-label="Next week">›</button>
+          </div>
           <div id="item-lists"></div>
         </div>
       </div>
@@ -3939,6 +3966,8 @@
       formatToggleBtn: document.getElementById('format-toggle-btn'),
       addForm: document.getElementById('add-form'),
       weekStrip: document.getElementById('week-strip'),
+      weekPrevBtn: document.getElementById('week-prev-btn'),
+      weekNextBtn: document.getElementById('week-next-btn'),
       addEditorHost: document.getElementById('add-editor-host'),
       addBtn: document.getElementById('add-btn'),
       itemLists: document.getElementById('item-lists'),
@@ -5150,6 +5179,12 @@
         btn.addEventListener('click', () => selectCalendarDate(key));
         host.appendChild(btn);
       }
+    }
+
+    function shiftWeekStrip(delta) {
+      const d = dateFromKey(state.selectedDate);
+      d.setDate(d.getDate() + delta * 7);
+      selectCalendarDate(formatDateKey(d));
     }
 
     function setAddPlaceholder() {
@@ -7889,6 +7924,27 @@
 
     els.prevDay.addEventListener('click', () => goToDate(-1));
     els.nextDay.addEventListener('click', () => goToDate(1));
+
+    // Week-strip prev/next buttons
+    els.weekPrevBtn.addEventListener('click', () => shiftWeekStrip(-1));
+    els.weekNextBtn.addEventListener('click', () => shiftWeekStrip(1));
+
+    // Week-strip swipe gesture
+    {
+      let _touchStartX = 0;
+      let _touchStartY = 0;
+      els.weekStrip.addEventListener('touchstart', (e) => {
+        _touchStartX = e.touches[0].clientX;
+        _touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+      els.weekStrip.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - _touchStartX;
+        const dy = e.changedTouches[0].clientY - _touchStartY;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          shiftWeekStrip(dx < 0 ? 1 : -1);
+        }
+      }, { passive: true });
+    }
 
     els.typeBtns.forEach(btn => {
       btn.addEventListener('click', () => {
