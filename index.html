@@ -556,7 +556,8 @@
       background: var(--sidebar); color: var(--sidebar-text);
       padding: 28px 20px; display: flex; flex-direction: column; gap: 24px;
       transition: width 0.2s ease, min-width 0.2s ease, padding 0.2s ease;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       height: 100vh;
       flex-shrink: 0;
     }
@@ -801,6 +802,7 @@
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 2px;
+      padding-right: 2px; /* prevents last-column highlight from clipping */
     }
 
     .cal-day {
