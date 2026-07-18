@@ -154,7 +154,11 @@
     [data-theme="synthwave"],
     [data-theme="cyberpunk"],
     [data-theme="outrun"],
-    [data-theme="vaporwave-dark"] {
+    [data-theme="vaporwave-dark"],
+    [data-theme="midnight"],
+    [data-theme="noir"],
+    [data-theme="mocha"],
+    [data-theme="rose-dark"] {
       --text: #e8ecf3; --text-muted: #919aad; --done: #6b7588;
       --note-bg: #252218; --note-border: #3d3628; --danger: #f07171;
       --shadow: 0 1px 4px rgba(0,0,0,.35); --tooltip-text: #ffffff;
@@ -353,6 +357,78 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #b79cff 55%, transparent);
     }
 
+    /* Midnight — ultra-deep blue-black, pure midnight sidebar, cool periwinkle accent */
+    [data-theme="midnight"] {
+      --bg: #070a14; --surface: #0d1224; --panel-bg: #060914; --input-bg: #0d1224;
+      --sidebar: #050810; --sidebar-text: #5870a8; --sidebar-active: #a8c0f0;
+      --sidebar-muted: #3a4870; --sidebar-border: rgba(100,140,220,.1);
+      --sidebar-hover: rgba(100,140,220,.07); --sidebar-btn-border: rgba(100,140,220,.14);
+      --accent: #6080e8; --accent-hover: #4868d8; --accent-light: #1a2448;
+      --text: #d0daf0; --text-muted: #6070a0;
+      --border: #1a2440; --tooltip-bg: #0d1224;
+      --done: #3850a0; --shelved-label: #4860a0;
+      --note-bg: #0e1530; --note-border: #1e2e50;
+      --shelved-border: #1e2e50;
+      --move-hover-bg: #101828; --delete-hover-bg: #1e1020; --shelf-hover-bg: #101428;
+      --sidebar-tab-active-bg: color-mix(in srgb, #6080e8 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #6080e8 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #6080e8 60%, transparent);
+    }
+
+    /* Noir — near-black charcoal, dark slate sidebar, muted gold accent */
+    [data-theme="noir"] {
+      --bg: #121212; --surface: #1c1c1c; --panel-bg: #0e0e0e; --input-bg: #1c1c1c;
+      --sidebar: #0a0a0a; --sidebar-text: #888888; --sidebar-active: #e8e0c8;
+      --sidebar-muted: #555555; --sidebar-border: rgba(180,160,100,.1);
+      --sidebar-hover: rgba(180,160,100,.07); --sidebar-btn-border: rgba(180,160,100,.14);
+      --accent: #c8a84a; --accent-hover: #b09030; --accent-light: #2a2418;
+      --text: #e0ddd8; --text-muted: #888070;
+      --border: #2a2a2a; --tooltip-bg: #1c1c1c;
+      --done: #706050; --shelved-label: #807060;
+      --note-bg: #1a1a14; --note-border: #302c1c;
+      --shelved-border: #2a2820;
+      --move-hover-bg: #201e14; --delete-hover-bg: #1e1414; --shelf-hover-bg: #1a1818;
+      --sidebar-tab-active-bg: color-mix(in srgb, #c8a84a 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #c8a84a 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #c8a84a 60%, transparent);
+    }
+
+    /* Mocha — dark espresso-brown, warm amber accent */
+    [data-theme="mocha"] {
+      --bg: #180e08; --surface: #261610; --panel-bg: #140c08; --input-bg: #261610;
+      --sidebar: #0e0804; --sidebar-text: #8a6848; --sidebar-active: #e8c898;
+      --sidebar-muted: #5a4030; --sidebar-border: rgba(180,120,60,.12);
+      --sidebar-hover: rgba(180,120,60,.08); --sidebar-btn-border: rgba(180,120,60,.16);
+      --accent: #d4883c; --accent-hover: #b8701e; --accent-light: #2d1c0c;
+      --text: #f0e0c8; --text-muted: #9a7858;
+      --border: #3a2418; --tooltip-bg: #261610;
+      --done: #7a5838; --shelved-label: #a07848;
+      --note-bg: #201408; --note-border: #3a2418;
+      --shelved-border: #3a2418;
+      --move-hover-bg: #241808; --delete-hover-bg: #261010; --shelf-hover-bg: #201418;
+      --sidebar-tab-active-bg: color-mix(in srgb, #d4883c 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #d4883c 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #d4883c 60%, transparent);
+    }
+
+    /* Rose Dark — deep wine/burgundy, soft rose-pink accent */
+    [data-theme="rose-dark"] {
+      --bg: #1a0810; --surface: #2a1018; --panel-bg: #140610; --input-bg: #2a1018;
+      --sidebar: #120608; --sidebar-text: #a85870; --sidebar-active: #f0a0c0;
+      --sidebar-muted: #704050; --sidebar-border: rgba(220,80,120,.12);
+      --sidebar-hover: rgba(220,80,120,.08); --sidebar-btn-border: rgba(220,80,120,.16);
+      --accent: #e8608a; --accent-hover: #d04878; --accent-light: #2d1020;
+      --text: #f0d8e0; --text-muted: #a07080;
+      --border: #3d1828; --tooltip-bg: #2a1018;
+      --done: #8a4060; --shelved-label: #c07090;
+      --note-bg: #221018; --note-border: #3d1828;
+      --shelved-border: #3d1828;
+      --move-hover-bg: #2a1820; --delete-hover-bg: #261010; --shelf-hover-bg: #221418;
+      --sidebar-tab-active-bg: color-mix(in srgb, #e8608a 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #e8608a 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #e8608a 60%, transparent);
+    }
+
     /* Solarized Light */
     [data-theme="solarized-light"] {
       --bg: #fdf6e3; --surface: #eee8d5; --panel-bg: #f5f0e0; --input-bg: #eee8d5;
@@ -498,6 +574,174 @@
       color-scheme: light;
     }
 
+    /* Latte — warm cream, coffee-brown sidebar, caramel accent */
+    [data-theme="latte"] {
+      --bg: #fdf6ee; --surface: #ffffff; --panel-bg: #f5ede0; --input-bg: #ffffff;
+      --sidebar: #3b2314; --sidebar-text: #c4987a; --sidebar-active: #fdf6ee;
+      --sidebar-muted: #8a6552; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #b5611a; --accent-hover: #9a4e12; --accent-light: #fde8d0;
+      --text: #2a1a0e; --text-muted: #7a5840;
+      --border: #e8d4bc; --done: #b09070;
+      --note-bg: #fef4e0; --note-border: #e8c88a;
+      --danger: #c0392b; --danger-surface: #fce8e6; --danger-surface-hover: #f8d4d0; --danger-border: #f0b0a8;
+      --shelved-border: #d8c0a8; --shelved-label: #9a7860;
+      --move-hover-bg: #fef8e8; --delete-hover-bg: #fce8e6; --shelf-hover-bg: #f8f0e8;
+      --shadow: 0 1px 4px rgba(60,30,10,.08); --modal-overlay: rgba(42,26,14,.45); --modal-shadow: 0 8px 32px rgba(60,30,10,.15);
+      --tooltip-bg: #3b2314; --tooltip-text: #fdf6ee;
+      --sidebar-tab-active-bg: color-mix(in srgb, #b5611a 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #b5611a 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #b5611a 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Arctic — bright white, deep navy sidebar, icy sky-blue accent */
+    [data-theme="arctic"] {
+      --bg: #f0f6ff; --surface: #ffffff; --panel-bg: #e6f1ff; --input-bg: #ffffff;
+      --sidebar: #0f2044; --sidebar-text: #7fa8cc; --sidebar-active: #e8f4ff;
+      --sidebar-muted: #4a6e8a; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #0ea5e9; --accent-hover: #0284c7; --accent-light: #e0f2fe;
+      --text: #0c1a30; --text-muted: #4a6070;
+      --border: #c8dff0; --done: #60a0cc;
+      --note-bg: #f0f8ff; --note-border: #b0d8f0;
+      --danger: #dc2626; --danger-surface: #fef2f2; --danger-surface-hover: #fee2e2; --danger-border: #fecaca;
+      --shelved-border: #a0c8e8; --shelved-label: #507090;
+      --move-hover-bg: #f0fcff; --delete-hover-bg: #fef2f2; --shelf-hover-bg: #e8f4ff;
+      --shadow: 0 1px 4px rgba(10,30,60,.07); --modal-overlay: rgba(12,26,48,.45); --modal-shadow: 0 8px 32px rgba(10,30,60,.14);
+      --tooltip-bg: #0f2044; --tooltip-text: #e8f4ff;
+      --sidebar-tab-active-bg: color-mix(in srgb, #0ea5e9 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #0ea5e9 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #0ea5e9 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Sand — warm sandy/beige, terracotta sidebar, burnt-orange accent */
+    [data-theme="sand"] {
+      --bg: #f7f0e6; --surface: #fffcf8; --panel-bg: #f0e8d8; --input-bg: #fffcf8;
+      --sidebar: #7a3520; --sidebar-text: #e8b898; --sidebar-active: #fff8f0;
+      --sidebar-muted: #c88060; --sidebar-border: rgba(255,255,255,.1);
+      --sidebar-hover: rgba(255,255,255,.08); --sidebar-btn-border: rgba(255,255,255,.15);
+      --accent: #d2691e; --accent-hover: #b8570e; --accent-light: #fde8cc;
+      --text: #2d1a0a; --text-muted: #785030;
+      --border: #e0cdb0; --done: #a88060;
+      --note-bg: #fff8e8; --note-border: #e8c890;
+      --danger: #c0392b; --danger-surface: #fce8e6; --danger-surface-hover: #f8d0cc; --danger-border: #f0b0a8;
+      --shelved-border: #d8c0a0; --shelved-label: #987858;
+      --move-hover-bg: #fff8e8; --delete-hover-bg: #fce8e6; --shelf-hover-bg: #f8f0e4;
+      --shadow: 0 1px 4px rgba(80,40,20,.09); --modal-overlay: rgba(45,26,10,.45); --modal-shadow: 0 8px 32px rgba(80,40,20,.15);
+      --tooltip-bg: #7a3520; --tooltip-text: #fff8f0;
+      --sidebar-tab-active-bg: color-mix(in srgb, #d2691e 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #d2691e 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #d2691e 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Mint — clean white, deep forest-green sidebar, fresh mint accent */
+    [data-theme="mint"] {
+      --bg: #f0faf4; --surface: #ffffff; --panel-bg: #e6f6ec; --input-bg: #ffffff;
+      --sidebar: #1a3d2a; --sidebar-text: #7ab898; --sidebar-active: #e8f8ee;
+      --sidebar-muted: #4a7860; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #16a34a; --accent-hover: #15803d; --accent-light: #dcfce7;
+      --text: #0d2018; --text-muted: #4a6858;
+      --border: #c0e8d0; --done: #60a880;
+      --note-bg: #f0fdf4; --note-border: #a8ddb8;
+      --danger: #dc2626; --danger-surface: #fef2f2; --danger-surface-hover: #fee2e2; --danger-border: #fecaca;
+      --shelved-border: #a8d8b8; --shelved-label: #488068;
+      --move-hover-bg: #f0fff4; --delete-hover-bg: #fef2f2; --shelf-hover-bg: #e8f8ec;
+      --shadow: 0 1px 4px rgba(20,60,30,.08); --modal-overlay: rgba(13,32,24,.45); --modal-shadow: 0 8px 32px rgba(20,60,30,.14);
+      --tooltip-bg: #1a3d2a; --tooltip-text: #e8f8ee;
+      --sidebar-tab-active-bg: color-mix(in srgb, #16a34a 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #16a34a 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #16a34a 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Lavender — soft lilac, deep indigo sidebar, violet accent */
+    [data-theme="lavender"] {
+      --bg: #f3f0fa; --surface: #ffffff; --panel-bg: #ede8f8; --input-bg: #ffffff;
+      --sidebar: #2d1f5e; --sidebar-text: #a890d8; --sidebar-active: #f0ecfc;
+      --sidebar-muted: #6848a8; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #7c3aed; --accent-hover: #6d28d9; --accent-light: #ede9fe;
+      --text: #1a1040; --text-muted: #5840a0;
+      --border: #d8cef0; --done: #8870c8;
+      --note-bg: #faf5ff; --note-border: #d8c0f0;
+      --danger: #dc2626; --danger-surface: #fef2f2; --danger-surface-hover: #fee2e2; --danger-border: #fecaca;
+      --shelved-border: #c8b8e8; --shelved-label: #7060b0;
+      --move-hover-bg: #fdf8ff; --delete-hover-bg: #fef2f2; --shelf-hover-bg: #f0eafc;
+      --shadow: 0 1px 4px rgba(40,20,80,.08); --modal-overlay: rgba(26,16,64,.45); --modal-shadow: 0 8px 32px rgba(40,20,80,.14);
+      --tooltip-bg: #2d1f5e; --tooltip-text: #f0ecfc;
+      --sidebar-tab-active-bg: color-mix(in srgb, #7c3aed 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #7c3aed 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #7c3aed 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Coral — warm off-white, deep rose-coral sidebar, salmon accent */
+    [data-theme="coral"] {
+      --bg: #fff5f0; --surface: #ffffff; --panel-bg: #ffede8; --input-bg: #ffffff;
+      --sidebar: #8b2635; --sidebar-text: #f0a090; --sidebar-active: #fff5f0;
+      --sidebar-muted: #d06070; --sidebar-border: rgba(255,255,255,.1);
+      --sidebar-hover: rgba(255,255,255,.08); --sidebar-btn-border: rgba(255,255,255,.15);
+      --accent: #f05040; --accent-hover: #d83828; --accent-light: #ffe4e0;
+      --text: #2a0e10; --text-muted: #7a4040;
+      --border: #f8c8c0; --done: #c08880;
+      --note-bg: #fff8f0; --note-border: #f0c0a8;
+      --danger: #c0392b; --danger-surface: #fce8e6; --danger-surface-hover: #f8d0cc; --danger-border: #f0b0a8;
+      --shelved-border: #f0c0b8; --shelved-label: #a06060;
+      --move-hover-bg: #fff8e8; --delete-hover-bg: #fce8e6; --shelf-hover-bg: #ffeee8;
+      --shadow: 0 1px 4px rgba(100,30,20,.08); --modal-overlay: rgba(42,14,16,.45); --modal-shadow: 0 8px 32px rgba(100,30,20,.14);
+      --tooltip-bg: #8b2635; --tooltip-text: #fff5f0;
+      --sidebar-tab-active-bg: color-mix(in srgb, #f05040 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #f05040 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #f05040 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Tokyo Day — light take on Tokyo Night; pale cool-gray, slate-blue sidebar, periwinkle accent */
+    [data-theme="tokyo-day"] {
+      --bg: #d5d6db; --surface: #e9e9ec; --panel-bg: #c8c9ce; --input-bg: #e9e9ec;
+      --sidebar: #1a1b26; --sidebar-text: #787c99; --sidebar-active: #c0caf5;
+      --sidebar-muted: #565f89; --sidebar-border: rgba(192,202,245,.12);
+      --sidebar-hover: rgba(192,202,245,.08); --sidebar-btn-border: rgba(192,202,245,.16);
+      --accent: #7aa2f7; --accent-hover: #5d8ef0; --accent-light: #d8e4fc;
+      --text: #1a1b26; --text-muted: #565f89;
+      --border: #a8aab8; --done: #7888c0;
+      --note-bg: #f0f0f4; --note-border: #c0c0d0;
+      --danger: #c0392b; --danger-surface: #fce8e6; --danger-surface-hover: #f8d0cc; --danger-border: #f0b0a8;
+      --shelved-border: #a8a0c8; --shelved-label: #6870a8;
+      --move-hover-bg: #f0f2fc; --delete-hover-bg: #fce8e6; --shelf-hover-bg: #eae8f4;
+      --shadow: 0 1px 4px rgba(26,27,38,.1); --modal-overlay: rgba(26,27,38,.45); --modal-shadow: 0 8px 32px rgba(26,27,38,.15);
+      --tooltip-bg: #1a1b26; --tooltip-text: #c0caf5;
+      --sidebar-tab-active-bg: color-mix(in srgb, #7aa2f7 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #7aa2f7 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #7aa2f7 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Paper — ultra-minimal parchment, charcoal sidebar, ink-gray accent */
+    [data-theme="paper"] {
+      --bg: #f8f4ed; --surface: #ffffff; --panel-bg: #f2ede4; --input-bg: #ffffff;
+      --sidebar: #2c2c2c; --sidebar-text: #a0a0a0; --sidebar-active: #f8f4ed;
+      --sidebar-muted: #707070; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #555555; --accent-hover: #333333; --accent-light: #e8e4dc;
+      --text: #1c1c1c; --text-muted: #6a6a6a;
+      --border: #ddd8d0; --done: #a0a0a0;
+      --note-bg: #fff8ec; --note-border: #ddd0b0;
+      --danger: #b03020; --danger-surface: #fce8e6; --danger-surface-hover: #f8d0cc; --danger-border: #f0b0a8;
+      --shelved-border: #d0c8bc; --shelved-label: #888070;
+      --move-hover-bg: #f8f8e8; --delete-hover-bg: #fce8e6; --shelf-hover-bg: #f0ece4;
+      --shadow: 0 1px 4px rgba(0,0,0,.06); --modal-overlay: rgba(28,28,28,.45); --modal-shadow: 0 8px 32px rgba(0,0,0,.12);
+      --tooltip-bg: #2c2c2c; --tooltip-text: #f8f4ed;
+      --sidebar-tab-active-bg: color-mix(in srgb, #555555 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #555555 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #555555 60%, transparent);
+      color-scheme: light;
+    }
+
     /* Vaporwave — neon chrome on cards and active controls */
     [data-theme="vaporwave"] .app-tab.active,
     [data-theme="vaporwave-dark"] .app-tab.active {
@@ -563,23 +807,19 @@
     }
 
     .sidebar.collapsed {
-      width: 52px; min-width: 52px;
-      padding: 16px 8px;
-      align-items: center;
+      width: 0; min-width: 0;
+      padding: 0;
+      overflow: hidden;
     }
-    .sidebar.collapsed .sidebar-body { display: none; }
-    .sidebar.collapsed .sidebar-header { justify-content: center; }
-    .sidebar.collapsed .sidebar-header .logo-wrap { display: none; }
 
     /* Boundary toggle button — sits on the sidebar/main edge */
     .app { position: relative; }
 
     .sidebar-collapse-btn {
       position: absolute;
-      left: 240px;
+      left: 256px;
       top: 22px;
       transform: translateX(-50%);
-      transition: left 0.2s ease;
       z-index: 20;
       width: 22px; height: 22px; border-radius: 50%;
       border: 2px solid var(--bg);
@@ -595,7 +835,7 @@
       border-color: var(--accent);
     }
     .sidebar-collapse-btn svg { width: 12px; height: 12px; display: block; pointer-events: none; }
-    .app.sidebar-collapsed .sidebar-collapse-btn { left: 52px; }
+    .app.sidebar-collapsed .sidebar-collapse-btn { left: 12px; transform: translateX(0); }
 
     /* Tooltip */
     .sidebar-tooltip {
@@ -638,20 +878,6 @@
     .sidebar-daily::-webkit-scrollbar { display: none; }
 
     /* ── Theme picker panel ────────────────────────────────────────────────── */
-    .theme-picker {
-      position: fixed;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 12px 10px;
-      z-index: 500;
-      min-width: 216px;
-      max-width: calc(100vw - 16px);
-      max-height: calc(100vh - 80px);
-      overflow-y: auto;
-      box-sizing: border-box;
-    }
-    .theme-picker.hidden { display: none; }
     .theme-picker-label {
       font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
       letter-spacing: 0.09em; color: var(--text-muted); margin-bottom: 10px;
@@ -696,30 +922,84 @@
     }
 
     .logo { font-size: 1.35rem; font-weight: 700; color: var(--sidebar-active); letter-spacing: -0.02em; }
-    .logo-sub { font-size: 0.8rem; margin-top: 2px; }
+    .logo-sub {
+      font-size: 0.8rem; margin-top: 2px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .logo-help-btn {
+      background: transparent; border: none; cursor: pointer;
+      width: 15px; height: 15px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 700; line-height: 1;
+      color: var(--sidebar-muted);
+      border: 1px solid var(--sidebar-muted);
+      opacity: 0.55;
+      padding: 0;
+      flex-shrink: 0;
+      transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .logo-help-btn:hover {
+      opacity: 1;
+      color: var(--sidebar-active);
+      border-color: var(--sidebar-active);
+    }
 
     .sb-sync-status {
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       opacity: 0.55;
       cursor: default;
       user-select: none;
       transition: opacity 0.2s;
       line-height: 1;
+      flex-shrink: 0;
     }
     .sb-sync-status[data-status="syncing"] { opacity: 1; animation: sb-spin 1s linear infinite; }
-    .sb-sync-status[data-status="ok"]      { opacity: 0.8; color: #4ade80; }
+    .sb-sync-status[data-status="ok"]      { opacity: 0.9; color: #4ade80; }
     .sb-sync-status[data-status="error"]   { opacity: 1;   color: #f87171; }
     @keyframes sb-spin { to { transform: rotate(360deg); } }
+
+    .sidebar-account {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid color-mix(in srgb, var(--sidebar-muted) 25%, transparent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+    }
+    .sidebar-account-icon {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      color: var(--sidebar-active);
+      font-weight: 600;
+    }
+    .sidebar-account-email {
+      flex: 1;
+      font-size: 0.7rem;
+      color: var(--sidebar-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
     .sb-signout-btn {
       background: transparent; border: none; cursor: pointer;
-      font-size: 0.85rem; color: var(--sidebar-muted);
-      opacity: 0.5; padding: 2px 4px; border-radius: 4px;
+      font-size: 0.75rem; color: var(--sidebar-muted);
+      opacity: 0.45; padding: 3px 4px; border-radius: 4px;
       transition: opacity 0.15s, color 0.15s;
+      flex-shrink: 0;
+      line-height: 1;
+      title: "Sign out";
     }
     .sb-signout-btn:hover { opacity: 1; color: var(--text-muted); }
     .sb-signout-btn.hidden { display: none; }
 
-    .theme-toggle {
+    .theme-toggle-unused {
       width: 36px;
       height: 36px;
       border-radius: 8px;
@@ -878,65 +1158,15 @@
       gap: 8px;
     }
 
-    .sidebar-help-btn {
-      width: 100%;
-      text-align: left;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 0.82rem;
-      color: var(--sidebar-text);
-      border: 1px solid var(--sidebar-btn-border);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .sidebar-help-btn:hover {
-      background: var(--sidebar-hover);
-      color: var(--sidebar-active);
-    }
-    .sidebar-help-btn svg {
-      width: 15px;
-      height: 15px;
-      flex-shrink: 0;
-      opacity: 0.75;
-    }
-
-    .sidebar-more {
+    .sidebar-backup {
       margin-top: auto;
       padding-top: 12px;
       border-top: 1px solid var(--sidebar-border);
       flex-shrink: 0;
-    }
-
-    .sidebar-more-toggle {
-      width: 100%;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--sidebar-muted);
-    }
-    .sidebar-more-toggle:hover { background: var(--sidebar-hover); color: var(--sidebar-text); }
-
-    .sidebar-more-chevron {
-      font-size: 0.7rem;
-      transition: transform 0.15s ease;
-    }
-    .sidebar-more.open .sidebar-more-chevron { transform: rotate(180deg); }
-
-    .sidebar-more-panel {
-      display: none;
       flex-direction: column;
-      gap: 12px;
-      padding-top: 10px;
+      gap: 4px;
     }
-    .sidebar-more.open .sidebar-more-panel { display: flex; }
 
     .help-modal .modal-box {
       max-width: 520px;
@@ -1054,75 +1284,6 @@
     .backup-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-active); }
     .backup-btn.replace { color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .backup-btn.replace:hover { background: rgba(239, 68, 68, 0.12); }
-
-    .archive-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-
-    .archive-header .nav-label { margin-bottom: 0; }
-
-    .archive-help-btn {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      border: 1px solid var(--sidebar-btn-border);
-      color: var(--sidebar-muted);
-      font-size: 0.68rem;
-      font-weight: 700;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      cursor: pointer;
-      background: transparent;
-    }
-    .archive-help-btn:hover,
-    .archive-help-btn[aria-expanded="true"] {
-      background: var(--sidebar-hover);
-      color: var(--sidebar-active);
-      border-color: var(--sidebar-btn-border);
-    }
-
-    .archive-summary {
-      font-size: 0.78rem;
-      color: var(--sidebar-muted);
-      line-height: 1.45;
-      margin-bottom: 8px;
-    }
-    .archive-summary.pending { color: #fbbf24; font-weight: 500; }
-
-    .archive-popover {
-      position: fixed;
-      background: var(--sidebar);
-      border: 1px solid var(--sidebar-btn-border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      z-index: 500;
-      width: 260px;
-      font-size: 0.76rem;
-      color: var(--sidebar-muted);
-      line-height: 1.55;
-    }
-    .archive-popover.hidden { display: none; }
-    .archive-popover p + p { margin-top: 6px; }
-    .archive-popover .archive-hint {
-      font-size: 0.72rem;
-      line-height: 1.45;
-      margin-bottom: 8px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--sidebar-border);
-      color: var(--sidebar-muted);
-    }
-
-    .archive-file { color: var(--sidebar-text); font-weight: 500; }
-
-    .archive-pending { color: #fbbf24; font-weight: 500; }
-
-    #archive-now-btn { margin-bottom: 0; }
 
     .backup-group {
       margin-top: 12px;
@@ -2027,18 +2188,6 @@
       vertical-align: middle;
     }
 
-    .insight-archive-note {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 16px;
-      line-height: 1.5;
-    }
-    .insight-archive-note strong { color: var(--text); }
-    .insight-archive-note em { font-style: normal; font-weight: 500; color: var(--text); }
-
     .date-nav-row { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
 
     .density-wrap {
@@ -2066,8 +2215,12 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       box-shadow: 0 6px 24px var(--shadow);
-      padding: 12px;
-      min-width: 196px;
+      padding: 14px 12px 12px;
+      min-width: 240px;
+      max-width: calc(100vw - 16px);
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+      box-sizing: border-box;
     }
     .density-popout.hidden { display: none; }
 
@@ -3245,6 +3398,8 @@
       .sidebar-header { align-items: center; }
       .logo { font-size: 1.1rem; }
       .logo-sub { display: none; }
+      .sidebar-account { display: none; }
+      .sidebar-backup { display: none; }
 
       .sidebar-body {
         width: 100%;
@@ -3285,12 +3440,6 @@
       .context-tabs .app-tab {
         padding: 6px 4px;
         font-size: 0.72rem;
-      }
-
-      .sidebar-more {
-        margin-top: 0;
-        padding-top: 0;
-        border-top: none;
       }
 
       .main {
@@ -3390,18 +3539,11 @@
       <div class="sidebar-header">
         <div class="logo-wrap">
           <h1 class="logo">Work Desk</h1>
-          <p id="logo-sub" class="logo-sub">Daily tasks &amp; notes</p>
+          <p id="logo-sub" class="logo-sub">
+            <span id="logo-sub-text"></span>
+            <button id="help-btn" class="logo-help-btn" type="button" aria-label="How to use this app" title="How to use this app">?</button>
+          </p>
         </div>
-        <span id="sb-sync-status" class="sb-sync-status" title="Cloud sync ready" data-status="idle">☁️</span>
-        <button id="sb-signout-btn" class="sb-signout-btn hidden" type="button" title="Sign out">↪</button>
-        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Choose theme">
-          <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
-            <circle cx="5" cy="5" r="2.5" fill="currentColor"/>
-            <circle cx="13" cy="5" r="2.5" fill="currentColor" opacity="0.65"/>
-            <circle cx="5" cy="13" r="2.5" fill="currentColor" opacity="0.4"/>
-            <circle cx="13" cy="13" r="2.5" fill="currentColor" opacity="0.85"/>
-          </svg>
-        </button>
       </div>
 
       <div class="sidebar-body">
@@ -3430,40 +3572,19 @@
           </nav>
         </div>
 
-        <div id="sidebar-more" class="sidebar-more">
-          <button id="sidebar-more-toggle" class="sidebar-more-toggle" type="button" aria-expanded="false">
-            <span>More</span>
-            <span class="sidebar-more-chevron" aria-hidden="true">▾</span>
-          </button>
-          <div id="sidebar-more-panel" class="sidebar-more-panel">
-            <button id="help-btn" class="sidebar-help-btn desk-only" type="button">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <circle cx="8" cy="8" r="6.25"/>
-                <path d="M6.2 6.1a1.85 1.85 0 0 1 3.45.75c0 1.15-1.65 1.35-1.65 2.65" stroke-linecap="round"/>
-                <circle cx="8" cy="11.6" r="0.55" fill="currentColor" stroke="none"/>
-              </svg>
-              How to use this app
-            </button>
-
-            <div class="backup-section">
-              <div class="archive-header">
-                <p class="nav-label">Archive</p>
-                <button id="archive-help-btn" class="archive-help-btn" type="button" aria-label="Archive info" aria-expanded="false">?</button>
-              </div>
-              <p id="archive-summary" class="archive-summary"></p>
-              <button id="archive-now-btn" class="backup-btn" type="button">Archive now</button>
-
-              <div id="archive-popover" class="archive-popover hidden" role="dialog" aria-label="Archive details"></div>
-
-              <div class="backup-group">
-                <p class="nav-label">Backup</p>
-                <button id="export-btn" class="backup-btn">Export backup</button>
-                <button id="import-btn" class="backup-btn">Import backup…</button>
-                <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
-              </div>
-            </div>
-          </div>
+        <div class="sidebar-backup">
+          <p class="nav-label">Backup</p>
+          <button id="export-btn" class="backup-btn">Export backup</button>
+          <button id="import-btn" class="backup-btn">Import backup…</button>
+          <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
+      </div>
+
+      <div class="sidebar-account">
+        <div class="sidebar-account-icon" id="account-avatar">?</div>
+        <span class="sidebar-account-email" id="account-email">Not signed in</span>
+        <span id="sb-sync-status" class="sb-sync-status" title="Cloud sync status" data-status="idle">☁️</span>
+        <button id="sb-signout-btn" class="sb-signout-btn hidden" type="button" title="Sign out">↪</button>
       </div>
     </aside>
 
@@ -3473,11 +3594,6 @@
       </svg>
       <span class="sidebar-tooltip">Collapse sidebar</span>
     </button>
-
-    <div id="theme-picker" class="theme-picker hidden" role="dialog" aria-label="Choose theme">
-      <p class="theme-picker-label">Theme</p>
-      <div id="theme-picker-grid"></div>
-    </div>
 
     <main class="main">
       <div id="desk-view">
@@ -3496,16 +3612,20 @@
               </div>
               <button id="next-day" class="nav-arrow" aria-label="Next day">→</button>
               <div class="density-wrap">
-                <button id="density-toggle" class="density-toggle" type="button" aria-label="View options" aria-haspopup="true" aria-expanded="false">
-                  <svg viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="1" y="2"  width="12" height="2.5" rx="1"/>
-                    <rect x="1" y="6.75" width="12" height="2.5" rx="1"/>
-                    <rect x="1" y="11.5" width="3.5" height="2.5" rx="1"/>
-                    <rect x="5.5" y="11.5" width="3.5" height="2.5" rx="1"/>
-                    <rect x="10" y="11.5" width="4" height="2.5" rx="1"/>
+                <button id="density-toggle" class="density-toggle" type="button" aria-label="Customize" aria-haspopup="true" aria-expanded="false" title="Customize">
+                  <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect x="1"  y="2.25" width="9"  height="1.5" rx="0.75"/>
+                    <circle cx="13" cy="3"    r="1.75"/>
+                    <rect x="6"  y="7.25" width="9"  height="1.5" rx="0.75"/>
+                    <circle cx="3"  cy="8"    r="1.75"/>
+                    <rect x="1"  y="12.25" width="9" height="1.5" rx="0.75"/>
+                    <circle cx="13" cy="13"   r="1.75"/>
                   </svg>
                 </button>
-                <div id="density-popout" class="density-popout hidden" role="dialog" aria-label="View options">
+                <div id="density-popout" class="density-popout hidden" role="dialog" aria-label="Customize">
+                  <p class="density-popout-label">Theme</p>
+                  <div id="customize-theme-grid"></div>
+                  <hr class="theme-section-divider" style="margin: 10px 0 8px;">
                   <p class="density-popout-label">Card layout</p>
                   <div class="density-option-group">
                     <button class="density-option" data-density="comfortable" type="button">
@@ -3624,7 +3744,7 @@
           <li><strong>Carry forward</strong> — bring unfinished tasks into today; use the <strong>▾</strong> menu on the carry button to turn on <strong>Auto carry each day</strong></li>
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly stats with a daily breakdown chart and activity heatmap</li>
-          <li><strong>Archive</strong> — export older days to JSON to keep the app fast</li>
+          <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
           <li><strong>Themes</strong> — light and dark presets including Synthwave, Cyberpunk, Outrun, Vaporwave, Forest, and more</li>
           <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
@@ -3644,7 +3764,7 @@
 
         <h3>Board layout</h3>
         <ul>
-          <li><strong>Card density</strong> — use the view options button (⊞) near the date to switch between <em>Comfortable</em> and <em>Compact</em> layouts</li>
+          <li><strong>Card density &amp; theme</strong> — use the customize button (⊟) near the date to switch between <em>Comfortable</em> and <em>Compact</em> layouts and to change the color theme</li>
           <li><strong>Left accent bar</strong> — each card has a colored left border matching its column (New = accent, Active = hover accent, Done = done color, Notes = muted)</li>
           <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
           <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
@@ -3678,12 +3798,12 @@
         <h3>Cloud sync &amp; data</h3>
         <ul>
           <li>Sign in with email to enable sync; your data is stored securely in the cloud</li>
-          <li>The <strong>☁️</strong> icon in the top of the sidebar shows sync status — 🔄 syncing, ✓ saved, ! error</li>
-          <li>Use the <strong>↪</strong> button next to the cloud icon to sign out</li>
+          <li>The sync status dot (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
+          <li>Use the <strong>↪</strong> sign-out button at the bottom of the sidebar to switch accounts</li>
           <li>Data syncs automatically 2–3 seconds after any change</li>
           <li>Opening on a new device: sign in and your full history loads automatically</li>
           <li><strong>Backup / restore</strong> (in sidebar More menu) — export or import your full data as JSON for a local safety copy</li>
-          <li><strong>Archive</strong> — exports days older than 6 months and removes them from the app to keep it fast; archived data can be re-imported manually</li>
+          <li><strong>Auto-pruning</strong> — on each app startup, days older than 1 year are silently removed from the local cache to keep the payload lean; because your full history lives in the cloud, nothing is permanently lost</li>
         </ul>
 
         <h3>Mobile &amp; PWA</h3>
@@ -3757,8 +3877,7 @@
     const SEARCH_ALL_CONTEXTS_KEY = 'work-desk-search-all-contexts';
     const AUTO_CARRY_FORWARD_KEY = 'work-desk-auto-carry-forward';
     const AUTO_CARRY_LAST_KEY = 'work-desk-auto-carry-last';
-    const RETENTION_MONTHS = 6;
-    const MAX_ARCHIVE_ITEMS_PER_FILE = 400;
+    const RETENTION_MONTHS = 12;
     const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     function getListContext() {
@@ -3768,14 +3887,6 @@
 
     function getStorageKey(context = state.listContext) {
       return context === 'personal' ? 'work-desk-data-personal' : 'work-desk-data-work';
-    }
-
-    function getArchiveMetaKey(context = state.listContext) {
-      return `work-desk-archive-meta-${context}`;
-    }
-
-    function getArchiveBucketsKey(context = state.listContext) {
-      return `work-desk-archive-buckets-${context}`;
     }
 
     function migrateLegacyStorage() {
@@ -3828,18 +3939,12 @@
       formatToggleBtn: document.getElementById('format-toggle-btn'),
       addForm: document.getElementById('add-form'),
       weekStrip: document.getElementById('week-strip'),
-      sidebarMore: document.getElementById('sidebar-more'),
-      sidebarMoreToggle: document.getElementById('sidebar-more-toggle'),
       addEditorHost: document.getElementById('add-editor-host'),
       addBtn: document.getElementById('add-btn'),
       itemLists: document.getElementById('item-lists'),
       prevDay: document.getElementById('prev-day'),
       nextDay: document.getElementById('next-day'),
       typeBtns: document.querySelectorAll('.type-btn[data-type]'),
-      archiveSummary: document.getElementById('archive-summary'),
-      archiveHelpBtn: document.getElementById('archive-help-btn'),
-      archivePopover: document.getElementById('archive-popover'),
-      archiveNowBtn: document.getElementById('archive-now-btn'),
       recurringBtn: document.getElementById('recurring-btn'),
       recurringModal: document.getElementById('recurring-modal'),
       recurringModalBody: document.getElementById('recurring-modal-body'),
@@ -3861,7 +3966,6 @@
       moveDateInput: document.getElementById('move-date-input'),
       moveConfirm: document.getElementById('move-confirm'),
       moveCancel: document.getElementById('move-cancel'),
-      themeToggle: document.getElementById('theme-toggle'),
       sidebarToggle: document.getElementById('sidebar-toggle'),
       sidebarToggleIcon: document.getElementById('sidebar-toggle-icon'),
       sidebarTooltip: document.querySelector('.sidebar-tooltip'),
@@ -3881,7 +3985,7 @@
       tabInsights: document.getElementById('tab-insights'),
       tabWork: document.getElementById('tab-work'),
       tabPersonal: document.getElementById('tab-personal'),
-      logoSub: document.querySelector('.logo-sub'),
+      logoSub: document.getElementById('logo-sub-text'),
       deskView: document.getElementById('desk-view'),
       insightsView: document.getElementById('insights-view'),
       toast: document.getElementById('toast'),
@@ -3974,28 +4078,46 @@
 
     // ── Theme system ───────────────────────────────────────────────────────────
     const THEMES = [
-      // Light
-      { id: '',                name: 'Default',    sidebar: '#1e2433', accent: '#3b6fd9', dark: false },
-      { id: 'solarized-light', name: 'Solarized',  sidebar: '#073642', accent: '#268bd2', dark: false },
-      { id: 'slate',           name: 'Slate',      sidebar: '#334155', accent: '#3b82f6', dark: false },
-      { id: 'rose',            name: 'Rose',        sidebar: '#4c0519', accent: '#f43f5e', dark: false },
-      { id: 'vaporwave',       name: 'Vaporwave',   sidebar: '#24085a', accent: '#ff1493', dark: false },
-      { id: 'synthwave-light', name: 'Synthwave',   sidebar: '#140428', accent: '#ff2d95', dark: false },
-      { id: 'cyberpunk-light', name: 'Cyberpunk',   sidebar: '#111319', accent: '#00d084', dark: false },
-      { id: 'outrun-light',    name: 'Outrun',      sidebar: '#200838', accent: '#ff2d95', dark: false },
-      // Dark
-      { id: 'dark',            name: 'Default',    sidebar: '#0d1017', accent: '#5b8def', dark: true  },
-      { id: 'solarized-dark',  name: 'Solarized',  sidebar: '#011d27', accent: '#268bd2', dark: true  },
-      { id: 'nord',            name: 'Nord',        sidebar: '#1b1f27', accent: '#88c0d0', dark: true  },
-      { id: 'dracula',         name: 'Dracula',     sidebar: '#1e2029', accent: '#bd93f9', dark: true  },
-      { id: 'ocean',           name: 'Ocean',       sidebar: '#030e18', accent: '#22d3ee', dark: true  },
-      { id: 'forest',          name: 'Forest',      sidebar: '#0b2218', accent: '#46d17c', dark: true  },
-      { id: 'dusk',            name: 'Dusk',        sidebar: '#090318', accent: '#a78bfa', dark: true  },
-      { id: 'warm',            name: 'Warm',        sidebar: '#0e0601', accent: '#f59e0b', dark: true  },
-      { id: 'synthwave',       name: 'Synthwave',   sidebar: '#060014', accent: '#ff71ce', dark: true  },
-      { id: 'cyberpunk',       name: 'Cyberpunk',   sidebar: '#050508', accent: '#00ff9f', dark: true  },
-      { id: 'outrun',          name: 'Outrun',      sidebar: '#10041c', accent: '#ff2d95', dark: true  },
-      { id: 'vaporwave-dark',  name: 'Vaporwave',   sidebar: '#1a1030', accent: '#ff77c8', dark: true  },
+      // Light — Neutral/minimal
+      { id: '',                name: 'Default',   sidebar: '#1e2433', accent: '#3b6fd9', dark: false },
+      { id: 'slate',           name: 'Slate',     sidebar: '#334155', accent: '#3b82f6', dark: false },
+      { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', accent: '#0ea5e9', dark: false },
+      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', accent: '#555555', dark: false },
+      // Light — Warm/earthy
+      { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', accent: '#b5611a', dark: false },
+      { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', accent: '#d2691e', dark: false },
+      { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', accent: '#f05040', dark: false },
+      { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', accent: '#f43f5e', dark: false },
+      // Light — Nature/elegant
+      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', accent: '#16a34a', dark: false },
+      { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', accent: '#7c3aed', dark: false },
+      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', accent: '#268bd2', dark: false },
+      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', accent: '#7aa2f7', dark: false },
+      // Light — Neon/vibrant
+      { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', accent: '#ff1493', dark: false },
+      { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', accent: '#ff2d95', dark: false },
+      { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', accent: '#00d084', dark: false },
+      { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', accent: '#ff2d95', dark: false },
+      // Dark — Base/neutral
+      { id: 'dark',            name: 'Default',   sidebar: '#0d1017', accent: '#5b8def', dark: true  },
+      { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', accent: '#88c0d0', dark: true  },
+      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', accent: '#bd93f9', dark: true  },
+      { id: 'solarized-dark',  name: 'Solarized', sidebar: '#011d27', accent: '#268bd2', dark: true  },
+      // Dark — Atmospheric
+      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', accent: '#22d3ee', dark: true  },
+      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', accent: '#46d17c', dark: true  },
+      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', accent: '#a78bfa', dark: true  },
+      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', accent: '#f59e0b', dark: true  },
+      // Dark — Moody/rich
+      { id: 'midnight',        name: 'Midnight',  sidebar: '#050810', accent: '#6080e8', dark: true  },
+      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', accent: '#c8a84a', dark: true  },
+      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', accent: '#d4883c', dark: true  },
+      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', accent: '#e8608a', dark: true  },
+      // Dark — Neon/vibrant
+      { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', accent: '#ff71ce', dark: true  },
+      { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', accent: '#00ff9f', dark: true  },
+      { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', accent: '#ff2d95', dark: true  },
+      { id: 'vaporwave-dark',  name: 'Vaporwave', sidebar: '#1a1030', accent: '#ff77c8', dark: true  },
     ];
 
     function getCurrentThemeId() {
@@ -4029,8 +4151,7 @@
     }
 
     // ── Theme picker ───────────────────────────────────────────────────────────
-    const elThemePicker = document.getElementById('theme-picker');
-    const elThemeGrid   = document.getElementById('theme-picker-grid');
+    const elThemeGrid   = document.getElementById('customize-theme-grid');
 
     function renderThemeSwatches() {
       const current = getCurrentThemeId();
@@ -4060,7 +4181,7 @@
               <div class="theme-swatch-dot" style="background:${t.accent}"></div>
             </div>
             <span class="theme-swatch-name">${t.name}</span>`;
-          sw.addEventListener('click', () => { applyTheme(t.id); closeThemePicker(); });
+          sw.addEventListener('click', () => { applyTheme(t.id); closeDensityPopout(); });
           grid.appendChild(sw);
         });
         section.appendChild(grid);
@@ -4076,20 +4197,7 @@
       elThemeGrid.appendChild(makeSection('Dark', dark));
     }
 
-    function openThemePicker() {
-      renderThemeSwatches();
-      const rect = els.themeToggle.getBoundingClientRect();
-      elThemePicker.style.top  = (rect.bottom + 8) + 'px';
-      // Clamp left so the picker never overflows the right edge of the viewport
-      const pickerW = Math.max(216, Math.min(window.innerWidth - 16, elThemePicker.offsetWidth || 216));
-      const clampedLeft = Math.min(rect.left, window.innerWidth - pickerW - 8);
-      elThemePicker.style.left = Math.max(8, clampedLeft) + 'px';
-      elThemePicker.classList.remove('hidden');
-    }
-
-    function closeThemePicker() {
-      elThemePicker.classList.add('hidden');
-    }
+    function closeThemePicker() { closeDensityPopout(); }
 
     let addEditor = null;
 
@@ -4780,20 +4888,6 @@
       });
     }
 
-    function initSidebarMore() {
-      const stored = localStorage.getItem('work-desk-sidebar-more');
-      const open = stored === 'open';
-      if (open) {
-        els.sidebarMore.classList.add('open');
-        els.sidebarMoreToggle.setAttribute('aria-expanded', 'true');
-      }
-      els.sidebarMoreToggle.addEventListener('click', () => {
-        const isOpen = els.sidebarMore.classList.toggle('open');
-        els.sidebarMoreToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        localStorage.setItem('work-desk-sidebar-more', isOpen ? 'open' : 'closed');
-      });
-    }
-
     function syncSearchUi() {
       els.searchInput.placeholder = state.searchAllContexts
         ? 'Search Work & Personal…'
@@ -4859,6 +4953,7 @@
     }
 
     function openDensityPopout() {
+      renderThemeSwatches();
       const btn    = document.getElementById('density-toggle');
       const popout = document.getElementById('density-popout');
       popout.classList.remove('hidden');
@@ -5314,9 +5409,13 @@
     function showAuthModal() {
       document.getElementById('auth-modal').classList.remove('hidden');
     }
-    function hideAuthModal() {
+    function hideAuthModal(email) {
       document.getElementById('auth-modal').classList.add('hidden');
       document.getElementById('sb-signout-btn').classList.remove('hidden');
+      if (email) {
+        document.getElementById('account-email').textContent = email;
+        document.getElementById('account-avatar').textContent = email.charAt(0).toUpperCase();
+      }
     }
     function setAuthError(msg) {
       const el = document.getElementById('auth-error');
@@ -5337,7 +5436,7 @@
       try {
         const { error } = await sbClient.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        hideAuthModal();
+        hideAuthModal(email);
         await sbPostAuthSync();
       } catch (e) {
         setAuthError(e.message);
@@ -5357,7 +5456,7 @@
         if (error) throw error;
         if (data.session) {
           // Email confirmation is off — signed in immediately
-          hideAuthModal();
+          hideAuthModal(email);
           await sbPostAuthSync();
         } else {
           setAuthError('Check your email for a confirmation link, then sign in.');
@@ -5434,7 +5533,10 @@
       // If user is already signed in, sbInit skips the modal and we sync immediately
       if (!sbClient) return;
       const { data: { session } } = await sbClient.auth.getSession();
-      if (session) await sbPostAuthSync();
+      if (session) {
+        hideAuthModal(session.user?.email);
+        await sbPostAuthSync();
+      }
     }
 
     function saveData() {
@@ -5730,307 +5832,18 @@
       return formatDateKey(d);
     }
 
-    function getCurrentArchivePeriod(date = new Date()) {
-      const year = date.getFullYear();
-      const half = date.getMonth() < 6 ? 'H1' : 'H2';
-      return `${year}-${half}`;
-    }
-
-    function getNextPeriodBoundary() {
-      const now = new Date();
-      const year = now.getFullYear();
-      if (now.getMonth() < 6) {
-        return { label: `Jul 1, ${year}` };
-      }
-      return { label: `Jan 1, ${year + 1}` };
-    }
-
-    function getNextArchivePeriodLabel(period) {
-      const [year, half] = period.split('-');
-      return half === 'H1' ? `${year}-H2` : `${parseInt(year, 10) + 1}-H1`;
-    }
-
-    function loadArchiveMeta() {
-      try {
-        const raw = localStorage.getItem(getArchiveMetaKey());
-        return raw ? JSON.parse(raw) : {};
-      } catch (_) {
-        return {};
-      }
-    }
-
-    function saveArchiveMeta(meta) {
-      localStorage.setItem(getArchiveMetaKey(), JSON.stringify(meta));
-    }
-
-    function loadArchiveBuckets() {
-      try {
-        const raw = localStorage.getItem(getArchiveBucketsKey());
-        return raw ? JSON.parse(raw) : {};
-      } catch (_) {
-        return {};
-      }
-    }
-
-    function saveArchiveBuckets(buckets) {
-      localStorage.setItem(getArchiveBucketsKey(), JSON.stringify(buckets));
-    }
-
-    function archiveBucketKey(period, part = 1) {
-      return part === 1 ? period : `${period}-${part}`;
-    }
-
-    function getArchiveFilename(period, part = 1) {
-      const prefix = `work-desk-archive-${state.listContext}-${period}`;
-      return part === 1 ? `${prefix}.json` : `${prefix}-${part}.json`;
-    }
-
-    function countDaysItems(days) {
-      let items = 0;
-      for (const day of Object.values(days)) {
-        items += day.items.length;
-      }
-      return items;
-    }
-
     function getEligibleArchiveDayKeys() {
       const cutoff = getRetentionCutoffKey();
       return Object.keys(state.data.days).filter(k => k < cutoff).sort();
     }
 
-    function extractDays(dayKeys) {
-      const days = {};
-      for (const key of dayKeys) {
-        days[key] = state.data.days[key];
-      }
-      return days;
-    }
-
-    function mergeDayRecords(target, source) {
-      for (const [date, day] of Object.entries(source)) {
-        if (!target[date]) {
-          target[date] = { date, items: [...day.items] };
-          continue;
-        }
-        const existingIds = new Set(target[date].items.map(i => i.id));
-        const newItems = day.items.filter(i => !existingIds.has(i.id));
-        target[date] = { date, items: [...target[date].items, ...newItems] };
-      }
-      return target;
-    }
-
-    function splitDaysByItemLimit(days, maxItems) {
-      const chunks = [];
-      let current = {};
-      let count = 0;
-
-      for (const date of Object.keys(days).sort()) {
-        const day = days[date];
-        if (count + day.items.length > maxItems && count > 0) {
-          chunks.push(current);
-          current = {};
-          count = 0;
-        }
-        current[date] = day;
-        count += day.items.length;
-      }
-      if (Object.keys(current).length > 0) chunks.push(current);
-      return chunks;
-    }
-
-    function buildArchivePayload(period, part, days) {
-      const dayKeys = Object.keys(days).sort();
-      return {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        app: 'work-desk',
-        archiveType: 'semiannual-rolling',
-        listContext: state.listContext,
-        archivePeriod: period,
-        archivePart: part,
-        retentionMonths: RETENTION_MONTHS,
-        oldestDay: dayKeys[0] || null,
-        newestDay: dayKeys[dayKeys.length - 1] || null,
-        dayCount: dayKeys.length,
-        itemCount: countDaysItems(days),
-        days,
-      };
-    }
-
-    function downloadJson(filename, payload) {
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
-
-    function getActiveArchivePart(buckets, period) {
-      let part = 1;
-      while (true) {
-        const key = archiveBucketKey(period, part);
-        const bucket = buckets[key];
-        const items = bucket ? countDaysItems(bucket.days || {}) : 0;
-        if (!bucket || items < MAX_ARCHIVE_ITEMS_PER_FILE) return part;
-        part++;
-      }
-    }
-
-    function formatArchiveDate(iso) {
-      if (!iso) return 'Never';
-      return new Date(iso).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    }
-
-    function getNextEligibilityDate() {
-      const activeKeys = Object.keys(state.data.days).sort();
-      if (activeKeys.length === 0) return null;
-
-      const d = dateFromKey(activeKeys[0]);
-      d.setMonth(d.getMonth() + RETENTION_MONTHS);
-      d.setDate(d.getDate() + 1);
-      return d;
-    }
-
-    function renderArchiveStatus() {
-      const meta = loadArchiveMeta();
-      const period = getCurrentArchivePeriod();
-      const nextBoundary = getNextPeriodBoundary();
-      const eligible = getEligibleArchiveDayKeys().length;
-      const nextEligible = getNextEligibilityDate();
-
-      let summary = '';
-      if (eligible > 0) {
-        summary = `${eligible} day${eligible === 1 ? '' : 's'} ready to archive`;
-        els.archiveSummary.className = 'archive-summary pending';
-      } else if (meta.lastArchiveAt) {
-        summary = `Last archive: ${formatArchiveDate(meta.lastArchiveAt)}`;
-        els.archiveSummary.className = 'archive-summary';
-      } else if (nextEligible) {
-        summary = `Nothing ready yet`;
-        els.archiveSummary.className = 'archive-summary';
-      } else {
-        summary = 'No archive yet';
-        els.archiveSummary.className = 'archive-summary';
-      }
-      els.archiveSummary.textContent = summary;
-
-      let html =
-        '<p class="archive-hint">Keeps the last 6 months in the app. ' +
-        'Older days archive on app open or when you click Archive now (saved to Downloads).</p>';
-
-      if (meta.lastArchiveAt) {
-        html += `<p>Last archive: ${escapeHtml(formatArchiveDate(meta.lastArchiveAt))}`;
-        if (meta.lastArchiveDayCount) html += ` (${meta.lastArchiveDayCount} days)`;
-        html += '</p>';
-      } else {
-        html += '<p>Last archive: Never</p>';
-      }
-
-      html += `<p>Current archive file: <span class="archive-file">${escapeHtml(getArchiveFilename(period))}</span></p>`;
-      html += `<p>Filename switches to ${escapeHtml(getNextArchivePeriodLabel(period))} on ${escapeHtml(nextBoundary.label)}</p>`;
-
-      if (eligible > 0) {
-        html += `<p class="archive-pending">${eligible} day${eligible === 1 ? '' : 's'} ready — will archive on next app open</p>`;
-      } else if (nextEligible) {
-        html += `<p>Nothing ready yet — oldest data eligible after ${escapeHtml(nextEligible.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }))}</p>`;
-      } else {
-        html += '<p>Nothing to archive yet</p>';
-      }
-
-      els.archivePopover.innerHTML = html;
-    }
-
-    function openArchivePopover() {
-      const rect = els.archiveHelpBtn.getBoundingClientRect();
-      els.archivePopover.style.top = `${rect.bottom + 8}px`;
-      els.archivePopover.style.left = `${rect.left}px`;
-      els.archivePopover.classList.remove('hidden');
-      els.archiveHelpBtn.setAttribute('aria-expanded', 'true');
-    }
-
-    function closeArchivePopover() {
-      els.archivePopover.classList.add('hidden');
-      els.archiveHelpBtn.setAttribute('aria-expanded', 'false');
-    }
-
-    function runArchive({ manual = false } = {}) {
-      const eligibleKeys = getEligibleArchiveDayKeys();
-      if (eligibleKeys.length === 0) {
-        if (manual) showToast('Nothing older than 6 months to archive');
-        return false;
-      }
-
-      const daysToArchive = extractDays(eligibleKeys);
-      const period = getCurrentArchivePeriod();
-      const buckets = loadArchiveBuckets();
-      let part = getActiveArchivePart(buckets, period);
-      let key = archiveBucketKey(period, part);
-
-      if (!buckets[key]) buckets[key] = { days: {} };
-      mergeDayRecords(buckets[key].days, daysToArchive);
-
-      const downloadedFiles = [];
-
-      while (countDaysItems(buckets[key].days) > MAX_ARCHIVE_ITEMS_PER_FILE) {
-        const chunks = splitDaysByItemLimit(buckets[key].days, MAX_ARCHIVE_ITEMS_PER_FILE);
-        buckets[key].days = chunks.shift();
-        const sealedPart = part;
-        const sealedName = getArchiveFilename(period, sealedPart);
-        downloadJson(sealedName, buildArchivePayload(period, sealedPart, buckets[key].days));
-        downloadedFiles.push(sealedName);
-
-        part++;
-        key = archiveBucketKey(period, part);
-        buckets[key] = { days: {} };
-        for (const chunk of chunks) {
-          mergeDayRecords(buckets[key].days, chunk);
-        }
-      }
-
-      const finalName = getArchiveFilename(period, part);
-      downloadJson(finalName, buildArchivePayload(period, part, buckets[key].days));
-      if (!downloadedFiles.includes(finalName)) downloadedFiles.push(finalName);
-
-      saveArchiveBuckets(buckets);
-
-      for (const dayKey of eligibleKeys) {
-        delete state.data.days[dayKey];
-      }
-
-      const newestArchived = eligibleKeys[eligibleKeys.length - 1];
-      saveArchiveMeta({
-        lastArchiveAt: new Date().toISOString(),
-        lastArchiveDayCount: eligibleKeys.length,
-        lastArchiveThrough: newestArchived,
-        lastArchivePeriod: period,
-        lastArchiveFile: finalName,
-      });
-
-      saveData();
-      clearEditing();
-      state.expandedTaskId = null;
-
-      const throughLabel = formatSidebarLabel(newestArchived);
-      const fileLabel = downloadedFiles.length > 1 ? downloadedFiles.join(', ') : finalName;
-      if (manual) {
-        showToast(`Archived ${eligibleKeys.length} days (through ${throughLabel}) · Saved ${fileLabel}`);
-      } else {
-        showToast(`Auto-archived ${eligibleKeys.length} day${eligibleKeys.length === 1 ? '' : 's'} (through ${throughLabel})`);
-      }
-      render();
-      return true;
-    }
-
+    // Silently prune days older than RETENTION_MONTHS from the active dataset.
+    // Supabase already holds the full history; this just keeps the local payload lean.
     function maybeAutoArchive() {
-      if (getEligibleArchiveDayKeys().length > 0) {
-        runArchive({ manual: false });
-      }
+      const eligibleKeys = getEligibleArchiveDayKeys();
+      if (eligibleKeys.length === 0) return;
+      for (const key of eligibleKeys) delete state.data.days[key];
+      saveData();
     }
 
     // ── Recurring templates ──────────────────────────────────────────
@@ -7938,16 +7751,6 @@
       tableSection.appendChild(tableWrap);
       panel.appendChild(tableSection);
 
-      const meta = loadArchiveMeta();
-      if (meta.lastArchiveThrough) {
-        const archiveNote = document.createElement('p');
-        archiveNote.className = 'insight-archive-note';
-        const through = formatSidebarLabel(meta.lastArchiveThrough);
-        archiveNote.innerHTML =
-          `<strong>Note:</strong> Data through ${escapeHtml(through)} has been archived and is not shown above. ` +
-          `Use <em>Import backup…</em> with an archive file to include older history.`;
-        panel.appendChild(archiveNote);
-      }
 
       els.insightsView.appendChild(panel);
     }
@@ -8006,7 +7809,6 @@
       });
 
       renderCalendar();
-      renderArchiveStatus();
     }
 
     function renderDesk() {
@@ -8172,21 +7974,7 @@
       if (e.target === els.moveModal) clearMoveModal();
     });
 
-    els.themeToggle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      elThemePicker.classList.contains('hidden') ? openThemePicker() : closeThemePicker();
-    });
-
-    els.archiveHelpBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      els.archivePopover.classList.contains('hidden') ? openArchivePopover() : closeArchivePopover();
-    });
-
     document.addEventListener('click', (e) => {
-      if (!elThemePicker.contains(e.target)) closeThemePicker();
-      if (!els.archivePopover.contains(e.target) && e.target !== els.archiveHelpBtn) {
-        closeArchivePopover();
-      }
       if (!els.carryForwardWrap.contains(e.target)) {
         closeCarryForwardMenu();
       }
@@ -8222,8 +8010,6 @@
     els.tabWork.addEventListener('click', () => setListContext('work'));
     els.tabPersonal.addEventListener('click', () => setListContext('personal'));
 
-    els.archiveNowBtn.addEventListener('click', () => runArchive({ manual: true }));
-
     els.recurringBtn.addEventListener('click', openRecurringModal);
     els.recurringClose.addEventListener('click', closeRecurringModal);
     els.recurringModal.addEventListener('click', (e) => {
@@ -8232,7 +8018,6 @@
 
     initTheme();
     initAddEditor();
-    initSidebarMore();
     initSearchScope();
     initCarryForwardMenu();
     initDensityToggle();
