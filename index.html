@@ -554,7 +554,7 @@
     .sidebar {
       width: 240px; min-width: 240px;
       background: var(--sidebar); color: var(--sidebar-text);
-      padding: 28px 20px; display: flex; flex-direction: column; gap: 24px;
+      padding: 28px 20px 28px 20px; display: flex; flex-direction: column; gap: 24px;
       transition: width 0.2s ease, min-width 0.2s ease, padding 0.2s ease;
       overflow-x: hidden;
       overflow-y: auto;
@@ -786,6 +786,7 @@
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 2px;
+      padding-right: 3px;
     }
 
     .cal-weekday {
@@ -802,7 +803,7 @@
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 2px;
-      padding-right: 2px; /* prevents last-column highlight from clipping */
+      padding-right: 3px;
     }
 
     .cal-day {
