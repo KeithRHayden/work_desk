@@ -1774,9 +1774,7 @@
     .week-strip::-webkit-scrollbar { display: none; }
 
     .week-day {
-      flex: 1;
-      min-width: 44px;
-      max-width: 72px;
+      flex: 0 0 46px;
       padding: 8px 4px;
       border-radius: 8px;
       border: 1px solid var(--border);
@@ -3946,6 +3944,7 @@
       insightsPeriod: 'week',
       insightsAnchor: todayKey(),
       calendarView: null,
+      weekAnchorKey: null,
     };
 
     state.data = loadData();
@@ -5141,50 +5140,85 @@
       render();
     }
 
+    // Returns the key of the Monday that contains the given dateKey
+    function getMondayOfWeek(key) {
+      const d = dateFromKey(key);
+      const dow = d.getDay(); // 0 = Sun
+      d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+      return formatDateKey(d);
+    }
+
     function renderWeekStrip() {
       const host = els.weekStrip;
       if (!host) return;
-      host.innerHTML = '';
-
-      const selected = dateFromKey(state.selectedDate);
-      const weekStart = new Date(selected);
-      weekStart.setDate(selected.getDate() - selected.getDay());
       const today = todayKey();
 
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(weekStart);
-        d.setDate(weekStart.getDate() + i);
-        const key = formatDateKey(d);
-        const day = state.data.days[key];
+      if (host.children.length === 0) {
+        // ── First render: build the full 26-week scrollable strip ─────────
+        const base = new Date();
+        const startD = new Date(base); startD.setDate(startD.getDate() - 91); // 13 weeks back
+        const endD   = new Date(base); endD.setDate(endD.getDate()   + 91); // 13 weeks forward
 
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'week-day';
-        if (key === state.selectedDate) btn.classList.add('selected');
-        if (key === today) btn.classList.add('today');
-        if (day && day.items.length > 0) btn.classList.add('has-data');
+        const cur = new Date(startD);
+        while (cur <= endD) {
+          const key = formatDateKey(cur);
+          const day = state.data.days[key];
 
-        const dow = document.createElement('div');
-        dow.className = 'week-day-dow';
-        dow.textContent = d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2);
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.dataset.dateKey = key;
+          btn.className = 'week-day';
+          if (key === state.selectedDate) btn.classList.add('selected');
+          if (key === today) btn.classList.add('today');
+          if (day && day.items.length > 0) btn.classList.add('has-data');
 
-        const num = document.createElement('div');
-        num.className = 'week-day-num';
-        num.textContent = String(d.getDate());
+          const dow = document.createElement('div');
+          dow.className = 'week-day-dow';
+          dow.textContent = cur.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2);
 
-        btn.append(dow, num);
-        btn.setAttribute('aria-label', d.toLocaleDateString('en-US', {
-          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-        }) + (key === state.selectedDate ? ' (selected)' : ''));
-        btn.addEventListener('click', () => selectCalendarDate(key));
-        host.appendChild(btn);
+          const num = document.createElement('div');
+          num.className = 'week-day-num';
+          num.textContent = String(cur.getDate());
+
+          btn.append(dow, num);
+          btn.setAttribute('aria-label', cur.toLocaleDateString('en-US', {
+            weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+          }) + (key === state.selectedDate ? ' (selected)' : ''));
+          btn.addEventListener('click', () => {
+            state.weekAnchorKey = getMondayOfWeek(key);
+            selectCalendarDate(key);
+          });
+          host.appendChild(btn);
+
+          cur.setDate(cur.getDate() + 1);
+        }
+
+        // Scroll selected date to center immediately (no animation on init)
+        const sel = host.querySelector(`[data-date-key="${state.selectedDate}"]`);
+        if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
+      } else {
+        // ── Subsequent renders: just refresh classes, preserve scroll pos ──
+        host.querySelectorAll('.week-day').forEach(btn => {
+          const key = btn.dataset.dateKey;
+          const day = state.data.days[key];
+          btn.classList.toggle('selected', key === state.selectedDate);
+          btn.classList.toggle('today', key === today);
+          btn.classList.toggle('has-data', !!(day && day.items.length > 0));
+          const d = new Date(key + 'T12:00:00');
+          const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+          btn.setAttribute('aria-label', label + (key === state.selectedDate ? ' (selected)' : ''));
+        });
       }
     }
 
-    function shiftWeekStrip(delta) {
-      const d = dateFromKey(state.selectedDate);
+    // Scroll the strip to the Monday of the prev/next week (Mon-anchored)
+    function shiftWeekStripAnchor(delta) {
+      if (!state.weekAnchorKey) state.weekAnchorKey = getMondayOfWeek(state.selectedDate);
+      const d = dateFromKey(state.weekAnchorKey);
       d.setDate(d.getDate() + delta * 7);
-      selectCalendarDate(formatDateKey(d));
+      state.weekAnchorKey = formatDateKey(d);
+      const el = els.weekStrip.querySelector(`[data-date-key="${state.weekAnchorKey}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
     }
 
     function setAddPlaceholder() {
@@ -7925,26 +7959,9 @@
     els.prevDay.addEventListener('click', () => goToDate(-1));
     els.nextDay.addEventListener('click', () => goToDate(1));
 
-    // Week-strip prev/next buttons
-    els.weekPrevBtn.addEventListener('click', () => shiftWeekStrip(-1));
-    els.weekNextBtn.addEventListener('click', () => shiftWeekStrip(1));
-
-    // Week-strip swipe gesture
-    {
-      let _touchStartX = 0;
-      let _touchStartY = 0;
-      els.weekStrip.addEventListener('touchstart', (e) => {
-        _touchStartX = e.touches[0].clientX;
-        _touchStartY = e.touches[0].clientY;
-      }, { passive: true });
-      els.weekStrip.addEventListener('touchend', (e) => {
-        const dx = e.changedTouches[0].clientX - _touchStartX;
-        const dy = e.changedTouches[0].clientY - _touchStartY;
-        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-          shiftWeekStrip(dx < 0 ? 1 : -1);
-        }
-      }, { passive: true });
-    }
+    // Week-strip prev/next buttons (jump to Monday of prev/next week)
+    els.weekPrevBtn.addEventListener('click', () => shiftWeekStripAnchor(-1));
+    els.weekNextBtn.addEventListener('click', () => shiftWeekStripAnchor(1));
 
     els.typeBtns.forEach(btn => {
       btn.addEventListener('click', () => {
