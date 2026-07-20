@@ -1298,6 +1298,8 @@
     .backup-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-active); }
     .backup-btn.replace { color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .backup-btn.replace:hover { background: rgba(239, 68, 68, 0.12); }
+    .backup-btn.repair-btn { opacity: 0.65; font-size: 0.78rem; padding: 6px 12px; }
+    .backup-btn.repair-btn:hover { opacity: 1; }
 
     .backup-group {
       margin-top: 12px;
@@ -3616,6 +3618,7 @@
             <button id="export-btn" class="backup-btn">Export backup</button>
             <button id="import-btn" class="backup-btn">Import backup…</button>
           </div>
+          <button id="repair-btn" class="backup-btn repair-btn" title="Scan for and remove duplicate tasks across both lists">Repair duplicates</button>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
       </div>
@@ -5437,6 +5440,21 @@
       return normalized;
     }
 
+    // Deduplicate items in a day — if multiple items share the same ID, keep
+    // the one with the most "advanced" state (completed > shelved > active/new).
+    function deduplicateDayItems(items) {
+      const seen = new Map();
+      const stateRank = item => item.completed ? 2 : item.shelved ? 1 : 0;
+      for (const item of items) {
+        if (!item.id) { seen.set(Symbol(), item); continue; }
+        const existing = seen.get(item.id);
+        if (!existing || stateRank(item) >= stateRank(existing)) {
+          seen.set(item.id, item);
+        }
+      }
+      return [...seen.values()];
+    }
+
     function loadData(context = state.listContext) {
       try {
         const raw = localStorage.getItem(getStorageKey(context));
@@ -5447,13 +5465,39 @@
             if (!day || !Array.isArray(day.items)) continue;
             days[date] = {
               date,
-              items: day.items.map(normalizeItem),
+              items: deduplicateDayItems(day.items.map(normalizeItem)),
             };
           }
           return { days };
         }
       } catch (_) {}
       return { days: {} };
+    }
+
+    // Scan all contexts, remove duplicates in-place, and re-save
+    function repairData() {
+      let totalFixed = 0;
+      ['personal', 'work'].forEach(ctx => {
+        try {
+          const raw = localStorage.getItem(getStorageKey(ctx));
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          let changed = false;
+          for (const [date, day] of Object.entries(parsed.days || {})) {
+            if (!day || !Array.isArray(day.items)) continue;
+            const before = day.items.length;
+            parsed.days[date].items = deduplicateDayItems(day.items.map(normalizeItem));
+            const after = parsed.days[date].items.length;
+            if (after < before) { totalFixed += before - after; changed = true; }
+          }
+          if (changed) localStorage.setItem(getStorageKey(ctx), JSON.stringify(parsed));
+        } catch (_) {}
+      });
+      state.data = loadData();
+      render();
+      showToast(totalFixed > 0
+        ? `Repaired ${totalFixed} duplicate item${totalFixed === 1 ? '' : 's'} ✓`
+        : 'No duplicates found — data looks clean ✓');
     }
 
     // ── Supabase cloud sync ───────────────────────────────────────
@@ -8007,6 +8051,8 @@
     });
 
     els.exportBtn.addEventListener('click', exportBackup);
+
+    document.getElementById('repair-btn').addEventListener('click', repairData);
 
     els.importBtn.addEventListener('click', () => els.importFile.click());
 
