@@ -901,13 +901,19 @@
     .theme-swatch-preview {
       width: 44px; height: 32px; border-radius: 6px;
       position: relative; border: 2px solid transparent;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s; overflow: hidden;
     }
     .theme-swatch.active .theme-swatch-preview { border-color: var(--accent); }
+    /* Bottom sidebar strip — only visible for light themes */
+    .theme-swatch-sidebar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 10px;
+    }
     .theme-swatch-dot {
-      position: absolute; bottom: 4px; right: 4px;
-      width: 9px; height: 9px; border-radius: 50%;
-      border: 1.5px solid rgba(255,255,255,0.3);
+      position: absolute; bottom: 2px; right: 5px;
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.4);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
     .theme-swatch-name {
       font-size: 0.64rem; color: var(--text-muted);
@@ -3419,8 +3425,11 @@
       .sidebar-header { align-items: center; }
       .logo { font-size: 1.1rem; }
       .logo-sub { display: none; }
-      .sidebar-account { display: none; }
-      .sidebar-backup { display: none; }
+      .sidebar-account { margin-top: 0; padding-top: 10px; }
+      .sidebar-backup { margin-top: 0; }
+      .sidebar-backup .nav-label { display: none; }
+      .sidebar-backup-btns { display: flex; gap: 6px; }
+      .sidebar-backup-btns .backup-btn { flex: 1; }
 
       .sidebar-body {
         width: 100%;
@@ -3595,8 +3604,10 @@
 
         <div class="sidebar-backup">
           <p class="nav-label">Backup</p>
-          <button id="export-btn" class="backup-btn">Export backup</button>
-          <button id="import-btn" class="backup-btn">Import backup…</button>
+          <div class="sidebar-backup-btns">
+            <button id="export-btn" class="backup-btn">Export backup</button>
+            <button id="import-btn" class="backup-btn">Import backup…</button>
+          </div>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
       </div>
@@ -3860,6 +3871,11 @@
           <li><strong>Underline</strong> — Ctrl/Cmd + U</li>
           <li><strong>Cancel edit / close menu</strong> — Escape</li>
         </ul>
+
+        <h3>Possible future improvements</h3>
+        <ul>
+          <li><strong>Google Assistant integration</strong> — "Hey Google, what are my tasks for today?" / "Hey Google, add a task to do xyz" via a Google Actions webhook connected to the Supabase backend</li>
+        </ul>
       </div>
       <div class="help-modal-footer">
         <button id="help-modal-dismiss" class="modal-btn primary" type="button">Got it</button>
@@ -4107,45 +4123,45 @@
     // ── Theme system ───────────────────────────────────────────────────────────
     const THEMES = [
       // Light — Neutral/minimal
-      { id: '',                name: 'Default',   sidebar: '#1e2433', accent: '#3b6fd9', dark: false },
-      { id: 'slate',           name: 'Slate',     sidebar: '#334155', accent: '#3b82f6', dark: false },
-      { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', accent: '#0ea5e9', dark: false },
-      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', accent: '#555555', dark: false },
+      { id: '',                name: 'Default',   sidebar: '#1e2433', bg: '#f4f6fb', accent: '#3b6fd9', dark: false },
+      { id: 'slate',           name: 'Slate',     sidebar: '#334155', bg: '#f1f5f9', accent: '#3b82f6', dark: false },
+      { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', bg: '#f0f6ff', accent: '#0ea5e9', dark: false },
+      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', accent: '#555555', dark: false },
       // Light — Warm/earthy
-      { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', accent: '#b5611a', dark: false },
-      { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', accent: '#d2691e', dark: false },
-      { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', accent: '#f05040', dark: false },
-      { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', accent: '#f43f5e', dark: false },
+      { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', bg: '#fdf6ee', accent: '#b5611a', dark: false },
+      { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', bg: '#f7f0e6', accent: '#d2691e', dark: false },
+      { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', bg: '#fff5f0', accent: '#f05040', dark: false },
+      { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', bg: '#fff1f2', accent: '#f43f5e', dark: false },
       // Light — Nature/elegant
-      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', accent: '#16a34a', dark: false },
-      { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', accent: '#7c3aed', dark: false },
-      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', accent: '#268bd2', dark: false },
-      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', accent: '#7aa2f7', dark: false },
+      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', bg: '#f0faf4', accent: '#16a34a', dark: false },
+      { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', bg: '#f3f0fa', accent: '#7c3aed', dark: false },
+      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', bg: '#fdf6e3', accent: '#268bd2', dark: false },
+      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', accent: '#7aa2f7', dark: false },
       // Light — Neon/vibrant
-      { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', accent: '#ff1493', dark: false },
-      { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', accent: '#ff2d95', dark: false },
-      { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', accent: '#00d084', dark: false },
-      { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', accent: '#ff2d95', dark: false },
+      { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#d8c0f0', accent: '#ff1493', dark: false },
+      { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', bg: '#ffe0c8', accent: '#ff2d95', dark: false },
+      { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', bg: '#a8e8ff', accent: '#00d084', dark: false },
+      { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', bg: '#552266', accent: '#ff2d95', dark: false },
       // Dark — Base/neutral
-      { id: 'dark',            name: 'Default',   sidebar: '#0d1017', accent: '#5b8def', dark: true  },
-      { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', accent: '#88c0d0', dark: true  },
-      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', accent: '#bd93f9', dark: true  },
-      { id: 'solarized-dark',  name: 'Solarized', sidebar: '#011d27', accent: '#268bd2', dark: true  },
+      { id: 'dark',            name: 'Default',   sidebar: '#0d1017', bg: '#12151c', accent: '#5b8def', dark: true  },
+      { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', bg: '#242933', accent: '#88c0d0', dark: true  },
+      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', accent: '#bd93f9', dark: true  },
+      { id: 'solarized-dark',  name: 'Solarized', sidebar: '#011d27', bg: '#002b36', accent: '#268bd2', dark: true  },
       // Dark — Atmospheric
-      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', accent: '#22d3ee', dark: true  },
-      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', accent: '#46d17c', dark: true  },
-      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', accent: '#a78bfa', dark: true  },
-      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', accent: '#f59e0b', dark: true  },
+      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', bg: '#051320', accent: '#22d3ee', dark: true  },
+      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', accent: '#46d17c', dark: true  },
+      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0c0020', accent: '#a78bfa', dark: true  },
+      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', accent: '#f59e0b', dark: true  },
       // Dark — Moody/rich
-      { id: 'midnight',        name: 'Midnight',  sidebar: '#050810', accent: '#6080e8', dark: true  },
-      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', accent: '#c8a84a', dark: true  },
-      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', accent: '#d4883c', dark: true  },
-      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', accent: '#e8608a', dark: true  },
+      { id: 'midnight',        name: 'Midnight',  sidebar: '#050810', bg: '#070a14', accent: '#6080e8', dark: true  },
+      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', accent: '#c8a84a', dark: true  },
+      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', accent: '#d4883c', dark: true  },
+      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', accent: '#e8608a', dark: true  },
       // Dark — Neon/vibrant
-      { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', accent: '#ff71ce', dark: true  },
-      { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', accent: '#00ff9f', dark: true  },
-      { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', accent: '#ff2d95', dark: true  },
-      { id: 'vaporwave-dark',  name: 'Vaporwave', sidebar: '#1a1030', accent: '#ff77c8', dark: true  },
+      { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', accent: '#ff71ce', dark: true  },
+      { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', accent: '#00ff9f', dark: true  },
+      { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', bg: '#1a0828', accent: '#ff2d95', dark: true  },
+      { id: 'vaporwave-dark',  name: 'Vaporwave', sidebar: '#1a1030', bg: '#120a24', accent: '#ff77c8', dark: true  },
     ];
 
     function getCurrentThemeId() {
@@ -4204,8 +4220,10 @@
           sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
           sw.type = 'button';
           sw.title = t.name;
+          // All themes: main bg fill + sidebar strip at bottom + accent dot
           sw.innerHTML = `
-            <div class="theme-swatch-preview" style="background:${t.sidebar}">
+            <div class="theme-swatch-preview" style="background:${t.bg || t.sidebar}">
+              <div class="theme-swatch-sidebar" style="background:${t.sidebar}"></div>
               <div class="theme-swatch-dot" style="background:${t.accent}"></div>
             </div>
             <span class="theme-swatch-name">${t.name}</span>`;
