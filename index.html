@@ -994,15 +994,23 @@
       min-width: 0;
     }
     .sb-signout-btn {
-      background: transparent; border: none; cursor: pointer;
-      font-size: 0.75rem; color: var(--sidebar-muted);
-      opacity: 0.45; padding: 3px 4px; border-radius: 4px;
-      transition: opacity 0.15s, color 0.15s;
+      background: transparent;
+      border: 1px solid color-mix(in srgb, var(--sidebar-muted) 35%, transparent);
+      cursor: pointer;
+      font-size: 0.7rem;
+      color: var(--sidebar-muted);
+      padding: 3px 8px;
+      border-radius: 4px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
       flex-shrink: 0;
-      line-height: 1;
-      title: "Sign out";
+      line-height: 1.4;
+      white-space: nowrap;
     }
-    .sb-signout-btn:hover { opacity: 1; color: var(--text-muted); }
+    .sb-signout-btn:hover {
+      background: color-mix(in srgb, var(--sidebar-muted) 12%, transparent);
+      border-color: var(--sidebar-muted);
+      color: var(--sidebar-active);
+    }
     .sb-signout-btn.hidden { display: none; }
 
     .theme-toggle-unused {
@@ -3616,7 +3624,7 @@
         <div class="sidebar-account-icon" id="account-avatar">?</div>
         <span class="sidebar-account-email" id="account-email">Not signed in</span>
         <span id="sb-sync-status" class="sb-sync-status" title="Cloud sync status" data-status="idle">☁️</span>
-        <button id="sb-signout-btn" class="sb-signout-btn hidden" type="button" title="Sign out">↪</button>
+        <button id="sb-signout-btn" class="sb-signout-btn hidden" type="button" title="Sign out">Sign out</button>
       </div>
     </aside>
 
