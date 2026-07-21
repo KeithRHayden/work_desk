@@ -3271,6 +3271,23 @@
     .add-comment-trigger:hover { opacity: 1; color: var(--accent); }
     .add-comment-trigger svg { width: 12px; height: 12px; flex-shrink: 0; }
 
+    /* Quick "+ Add update" link on note cards */
+    .note-quick-add {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      transition: opacity 0.15s, color 0.15s;
+    }
+    .note-quick-add:hover { opacity: 1; color: var(--accent); }
+    .note-quick-add svg { width: 10px; height: 10px; flex-shrink: 0; }
+
     /* Add form — hidden until trigger clicked */
     .add-comment-form {
       display: flex;
@@ -4035,6 +4052,7 @@
       editingId: null,
       editingComment: null,
       expandedTaskId: null,
+      autoOpenEditor: null,
       movingItemId: null,
       pendingImport: null,
       searchQuery: '',
@@ -7080,7 +7098,7 @@
 
     function renderCommentsPanel(item) {
       const isNote = item.type === 'note';
-      const addLabel  = isNote ? '+ Add update' : '+ Add comment';
+      const addLabel  = isNote ? 'Add update' : 'Add comment';
       const addPlaceholder = isNote ? 'Add an update…' : 'Add a comment…';
 
       const panel = document.createElement('div');
@@ -7150,19 +7168,8 @@
         panel.appendChild(list);
       }
 
-      // ── Collapsed add trigger — editor created lazily on click ─────────
-      const triggerWrap = document.createElement('div');
-      triggerWrap.className = 'add-comment-trigger-wrap';
-
-      const trigger = document.createElement('button');
-      trigger.type = 'button';
-      trigger.className = 'add-comment-trigger';
-      trigger.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>${addLabel}`;
-
-      trigger.addEventListener('click', () => {
-        // Build the editor form fresh so it's visible from the start
-        triggerWrap.remove();
-
+      // Helper to build the add editor form
+      function buildAddForm() {
         const form = document.createElement('form');
         form.className = 'add-comment-form';
 
@@ -7185,12 +7192,31 @@
 
         form.appendChild(editorWrap);
         form.appendChild(addBtn);
-        panel.appendChild(form);
         setTimeout(() => commentEditor.focus(), 0);
-      });
+        return form;
+      }
 
-      triggerWrap.appendChild(trigger);
-      panel.appendChild(triggerWrap);
+      // If auto-open was signaled, show editor directly; otherwise show collapsed trigger
+      if (state.autoOpenEditor === item.id) {
+        state.autoOpenEditor = null;
+        panel.appendChild(buildAddForm());
+      } else {
+        const triggerWrap = document.createElement('div');
+        triggerWrap.className = 'add-comment-trigger-wrap';
+
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'add-comment-trigger';
+        trigger.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>${addLabel}`;
+
+        trigger.addEventListener('click', () => {
+          triggerWrap.remove();
+          panel.appendChild(buildAddForm());
+        });
+
+        triggerWrap.appendChild(trigger);
+        panel.appendChild(triggerWrap);
+      }
 
       return panel;
     }
@@ -7349,6 +7375,22 @@
         row.appendChild(triggerArea);
       }
       card.appendChild(row);
+
+      // Quick "+ Add update" link for notes (visible without hamburger menu)
+      if (item.type === 'note' && !isEditing && !isExpanded) {
+        const quickAdd = document.createElement('button');
+        quickAdd.type = 'button';
+        quickAdd.className = 'note-quick-add';
+        quickAdd.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>Add update`;
+        quickAdd.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeItemMenu();
+          state.expandedTaskId = item.id;
+          state.autoOpenEditor = item.id; // Signal to auto-open editor
+          render();
+        });
+        card.appendChild(quickAdd);
+      }
 
       if (isExpanded) {
         card.appendChild(renderCommentsPanel(item));
