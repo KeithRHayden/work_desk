@@ -3280,7 +3280,6 @@
       border-top: 1px solid var(--border);
       padding-top: 10px;
     }
-    .add-comment-form.collapsed { display: none; }
 
     .comment-add-btn {
       align-self: flex-end;
@@ -5515,16 +5514,25 @@
       return normalized;
     }
 
-    // Deduplicate items in a day — if multiple items share the same ID, keep
-    // the one with the most "advanced" state (completed > shelved > active/new).
+    // Deduplicate items in a day — if multiple items share the same ID, merge
+    // them into one, preserving the most advanced state AND the most comments.
     function deduplicateDayItems(items) {
       const seen = new Map();
       const stateRank = item => item.completed ? 2 : item.shelved ? 1 : 0;
       for (const item of items) {
         if (!item.id) { seen.set(Symbol(), item); continue; }
         const existing = seen.get(item.id);
-        if (!existing || stateRank(item) >= stateRank(existing)) {
+        if (!existing) {
           seen.set(item.id, item);
+        } else {
+          // Keep the more advanced state, but always preserve comments from either copy
+          const base = stateRank(item) >= stateRank(existing) ? item : existing;
+          const otherComments = (stateRank(item) >= stateRank(existing) ? existing : item).comments || [];
+          const baseComments = base.comments || [];
+          // Merge comments by ID, deduplicating
+          const commentIds = new Set(baseComments.map(c => c.id));
+          const mergedComments = [...baseComments, ...otherComments.filter(c => !commentIds.has(c.id))];
+          seen.set(item.id, { ...base, comments: mergedComments.length > 0 ? mergedComments : undefined });
         }
       }
       return [...seen.values()];
@@ -7142,44 +7150,47 @@
         panel.appendChild(list);
       }
 
-      // ── Collapsed add trigger ───────────────────────────────────────────
+      // ── Collapsed add trigger — editor created lazily on click ─────────
+      const triggerWrap = document.createElement('div');
+      triggerWrap.className = 'add-comment-trigger-wrap';
+
       const trigger = document.createElement('button');
       trigger.type = 'button';
       trigger.className = 'add-comment-trigger';
       trigger.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>${addLabel}`;
 
-      // ── Add form (collapsed by default) ────────────────────────────────
-      const form = document.createElement('form');
-      form.className = 'add-comment-form collapsed';
-
-      const { wrap: editorWrap, editor: commentEditor } = createRichEditor({
-        className: 'comment-input',
-        placeholder: addPlaceholder,
-        onInput: (html) => { addBtn.disabled = isEmptyHtml(html); },
-      });
-
-      const addBtn = document.createElement('button');
-      addBtn.className = 'comment-add-btn';
-      addBtn.type = 'submit';
-      addBtn.textContent = 'Add';
-      addBtn.disabled = true;
-
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        addComment(item.id, getEditorHtml(commentEditor));
-      });
-
-      form.appendChild(editorWrap);
-      form.appendChild(addBtn);
-
       trigger.addEventListener('click', () => {
-        trigger.style.display = 'none';
-        form.classList.remove('collapsed');
+        // Build the editor form fresh so it's visible from the start
+        triggerWrap.remove();
+
+        const form = document.createElement('form');
+        form.className = 'add-comment-form';
+
+        const { wrap: editorWrap, editor: commentEditor } = createRichEditor({
+          className: 'comment-input',
+          placeholder: addPlaceholder,
+          onInput: (html) => { addBtn.disabled = isEmptyHtml(html); },
+        });
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'comment-add-btn';
+        addBtn.type = 'submit';
+        addBtn.textContent = 'Add';
+        addBtn.disabled = true;
+
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          addComment(item.id, getEditorHtml(commentEditor));
+        });
+
+        form.appendChild(editorWrap);
+        form.appendChild(addBtn);
+        panel.appendChild(form);
         setTimeout(() => commentEditor.focus(), 0);
       });
 
-      panel.appendChild(trigger);
-      panel.appendChild(form);
+      triggerWrap.appendChild(trigger);
+      panel.appendChild(triggerWrap);
 
       return panel;
     }
