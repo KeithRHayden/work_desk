@@ -3288,6 +3288,77 @@
     .note-quick-add:hover { opacity: 1; color: var(--accent); }
     .note-quick-add svg { width: 10px; height: 10px; flex-shrink: 0; }
 
+    /* ── Inline card action bar ─────────────────────────────────────────── */
+    .card-action-bar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 12px 8px;
+      font-size: 0.72rem;
+    }
+    .card-action {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      opacity: 0.65;
+      padding: 2px 4px;
+      border-radius: 3px;
+      transition: opacity 0.12s, color 0.12s, background 0.12s;
+    }
+    .card-action:hover { opacity: 1; color: var(--accent); background: var(--accent-light); }
+    .card-action-sep { color: var(--text-muted); opacity: 0.35; user-select: none; }
+
+    .card-action.has-comments { color: var(--accent); opacity: 0.8; }
+    .card-action.has-comments:hover { opacity: 1; }
+
+    /* Overflow menu trigger */
+    .card-overflow-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      opacity: 0.5;
+      padding: 2px 6px;
+      font-size: 0.85rem;
+      line-height: 1;
+      border-radius: 3px;
+      transition: opacity 0.12s, background 0.12s;
+    }
+    .card-overflow-btn:hover { opacity: 1; background: var(--surface); }
+
+    /* Overflow dropdown menu */
+    .card-overflow-menu {
+      position: absolute;
+      bottom: 100%;
+      right: 8px;
+      margin-bottom: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: var(--shadow);
+      padding: 4px 0;
+      min-width: 120px;
+      z-index: 100;
+    }
+    .card-overflow-menu.hidden { display: none; }
+    .card-overflow-menu button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 6px 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--text);
+      transition: background 0.1s;
+    }
+    .card-overflow-menu button:hover { background: var(--accent-light); }
+    .card-overflow-menu button.danger { color: var(--danger); }
+    .card-overflow-menu button.danger:hover { background: var(--delete-hover-bg); }
+
     /* Add form — hidden until trigger clicked */
     .add-comment-form {
       display: flex;
@@ -7308,91 +7379,106 @@
         row.appendChild(content);
       }
 
-      const actions = document.createElement('div');
-      actions.className = 'item-actions';
+      card.appendChild(row);
 
+      // ── Inline action bar at bottom of card ───────────────────────────────
       if (!isEditing) {
-        if (
-          item.type === 'task' &&
-          !item.completed &&
-          !item.shelved &&
-          item.boardColumn === 'new'
-        ) {
-          const startBtn = createStartButton(() => { closeItemMenu(); moveTaskToColumn(item.id, 'active'); });
-          startBtn.classList.add('touch-column-btn');
-          actions.appendChild(startBtn);
-        }
-        actions.appendChild(createEditButton(() => { closeItemMenu(); startEditItem(item.id); }));
-        actions.appendChild(createConvertButton(item.type === 'task', () => { closeItemMenu(); convertItem(item.id); }));
-        actions.appendChild(createMoveButton(() => { closeItemMenu(); startMoveItem(item.id); }));
-        actions.appendChild(createSendToListButton(() => { closeItemMenu(); sendItemToOtherContext(item.id); }));
-      }
+        const actionBar = document.createElement('div');
+        actionBar.className = 'card-action-bar';
 
-      if (item.type === 'task' && !isEditing) {
-        if (!item.completed) {
-          actions.appendChild(createShelfButton(!!item.shelved, () => { closeItemMenu(); toggleShelf(item.id); }));
-        }
-      }
-      if (!isEditing) {
-        // Comments button in action bar for both tasks and notes
-        actions.appendChild(createCommentsButton(commentCount, isExpanded, () => {
-          closeItemMenu();
-          state.expandedTaskId = isExpanded ? null : item.id;
-          render();
-        }));
-      }
+        // Helper to create text action links
+        const addAction = (label, onClick) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'card-action';
+          btn.textContent = label;
+          btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+          actionBar.appendChild(btn);
+          return btn;
+        };
+        const addSep = () => {
+          const sep = document.createElement('span');
+          sep.className = 'card-action-sep';
+          sep.textContent = '·';
+          actionBar.appendChild(sep);
+        };
 
-      actions.appendChild(createDeleteButton(() => { closeItemMenu(); deleteItem(item.id); }));
+        // Primary inline actions
+        addAction('edit', () => startEditItem(item.id));
+        addSep();
+        addAction('move', () => startMoveItem(item.id));
+        addSep();
 
-      row.appendChild(actions);
-
-      // Trigger area — contains optional comments indicator + hamburger
-      if (!isEditing) {
-        const triggerArea = document.createElement('div');
-        triggerArea.className = 'item-trigger-area';
-
-        // Comments indicator — for tasks and notes that have comments
-        if (commentCount > 0) {
-          const commentsIndicator = createCommentsButton(commentCount, isExpanded, () => {
-            closeItemMenu();
+        if (item.type === 'task') {
+          const commentLabel = commentCount > 0 ? `comments (${commentCount})` : 'comment';
+          const commentBtn = addAction(commentLabel, () => {
             state.expandedTaskId = isExpanded ? null : item.id;
             render();
           });
-          commentsIndicator.classList.add('comments-indicator');
-          triggerArea.appendChild(commentsIndicator);
+          if (commentCount > 0) commentBtn.classList.add('has-comments');
+        } else {
+          // Notes get "add update" link
+          const updateLabel = commentCount > 0 ? `updates (${commentCount})` : 'add update';
+          const updateBtn = addAction(updateLabel, () => {
+            state.expandedTaskId = item.id;
+            if (commentCount === 0) state.autoOpenEditor = item.id;
+            render();
+          });
+          if (commentCount > 0) updateBtn.classList.add('has-comments');
         }
 
-        const trigger = document.createElement('button');
-        trigger.type = 'button';
-        trigger.className = 'item-menu-trigger';
-        trigger.setAttribute('aria-label', 'Card options');
-        trigger.setAttribute('aria-expanded', openMenuId === item.id ? 'true' : 'false');
-        trigger.innerHTML = ICON_HAMBURGER;
-        trigger.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (openMenuId === item.id) { closeItemMenu(); }
-          else { openItemMenu(item.id); }
-          trigger.setAttribute('aria-expanded', openMenuId === item.id ? 'true' : 'false');
-        });
-        triggerArea.appendChild(trigger);
-        row.appendChild(triggerArea);
-      }
-      card.appendChild(row);
+        // Overflow menu (⋮) for less common actions
+        const overflowWrap = document.createElement('div');
+        overflowWrap.style.cssText = 'position: relative; margin-left: auto;';
 
-      // Quick "+ Add update" link for notes (visible without hamburger menu)
-      if (item.type === 'note' && !isEditing && !isExpanded) {
-        const quickAdd = document.createElement('button');
-        quickAdd.type = 'button';
-        quickAdd.className = 'note-quick-add';
-        quickAdd.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>Add update`;
-        quickAdd.addEventListener('click', (e) => {
+        const overflowBtn = document.createElement('button');
+        overflowBtn.type = 'button';
+        overflowBtn.className = 'card-overflow-btn';
+        overflowBtn.textContent = '⋮';
+        overflowBtn.setAttribute('aria-label', 'More options');
+
+        const overflowMenu = document.createElement('div');
+        overflowMenu.className = 'card-overflow-menu hidden';
+
+        // Overflow menu items
+        const addMenuItem = (label, onClick, danger = false) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = label;
+          if (danger) btn.classList.add('danger');
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            overflowMenu.classList.add('hidden');
+            onClick();
+          });
+          overflowMenu.appendChild(btn);
+        };
+
+        // "Start" for new tasks
+        if (item.type === 'task' && !item.completed && !item.shelved && item.boardColumn === 'new') {
+          addMenuItem('Start', () => moveTaskToColumn(item.id, 'active'));
+        }
+        // Shelf toggle for tasks
+        if (item.type === 'task' && !item.completed) {
+          addMenuItem(item.shelved ? 'Unshelve' : 'Shelve', () => toggleShelf(item.id));
+        }
+        addMenuItem('Send to ' + (state.listContext === 'work' ? 'Personal' : 'Work'), () => sendItemToOtherContext(item.id));
+        addMenuItem(item.type === 'task' ? 'Convert to note' : 'Convert to task', () => convertItem(item.id));
+        addMenuItem('Delete', () => deleteItem(item.id), true);
+
+        overflowBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          closeItemMenu();
-          state.expandedTaskId = item.id;
-          state.autoOpenEditor = item.id; // Signal to auto-open editor
-          render();
+          const isOpen = !overflowMenu.classList.contains('hidden');
+          // Close all other overflow menus first
+          document.querySelectorAll('.card-overflow-menu').forEach(m => m.classList.add('hidden'));
+          if (!isOpen) overflowMenu.classList.remove('hidden');
         });
-        card.appendChild(quickAdd);
+
+        overflowWrap.appendChild(overflowBtn);
+        overflowWrap.appendChild(overflowMenu);
+        actionBar.appendChild(overflowWrap);
+
+        card.appendChild(actionBar);
       }
 
       if (isExpanded) {
@@ -8240,6 +8326,13 @@
       const card = document.getElementById(`item-${openMenuId}`);
       if (card && !card.contains(e.target)) closeItemMenu();
     }, true);
+
+    // Close overflow menus when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.card-overflow-btn')) {
+        document.querySelectorAll('.card-overflow-menu').forEach(m => m.classList.add('hidden'));
+      }
+    });
 
     els.importCancel.addEventListener('click', () => {
       state.pendingImport = null;
