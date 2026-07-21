@@ -5521,13 +5521,16 @@
       if (item.type === 'task') {
         normalized.shelved = !!item.shelved;
         normalized.boardColumn = item.boardColumn === 'new' ? 'new' : 'active';
-        normalized.comments = Array.isArray(item.comments)
-          ? item.comments.filter(c => c && typeof c.content === 'string').map(c => ({
-              id: c.id || newId(),
-              content: c.content,
-              createdAt: c.createdAt || new Date().toISOString(),
-            }))
-          : [];
+      }
+      // Preserve comments for both tasks and notes
+      if (Array.isArray(item.comments) && item.comments.length > 0) {
+        normalized.comments = item.comments
+          .filter(c => c && typeof c.content === 'string')
+          .map(c => ({
+            id: c.id || newId(),
+            content: c.content,
+            createdAt: c.createdAt || new Date().toISOString(),
+          }));
       }
       return normalized;
     }
