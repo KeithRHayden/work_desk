@@ -3176,6 +3176,14 @@
       max-width: 100%;
     }
 
+    /* Paragraph breathing room in note cards */
+    .note-card .rich-content p {
+      margin-bottom: 0.55em;
+      line-height: 1.55;
+    }
+    .note-card .rich-content p:last-child { margin-bottom: 0; }
+    .note-card .rich-content p:empty { height: 0.4em; margin: 0; }
+
     .comments-toggle {
       position: relative;
       color: var(--text-muted);
@@ -3906,6 +3914,7 @@
         <h3>Possible future improvements</h3>
         <ul>
           <li><strong>Google Assistant integration</strong> — "Hey Google, what are my tasks for today?" / "Hey Google, add a task to do xyz" via a Google Actions webhook connected to the Supabase backend</li>
+          <li><strong>Data encryption</strong> — opt-in PIN or passphrase-based AES-256 encryption of stored data so the Supabase DB owner cannot read tasks in plain text; PIN (4–6 digits) blocks casual viewing, a full passphrase blocks determined attacks</li>
         </ul>
       </div>
       <div class="help-modal-footer">
@@ -5788,7 +5797,7 @@
               listContext,
             });
           }
-          if (item.type === 'task' && item.comments) {
+          if (item.comments) {
             for (const c of item.comments) {
               if (plainTextPreview(c.content, 20000).toLowerCase().includes(q)) {
                 results.push({
@@ -5846,7 +5855,9 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'search-result';
-        const typeLabel = r.itemType === 'note' ? 'Note' : r.matchType === 'comment' ? 'Task comment' : 'Task';
+        const typeLabel = r.itemType === 'note'
+          ? (r.matchType === 'comment' ? 'Note comment' : 'Note')
+          : r.matchType === 'comment' ? 'Task comment' : 'Task';
         let html =
           `<div class="search-result-date">${escapeHtml(formatSidebarLabel(r.date))}</div>` +
           `<div class="search-result-text">${escapeHtml(r.preview)}</div>` +
@@ -6965,7 +6976,7 @@
       if (isEmptyHtml(cleaned)) return;
 
       const found = findItem(taskId);
-      if (!found || found.item.type !== 'task') return;
+      if (!found) return;
 
       const comment = {
         id: newId(),
@@ -7123,7 +7134,7 @@
     function renderItem(item) {
       const isEditing = state.editingId === item.id;
       const isExpanded = state.expandedTaskId === item.id;
-      const commentCount = item.type === 'task' ? (item.comments || []).length : 0;
+      const commentCount = (item.comments || []).length;
 
       const isShelved = item.type === 'task' && item.shelved && !item.completed;
 
@@ -7185,7 +7196,13 @@
       } else {
         const content = document.createElement('div');
         content.className = 'item-content rich-content';
-        content.innerHTML = sanitizeHtml(item.content);
+        if (item.type === 'note') {
+          // Wrap <br>-delimited lines in <p> so CSS can add paragraph spacing
+          const parts = sanitizeHtml(item.content || '').split(/<br\s*\/?>/gi);
+          content.innerHTML = '<p>' + parts.join('</p><p>') + '</p>';
+        } else {
+          content.innerHTML = sanitizeHtml(item.content);
+        }
         content.title = 'Double-click to edit';
         content.addEventListener('dblclick', () => startEditItem(item.id));
         if (item.recurringTemplateId) {
@@ -7222,7 +7239,9 @@
         if (!item.completed) {
           actions.appendChild(createShelfButton(!!item.shelved, () => { closeItemMenu(); toggleShelf(item.id); }));
         }
-        // Comments button always in the action bar
+      }
+      if (!isEditing) {
+        // Comments button in action bar for both tasks and notes
         actions.appendChild(createCommentsButton(commentCount, isExpanded, () => {
           closeItemMenu();
           state.expandedTaskId = isExpanded ? null : item.id;
@@ -7239,8 +7258,8 @@
         const triggerArea = document.createElement('div');
         triggerArea.className = 'item-trigger-area';
 
-        // Comments indicator — only for tasks that have comments
-        if (item.type === 'task' && commentCount > 0) {
+        // Comments indicator — for tasks and notes that have comments
+        if (commentCount > 0) {
           const commentsIndicator = createCommentsButton(commentCount, isExpanded, () => {
             closeItemMenu();
             state.expandedTaskId = isExpanded ? null : item.id;
@@ -7267,7 +7286,7 @@
       }
       card.appendChild(row);
 
-      if (item.type === 'task' && isExpanded) {
+      if (isExpanded) {
         card.appendChild(renderCommentsPanel(item));
       }
 
