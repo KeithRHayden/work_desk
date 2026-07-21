@@ -8,22 +8,42 @@
   <script>
     (function () {
       const FAVICONS = {
+        // Light — Neutral/minimal
         '': '📋',
-        'solarized-light': '☀️',
         slate: '🪨',
+        arctic: '❄️',
+        paper: '📄',
+        // Light — Warm/earthy
+        latte: '☕',
+        sand: '🏖️',
+        coral: '🪸',
         rose: '🌹',
+        // Light — Nature/elegant
+        mint: '🌿',
+        lavender: '💜',
+        'solarized-light': '☀️',
+        'tokyo-day': '🗼',
+        // Light — Neon/vibrant
         vaporwave: '🌴',
         'synthwave-light': '🎹',
         'cyberpunk-light': '🦾',
         'outrun-light': '🌅',
+        // Dark — Base/neutral
         dark: '🌙',
-        'solarized-dark': '🔆',
         nord: '🧊',
         dracula: '🧛',
+        'solarized-dark': '🔆',
+        // Dark — Atmospheric
         ocean: '🌊',
         forest: '🌲',
         dusk: '🌇',
         warm: '🔥',
+        // Dark — Moody/rich
+        midnight: '🌌',
+        noir: '🎬',
+        mocha: '☕',
+        'rose-dark': '🥀',
+        // Dark — Neon/vibrant
         synthwave: '🌃',
         cyberpunk: '⚡',
         outrun: '🏎️',
@@ -47,7 +67,7 @@
       const stored = localStorage.getItem('work-desk-theme');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       let themeId = '';
-      if (stored !== null && Object.prototype.hasOwnProperty.call(FAVICONS, stored)) {
+      if (stored !== null && (stored === '' || stored in FAVICONS)) {
         themeId = stored;
         if (stored) document.documentElement.dataset.theme = stored;
       } else if (prefersDark) {
