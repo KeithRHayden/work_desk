@@ -896,6 +896,7 @@
       scrollbar-width: none;
     }
     .sidebar-daily::-webkit-scrollbar { display: none; }
+    .sidebar-daily.hidden { display: none; }
 
     /* ── Theme picker panel ────────────────────────────────────────────────── */
     .theme-picker-label {
@@ -1200,6 +1201,342 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
+    }
+
+    /* Projects sidebar list */
+    .sidebar-projects {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0 14px;
+      overflow: hidden;
+    }
+    .sidebar-projects.hidden { display: none; }
+
+    .projects-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 4px;
+      margin-bottom: 4px;
+    }
+
+    .projects-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--sidebar-muted);
+    }
+
+    .new-project-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      color: var(--sidebar-muted);
+      font-size: 1.1rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s, color 0.12s;
+    }
+    .new-project-btn:hover {
+      background: var(--sidebar-hover);
+      color: var(--sidebar-active);
+    }
+
+    .projects-list {
+      list-style: none;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .project-list-item {
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .project-list-item:hover {
+      background: var(--sidebar-hover);
+    }
+    .project-list-item.active {
+      background: var(--sidebar-tab-active-bg);
+    }
+
+    .project-list-name {
+      font-size: 0.85rem;
+      color: var(--sidebar-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .project-list-item.active .project-list-name {
+      color: var(--sidebar-active);
+      font-weight: 500;
+    }
+
+    .project-list-meta {
+      font-size: 0.72rem;
+      color: var(--sidebar-muted);
+      margin-top: 2px;
+    }
+
+    .project-list-empty {
+      padding: 16px 8px;
+      text-align: center;
+      color: var(--sidebar-muted);
+      font-size: 0.8rem;
+    }
+
+    /* Projects main view */
+    .projects-view {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .projects-view.hidden { display: none; }
+
+    .project-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .project-empty.hidden { display: none; }
+
+    .project-empty-text {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .project-detail {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .project-detail.hidden { display: none; }
+
+    .project-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+
+    .project-title {
+      flex: 1;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text);
+      border: none;
+      outline: none;
+      background: transparent;
+      padding: 4px 0;
+      border-radius: 4px;
+    }
+    .project-title:focus {
+      background: var(--input-bg);
+      padding: 4px 8px;
+      margin: 0 -8px;
+    }
+
+    .project-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .project-action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .project-action-btn:hover {
+      background: var(--panel-bg);
+      border-color: var(--text-muted);
+    }
+    .project-delete-btn:hover {
+      background: var(--delete-hover-bg);
+      border-color: var(--danger);
+    }
+
+    .project-body {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .project-notes-section,
+    .project-tasks-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .project-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .project-section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .project-add-btn {
+      font-size: 0.8rem;
+      color: var(--accent);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.12s;
+    }
+    .project-add-btn:hover {
+      background: var(--accent-light);
+    }
+
+    .project-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .project-item-card {
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .project-item-card.note-card {
+      background: var(--note-bg);
+      border-color: var(--note-border);
+    }
+
+    .project-item-title {
+      font-size: 0.95rem;
+      color: var(--text);
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .project-item-content {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+    .project-item-content p {
+      margin-bottom: 0.55em;
+    }
+    .project-item-content p:last-child { margin-bottom: 0; }
+
+    .project-item-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .project-item-actions {
+      display: flex;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+    .project-item-actions button {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .project-item-actions button:hover {
+      color: var(--accent);
+    }
+
+    .project-task-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .project-task-check {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 2px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .project-task-check:hover {
+      border-color: var(--accent);
+    }
+    .project-task-check.checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .project-task-check.checked::after {
+      content: '✓';
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .project-task-content {
+      flex: 1;
+    }
+
+    .project-task-text {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    .project-task-text.completed {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .project-items-empty {
+      padding: 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--panel-bg);
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
     }
 
     .help-modal .modal-box {
@@ -2433,6 +2770,10 @@
     .context-badge.personal {
       background: color-mix(in srgb, var(--shelved-label) 22%, var(--panel-bg));
       color: var(--shelved-label);
+    }
+    .context-badge.projects {
+      background: color-mix(in srgb, var(--accent) 18%, var(--panel-bg));
+      color: var(--accent);
     }
 
     .today-badge {
@@ -3757,6 +4098,7 @@
             <nav class="context-tabs" aria-label="List type">
               <button id="tab-work" class="app-tab active" type="button">Work</button>
               <button id="tab-personal" class="app-tab" type="button">Personal</button>
+              <button id="tab-projects" class="app-tab" type="button">Projects</button>
             </nav>
           </div>
 
@@ -3771,6 +4113,14 @@
           <nav class="date-nav desk-only" aria-label="Calendar">
             <div id="sidebar-calendar" class="sidebar-calendar"></div>
           </nav>
+        </div>
+
+        <div id="sidebar-projects" class="sidebar-projects hidden">
+          <div class="projects-header">
+            <span class="projects-label">Projects</span>
+            <button id="new-project-btn" class="new-project-btn" type="button" title="New project">+</button>
+          </div>
+          <ul id="projects-list" class="projects-list"></ul>
         </div>
 
         <div class="sidebar-backup">
@@ -3911,6 +4261,37 @@
       </div>
 
       <div id="insights-view" class="insights-only hidden"></div>
+
+      <div id="projects-view" class="projects-view hidden">
+        <div id="project-empty" class="project-empty">
+          <p class="project-empty-text">Select a project from the sidebar or create a new one</p>
+        </div>
+        <div id="project-detail" class="project-detail hidden">
+          <header class="project-header">
+            <h2 id="project-title" class="project-title" contenteditable="false"></h2>
+            <div class="project-actions">
+              <button id="project-rename-btn" class="project-action-btn" type="button" title="Rename project">✏️</button>
+              <button id="project-delete-btn" class="project-action-btn project-delete-btn" type="button" title="Delete project">🗑️</button>
+            </div>
+          </header>
+          <div class="project-body">
+            <section class="project-notes-section">
+              <div class="project-section-header">
+                <h3 class="project-section-title">Notes</h3>
+                <button id="project-add-note-btn" class="project-add-btn" type="button">+ Add note</button>
+              </div>
+              <div id="project-notes-list" class="project-items-list"></div>
+            </section>
+            <section class="project-tasks-section">
+              <div class="project-section-header">
+                <h3 class="project-section-title">Tasks</h3>
+                <button id="project-add-task-btn" class="project-add-btn" type="button">+ Add task</button>
+              </div>
+              <div id="project-tasks-list" class="project-items-list"></div>
+            </section>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -3947,7 +4328,8 @@
         <h3>What it does</h3>
         <ul>
           <li><strong>Daily desk</strong> — tasks and notes organized by day in New / Active / Done / Shelved columns</li>
-          <li><strong>Work &amp; Personal</strong> — separate lists, toggled in the sidebar</li>
+          <li><strong>Work, Personal &amp; Projects</strong> — three separate contexts, toggled in the sidebar</li>
+          <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
           <li><strong>Search</strong> — find tasks and notes across any day; use the <strong>Both</strong> chip to search Work and Personal together</li>
           <li><strong>Carry forward</strong> — bring unfinished tasks into today; use the <strong>▾</strong> menu on the carry button to turn on <strong>Auto carry each day</strong></li>
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define</li>
@@ -3968,6 +4350,14 @@
           <li><strong>Move to another day</strong> — reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
           <li><strong>Send to Work / Personal</strong> — moves a task or note to the other context list</li>
           <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough; hover to see them clearly</li>
+        </ul>
+
+        <h3>Projects</h3>
+        <ul>
+          <li><strong>What it's for</strong> — capture notes and tasks for long-running projects, side ideas, or collaborations that don't fit the daily workflow</li>
+          <li><strong>Create a project</strong> — click the <strong>Projects</strong> tab in the sidebar, then click <strong>+</strong> to add a new project</li>
+          <li><strong>Notes &amp; tasks</strong> — each project has its own notes and tasks; notes support updates (like comments) to track progress over time</li>
+          <li><strong>Cloud sync</strong> — projects sync to the cloud alongside your Work and Personal data</li>
         </ul>
 
         <h3>Board layout</h3>
@@ -4091,12 +4481,16 @@
     const SEARCH_ALL_CONTEXTS_KEY = 'work-desk-search-all-contexts';
     const AUTO_CARRY_FORWARD_KEY = 'work-desk-auto-carry-forward';
     const AUTO_CARRY_LAST_KEY = 'work-desk-auto-carry-last';
+    const PROJECTS_STORAGE_KEY = 'work-desk-projects';
+    const SELECTED_PROJECT_KEY = 'work-desk-selected-project';
     const RETENTION_MONTHS = 12;
     const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     function getListContext() {
       const stored = localStorage.getItem(LIST_CONTEXT_KEY);
-      return stored === 'personal' ? 'personal' : 'work';
+      if (stored === 'personal') return 'personal';
+      if (stored === 'projects') return 'projects';
+      return 'work';
     }
 
     function getStorageKey(context = state.listContext) {
@@ -4110,7 +4504,9 @@
     }
 
     function getContextLabel(ctx = state.listContext) {
-      return ctx === 'personal' ? 'Personal' : 'Work';
+      if (ctx === 'personal') return 'Personal';
+      if (ctx === 'projects') return 'Projects';
+      return 'Work';
     }
 
     migrateLegacyStorage();
@@ -4135,9 +4531,13 @@
       insightsAnchor: todayKey(),
       calendarView: null,
       weekAnchorKey: null,
+      projectsData: null,
+      selectedProjectId: localStorage.getItem(SELECTED_PROJECT_KEY) || null,
+      editingProjectItemId: null,
     };
 
     state.data = loadData();
+    state.projectsData = loadProjectsData();
 
     const els = {
       headerTodayBtn: document.getElementById('header-today-btn'),
@@ -4203,9 +4603,24 @@
       tabInsights: document.getElementById('tab-insights'),
       tabWork: document.getElementById('tab-work'),
       tabPersonal: document.getElementById('tab-personal'),
+      tabProjects: document.getElementById('tab-projects'),
       logoSub: document.getElementById('logo-sub-text'),
       deskView: document.getElementById('desk-view'),
       insightsView: document.getElementById('insights-view'),
+      projectsView: document.getElementById('projects-view'),
+      projectEmpty: document.getElementById('project-empty'),
+      projectDetail: document.getElementById('project-detail'),
+      projectTitle: document.getElementById('project-title'),
+      projectRenameBtn: document.getElementById('project-rename-btn'),
+      projectDeleteBtn: document.getElementById('project-delete-btn'),
+      projectAddNoteBtn: document.getElementById('project-add-note-btn'),
+      projectAddTaskBtn: document.getElementById('project-add-task-btn'),
+      projectNotesList: document.getElementById('project-notes-list'),
+      projectTasksList: document.getElementById('project-tasks-list'),
+      sidebarDaily: document.querySelector('.sidebar-daily'),
+      sidebarProjects: document.getElementById('sidebar-projects'),
+      projectsList: document.getElementById('projects-list'),
+      newProjectBtn: document.getElementById('new-project-btn'),
       toast: document.getElementById('toast'),
     };
 
@@ -5650,6 +6065,165 @@
       return { days: {} };
     }
 
+    function loadProjectsData() {
+      try {
+        const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return { projects: parsed.projects || [] };
+        }
+      } catch (_) {}
+      return { projects: [] };
+    }
+
+    function saveProjectsData() {
+      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(state.projectsData));
+      localStorage.setItem(SB_TS_KEY, new Date().toISOString());
+      if (sbSynced) sbSchedulePush();
+    }
+
+    function generateProjectId() {
+      return 'proj_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function generateProjectItemId() {
+      return 'pi_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function createProject(name) {
+      const project = {
+        id: generateProjectId(),
+        name: name || 'New Project',
+        createdAt: new Date().toISOString(),
+        notes: [],
+        tasks: [],
+      };
+      state.projectsData.projects.push(project);
+      saveProjectsData();
+      return project;
+    }
+
+    function getProject(projectId) {
+      return state.projectsData.projects.find(p => p.id === projectId) || null;
+    }
+
+    function renameProject(projectId, newName) {
+      const project = getProject(projectId);
+      if (project && newName && newName.trim()) {
+        project.name = newName.trim();
+        saveProjectsData();
+        renderProjectsList();
+        return true;
+      }
+      return false;
+    }
+
+    function deleteProject(projectId) {
+      const idx = state.projectsData.projects.findIndex(p => p.id === projectId);
+      if (idx !== -1) {
+        state.projectsData.projects.splice(idx, 1);
+        saveProjectsData();
+        if (state.selectedProjectId === projectId) {
+          state.selectedProjectId = null;
+          localStorage.removeItem(SELECTED_PROJECT_KEY);
+        }
+        renderProjectsList();
+        renderProjectDetail();
+        return true;
+      }
+      return false;
+    }
+
+    function addProjectNote(projectId, content) {
+      const project = getProject(projectId);
+      if (!project) return null;
+      const note = {
+        id: generateProjectItemId(),
+        type: 'note',
+        content: content || '',
+        createdAt: new Date().toISOString(),
+        comments: [],
+      };
+      project.notes.push(note);
+      saveProjectsData();
+      return note;
+    }
+
+    function addProjectTask(projectId, content) {
+      const project = getProject(projectId);
+      if (!project) return null;
+      const task = {
+        id: generateProjectItemId(),
+        type: 'task',
+        content: content || '',
+        completed: false,
+        createdAt: new Date().toISOString(),
+        comments: [],
+      };
+      project.tasks.push(task);
+      saveProjectsData();
+      return task;
+    }
+
+    function updateProjectItem(projectId, itemId, updates) {
+      const project = getProject(projectId);
+      if (!project) return false;
+      let item = project.notes.find(n => n.id === itemId) || project.tasks.find(t => t.id === itemId);
+      if (item) {
+        Object.assign(item, updates);
+        saveProjectsData();
+        return true;
+      }
+      return false;
+    }
+
+    function deleteProjectItem(projectId, itemId) {
+      const project = getProject(projectId);
+      if (!project) return false;
+      let idx = project.notes.findIndex(n => n.id === itemId);
+      if (idx !== -1) {
+        project.notes.splice(idx, 1);
+        saveProjectsData();
+        return true;
+      }
+      idx = project.tasks.findIndex(t => t.id === itemId);
+      if (idx !== -1) {
+        project.tasks.splice(idx, 1);
+        saveProjectsData();
+        return true;
+      }
+      return false;
+    }
+
+    function toggleProjectTaskComplete(projectId, taskId) {
+      const project = getProject(projectId);
+      if (!project) return false;
+      const task = project.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.completed = !task.completed;
+        saveProjectsData();
+        return true;
+      }
+      return false;
+    }
+
+    function addProjectItemComment(projectId, itemId, commentText) {
+      const project = getProject(projectId);
+      if (!project) return false;
+      let item = project.notes.find(n => n.id === itemId) || project.tasks.find(t => t.id === itemId);
+      if (item && commentText && commentText.trim()) {
+        if (!item.comments) item.comments = [];
+        item.comments.push({
+          id: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+          text: commentText.trim(),
+          createdAt: new Date().toISOString(),
+        });
+        saveProjectsData();
+        return true;
+      }
+      return false;
+    }
+
     // Scan all contexts, remove duplicates in-place, and re-save
     function repairData() {
       let totalFixed = 0;
@@ -5690,6 +6264,7 @@
       return {
         personal: get('work-desk-data-personal') || { days: {} },
         work:     get('work-desk-data-work')     || { days: {} },
+        projects: get(PROJECTS_STORAGE_KEY) || { projects: [] },
       };
     }
 
@@ -5793,6 +6368,10 @@
           ['personal', 'work'].forEach(ctx => {
             if (remote.data[ctx]) localStorage.setItem(`work-desk-data-${ctx}`, JSON.stringify(remote.data[ctx]));
           });
+          if (remote.data.projects) {
+            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(remote.data.projects));
+            state.projectsData = loadProjectsData();
+          }
           localStorage.setItem(SB_TS_KEY, remote.updated_at);
           state.data = loadData();
           render();
@@ -6128,6 +6707,43 @@
     }
 
     function validateImportData(raw) {
+      // Check if this is a projects backup
+      if (raw.type === 'projects' && Array.isArray(raw.projects)) {
+        const cleaned = { type: 'projects', projects: [] };
+        for (const project of raw.projects) {
+          if (!project || typeof project.id !== 'string' || typeof project.name !== 'string') continue;
+          const cleanedProject = {
+            id: project.id,
+            name: project.name,
+            createdAt: project.createdAt || new Date().toISOString(),
+            notes: [],
+            tasks: [],
+          };
+          if (Array.isArray(project.notes)) {
+            cleanedProject.notes = project.notes.filter(n => n && typeof n.id === 'string').map(n => ({
+              id: n.id,
+              type: 'note',
+              content: n.content || '',
+              createdAt: n.createdAt || new Date().toISOString(),
+              comments: Array.isArray(n.comments) ? n.comments : [],
+            }));
+          }
+          if (Array.isArray(project.tasks)) {
+            cleanedProject.tasks = project.tasks.filter(t => t && typeof t.id === 'string').map(t => ({
+              id: t.id,
+              type: 'task',
+              content: t.content || '',
+              completed: !!t.completed,
+              createdAt: t.createdAt || new Date().toISOString(),
+              comments: Array.isArray(t.comments) ? t.comments : [],
+            }));
+          }
+          cleaned.projects.push(cleanedProject);
+        }
+        return cleaned.projects.length > 0 ? cleaned : null;
+      }
+
+      // Standard days-based backup
       const data = raw.days ? raw : { days: raw };
       if (!data.days || typeof data.days !== 'object') return null;
 
@@ -6431,22 +7047,40 @@
     // ── End recurring ──────────────────────────────────────────────────
 
     function exportBackup() {
-      const payload = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        app: 'work-desk',
-        days: state.data.days,
-      };
+      let payload, filename, toastMsg;
+
+      if (state.listContext === 'projects') {
+        payload = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          app: 'work-desk',
+          type: 'projects',
+          projects: state.projectsData.projects,
+        };
+        filename = `work-desk-backup-projects-${todayKey()}.json`;
+        const projectCount = state.projectsData.projects.length;
+        toastMsg = `Exported ${projectCount} project${projectCount !== 1 ? 's' : ''}`;
+      } else {
+        payload = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          app: 'work-desk',
+          days: state.data.days,
+        };
+        filename = `work-desk-backup-${state.listContext}-${todayKey()}.json`;
+        const { days, items } = countItems(state.data);
+        toastMsg = `Exported ${getContextLabel().toLowerCase()} list — ${items} items from ${days} days`;
+      }
+
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `work-desk-backup-${state.listContext}-${todayKey()}.json`;
+      link.download = filename;
       link.click();
       URL.revokeObjectURL(url);
 
-      const { days, items } = countItems(state.data);
-      showToast(`Exported ${getContextLabel().toLowerCase()} list — ${items} items from ${days} days`);
+      showToast(toastMsg);
     }
 
     function mergeImportData(imported) {
@@ -6471,6 +7105,32 @@
     function applyImport(mode) {
       if (!state.pendingImport) return;
 
+      // Handle projects import
+      if (state.pendingImport.type === 'projects') {
+        if (mode === 'replace') {
+          state.projectsData = { projects: state.pendingImport.projects };
+        } else {
+          // Merge: add projects that don't exist by ID
+          const existingIds = new Set(state.projectsData.projects.map(p => p.id));
+          for (const proj of state.pendingImport.projects) {
+            if (!existingIds.has(proj.id)) {
+              state.projectsData.projects.push(proj);
+            }
+          }
+        }
+        saveProjectsData();
+        state.pendingImport = null;
+        els.importModal.classList.add('hidden');
+        els.importFile.value = '';
+        const count = state.projectsData.projects.length;
+        showToast(mode === 'replace'
+          ? `Replaced with backup (${count} project${count !== 1 ? 's' : ''})`
+          : `Merged backup — now ${count} project${count !== 1 ? 's' : ''}`);
+        render();
+        return;
+      }
+
+      // Standard days-based import
       if (mode === 'replace') {
         state.data = state.pendingImport;
       } else {
@@ -6502,6 +7162,18 @@
             return;
           }
 
+          // Handle projects import
+          if (validated.type === 'projects') {
+            const projectCount = validated.projects.length;
+            state.pendingImport = validated;
+            els.importModalText.textContent =
+              `Import ${projectCount} project${projectCount !== 1 ? 's' : ''} into Projects. ` +
+              'Merge adds new projects. Replace overwrites all projects.';
+            els.importModal.classList.remove('hidden');
+            return;
+          }
+
+          // Standard days-based import
           const { days, items } = countItems(validated);
           state.pendingImport = validated;
           els.importModalText.textContent =
@@ -8139,54 +8811,530 @@
         clearEditing();
         clearMoveModal();
       }
+      // If in projects context, switch to work context when accessing desk/insights
+      if (state.listContext === 'projects') {
+        setListContext('work');
+        return;
+      }
       render();
     }
 
     function setListContext(ctx, options = {}) {
       const { preserveSearch = false } = options;
       if (ctx === state.listContext) return;
-      saveData();
+
+      const wasProjects = state.listContext === 'projects';
+      const isProjects = ctx === 'projects';
+
+      if (!wasProjects) {
+        saveData();
+      }
+
       state.listContext = ctx;
       localStorage.setItem(LIST_CONTEXT_KEY, ctx);
-      state.data = loadData(ctx);
-      clearEditing();
-      clearMoveModal();
-      state.expandedTaskId = null;
-      state.pendingImport = null;
-      if (!preserveSearch) {
-        state.searchQuery = '';
-        state.highlightItemId = null;
-        els.searchInput.value = '';
+
+      if (!isProjects) {
+        state.data = loadData(ctx);
+        clearEditing();
+        clearMoveModal();
+        state.expandedTaskId = null;
+        state.pendingImport = null;
+        if (!preserveSearch) {
+          state.searchQuery = '';
+          state.highlightItemId = null;
+          els.searchInput.value = '';
+        }
+        state.calendarView = null;
+        clearPendingUndo();
+        syncSearchUi();
+        if (!preserveSearch) renderSearchResults();
+        maybeAutoArchive();
+        injectDueTemplates();
+        maybeAutoCarryForward();
+      } else {
+        state.editingProjectItemId = null;
       }
-      state.calendarView = null;
-      clearPendingUndo();
-      syncSearchUi();
-      if (!preserveSearch) renderSearchResults();
-      maybeAutoArchive();
-      injectDueTemplates();
-      maybeAutoCarryForward();
+
       render();
     }
 
     function renderSidebar() {
       const isDesk = state.activeTab === 'desk';
+      const isProjects = state.listContext === 'projects';
       const isWork = state.listContext === 'work';
+      const isPersonal = state.listContext === 'personal';
 
-      els.tabDesk.classList.toggle('active', isDesk);
-      els.tabInsights.classList.toggle('active', !isDesk);
+      els.tabDesk.classList.toggle('active', isDesk && !isProjects);
+      els.tabInsights.classList.toggle('active', !isDesk && !isProjects);
       els.tabWork.classList.toggle('active', isWork);
-      els.tabPersonal.classList.toggle('active', !isWork);
+      els.tabPersonal.classList.toggle('active', isPersonal);
+      els.tabProjects.classList.toggle('active', isProjects);
+
       if (els.logoSub) {
-        els.logoSub.textContent = isWork ? 'Work tasks & notes' : 'Personal tasks & notes';
+        if (isProjects) {
+          els.logoSub.textContent = 'Projects & ideas';
+        } else {
+          els.logoSub.textContent = isWork ? 'Work tasks & notes' : 'Personal tasks & notes';
+        }
       }
-      els.deskView.classList.toggle('hidden', !isDesk);
-      els.insightsView.classList.toggle('hidden', isDesk);
+
+      els.deskView.classList.toggle('hidden', !isDesk || isProjects);
+      els.insightsView.classList.toggle('hidden', isDesk || isProjects);
+      els.projectsView.classList.toggle('hidden', !isProjects);
+
+      els.sidebarDaily.classList.toggle('hidden', isProjects);
+      els.sidebarProjects.classList.toggle('hidden', !isProjects);
 
       document.querySelectorAll('.desk-only').forEach((el) => {
-        el.classList.toggle('hidden', !isDesk);
+        el.classList.toggle('hidden', !isDesk || isProjects);
       });
 
-      renderCalendar();
+      if (isProjects) {
+        renderProjectsList();
+        renderProjectDetail();
+      } else {
+        renderCalendar();
+      }
+    }
+
+    function renderProjectsList() {
+      const projects = state.projectsData?.projects || [];
+      els.projectsList.innerHTML = '';
+
+      if (projects.length === 0) {
+        const emptyLi = document.createElement('li');
+        emptyLi.className = 'project-list-empty';
+        emptyLi.textContent = 'No projects yet';
+        els.projectsList.appendChild(emptyLi);
+        return;
+      }
+
+      projects.forEach(project => {
+        const li = document.createElement('li');
+        li.className = 'project-list-item';
+        if (project.id === state.selectedProjectId) {
+          li.classList.add('active');
+        }
+        li.dataset.projectId = project.id;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'project-list-name';
+        nameSpan.textContent = project.name;
+
+        const metaSpan = document.createElement('span');
+        metaSpan.className = 'project-list-meta';
+        const notesCount = project.notes?.length || 0;
+        const tasksCount = project.tasks?.length || 0;
+        const parts = [];
+        if (notesCount > 0) parts.push(`${notesCount} note${notesCount !== 1 ? 's' : ''}`);
+        if (tasksCount > 0) parts.push(`${tasksCount} task${tasksCount !== 1 ? 's' : ''}`);
+        metaSpan.textContent = parts.length > 0 ? parts.join(' · ') : 'Empty';
+
+        li.appendChild(nameSpan);
+        li.appendChild(metaSpan);
+
+        li.addEventListener('click', () => selectProject(project.id));
+        els.projectsList.appendChild(li);
+      });
+    }
+
+    function selectProject(projectId) {
+      state.selectedProjectId = projectId;
+      localStorage.setItem(SELECTED_PROJECT_KEY, projectId);
+      renderProjectsList();
+      renderProjectDetail();
+    }
+
+    function renderProjectDetail() {
+      const project = getProject(state.selectedProjectId);
+
+      if (!project) {
+        els.projectEmpty.classList.remove('hidden');
+        els.projectDetail.classList.add('hidden');
+        return;
+      }
+
+      els.projectEmpty.classList.add('hidden');
+      els.projectDetail.classList.remove('hidden');
+
+      els.projectTitle.textContent = project.name;
+      els.projectTitle.contentEditable = 'false';
+
+      renderProjectNotes(project);
+      renderProjectTasks(project);
+    }
+
+    function renderProjectNotes(project) {
+      els.projectNotesList.innerHTML = '';
+
+      if (!project.notes || project.notes.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'project-items-empty';
+        emptyDiv.textContent = 'No notes yet — add one to start capturing ideas';
+        els.projectNotesList.appendChild(emptyDiv);
+        return;
+      }
+
+      project.notes.forEach(note => {
+        const card = createProjectNoteCard(project.id, note);
+        els.projectNotesList.appendChild(card);
+      });
+    }
+
+    function renderProjectTasks(project) {
+      els.projectTasksList.innerHTML = '';
+
+      if (!project.tasks || project.tasks.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'project-items-empty';
+        emptyDiv.textContent = 'No tasks yet — add one to track action items';
+        els.projectTasksList.appendChild(emptyDiv);
+        return;
+      }
+
+      project.tasks.forEach(task => {
+        const card = createProjectTaskCard(project.id, task);
+        els.projectTasksList.appendChild(card);
+      });
+    }
+
+    function createProjectNoteCard(projectId, note) {
+      const card = document.createElement('div');
+      card.className = 'project-item-card note-card';
+      card.dataset.itemId = note.id;
+
+      const isEditing = state.editingProjectItemId === note.id;
+
+      if (isEditing) {
+        const editor = document.createElement('div');
+        editor.className = 'project-item-editor';
+        editor.contentEditable = 'true';
+        editor.innerHTML = sanitizeHtml(note.content || '');
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'project-add-btn';
+        saveBtn.textContent = 'Save';
+        saveBtn.style.marginTop = '8px';
+        saveBtn.addEventListener('click', () => {
+          const newContent = serializeEditorHtml(editor);
+          updateProjectItem(projectId, note.id, { content: newContent });
+          state.editingProjectItemId = null;
+          renderProjectDetail();
+        });
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'project-add-btn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.marginTop = '8px';
+        cancelBtn.style.marginLeft = '8px';
+        cancelBtn.style.color = 'var(--text-muted)';
+        cancelBtn.addEventListener('click', () => {
+          state.editingProjectItemId = null;
+          renderProjectDetail();
+        });
+
+        card.appendChild(editor);
+        card.appendChild(saveBtn);
+        card.appendChild(cancelBtn);
+
+        setTimeout(() => {
+          editor.focus();
+          const sel = window.getSelection();
+          sel.selectAllChildren(editor);
+          sel.collapseToEnd();
+        }, 0);
+      } else {
+        const content = document.createElement('div');
+        content.className = 'project-item-content';
+        const parts = sanitizeHtml(note.content || '').split(/<br\s*\/?>/gi);
+        content.innerHTML = '<p>' + parts.join('</p><p>') + '</p>';
+
+        const meta = document.createElement('div');
+        meta.className = 'project-item-meta';
+
+        const dateSpan = document.createElement('span');
+        const created = new Date(note.createdAt);
+        dateSpan.textContent = created.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        const commentCount = note.comments?.length || 0;
+        if (commentCount > 0) {
+          dateSpan.textContent += ` · ${commentCount} update${commentCount !== 1 ? 's' : ''}`;
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'project-item-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.textContent = 'edit';
+        editBtn.addEventListener('click', () => {
+          state.editingProjectItemId = note.id;
+          renderProjectDetail();
+        });
+
+        const addUpdateBtn = document.createElement('button');
+        addUpdateBtn.type = 'button';
+        addUpdateBtn.textContent = 'add update';
+        addUpdateBtn.addEventListener('click', () => {
+          showProjectItemCommentEditor(card, projectId, note.id);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = 'delete';
+        deleteBtn.style.color = 'var(--danger)';
+        deleteBtn.addEventListener('click', () => {
+          if (confirm('Delete this note?')) {
+            deleteProjectItem(projectId, note.id);
+            renderProjectDetail();
+          }
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(addUpdateBtn);
+        actions.appendChild(deleteBtn);
+
+        meta.appendChild(dateSpan);
+        meta.appendChild(actions);
+
+        card.appendChild(content);
+        card.appendChild(meta);
+
+        if (note.comments && note.comments.length > 0) {
+          const commentsDiv = document.createElement('div');
+          commentsDiv.className = 'project-item-comments';
+          commentsDiv.style.marginTop = '12px';
+          commentsDiv.style.paddingTop = '10px';
+          commentsDiv.style.borderTop = '1px solid var(--border)';
+
+          note.comments.forEach(comment => {
+            const commentEl = document.createElement('div');
+            commentEl.style.fontSize = '0.82rem';
+            commentEl.style.color = 'var(--text-muted)';
+            commentEl.style.marginBottom = '6px';
+
+            const timeEl = document.createElement('span');
+            timeEl.style.fontSize = '0.72rem';
+            timeEl.style.color = 'var(--text-muted)';
+            timeEl.style.opacity = '0.7';
+            const commentDate = new Date(comment.createdAt);
+            timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ';
+
+            commentEl.appendChild(timeEl);
+            commentEl.appendChild(document.createTextNode(comment.text));
+            commentsDiv.appendChild(commentEl);
+          });
+
+          card.appendChild(commentsDiv);
+        }
+      }
+
+      return card;
+    }
+
+    function createProjectTaskCard(projectId, task) {
+      const card = document.createElement('div');
+      card.className = 'project-item-card';
+      card.dataset.itemId = task.id;
+
+      const row = document.createElement('div');
+      row.className = 'project-task-row';
+
+      const checkBtn = document.createElement('button');
+      checkBtn.type = 'button';
+      checkBtn.className = 'project-task-check' + (task.completed ? ' checked' : '');
+      checkBtn.addEventListener('click', () => {
+        toggleProjectTaskComplete(projectId, task.id);
+        renderProjectDetail();
+      });
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'project-task-content';
+
+      const isEditing = state.editingProjectItemId === task.id;
+
+      if (isEditing) {
+        const editor = document.createElement('div');
+        editor.className = 'project-item-editor';
+        editor.contentEditable = 'true';
+        editor.innerHTML = sanitizeHtml(task.content || '');
+        editor.style.minHeight = '32px';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'project-add-btn';
+        saveBtn.textContent = 'Save';
+        saveBtn.style.marginTop = '8px';
+        saveBtn.addEventListener('click', () => {
+          const newContent = serializeEditorHtml(editor);
+          updateProjectItem(projectId, task.id, { content: newContent });
+          state.editingProjectItemId = null;
+          renderProjectDetail();
+        });
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'project-add-btn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.marginTop = '8px';
+        cancelBtn.style.marginLeft = '8px';
+        cancelBtn.style.color = 'var(--text-muted)';
+        cancelBtn.addEventListener('click', () => {
+          state.editingProjectItemId = null;
+          renderProjectDetail();
+        });
+
+        contentDiv.appendChild(editor);
+        contentDiv.appendChild(saveBtn);
+        contentDiv.appendChild(cancelBtn);
+
+        setTimeout(() => {
+          editor.focus();
+          const sel = window.getSelection();
+          sel.selectAllChildren(editor);
+          sel.collapseToEnd();
+        }, 0);
+      } else {
+        const textSpan = document.createElement('span');
+        textSpan.className = 'project-task-text' + (task.completed ? ' completed' : '');
+        textSpan.innerHTML = sanitizeHtml(task.content || '');
+
+        const meta = document.createElement('div');
+        meta.className = 'project-item-meta';
+        meta.style.marginTop = '6px';
+
+        const actions = document.createElement('div');
+        actions.className = 'project-item-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.textContent = 'edit';
+        editBtn.addEventListener('click', () => {
+          state.editingProjectItemId = task.id;
+          renderProjectDetail();
+        });
+
+        const commentBtn = document.createElement('button');
+        commentBtn.type = 'button';
+        const commentCount = task.comments?.length || 0;
+        commentBtn.textContent = commentCount > 0 ? `comments (${commentCount})` : 'comment';
+        commentBtn.addEventListener('click', () => {
+          showProjectItemCommentEditor(card, projectId, task.id);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = 'delete';
+        deleteBtn.style.color = 'var(--danger)';
+        deleteBtn.addEventListener('click', () => {
+          if (confirm('Delete this task?')) {
+            deleteProjectItem(projectId, task.id);
+            renderProjectDetail();
+          }
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(commentBtn);
+        actions.appendChild(deleteBtn);
+        meta.appendChild(actions);
+
+        contentDiv.appendChild(textSpan);
+        contentDiv.appendChild(meta);
+
+        if (task.comments && task.comments.length > 0) {
+          const commentsDiv = document.createElement('div');
+          commentsDiv.style.marginTop = '10px';
+          commentsDiv.style.paddingTop = '8px';
+          commentsDiv.style.borderTop = '1px solid var(--border)';
+
+          task.comments.forEach(comment => {
+            const commentEl = document.createElement('div');
+            commentEl.style.fontSize = '0.82rem';
+            commentEl.style.color = 'var(--text-muted)';
+            commentEl.style.marginBottom = '6px';
+
+            const timeEl = document.createElement('span');
+            timeEl.style.fontSize = '0.72rem';
+            timeEl.style.opacity = '0.7';
+            const commentDate = new Date(comment.createdAt);
+            timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ';
+
+            commentEl.appendChild(timeEl);
+            commentEl.appendChild(document.createTextNode(comment.text));
+            commentsDiv.appendChild(commentEl);
+          });
+
+          contentDiv.appendChild(commentsDiv);
+        }
+      }
+
+      row.appendChild(checkBtn);
+      row.appendChild(contentDiv);
+      card.appendChild(row);
+
+      return card;
+    }
+
+    function showProjectItemCommentEditor(card, projectId, itemId) {
+      let editorWrap = card.querySelector('.project-comment-editor-wrap');
+      if (editorWrap) {
+        editorWrap.remove();
+        return;
+      }
+
+      editorWrap = document.createElement('div');
+      editorWrap.className = 'project-comment-editor-wrap';
+      editorWrap.style.marginTop = '12px';
+      editorWrap.style.paddingTop = '10px';
+      editorWrap.style.borderTop = '1px solid var(--border)';
+
+      const editor = document.createElement('textarea');
+      editor.className = 'project-comment-editor';
+      editor.placeholder = 'Add a comment or update...';
+      editor.style.width = '100%';
+      editor.style.minHeight = '60px';
+      editor.style.padding = '8px';
+      editor.style.border = '1px solid var(--border)';
+      editor.style.borderRadius = '6px';
+      editor.style.fontSize = '0.85rem';
+      editor.style.resize = 'vertical';
+      editor.style.background = 'var(--input-bg)';
+      editor.style.color = 'var(--text)';
+
+      const btnRow = document.createElement('div');
+      btnRow.style.display = 'flex';
+      btnRow.style.gap = '8px';
+      btnRow.style.marginTop = '8px';
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'project-add-btn';
+      addBtn.textContent = 'Add';
+      addBtn.addEventListener('click', () => {
+        if (editor.value.trim()) {
+          addProjectItemComment(projectId, itemId, editor.value.trim());
+          renderProjectDetail();
+        }
+      });
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'project-add-btn';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.color = 'var(--text-muted)';
+      cancelBtn.addEventListener('click', () => {
+        editorWrap.remove();
+      });
+
+      btnRow.appendChild(addBtn);
+      btnRow.appendChild(cancelBtn);
+      editorWrap.appendChild(editor);
+      editorWrap.appendChild(btnRow);
+      card.appendChild(editorWrap);
+
+      setTimeout(() => editor.focus(), 0);
     }
 
     function renderDesk() {
@@ -8199,6 +9347,7 @@
       els.dateTitle.textContent = formatFullDate(state.selectedDate);
       els.contextBadge.textContent = getContextLabel();
       els.contextBadge.classList.toggle('personal', state.listContext === 'personal');
+      els.contextBadge.classList.toggle('projects', state.listContext === 'projects');
       renderProgressBar(stats);
       renderProgressLegend(stats);
 
@@ -8256,6 +9405,10 @@
 
     function render() {
       renderSidebar();
+      if (state.listContext === 'projects') {
+        // Projects view is rendered in renderSidebar
+        return;
+      }
       if (state.activeTab === 'insights') {
         renderInsights();
       } else {
@@ -8400,6 +9553,51 @@
     els.tabInsights.addEventListener('click', () => setActiveTab('insights'));
     els.tabWork.addEventListener('click', () => setListContext('work'));
     els.tabPersonal.addEventListener('click', () => setListContext('personal'));
+    els.tabProjects.addEventListener('click', () => setListContext('projects'));
+
+    els.newProjectBtn.addEventListener('click', () => {
+      const name = prompt('Project name:');
+      if (name && name.trim()) {
+        const project = createProject(name.trim());
+        selectProject(project.id);
+      }
+    });
+
+    els.projectRenameBtn.addEventListener('click', () => {
+      const project = getProject(state.selectedProjectId);
+      if (!project) return;
+      const newName = prompt('Rename project:', project.name);
+      if (newName && newName.trim() && newName.trim() !== project.name) {
+        renameProject(project.id, newName.trim());
+        renderProjectDetail();
+      }
+    });
+
+    els.projectDeleteBtn.addEventListener('click', () => {
+      const project = getProject(state.selectedProjectId);
+      if (!project) return;
+      if (confirm(`Delete project "${project.name}" and all its contents?`)) {
+        deleteProject(project.id);
+      }
+    });
+
+    els.projectAddNoteBtn.addEventListener('click', () => {
+      if (!state.selectedProjectId) return;
+      const note = addProjectNote(state.selectedProjectId, '');
+      if (note) {
+        state.editingProjectItemId = note.id;
+        renderProjectDetail();
+      }
+    });
+
+    els.projectAddTaskBtn.addEventListener('click', () => {
+      if (!state.selectedProjectId) return;
+      const task = addProjectTask(state.selectedProjectId, '');
+      if (task) {
+        state.editingProjectItemId = task.id;
+        renderProjectDetail();
+      }
+    });
 
     els.recurringBtn.addEventListener('click', openRecurringModal);
     els.recurringClose.addEventListener('click', closeRecurringModal);
