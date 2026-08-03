@@ -5508,7 +5508,8 @@
         return;
       }
 
-      const item = found.item;
+      // Deep clone the item to preserve all properties including comments
+      const item = JSON.parse(JSON.stringify(found.item));
       const sourceDay = state.data.days[sourceDate];
       const remaining = sourceDay.items.filter(i => i.id !== itemId);
 
@@ -5855,6 +5856,8 @@
 
     function saveData() {
       localStorage.setItem(getStorageKey(), JSON.stringify(state.data));
+      // Update local timestamp immediately so a refresh before push won't overwrite local changes
+      localStorage.setItem(SB_TS_KEY, new Date().toISOString());
       if (sbSynced) sbSchedulePush();
     }
 
@@ -6090,7 +6093,9 @@
       if (remaining.length === 0) delete state.data.days[sourceDate];
       else state.data.days[sourceDate] = { ...sourceDay, items: remaining };
 
-      state.data.days[today] = { date: today, items: [...targetDay.items, ...toAdd] };
+      // Deep clone items to preserve all properties including comments
+      const clonedItems = toAdd.map(i => JSON.parse(JSON.stringify(i)));
+      state.data.days[today] = { date: today, items: [...targetDay.items, ...clonedItems] };
       if (!auto) {
         state.selectedDate = today;
         syncCalendarViewToSelected();
