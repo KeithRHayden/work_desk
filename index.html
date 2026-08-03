@@ -892,7 +892,7 @@
       overflow-x: hidden;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 16px;
       scrollbar-width: none;
     }
     .sidebar-daily::-webkit-scrollbar { display: none; }
@@ -2052,6 +2052,8 @@
       background: rgba(255, 255, 255, 0.05);
       border-radius: 10px;
       border: 1px solid var(--sidebar-border);
+      margin-bottom: 16px;
+      flex-shrink: 0;
     }
 
     .app-tabs,
@@ -2060,21 +2062,20 @@
       gap: 4px;
       padding: 0;
       background: transparent;
+      justify-content: center;
       border: none;
       border-radius: 0;
     }
 
     .context-tabs {
-      margin: 4px 18px 0;
+      margin-top: 2px;
       padding-top: 4px;
       border-top: 1px solid var(--sidebar-border);
-      width: calc(100% - 36px);
-      align-self: center;
     }
 
     .context-tabs .app-tab {
-      padding: 6px 8px;
-      font-size: 0.78rem;
+      padding: 6px 10px;
+      font-size: 0.76rem;
     }
 
     .app-tab {
@@ -4089,19 +4090,19 @@
       </div>
 
       <div class="sidebar-body">
-        <div class="sidebar-daily">
-          <div class="sidebar-tabs">
-            <nav class="app-tabs" aria-label="App views">
-              <button id="tab-desk" class="app-tab active" type="button">Desk</button>
-              <button id="tab-insights" class="app-tab" type="button">Insights</button>
-            </nav>
-            <nav class="context-tabs" aria-label="List type">
-              <button id="tab-work" class="app-tab active" type="button">Work</button>
-              <button id="tab-personal" class="app-tab" type="button">Personal</button>
-              <button id="tab-projects" class="app-tab" type="button">Projects</button>
-            </nav>
-          </div>
+        <div class="sidebar-tabs">
+          <nav class="app-tabs" aria-label="App views">
+            <button id="tab-desk" class="app-tab active" type="button">Desk</button>
+            <button id="tab-insights" class="app-tab" type="button">Insights</button>
+          </nav>
+          <nav class="context-tabs" aria-label="List type">
+            <button id="tab-work" class="app-tab active" type="button">Work</button>
+            <button id="tab-personal" class="app-tab" type="button">Personal</button>
+            <button id="tab-projects" class="app-tab" type="button">Projects</button>
+          </nav>
+        </div>
 
+        <div class="sidebar-daily">
           <div class="search-section desk-only">
             <div id="search-wrap" class="search-wrap">
               <input id="search-input" class="search-input" type="search" placeholder="Search tasks & notes…" />
