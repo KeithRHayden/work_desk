@@ -6345,7 +6345,13 @@
       if (password.length < 6) { setAuthError('Password must be at least 6 characters.'); return; }
       setAuthError(''); setAuthBusy(true);
       try {
-        const { data, error } = await sbClient.auth.signUp({ email, password });
+        const { data, error } = await sbClient.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin + window.location.pathname
+          }
+        });
         if (error) throw error;
         if (data.session) {
           // Email confirmation is off — signed in immediately
