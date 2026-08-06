@@ -6367,31 +6367,189 @@
       }
     }
 
-    async function sbPostAuthSync() {
-      sbSetStatus('idle');
-      const remote  = await sbPull();
-      const localTs = localStorage.getItem(SB_TS_KEY);
-      if (remote && remote.data) {
-        const remoteNewer = !localTs || new Date(remote.updated_at) > new Date(localTs);
-        if (remoteNewer) {
-          ['personal', 'work'].forEach(ctx => {
-            if (remote.data[ctx]) localStorage.setItem(`work-desk-data-${ctx}`, JSON.stringify(remote.data[ctx]));
-          });
-          if (remote.data.projects) {
-            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(remote.data.projects));
-            state.projectsData = loadProjectsData();
+    // Merge two day data structures, keeping all unique items and preferring newer versions of duplicates
+    function mergeDaysData(local, remote) {
+      const merged = { days: {} };
+      const allDates = new Set([
+        ...Object.keys(local?.days || {}),
+        ...Object.keys(remote?.days || {})
+      ]);
+
+      for (const date of allDates) {
+        const localDay = local?.days?.[date];
+        const remoteDay = remote?.days?.[date];
+
+        if (!localDay && remoteDay) {
+          merged.days[date] = remoteDay;
+        } else if (localDay && !remoteDay) {
+          merged.days[date] = localDay;
+        } else if (localDay && remoteDay) {
+          // Merge items from both, preferring items with more data (comments, etc.)
+          const itemMap = new Map();
+
+          // Add all local items
+          for (const item of localDay.items || []) {
+            itemMap.set(item.id, item);
           }
-          localStorage.setItem(SB_TS_KEY, remote.updated_at);
+
+          // Merge remote items (add new ones, update existing if remote has more data)
+          for (const item of remoteDay.items || []) {
+            const existing = itemMap.get(item.id);
+            if (!existing) {
+              itemMap.set(item.id, item);
+            } else {
+              // Keep the one with more comments, or if equal, prefer completed over not
+              const existingScore = (existing.comments?.length || 0) * 10 + (existing.completed ? 1 : 0);
+              const remoteScore = (item.comments?.length || 0) * 10 + (item.completed ? 1 : 0);
+              if (remoteScore > existingScore) {
+                itemMap.set(item.id, item);
+              }
+            }
+          }
+
+          merged.days[date] = { date, items: Array.from(itemMap.values()) };
+        }
+      }
+
+      return merged;
+    }
+
+    // Merge two projects data structures
+    function mergeProjectsData(local, remote) {
+      const merged = { projects: [] };
+      const projectMap = new Map();
+
+      // Add all local projects
+      for (const proj of local?.projects || []) {
+        projectMap.set(proj.id, JSON.parse(JSON.stringify(proj)));
+      }
+
+      // Merge remote projects
+      for (const remoteProj of remote?.projects || []) {
+        const existing = projectMap.get(remoteProj.id);
+        if (!existing) {
+          projectMap.set(remoteProj.id, remoteProj);
+        } else {
+          // Merge notes
+          const noteMap = new Map();
+          for (const note of existing.notes || []) noteMap.set(note.id, note);
+          for (const note of remoteProj.notes || []) {
+            const existingNote = noteMap.get(note.id);
+            if (!existingNote || (note.comments?.length || 0) > (existingNote.comments?.length || 0)) {
+              noteMap.set(note.id, note);
+            }
+          }
+          existing.notes = Array.from(noteMap.values());
+
+          // Merge tasks
+          const taskMap = new Map();
+          for (const task of existing.tasks || []) taskMap.set(task.id, task);
+          for (const task of remoteProj.tasks || []) {
+            const existingTask = taskMap.get(task.id);
+            if (!existingTask) {
+              taskMap.set(task.id, task);
+            } else {
+              const existingScore = (existingTask.comments?.length || 0) * 10 + (existingTask.completed ? 1 : 0);
+              const remoteScore = (task.comments?.length || 0) * 10 + (task.completed ? 1 : 0);
+              if (remoteScore > existingScore) {
+                taskMap.set(task.id, task);
+              }
+            }
+          }
+          existing.tasks = Array.from(taskMap.values());
+
+          projectMap.set(remoteProj.id, existing);
+        }
+      }
+
+      merged.projects = Array.from(projectMap.values());
+      return merged;
+    }
+
+    let lastSyncTime = 0;
+    const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+    const SYNC_DEBOUNCE = 10 * 1000; // Don't sync more than once per 10 seconds
+
+    async function sbPostAuthSync(options = {}) {
+      const { silent = false, force = false } = options;
+
+      // Debounce rapid sync requests
+      const now = Date.now();
+      if (!force && now - lastSyncTime < SYNC_DEBOUNCE) {
+        return;
+      }
+      lastSyncTime = now;
+
+      sbSetStatus('syncing');
+      const remote = await sbPull();
+
+      if (remote && remote.data) {
+        let changed = false;
+
+        // Merge daily data for each context
+        ['personal', 'work'].forEach(ctx => {
+          if (remote.data[ctx]) {
+            const localRaw = localStorage.getItem(`work-desk-data-${ctx}`);
+            const localData = localRaw ? JSON.parse(localRaw) : { days: {} };
+            const merged = mergeDaysData(localData, remote.data[ctx]);
+
+            // Check if merge resulted in changes
+            const mergedStr = JSON.stringify(merged);
+            if (mergedStr !== localRaw) {
+              localStorage.setItem(`work-desk-data-${ctx}`, mergedStr);
+              changed = true;
+            }
+          }
+        });
+
+        // Merge projects data
+        if (remote.data.projects) {
+          const localProjects = loadProjectsData();
+          const mergedProjects = mergeProjectsData(localProjects, remote.data.projects);
+          const mergedStr = JSON.stringify(mergedProjects);
+          const localStr = JSON.stringify(localProjects);
+
+          if (mergedStr !== localStr) {
+            localStorage.setItem(PROJECTS_STORAGE_KEY, mergedStr);
+            state.projectsData = mergedProjects;
+            changed = true;
+          }
+        }
+
+        if (changed) {
           state.data = loadData();
           render();
-          showToast('Synced from cloud ☁️');
+          if (!silent) showToast('Synced from cloud ☁️');
         }
-      } else {
+
+        // Always push merged data back to ensure cloud has the complete set
+        localStorage.setItem(SB_TS_KEY, new Date().toISOString());
         await sbPush();
-        showToast('Data backed up to cloud ☁️');
+        sbSetStatus('ok');
+      } else {
+        // No remote data, just push local
+        await sbPush();
+        if (!silent) showToast('Data backed up to cloud ☁️');
+        sbSetStatus('ok');
       }
+
       sbSynced = true;
     }
+
+    // Auto-sync on window focus (when user returns to tab)
+    let syncOnFocusEnabled = true;
+    window.addEventListener('focus', () => {
+      if (syncOnFocusEnabled && sbSynced && sbClient) {
+        sbPostAuthSync({ silent: true });
+      }
+    });
+
+    // Periodic auto-sync every 5 minutes
+    setInterval(() => {
+      if (sbSynced && sbClient && document.visibilityState === 'visible') {
+        sbPostAuthSync({ silent: true });
+      }
+    }, SYNC_INTERVAL);
 
     async function sbPull() {
       if (!sbClient) return null;
