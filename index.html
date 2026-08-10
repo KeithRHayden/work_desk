@@ -10,7 +10,7 @@
       const FAVICONS = {
         // Light — Neutral/minimal
         '': '📋',
-        slate:  '🪨',
+        slate: '🪨',
         arctic: '❄️',
         paper: '📄',
         // Light — Warm/earthy
@@ -2945,6 +2945,11 @@
     .format-btn[data-cmd="bold"] { font-weight: 700; }
     .format-btn[data-cmd="italic"] { font-style: italic; font-weight: 500; }
     .format-btn[data-cmd="underline"] { text-decoration: underline; font-weight: 500; }
+    .format-btn[data-cmd="insertUnorderedList"] {
+      font-size: 1rem;
+      line-height: 1;
+      font-weight: 700;
+    }
 
     .rich-editor {
       padding: 10px 14px;
@@ -4247,7 +4252,7 @@
             </div>
             <div class="add-row">
               <div id="add-editor-host"></div>
-              <button id="format-toggle-btn" class="format-toggle-btn" type="button" title="Text formatting (bold, italic, underline)">Aa</button>
+              <button id="format-toggle-btn" class="format-toggle-btn" type="button" title="Text formatting (bold, italic, underline, bullets)">Aa</button>
               <button id="add-btn" class="add-btn" type="submit" disabled>Add</button>
             </div>
           </form>
@@ -4420,7 +4425,7 @@
         <h3>Tips</h3>
         <ul>
           <li>Double-click a task to edit it on desktop; use the card menu on touch</li>
-          <li>Click <strong>Aa</strong> next to the input box to show bold, italic, and underline formatting buttons</li>
+          <li>Click <strong>Aa</strong> next to the input box to show bold, italic, underline, and bullet formatting buttons</li>
           <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
           <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box to submit without clicking Add</li>
           <li>Use the sidebar collapse button (‹) to give the board more room</li>
@@ -4843,6 +4848,7 @@
       { cmd: 'bold', label: 'B', title: 'Bold (Ctrl+B)' },
       { cmd: 'italic', label: 'I', title: 'Italic (Ctrl+I)' },
       { cmd: 'underline', label: 'U', title: 'Underline (Ctrl+U)' },
+      { cmd: 'insertUnorderedList', label: '•', title: 'Bullet list' },
     ];
 
     const ICON_PENCIL = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -5062,6 +5068,7 @@
     }
 
     const BULLET_LINE_RE = /^[•\-\*○◦▪▸\u2022\u2023\u25E6\u2043\u2219]\s*(.*)$/;
+    const NUMBERED_LINE_RE = /^\d+[.)]\s+\S/;
     const INLINE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U']);
     const SENTENCE_END_RE = /[.!?:]["'""»)\]]*$/;
 
@@ -5132,10 +5139,14 @@
 
     function shouldCollapseSoftBreak(beforePlain, afterStart, beforeHtml = '') {
       if (!beforePlain || !afterStart) return false;
-      if (BULLET_START_RE.test(afterStart)) return false;
+      // Keep intentional list / outline breaks (bullets and "1)" / "2." style lines)
+      if (BULLET_START_RE.test(afterStart) || NUMBERED_LINE_RE.test(afterStart)) return false;
       if (BLOCK_END_RE.test((beforeHtml || '').trim())) return false;
-      if (SENTENCE_END_RE.test(beforePlain) && /^[A-Z]/.test(afterStart)) return false;
-      return true;
+      // Keep a break when the previous line looks finished and the next starts a new sentence/item
+      if (SENTENCE_END_RE.test(beforePlain) && /^[A-Z0-9]/.test(afterStart)) return false;
+      // Only collapse true soft-wraps: next line continues mid-sentence (usually lowercase)
+      if (/^[a-z]/.test(afterStart)) return true;
+      return false;
     }
 
     function repairSoftLineBreaks(html) {
@@ -5447,6 +5458,7 @@
         btn.addEventListener('click', () => {
           editor.focus();
           document.execCommand(cmd, false, null);
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
         });
         bar.appendChild(btn);
       });
@@ -8072,7 +8084,7 @@
             // Comment text
             const body = document.createElement('div');
             body.className = 'comment-body';
-            const text = document.createElement('p');
+            const text = document.createElement('div');
             text.className = 'comment-text rich-content';
             text.innerHTML = sanitizeHtml(comment.content);
             text.title = 'Double-click to edit';
