@@ -2677,6 +2677,26 @@
       line-height: 1;
     }
 
+    .customize-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 6px;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    .customize-toggle:hover { background: color-mix(in srgb, var(--accent) 8%, var(--panel-bg)); }
+    .customize-toggle input {
+      width: 14px;
+      height: 14px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
     /* ── Compact board density ─────────────────────────────────────────── */
     #desk-view[data-density="compact"] .board-column .items { gap: 3px; }
 
@@ -4137,7 +4157,7 @@
             <button id="export-btn" class="backup-btn">Export backup</button>
             <button id="import-btn" class="backup-btn">Import backup…</button>
           </div>
-          <button id="repair-btn" class="backup-btn repair-btn" title="Scan for and remove duplicate tasks across both lists">Repair duplicates</button>
+          <button id="repair-btn" class="backup-btn repair-btn" title="Scan for and remove duplicate tasks within a day and across days">Repair duplicates</button>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
       </div>
@@ -4213,6 +4233,12 @@
                       <span class="density-option-label">Compact</span>
                     </button>
                   </div>
+                  <hr class="theme-section-divider" style="margin: 12px 0 8px;">
+                  <p class="density-popout-label">Comments</p>
+                  <label class="customize-toggle" title="When on, opening comments on one task won't collapse others">
+                    <input id="keep-comments-open-toggle" type="checkbox" />
+                    <span>Keep comments open</span>
+                  </label>
                 </div>
               </div>
             </div>
@@ -4338,26 +4364,35 @@
           <li><strong>Daily desk</strong> — tasks and notes organized by day in New / Active / Done / Shelved columns</li>
           <li><strong>Work, Personal &amp; Projects</strong> — three separate contexts, toggled in the sidebar</li>
           <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
+          <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
           <li><strong>Search</strong> — find tasks and notes across any day; use the <strong>Both</strong> chip to search Work and Personal together</li>
           <li><strong>Carry forward</strong> — bring unfinished tasks into today; use the <strong>▾</strong> menu on the carry button to turn on <strong>Auto carry each day</strong></li>
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly stats with a daily breakdown chart and activity heatmap</li>
           <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
           <li><strong>Themes</strong> — light and dark presets including Synthwave, Cyberpunk, Outrun, Vaporwave, Forest, and more</li>
-          <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to</li>
+          <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
         </ul>
 
         <h3>Task &amp; note cards</h3>
         <ul>
-          <li><strong>Hamburger menu (≡)</strong> — click the icon in the bottom-right of any card to reveal all actions: edit, convert, move, send, shelve, comment, delete</li>
-          <li><strong>Comments indicator</strong> — if a task has comments, a speech-bubble badge appears next to the hamburger showing the count; click it to open comments directly</li>
-          <li><strong>Convert</strong> — use the convert icon (⇄) in the card menu to switch a task into a note or vice versa</li>
+          <li><strong>Action bar</strong> — common actions sit along the bottom of each card: <em>edit</em>, <em>move</em>, and <em>comment</em> / <em>add update</em></li>
+          <li><strong>Overflow menu (⋮)</strong> — less common actions live here: delete, convert, send to Work/Personal, shelve/unshelve, and start (move to Active)</li>
+          <li><strong>Convert</strong> — switch a task into a note or vice versa from the overflow menu</li>
           <li><strong>Shelving</strong> — move a task to Shelved when it isn't done but isn't today's focus; unshelf it later from the Done/Shelved column</li>
-          <li><strong>Comments</strong> — add notes, updates, or links to a task without changing the title; supports bold, italic, and underline formatting</li>
           <li><strong>Move to another day</strong> — reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
           <li><strong>Send to Work / Personal</strong> — moves a task or note to the other context list</li>
           <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough; hover to see them clearly</li>
+        </ul>
+
+        <h3>Comments &amp; updates</h3>
+        <ul>
+          <li><strong>Tasks</strong> — click <em>comment</em> on a card to open the thread; add timestamped comments with bold, italic, underline, and bullet formatting</li>
+          <li><strong>Notes</strong> — use <em>add update</em> for the same threaded follow-ups (handy for living documents)</li>
+          <li><strong>Indent</strong> — comments sit slightly indented under the card so they read as replies, not another task</li>
+          <li><strong>Keep comments open</strong> — in Customize (⊟), turn this on so opening comments on one task doesn't collapse another; click <em>comment</em> again to close just that thread</li>
+          <li><strong>Multi-line</strong> — press Enter for new lines; numbered lists like <code>1)</code> and bullets stay formatted when you save</li>
         </ul>
 
         <h3>Projects</h3>
@@ -4371,6 +4406,7 @@
         <h3>Board layout</h3>
         <ul>
           <li><strong>Card density &amp; theme</strong> — use the customize button (⊟) near the date to switch between <em>Comfortable</em> and <em>Compact</em> layouts and to change the color theme</li>
+          <li><strong>Keep comments open</strong> — in the same customize menu, turn this on so opening comments on one task doesn’t collapse another</li>
           <li><strong>Left accent bar</strong> — each card has a colored left border matching its column (New = accent, Active = hover accent, Done = done color, Notes = muted)</li>
           <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
           <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
@@ -4382,7 +4418,7 @@
           <li><strong>Calendar</strong> — pick any day; dots mean data exists; red badges on past days show open tasks left behind</li>
           <li><strong>Arrow buttons</strong> — step day by day at the top of the desk</li>
           <li><strong>Today</strong> — click <strong>Back to today</strong> beside the date to return instantly</li>
-          <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board</li>
+          <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board; use <strong>&lt;</strong> / <strong>&gt;</strong> to jump week by week (Monday-aligned)</li>
         </ul>
 
         <h3>Recurring tasks</h3>
@@ -4403,13 +4439,14 @@
 
         <h3>Cloud sync &amp; data</h3>
         <ul>
-          <li>Sign in with email to enable sync; your data is stored securely in the cloud</li>
-          <li>The sync status dot (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
-          <li>Use the <strong>↪</strong> sign-out button at the bottom of the sidebar to switch accounts</li>
-          <li>Data syncs automatically 2–3 seconds after any change</li>
-          <li>Opening on a new device: sign in and your full history loads automatically</li>
-          <li><strong>Backup / restore</strong> (in sidebar More menu) — export or import your full data as JSON for a local safety copy</li>
-          <li><strong>Auto-pruning</strong> — on each app startup, days older than 1 year are silently removed from the local cache to keep the payload lean; because your full history lives in the cloud, nothing is permanently lost</li>
+          <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
+          <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
+          <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
+          <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
+          <li>Opening on a new device: sign in and your history loads automatically (devices merge rather than overwrite)</li>
+          <li><strong>Backup / restore</strong> — Export backup and Import backup in the sidebar for a local JSON safety copy (includes Projects when you're in that context)</li>
+          <li><strong>Repair duplicates</strong> — cleans duplicate task IDs within a day and across days if sync ever leaves copies behind</li>
+          <li><strong>Auto-pruning</strong> — on each app startup, days older than 1 year are silently removed from the local cache; full history remains in the cloud</li>
         </ul>
 
         <h3>Mobile &amp; PWA</h3>
@@ -4417,14 +4454,15 @@
           <li>Install as a home screen app: on Chrome/Edge tap <strong>Install and create shortcut</strong> (or address bar install icon on desktop)</li>
           <li>On iPhone/Safari: tap <strong>Share → Add to Home Screen</strong></li>
           <li>Once installed, opens in its own window without browser chrome and works offline</li>
-          <li>Tap the <strong>hamburger (≡)</strong> icon on any card to access all actions</li>
-          <li>Tap the <strong>checkbox</strong> to complete a task; tap the <strong>pencil</strong> in the card menu to edit</li>
+          <li>Use the action links under each card (edit / move / comment) and the <strong>⋮</strong> overflow menu for the rest</li>
+          <li>Tap the <strong>checkbox</strong> to complete a task</li>
           <li>The week strip above the board replaces the sidebar calendar on smaller screens</li>
+          <li>Account email, Sign out, and Export/Import stay available in the sidebar on mobile</li>
         </ul>
 
         <h3>Tips</h3>
         <ul>
-          <li>Double-click a task to edit it on desktop; use the card menu on touch</li>
+          <li>Double-click a task or comment to edit it on desktop</li>
           <li>Click <strong>Aa</strong> next to the input box to show bold, italic, underline, and bullet formatting buttons</li>
           <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
           <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box to submit without clicking Add</li>
@@ -4526,7 +4564,8 @@
       itemType: 'task',
       editingId: null,
       editingComment: null,
-      expandedTaskId: null,
+      expandedTaskIds: new Set(),
+      keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
       autoOpenEditor: null,
       movingItemId: null,
       pendingImport: null,
@@ -5588,6 +5627,30 @@
 
     const DENSITY_KEY = 'work-desk-density';
 
+    function isCommentsExpanded(itemId) {
+      return state.expandedTaskIds.has(itemId);
+    }
+
+    function clearExpandedComments() {
+      state.expandedTaskIds.clear();
+    }
+
+    function openComments(itemId, { autoOpenEditor = false } = {}) {
+      if (!state.keepCommentsOpen) {
+        state.expandedTaskIds.clear();
+      }
+      state.expandedTaskIds.add(itemId);
+      if (autoOpenEditor) state.autoOpenEditor = itemId;
+    }
+
+    function toggleComments(itemId) {
+      if (state.expandedTaskIds.has(itemId)) {
+        state.expandedTaskIds.delete(itemId);
+        return;
+      }
+      openComments(itemId);
+    }
+
     function applyDensity(mode) {
       const view   = document.getElementById('desk-view');
       const popout = document.getElementById('density-popout');
@@ -5653,6 +5716,22 @@
           closeDensityPopout();
         });
       });
+
+      const keepCommentsToggle = document.getElementById('keep-comments-open-toggle');
+      if (keepCommentsToggle) {
+        keepCommentsToggle.checked = state.keepCommentsOpen;
+        keepCommentsToggle.addEventListener('change', () => {
+          state.keepCommentsOpen = keepCommentsToggle.checked;
+          localStorage.setItem('work-desk-keep-comments-open', state.keepCommentsOpen ? 'true' : 'false');
+          // Turning the preference off collapses down to a single open panel
+          if (!state.keepCommentsOpen && state.expandedTaskIds.size > 1) {
+            const keep = [...state.expandedTaskIds].pop();
+            state.expandedTaskIds.clear();
+            if (keep) state.expandedTaskIds.add(keep);
+            render();
+          }
+        });
+      }
 
       document.addEventListener('click', (e) => {
         if (!popout.classList.contains('hidden') && !popout.contains(e.target) && e.target !== btn) {
@@ -5758,7 +5837,7 @@
       syncCalendarViewToSelected();
       clearEditing();
       clearMoveModal();
-      state.expandedTaskId = null;
+      state.expandedTaskIds.clear();
       render();
     }
 
@@ -5969,7 +6048,7 @@
     function startEditComment(taskId, commentId) {
       state.editingComment = { taskId, commentId };
       state.editingId = null;
-      state.expandedTaskId = taskId;
+      openComments(taskId);
       render();
     }
 
@@ -6826,7 +6905,8 @@
         comments.splice(Math.min(undo.index, comments.length), 0, undo.comment);
         items[found.idx] = { ...items[found.idx], comments };
         state.data.days[found.date] = { ...found.day, items };
-        state.expandedTaskId = undo.taskId;
+        state.expandedTaskIds.clear();
+        openComments(undo.taskId);
         saveData();
         render();
         showToast('Comment restored');
@@ -6933,7 +7013,7 @@
       els.searchInput.value = '';
       clearEditing();
       clearMoveModal();
-      state.expandedTaskId = itemId;
+      openComments(itemId);
       renderSearchResults();
       render();
 
@@ -7471,7 +7551,7 @@
       saveData();
       state.pendingImport = null;
       clearEditing();
-      state.expandedTaskId = null;
+      clearExpandedComments();
       els.importModal.classList.add('hidden');
       els.importFile.value = '';
 
@@ -7551,7 +7631,7 @@
       state.activeTab = 'desk';
       clearEditing();
       clearMoveModal();
-      state.expandedTaskId = null;
+      clearExpandedComments();
       render();
     }
 
@@ -8123,7 +8203,7 @@
       syncCalendarViewToSelected();
       clearEditing();
       clearMoveModal();
-      state.expandedTaskId = null;
+      clearExpandedComments();
       render();
     }
 
@@ -8159,7 +8239,7 @@
       const comments = [...(items[found.idx].comments || []), comment];
       items[found.idx] = { ...items[found.idx], comments };
       state.data.days[found.date] = { ...found.day, items };
-      state.expandedTaskId = taskId;
+      openComments(taskId);
       saveData();
       render();
     }
@@ -8322,7 +8402,7 @@
 
     function renderItem(item) {
       const isEditing = state.editingId === item.id;
-      const isExpanded = state.expandedTaskId === item.id;
+      const isExpanded = isCommentsExpanded(item.id);
       const commentCount = (item.comments || []).length;
 
       const isShelved = item.type === 'task' && item.shelved && !item.completed;
@@ -8437,7 +8517,7 @@
         if (item.type === 'task') {
           const commentLabel = commentCount > 0 ? `comments (${commentCount})` : 'comment';
           const commentBtn = addAction(commentLabel, () => {
-            state.expandedTaskId = isExpanded ? null : item.id;
+            toggleComments(item.id);
             render();
           });
           if (commentCount > 0) commentBtn.classList.add('has-comments');
@@ -8445,8 +8525,7 @@
           // Notes get "add update" link
           const updateLabel = commentCount > 0 ? `updates (${commentCount})` : 'add update';
           const updateBtn = addAction(updateLabel, () => {
-            state.expandedTaskId = item.id;
-            if (commentCount === 0) state.autoOpenEditor = item.id;
+            openComments(item.id, { autoOpenEditor: commentCount === 0 });
             render();
           });
           if (commentCount > 0) updateBtn.classList.add('has-comments');
@@ -9185,7 +9264,7 @@
         state.data = loadData(ctx);
         clearEditing();
         clearMoveModal();
-        state.expandedTaskId = null;
+        clearExpandedComments();
         state.pendingImport = null;
         if (!preserveSearch) {
           state.searchQuery = '';
