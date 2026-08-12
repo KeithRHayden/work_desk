@@ -4157,7 +4157,7 @@
             <button id="export-btn" class="backup-btn">Export backup</button>
             <button id="import-btn" class="backup-btn">Import backup…</button>
           </div>
-          <button id="repair-btn" class="backup-btn repair-btn" title="Scan for and remove duplicate tasks within a day and across days">Repair duplicates</button>
+          <button id="repair-btn" class="backup-btn repair-btn" title="Scan for and remove duplicate tasks (same ID or same recurring template on one day)">Repair duplicates</button>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
       </div>
@@ -4445,7 +4445,7 @@
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
           <li>Opening on a new device: sign in and your history loads automatically (devices merge rather than overwrite)</li>
           <li><strong>Backup / restore</strong> — Export backup and Import backup in the sidebar for a local JSON safety copy (includes Projects when you're in that context)</li>
-          <li><strong>Repair duplicates</strong> — cleans duplicate task IDs within a day and across days if sync ever leaves copies behind</li>
+          <li><strong>Repair duplicates</strong> — cleans duplicate task IDs within a day and across days, and collapses same-day copies of the same recurring task if sync ever left extras behind</li>
           <li><strong>Auto-pruning</strong> — on each app startup, days older than 1 year are silently removed from the local cache; full history remains in the cloud</li>
         </ul>
 
@@ -6102,6 +6102,11 @@
       if (item.type === 'task') {
         normalized.shelved = !!item.shelved;
         normalized.boardColumn = item.boardColumn === 'new' ? 'new' : 'active';
+        // Keep template link through sync/repair — without this, injectDueTemplates
+        // cannot see today's instance and recreates the recurring task.
+        if (item.recurringTemplateId) {
+          normalized.recurringTemplateId = item.recurringTemplateId;
+        }
       }
       // Preserve comments for both tasks and notes
       if (Array.isArray(item.comments) && item.comments.length > 0) {
@@ -6114,6 +6119,89 @@
           }));
       }
       return normalized;
+    }
+
+    function recurringContentKey(html) {
+      return stripHtmlTags(html || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    // Collapse same-day copies of the same recurring template (different item IDs).
+    // Prefer completed > shelved > open; merge comments onto the winner.
+    function deduplicateRecurringSameDay(items, templates = []) {
+      if (!Array.isArray(items) || items.length < 2) return { items: items || [], removed: 0 };
+      const stateRank = item => (item.completed ? 2 : item.shelved ? 1 : 0);
+      const working = items.map(i => ({ ...i }));
+      let removed = 0;
+
+      // Re-stamp orphan tasks that match a known template by content
+      for (const t of templates) {
+        if (!t?.id) continue;
+        const key = recurringContentKey(t.content);
+        if (!key) continue;
+        for (let i = 0; i < working.length; i++) {
+          const item = working[i];
+          if (item.type !== 'task' || item.recurringTemplateId) continue;
+          if (recurringContentKey(item.content) === key) {
+            working[i] = { ...item, recurringTemplateId: t.id };
+          }
+        }
+      }
+
+      const groups = new Map();
+      const passthrough = [];
+      for (const item of working) {
+        if (item.type === 'task' && item.recurringTemplateId) {
+          const list = groups.get(item.recurringTemplateId) || [];
+          list.push(item);
+          groups.set(item.recurringTemplateId, list);
+        } else {
+          passthrough.push(item);
+        }
+      }
+
+      const kept = [...passthrough];
+      for (const group of groups.values()) {
+        if (group.length === 1) {
+          kept.push(group[0]);
+          continue;
+        }
+        group.sort((a, b) => {
+          const r = stateRank(b) - stateRank(a);
+          if (r) return r;
+          return (b.comments?.length || 0) - (a.comments?.length || 0);
+        });
+        const winner = { ...group[0] };
+        const commentIds = new Set((winner.comments || []).map(c => c.id));
+        const mergedComments = [...(winner.comments || [])];
+        for (const loser of group.slice(1)) {
+          for (const c of loser.comments || []) {
+            if (c?.id && !commentIds.has(c.id)) {
+              commentIds.add(c.id);
+              mergedComments.push(c);
+            }
+          }
+        }
+        if (mergedComments.length) winner.comments = mergedComments;
+        kept.push(winner);
+        removed += group.length - 1;
+      }
+
+      // Preserve original relative order where possible
+      const keptIds = new Set(kept.map(i => i.id));
+      const ordered = [];
+      const used = new Set();
+      for (const item of items) {
+        if (!keptIds.has(item.id) || used.has(item.id)) continue;
+        const k = kept.find(x => x.id === item.id);
+        if (k) {
+          ordered.push(k);
+          used.add(item.id);
+        }
+      }
+      for (const k of kept) {
+        if (!used.has(k.id)) ordered.push(k);
+      }
+      return { items: ordered, removed };
     }
 
     // Deduplicate items in a day — if multiple items share the same ID, merge
@@ -6421,11 +6509,15 @@
           const parsed = JSON.parse(raw);
           let changed = false;
           const days = {};
+          const templates = loadRecurringTemplates(ctx);
           for (const [date, day] of Object.entries(parsed.days || {})) {
             if (!day || !Array.isArray(day.items)) continue;
             const before = day.items.length;
-            const items = deduplicateDayItems(day.items.map(normalizeItem));
-            if (items.length < before) totalFixed += before - items.length;
+            let items = deduplicateDayItems(day.items.map(normalizeItem));
+            const recur = deduplicateRecurringSameDay(items, templates);
+            items = recur.items;
+            const removedHere = (before - items.length);
+            if (removedHere > 0) totalFixed += removedHere;
             if (items.length > 0) days[date] = { date, items };
             if (items.length !== before) changed = true;
           }
@@ -6433,6 +6525,23 @@
           if (removed > 0) {
             totalFixed += removed;
             changed = true;
+          }
+          // Mark templates as injected for today when an instance already exists
+          const today = todayKey();
+          const todayItems = cleaned[today]?.items || [];
+          if (templates.length && todayItems.length) {
+            const stamped = templates.map(t => {
+              const has = todayItems.some(i =>
+                i.recurringTemplateId === t.id ||
+                recurringContentKey(i.content) === recurringContentKey(t.content)
+              );
+              if (has && t.lastInjectedDate !== today) {
+                changed = true;
+                return { ...t, lastInjectedDate: today };
+              }
+              return t;
+            });
+            saveRecurringTemplates(stamped, ctx);
           }
           if (changed) {
             parsed.days = cleaned;
@@ -6464,7 +6573,33 @@
         personal: get('work-desk-data-personal') || { days: {}, deletedIds: {} },
         work:     get('work-desk-data-work')     || { days: {}, deletedIds: {} },
         projects: get(PROJECTS_STORAGE_KEY) || { projects: [] },
+        recurring: {
+          personal: get('work-desk-recurring-personal') || { templates: [] },
+          work:     get('work-desk-recurring-work')     || { templates: [] },
+        },
       };
+    }
+
+    function mergeRecurringTemplates(localList, remoteList) {
+      const seen = new Map();
+      // Remote first, then local overwrites content/rule but keeps the later lastInjectedDate
+      for (const t of [...(remoteList || []), ...(localList || [])]) {
+        if (!t?.id) continue;
+        const prev = seen.get(t.id);
+        if (!prev) {
+          seen.set(t.id, { ...t });
+          continue;
+        }
+        const a = prev.lastInjectedDate || '';
+        const b = t.lastInjectedDate || '';
+        seen.set(t.id, {
+          ...prev,
+          ...t,
+          createdAt: prev.createdAt || t.createdAt,
+          lastInjectedDate: [a, b].sort().pop() || null,
+        });
+      }
+      return Array.from(seen.values());
     }
 
     function sbSetStatus(status) {
@@ -6749,8 +6884,28 @@
           }
         }
 
+        // Merge recurring templates (keeps lastInjectedDate in sync across devices)
+        if (remote.data.recurring) {
+          ['personal', 'work'].forEach(ctx => {
+            const remoteBlock = remote.data.recurring[ctx];
+            const remoteList = Array.isArray(remoteBlock)
+              ? remoteBlock
+              : (remoteBlock?.templates || []);
+            const localList = loadRecurringTemplates(ctx);
+            const mergedList = mergeRecurringTemplates(localList, remoteList);
+            if (JSON.stringify(mergedList) !== JSON.stringify(localList)) {
+              saveRecurringTemplates(mergedList, ctx);
+              changed = true;
+            }
+          });
+        }
+
         if (changed) {
           state.data = loadData();
+          // Re-run inject with merged template dates so we don't recreate today's tasks
+          if (state.listContext === 'work' || state.listContext === 'personal') {
+            injectDueTemplates();
+          }
           render();
           if (!silent) showToast('Synced from cloud ☁️');
         }
@@ -7242,15 +7397,58 @@
       }
     }
 
+    function markTemplateInjectedToday(templateId, context = state.listContext) {
+      if (!templateId) return;
+      const today = todayKey();
+      const templates = loadRecurringTemplates(context);
+      let changed = false;
+      const updated = templates.map(t => {
+        if (t.id !== templateId || t.lastInjectedDate === today) return t;
+        changed = true;
+        return { ...t, lastInjectedDate: today };
+      });
+      if (changed) saveRecurringTemplates(updated, context);
+    }
+
+    function dayHasRecurringInstance(day, template) {
+      const items = day?.items || [];
+      if (items.some(i => i.recurringTemplateId === template.id)) return true;
+      const key = recurringContentKey(template.content);
+      if (!key) return false;
+      // Fallback for older synced items that lost their template id
+      return items.some(i => i.type === 'task' && recurringContentKey(i.content) === key);
+    }
+
+    function stampRecurringTemplateId(day, template) {
+      if (!day?.items) return false;
+      if (day.items.some(i => i.recurringTemplateId === template.id)) return false;
+      const key = recurringContentKey(template.content);
+      if (!key) return false;
+      let stamped = false;
+      day.items = day.items.map(item => {
+        if (stamped || item.type !== 'task' || item.recurringTemplateId) return item;
+        if (recurringContentKey(item.content) !== key) return item;
+        stamped = true;
+        return { ...item, recurringTemplateId: template.id };
+      });
+      return stamped;
+    }
+
     function injectDueTemplates() {
       const templates = loadRecurringTemplates();
       const today = todayKey();
       const toInject = [];
+      let dayMutated = false;
+      const existingDay = state.data.days[today];
+      const day = existingDay || { date: today, items: [] };
+
       const updated = templates.map(t => {
+        // Always skip inject when today's instance already exists (any status)
+        if (dayHasRecurringInstance(day, t)) {
+          if (stampRecurringTemplateId(day, t)) dayMutated = true;
+          return { ...t, lastInjectedDate: today };
+        }
         if (!isDueToday(t)) return t;
-        const day = state.data.days[today] || { date: today, items: [] };
-        const alreadyHas = day.items.some(i => i.recurringTemplateId === t.id);
-        if (alreadyHas) return { ...t, lastInjectedDate: today };
         toInject.push({
           id: newId(),
           type: 'task',
@@ -7264,9 +7462,21 @@
         });
         return { ...t, lastInjectedDate: today };
       });
-      if (toInject.length > 0) {
-        const day = state.data.days[today] || { date: today, items: [] };
-        state.data.days[today] = { date: today, items: [...toInject, ...day.items] };
+
+      // Collapse any same-template copies left from older bugs
+      const collapsed = deduplicateRecurringSameDay(
+        [...toInject, ...(day.items || [])],
+        updated
+      );
+      const finalItems = collapsed.items;
+      const itemsChanged = toInject.length > 0 || dayMutated || collapsed.removed > 0;
+
+      if (itemsChanged) {
+        if (finalItems.length === 0) {
+          if (existingDay) delete state.data.days[today];
+        } else {
+          state.data.days[today] = { date: today, items: finalItems };
+        }
         saveRecurringTemplates(updated);
         saveData();
       } else {
@@ -7835,6 +8045,9 @@
             boardColumn: wasCompleted ? 'active' : items[idx].boardColumn,
           };
           state.data.days[date] = { ...day, items };
+          if (markingComplete && items[idx].recurringTemplateId) {
+            markTemplateInjectedToday(items[idx].recurringTemplateId);
+          }
           saveData();
           if (markingComplete) celebrateTaskComplete(id);
           render();
@@ -7880,6 +8093,9 @@
       const items = [...found.day.items];
       items[found.idx] = next;
       state.data.days[found.date] = { ...found.day, items };
+      if (justCompleted && next.recurringTemplateId) {
+        markTemplateInjectedToday(next.recurringTemplateId);
+      }
       saveData();
 
       const messages = {
@@ -8154,6 +8370,9 @@
       if (!deleted) return;
 
       markItemDeleted(id);
+      if (deleted.recurringTemplateId) {
+        markTemplateInjectedToday(deleted.recurringTemplateId);
+      }
       pendingUndo = { type: 'item', date: deletedDate, item: deleted, index: deletedIndex };
       saveData();
       render();
