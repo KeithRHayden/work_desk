@@ -6061,6 +6061,73 @@
       return [...seen.values()];
     }
 
+    // Same task ID should only live on one day. Prefer more advanced state, then later dates.
+    function deduplicateAcrossDays(days) {
+      const idBest = new Map(); // id -> { date, item, rank }
+      const stateRank = item => (item.completed ? 2 : item.shelved ? 1 : 0);
+
+      for (const [date, day] of Object.entries(days || {})) {
+        for (const item of day.items || []) {
+          if (!item.id) continue;
+          const rank = stateRank(item);
+          const prev = idBest.get(item.id);
+          if (
+            !prev ||
+            rank > prev.rank ||
+            (rank === prev.rank && date > prev.date)
+          ) {
+            // Preserve comments from the displaced copy when upgrading
+            let nextItem = item;
+            if (prev && prev.item) {
+              const commentIds = new Set((item.comments || []).map(c => c.id));
+              const extras = (prev.item.comments || []).filter(c => !commentIds.has(c.id));
+              if (extras.length) {
+                nextItem = { ...item, comments: [...(item.comments || []), ...extras] };
+              }
+            }
+            idBest.set(item.id, { date, item: nextItem, rank });
+          } else if (rank === prev.rank && date === prev.date) {
+            const commentIds = new Set((prev.item.comments || []).map(c => c.id));
+            const extras = (item.comments || []).filter(c => !commentIds.has(c.id));
+            if (extras.length) {
+              prev.item = { ...prev.item, comments: [...(prev.item.comments || []), ...extras] };
+              idBest.set(item.id, prev);
+            }
+          } else if (prev) {
+            // Losing copy may still have comments worth keeping
+            const commentIds = new Set((prev.item.comments || []).map(c => c.id));
+            const extras = (item.comments || []).filter(c => !commentIds.has(c.id));
+            if (extras.length) {
+              prev.item = { ...prev.item, comments: [...(prev.item.comments || []), ...extras] };
+              idBest.set(item.id, prev);
+            }
+          }
+        }
+      }
+
+      let removed = 0;
+      const cleaned = {};
+      for (const [date, day] of Object.entries(days || {})) {
+        const items = (day.items || []).filter(item => {
+          if (!item.id) return true;
+          const best = idBest.get(item.id);
+          if (best && best.date === date) {
+            // Use the possibly comment-merged item
+            return true;
+          }
+          removed++;
+          return false;
+        }).map(item => {
+          const best = idBest.get(item.id);
+          return best && best.date === date ? best.item : item;
+        });
+        // Deduplicate within day after remap
+        const deduped = deduplicateDayItems(items);
+        if (deduped.length > 0) cleaned[date] = { date, items: deduped };
+      }
+      return { days: cleaned, removed };
+    }
+
     function loadData(context = state.listContext) {
       try {
         const raw = localStorage.getItem(getStorageKey(context));
@@ -6074,10 +6141,36 @@
               items: deduplicateDayItems(day.items.map(normalizeItem)),
             };
           }
-          return { days };
+          const { days: cleaned } = deduplicateAcrossDays(days);
+          return {
+            days: cleaned,
+            deletedIds: parsed.deletedIds && typeof parsed.deletedIds === 'object' ? parsed.deletedIds : {},
+          };
         }
       } catch (_) {}
-      return { days: {} };
+      return { days: {}, deletedIds: {} };
+    }
+
+    function markItemDeleted(id) {
+      if (!id) return;
+      if (!state.data.deletedIds) state.data.deletedIds = {};
+      state.data.deletedIds[id] = new Date().toISOString();
+    }
+
+    function clearItemDeleted(id) {
+      if (!id || !state.data.deletedIds) return;
+      delete state.data.deletedIds[id];
+    }
+
+    function pruneDeletedIds(deletedIds) {
+      if (!deletedIds) return {};
+      const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+      const kept = {};
+      for (const [id, ts] of Object.entries(deletedIds)) {
+        const t = Date.parse(ts);
+        if (!Number.isNaN(t) && t >= cutoff) kept[id] = ts;
+      }
+      return kept;
     }
 
     function loadProjectsData() {
@@ -6239,7 +6332,7 @@
       return false;
     }
 
-    // Scan all contexts, remove duplicates in-place, and re-save
+    // Scan all contexts, remove duplicates in-place (same-day and cross-day), and re-save
     function repairData() {
       let totalFixed = 0;
       ['personal', 'work'].forEach(ctx => {
@@ -6248,17 +6341,29 @@
           if (!raw) return;
           const parsed = JSON.parse(raw);
           let changed = false;
+          const days = {};
           for (const [date, day] of Object.entries(parsed.days || {})) {
             if (!day || !Array.isArray(day.items)) continue;
             const before = day.items.length;
-            parsed.days[date].items = deduplicateDayItems(day.items.map(normalizeItem));
-            const after = parsed.days[date].items.length;
-            if (after < before) { totalFixed += before - after; changed = true; }
+            const items = deduplicateDayItems(day.items.map(normalizeItem));
+            if (items.length < before) totalFixed += before - items.length;
+            if (items.length > 0) days[date] = { date, items };
+            if (items.length !== before) changed = true;
           }
-          if (changed) localStorage.setItem(getStorageKey(ctx), JSON.stringify(parsed));
+          const { days: cleaned, removed } = deduplicateAcrossDays(days);
+          if (removed > 0) {
+            totalFixed += removed;
+            changed = true;
+          }
+          if (changed) {
+            parsed.days = cleaned;
+            parsed.deletedIds = pruneDeletedIds(parsed.deletedIds || {});
+            localStorage.setItem(getStorageKey(ctx), JSON.stringify(parsed));
+          }
         } catch (_) {}
       });
       state.data = loadData();
+      saveData();
       render();
       showToast(totalFixed > 0
         ? `Repaired ${totalFixed} duplicate item${totalFixed === 1 ? '' : 's'} ✓`
@@ -6277,8 +6382,8 @@
     function buildSbPayload() {
       const get = key => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(_){ return null; } };
       return {
-        personal: get('work-desk-data-personal') || { days: {} },
-        work:     get('work-desk-data-work')     || { days: {} },
+        personal: get('work-desk-data-personal') || { days: {}, deletedIds: {} },
+        work:     get('work-desk-data-work')     || { days: {}, deletedIds: {} },
         projects: get(PROJECTS_STORAGE_KEY) || { projects: [] },
       };
     }
@@ -6381,49 +6486,86 @@
 
     // Merge two day data structures, keeping all unique items and preferring newer versions of duplicates
     function mergeDaysData(local, remote) {
-      const merged = { days: {} };
-      const allDates = new Set([
-        ...Object.keys(local?.days || {}),
-        ...Object.keys(remote?.days || {})
-      ]);
-
-      for (const date of allDates) {
-        const localDay = local?.days?.[date];
-        const remoteDay = remote?.days?.[date];
-
-        if (!localDay && remoteDay) {
-          merged.days[date] = remoteDay;
-        } else if (localDay && !remoteDay) {
-          merged.days[date] = localDay;
-        } else if (localDay && remoteDay) {
-          // Merge items from both, preferring items with more data (comments, etc.)
-          const itemMap = new Map();
-
-          // Add all local items
-          for (const item of localDay.items || []) {
-            itemMap.set(item.id, item);
-          }
-
-          // Merge remote items (add new ones, update existing if remote has more data)
-          for (const item of remoteDay.items || []) {
-            const existing = itemMap.get(item.id);
-            if (!existing) {
-              itemMap.set(item.id, item);
-            } else {
-              // Keep the one with more comments, or if equal, prefer completed over not
-              const existingScore = (existing.comments?.length || 0) * 10 + (existing.completed ? 1 : 0);
-              const remoteScore = (item.comments?.length || 0) * 10 + (item.completed ? 1 : 0);
-              if (remoteScore > existingScore) {
-                itemMap.set(item.id, item);
-              }
-            }
-          }
-
-          merged.days[date] = { date, items: Array.from(itemMap.values()) };
+      const localDays = local?.days || {};
+      const remoteDays = remote?.days || {};
+      const deletedIds = pruneDeletedIds({
+        ...(remote?.deletedIds || {}),
+        ...(local?.deletedIds || {}),
+      });
+      // Later tombstone wins if both exist
+      for (const [id, ts] of Object.entries(remote?.deletedIds || {})) {
+        if (!local?.deletedIds?.[id] || new Date(ts) > new Date(local.deletedIds[id])) {
+          deletedIds[id] = ts;
+        }
+      }
+      for (const [id, ts] of Object.entries(local?.deletedIds || {})) {
+        if (!deletedIds[id] || new Date(ts) >= new Date(deletedIds[id])) {
+          deletedIds[id] = ts;
         }
       }
 
-      return merged;
+      // Where each item ID currently lives in local data (after carry/move)
+      const localIdDates = new Map();
+      for (const [date, day] of Object.entries(localDays)) {
+        for (const item of day.items || []) {
+          if (!item?.id) continue;
+          if (!localIdDates.has(item.id)) localIdDates.set(item.id, new Set());
+          localIdDates.get(item.id).add(date);
+        }
+      }
+
+      const scoreItem = item => (item.comments?.length || 0) * 10 + (item.completed ? 1 : 0);
+
+      const shouldTakeRemoteItem = (item, date) => {
+        if (!item?.id) return false;
+        if (deletedIds[item.id] && !localIdDates.has(item.id)) return false;
+        // If local already has this ID on another day (carried/moved), don't resurrect it here
+        const localDates = localIdDates.get(item.id);
+        if (localDates && !localDates.has(date)) return false;
+        return true;
+      };
+
+      const mergeDayItems = (date, localItems, remoteItems) => {
+        const itemMap = new Map();
+        for (const item of localItems || []) {
+          if (item?.id) itemMap.set(item.id, item);
+        }
+        for (const item of remoteItems || []) {
+          if (!shouldTakeRemoteItem(item, date)) continue;
+          const existing = itemMap.get(item.id);
+          if (!existing) {
+            itemMap.set(item.id, item);
+          } else if (scoreItem(item) > scoreItem(existing)) {
+            itemMap.set(item.id, item);
+          }
+        }
+        return Array.from(itemMap.values());
+      };
+
+      const mergedDays = {};
+      const allDates = new Set([...Object.keys(localDays), ...Object.keys(remoteDays)]);
+
+      for (const date of allDates) {
+        const localDay = localDays[date];
+        const remoteDay = remoteDays[date];
+        let items;
+
+        if (!localDay && remoteDay) {
+          items = (remoteDay.items || []).filter(item => shouldTakeRemoteItem(item, date));
+        } else if (localDay && !remoteDay) {
+          items = localDay.items || [];
+        } else {
+          items = mergeDayItems(date, localDay.items, remoteDay.items);
+        }
+
+        if (items.length > 0) {
+          mergedDays[date] = { date, items: deduplicateDayItems(items.map(normalizeItem)) };
+        }
+      }
+
+      // Final pass: one ID → one day
+      const { days } = deduplicateAcrossDays(mergedDays);
+      return { days, deletedIds };
     }
 
     // Merge two projects data structures
@@ -6669,6 +6811,7 @@
         const items = [...day.items];
         items.splice(Math.min(undo.index, items.length), 0, undo.item);
         state.data.days[undo.date] = { date: undo.date, items };
+        clearItemDeleted(undo.item.id);
         saveData();
         render();
         showToast('Item restored');
@@ -6840,19 +6983,28 @@
       const targetDay = state.data.days[today] || { date: today, items: [] };
       const existingIds = new Set(targetDay.items.map(i => i.id));
       const toAdd = unfinished.filter(i => !existingIds.has(i.id));
+      // Always remove unfinished copies from the source day when they already exist on today
+      // (or when we're moving them). Prevents the same ID living on two days.
+      const unfinishedIds = new Set(unfinished.map(i => i.id));
+      const remaining = sourceDay.items.filter(i => !unfinishedIds.has(i.id));
 
-      if (toAdd.length === 0) {
-        if (!auto) showToast('Unfinished tasks already on today');
-        return;
-      }
-
-      const toAddIds = new Set(toAdd.map(i => i.id));
-      const remaining = sourceDay.items.filter(i => !toAddIds.has(i.id));
       if (remaining.length === 0) delete state.data.days[sourceDate];
       else state.data.days[sourceDate] = { ...sourceDay, items: remaining };
 
-      // Deep clone items to preserve all properties including comments
+      if (toAdd.length === 0) {
+        saveData();
+        if (!auto) {
+          showToast('Unfinished tasks already on today — cleared from this day');
+          render();
+        } else {
+          render();
+        }
+        return;
+      }
+
+      // Deep clone items to preserve all properties including comments (same IDs = move)
       const clonedItems = toAdd.map(i => JSON.parse(JSON.stringify(i)));
+      for (const item of clonedItems) clearItemDeleted(item.id);
       state.data.days[today] = { date: today, items: [...targetDay.items, ...clonedItems] };
       if (!auto) {
         state.selectedDate = today;
@@ -7579,6 +7731,7 @@
         ...(state.itemType === 'task' ? { comments: [], shelved: false, boardColumn: 'new' } : {}),
       };
 
+      clearItemDeleted(item.id);
       state.data.days[state.selectedDate] = {
         ...day,
         items: [...day.items, item],
@@ -7900,21 +8053,31 @@
 
       clearPendingUndo();
 
+      // Remove every occurrence of this ID across all days (guards against cross-day clones)
+      let deleted = null;
+      let deletedDate = null;
+      let deletedIndex = 0;
       for (const date of Object.keys(state.data.days)) {
         const day = state.data.days[date];
         const idx = day.items.findIndex(i => i.id === id);
-        if (idx !== -1) {
-          const deleted = cloneData(day.items[idx]);
-          const filtered = day.items.filter(i => i.id !== id);
-          if (filtered.length === 0) delete state.data.days[date];
-          else state.data.days[date] = { ...day, items: filtered };
-          pendingUndo = { type: 'item', date, item: deleted, index: idx };
-          saveData();
-          render();
-          showToast('Item deleted', { undo: restoreDeleted });
-          return;
+        if (idx === -1) continue;
+        if (!deleted) {
+          deleted = cloneData(day.items[idx]);
+          deletedDate = date;
+          deletedIndex = idx;
         }
+        const filtered = day.items.filter(i => i.id !== id);
+        if (filtered.length === 0) delete state.data.days[date];
+        else state.data.days[date] = { ...day, items: filtered };
       }
+
+      if (!deleted) return;
+
+      markItemDeleted(id);
+      pendingUndo = { type: 'item', date: deletedDate, item: deleted, index: deletedIndex };
+      saveData();
+      render();
+      showToast('Item deleted', { undo: restoreDeleted });
     }
 
     function updateItem(id, content) {
@@ -7965,6 +8128,12 @@
     }
 
     function findItem(id) {
+      // Prefer the currently viewed day when the same ID exists on multiple dates
+      if (state.selectedDate && state.data.days[state.selectedDate]) {
+        const day = state.data.days[state.selectedDate];
+        const idx = day.items.findIndex(i => i.id === id);
+        if (idx !== -1) return { date: state.selectedDate, day, idx, item: day.items[idx] };
+      }
       for (const date of Object.keys(state.data.days)) {
         const day = state.data.days[date];
         const idx = day.items.findIndex(i => i.id === id);
