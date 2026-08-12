@@ -4366,7 +4366,7 @@
           <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
           <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
           <li><strong>Search</strong> — find tasks and notes across any day; use the <strong>Both</strong> chip to search Work and Personal together</li>
-          <li><strong>Carry forward</strong> — bring unfinished tasks into today; use the <strong>▾</strong> menu on the carry button to turn on <strong>Auto carry each day</strong></li>
+          <li><strong>Carry forward</strong> — bring unfinished tasks into today; use the <strong>▾</strong> menu on the carry button to turn on <strong>Auto carry each day</strong> (pulls open tasks from all past days, not just yesterday)</li>
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly stats with a daily breakdown chart and activity heatmap</li>
           <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
@@ -6017,20 +6017,26 @@
         return;
       }
 
-      // Deep clone the item to preserve all properties including comments
+      // Prefer the copy from the source day we found; strip EVERY occurrence of this ID
+      // so move can't leave the same ID on two days.
       const item = JSON.parse(JSON.stringify(found.item));
-      const sourceDay = state.data.days[sourceDate];
-      const remaining = sourceDay.items.filter(i => i.id !== itemId);
-
-      if (remaining.length === 0) delete state.data.days[sourceDate];
-      else state.data.days[sourceDate] = { ...sourceDay, items: remaining };
+      for (const date of Object.keys(state.data.days)) {
+        const day = state.data.days[date];
+        const remaining = day.items.filter(i => i.id !== itemId);
+        if (remaining.length === 0) delete state.data.days[date];
+        else if (remaining.length !== day.items.length) {
+          state.data.days[date] = { ...day, items: remaining };
+        }
+      }
 
       const targetDay = state.data.days[targetDate] || { date: targetDate, items: [] };
+      const withoutDup = targetDay.items.filter(i => i.id !== itemId);
       state.data.days[targetDate] = {
         date: targetDate,
-        items: [...targetDay.items, item],
+        items: [...withoutDup, item],
       };
 
+      clearItemDeleted(itemId);
       clearMoveModal();
       saveData();
       const label = formatSidebarLabel(targetDate);
@@ -6728,7 +6734,27 @@
         }
       }
 
-      const scoreItem = item => (item.comments?.length || 0) * 10 + (item.completed ? 1 : 0);
+      const scoreItem = item =>
+        (item.comments?.length || 0) * 10 +
+        (item.completed ? 100 : 0) +
+        (item.shelved ? 50 : 0);
+
+      const mergeItemPair = (a, b) => {
+        const scoreA = scoreItem(a);
+        const scoreB = scoreItem(b);
+        const winner = scoreB > scoreA ? b : a;
+        const loser = scoreB > scoreA ? a : b;
+        const baseComments = winner.comments || [];
+        const commentIds = new Set(baseComments.map(c => c.id));
+        const extras = (loser.comments || []).filter(c => c?.id && !commentIds.has(c.id));
+        const merged = extras.length
+          ? { ...winner, comments: [...baseComments, ...extras] }
+          : winner;
+        if (!merged.recurringTemplateId && loser.recurringTemplateId) {
+          return { ...merged, recurringTemplateId: loser.recurringTemplateId };
+        }
+        return merged;
+      };
 
       const shouldTakeRemoteItem = (item, date) => {
         if (!item?.id) return false;
@@ -6749,8 +6775,8 @@
           const existing = itemMap.get(item.id);
           if (!existing) {
             itemMap.set(item.id, item);
-          } else if (scoreItem(item) > scoreItem(existing)) {
-            itemMap.set(item.id, item);
+          } else {
+            itemMap.set(item.id, mergeItemPair(existing, item));
           }
         }
         return Array.from(itemMap.values());
@@ -6902,8 +6928,9 @@
 
         if (changed) {
           state.data = loadData();
-          // Re-run inject with merged template dates so we don't recreate today's tasks
+          // Carry before inject so yesterday's open recurring isn't duplicated
           if (state.listContext === 'work' || state.listContext === 'personal') {
+            carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
             injectDueTemplates();
           }
           render();
@@ -7196,8 +7223,60 @@
     }
 
     function carryForwardUnfinished(sourceDate, options = {}) {
-      const { auto = false } = options;
+      const { auto = false, allPastDays = false } = options;
       const today = todayKey();
+
+      if (auto && allPastDays) {
+        const pastDates = Object.keys(state.data.days || {})
+          .filter(d => d < today)
+          .sort()
+          .reverse();
+        let carried = 0;
+        const targetDay = state.data.days[today] || { date: today, items: [] };
+        const existingIds = new Set(targetDay.items.map(i => i.id));
+        const toAdd = [];
+
+        for (const sourceDateKey of pastDates) {
+          const sourceDay = state.data.days[sourceDateKey];
+          if (!sourceDay) continue;
+          const unfinished = sourceDay.items.filter(i => i.type === 'task' && !i.completed && !i.shelved);
+          if (!unfinished.length) continue;
+          const unfinishedIds = new Set(unfinished.map(i => i.id));
+          const remaining = sourceDay.items.filter(i => !unfinishedIds.has(i.id));
+          if (remaining.length === 0) delete state.data.days[sourceDateKey];
+          else state.data.days[sourceDateKey] = { ...sourceDay, items: remaining };
+
+          for (const item of unfinished) {
+            if (existingIds.has(item.id)) continue;
+            existingIds.add(item.id);
+            toAdd.push(JSON.parse(JSON.stringify(item)));
+          }
+        }
+
+        if (toAdd.length === 0) {
+          // Still may have cleared source days of already-on-today IDs
+          saveData();
+          render();
+          return;
+        }
+
+        for (const item of toAdd) clearItemDeleted(item.id);
+        let todayItems = [...(state.data.days[today]?.items || targetDay.items), ...toAdd];
+        // Dedupe if target was mutated mid-loop
+        const seen = new Set();
+        todayItems = todayItems.filter(i => {
+          if (seen.has(i.id)) return false;
+          seen.add(i.id);
+          return true;
+        });
+        const recur = deduplicateRecurringSameDay(todayItems, loadRecurringTemplates());
+        state.data.days[today] = { date: today, items: recur.items };
+        saveData();
+        showToast(`Auto-carried ${toAdd.length} task${toAdd.length === 1 ? '' : 's'} to today`);
+        render();
+        return;
+      }
+
       if (sourceDate > today) {
         if (!auto) showToast('Can only carry forward from past days');
         return;
@@ -7240,7 +7319,11 @@
       // Deep clone items to preserve all properties including comments (same IDs = move)
       const clonedItems = toAdd.map(i => JSON.parse(JSON.stringify(i)));
       for (const item of clonedItems) clearItemDeleted(item.id);
-      state.data.days[today] = { date: today, items: [...targetDay.items, ...clonedItems] };
+      let todayItems = [...targetDay.items, ...clonedItems];
+      // Collapse same-template recurring copies (e.g. inject raced ahead of carry)
+      const recur = deduplicateRecurringSameDay(todayItems, loadRecurringTemplates());
+      todayItems = recur.items;
+      state.data.days[today] = { date: today, items: todayItems };
       if (!auto) {
         state.selectedDate = today;
         syncCalendarViewToSelected();
@@ -7258,7 +7341,8 @@
       const today = todayKey();
       const lastKey = `${AUTO_CARRY_LAST_KEY}-${state.listContext}`;
       if (localStorage.getItem(lastKey) === today) return;
-      carryForwardUnfinished(yesterdayKey(), { auto: true });
+      // Pull unfinished open tasks from every past day (not just yesterday)
+      carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
       localStorage.setItem(lastKey, today);
     }
 
@@ -7313,7 +7397,7 @@
       const data = raw.days ? raw : { days: raw };
       if (!data.days || typeof data.days !== 'object') return null;
 
-      const cleaned = { days: {} };
+      const cleaned = { days: {}, deletedIds: {} };
       for (const [date, day] of Object.entries(data.days)) {
         if (!day || !Array.isArray(day.items)) continue;
         const items = day.items.filter(item =>
@@ -7326,7 +7410,22 @@
           cleaned.days[date] = { date, items };
         }
       }
-      return Object.keys(cleaned.days).length > 0 ? cleaned : null;
+      if (data.deletedIds && typeof data.deletedIds === 'object') {
+        cleaned.deletedIds = pruneDeletedIds(data.deletedIds);
+      }
+      // Strip any imported items that are tombstoned in this backup
+      if (Object.keys(cleaned.deletedIds).length) {
+        for (const [date, day] of Object.entries(cleaned.days)) {
+          const items = day.items.filter(i => !cleaned.deletedIds[i.id]);
+          if (items.length === 0) delete cleaned.days[date];
+          else cleaned.days[date] = { date, items };
+        }
+      }
+      const { days: dedupedDays } = deduplicateAcrossDays(cleaned.days);
+      cleaned.days = dedupedDays;
+      return Object.keys(cleaned.days).length > 0 || Object.keys(cleaned.deletedIds).length > 0
+        ? cleaned
+        : null;
     }
 
     function getRetentionCutoffKey() {
@@ -7397,15 +7496,18 @@
       }
     }
 
-    function markTemplateInjectedToday(templateId, context = state.listContext) {
-      if (!templateId) return;
-      const today = todayKey();
+    function markTemplateInjectedForDate(templateId, dateKey, context = state.listContext) {
+      if (!templateId || !dateKey) return;
       const templates = loadRecurringTemplates(context);
       let changed = false;
       const updated = templates.map(t => {
-        if (t.id !== templateId || t.lastInjectedDate === today) return t;
+        if (t.id !== templateId) return t;
+        const prev = t.lastInjectedDate || '';
+        // Only advance — completing/deleting a past-day instance must not stamp "today"
+        // or today's fresh inject gets blocked.
+        if (dateKey <= prev) return t;
         changed = true;
-        return { ...t, lastInjectedDate: today };
+        return { ...t, lastInjectedDate: dateKey };
       });
       if (changed) saveRecurringTemplates(updated, context);
     }
@@ -7687,6 +7789,7 @@
           exportedAt: new Date().toISOString(),
           app: 'work-desk',
           days: state.data.days,
+          deletedIds: pruneDeletedIds(state.data.deletedIds || {}),
         };
         filename = `work-desk-backup-${state.listContext}-${todayKey()}.json`;
         const { days, items } = countItems(state.data);
@@ -7705,22 +7808,45 @@
     }
 
     function mergeImportData(imported) {
-      const merged = { days: { ...state.data.days } };
+      // Union tombstones (later wins), merge days by ID, strip resurrected deletes,
+      // then enforce one ID → one day.
+      const deletedIds = pruneDeletedIds({
+        ...(state.data.deletedIds || {}),
+        ...(imported.deletedIds || {}),
+      });
+      for (const [id, ts] of Object.entries(imported.deletedIds || {})) {
+        if (!deletedIds[id] || new Date(ts) >= new Date(deletedIds[id])) {
+          deletedIds[id] = ts;
+        }
+      }
+      for (const [id, ts] of Object.entries(state.data.deletedIds || {})) {
+        if (!deletedIds[id] || new Date(ts) >= new Date(deletedIds[id])) {
+          deletedIds[id] = ts;
+        }
+      }
 
-      for (const [date, day] of Object.entries(imported.days)) {
-        if (!merged.days[date]) {
-          merged.days[date] = { date, items: [...day.items] };
+      const mergedDays = { ...(state.data.days || {}) };
+      for (const [date, day] of Object.entries(imported.days || {})) {
+        if (!mergedDays[date]) {
+          mergedDays[date] = { date, items: [...(day.items || [])] };
           continue;
         }
-        const existingIds = new Set(merged.days[date].items.map(i => i.id));
-        const newItems = day.items.filter(i => !existingIds.has(i.id));
-        merged.days[date] = {
+        const existingIds = new Set(mergedDays[date].items.map(i => i.id));
+        const newItems = (day.items || []).filter(i => i?.id && !existingIds.has(i.id));
+        mergedDays[date] = {
           date,
-          items: [...merged.days[date].items, ...newItems],
+          items: [...mergedDays[date].items, ...newItems],
         };
       }
 
-      return merged;
+      for (const [date, day] of Object.entries(mergedDays)) {
+        const items = (day.items || []).filter(i => !i?.id || !deletedIds[i.id]);
+        if (items.length === 0) delete mergedDays[date];
+        else mergedDays[date] = { date, items };
+      }
+
+      const { days } = deduplicateAcrossDays(mergedDays);
+      return { days, deletedIds: pruneDeletedIds(deletedIds) };
     }
 
     function applyImport(mode) {
@@ -7753,7 +7879,20 @@
 
       // Standard days-based import
       if (mode === 'replace') {
-        state.data = state.pendingImport;
+        const deletedIds = pruneDeletedIds({
+          ...(state.data.deletedIds || {}),
+          ...(state.pendingImport.deletedIds || {}),
+        });
+        // Keep current tombstones so replace can't resurrect previously deleted IDs
+        // that happen to be in an older backup.
+        let days = state.pendingImport.days || {};
+        for (const [date, day] of Object.entries(days)) {
+          const items = (day.items || []).filter(i => !i?.id || !deletedIds[i.id]);
+          if (items.length === 0) delete days[date];
+          else days[date] = { date, items };
+        }
+        const deduped = deduplicateAcrossDays(days);
+        state.data = { days: deduped.days, deletedIds };
       } else {
         state.data = mergeImportData(state.pendingImport);
       }
@@ -8038,15 +8177,17 @@
           const items = [...day.items];
           const wasCompleted = items[idx].completed;
           const markingComplete = !wasCompleted && items[idx].type === 'task';
+          // Preserve New vs Active so uncomplete returns to the prior column
+          const boardColumn = items[idx].boardColumn === 'new' ? 'new' : 'active';
           items[idx] = {
             ...items[idx],
             completed: !wasCompleted,
             shelved: wasCompleted ? items[idx].shelved : false,
-            boardColumn: wasCompleted ? 'active' : items[idx].boardColumn,
+            boardColumn,
           };
           state.data.days[date] = { ...day, items };
           if (markingComplete && items[idx].recurringTemplateId) {
-            markTemplateInjectedToday(items[idx].recurringTemplateId);
+            markTemplateInjectedForDate(items[idx].recurringTemplateId, date);
           }
           saveData();
           if (markingComplete) celebrateTaskComplete(id);
@@ -8063,13 +8204,15 @@
     }
 
     function applyTaskDropState(item, target) {
+      const boardColumn = item.boardColumn === 'new' ? 'new' : 'active';
       switch (target) {
         case 'new':
           return { ...item, boardColumn: 'new', completed: false, shelved: false };
         case 'active':
           return { ...item, boardColumn: 'active', completed: false, shelved: false };
         case 'completed':
-          return { ...item, boardColumn: 'active', completed: true, shelved: false };
+          // Keep prior New/Active so uncomplete/drag-back can restore it
+          return { ...item, boardColumn, completed: true, shelved: false };
         case 'shelved':
           return { ...item, completed: false, shelved: true };
         default:
@@ -8094,7 +8237,7 @@
       items[found.idx] = next;
       state.data.days[found.date] = { ...found.day, items };
       if (justCompleted && next.recurringTemplateId) {
-        markTemplateInjectedToday(next.recurringTemplateId);
+        markTemplateInjectedForDate(next.recurringTemplateId, found.date);
       }
       saveData();
 
@@ -8371,7 +8514,7 @@
 
       markItemDeleted(id);
       if (deleted.recurringTemplateId) {
-        markTemplateInjectedToday(deleted.recurringTemplateId);
+        markTemplateInjectedForDate(deleted.recurringTemplateId, deletedDate);
       }
       pendingUndo = { type: 'item', date: deletedDate, item: deleted, index: deletedIndex };
       saveData();
@@ -9495,8 +9638,8 @@
         syncSearchUi();
         if (!preserveSearch) renderSearchResults();
         maybeAutoArchive();
-        injectDueTemplates();
         maybeAutoCarryForward();
+        injectDueTemplates();
       } else {
         state.editingProjectItemId = null;
       }
@@ -10257,8 +10400,8 @@
     initCarryForwardMenu();
     initDensityToggle();
     maybeAutoArchive();
-    injectDueTemplates();
     maybeAutoCarryForward();
+    injectDueTemplates();
     render();
     // Auth modal buttons
     document.getElementById('auth-signin-btn').addEventListener('click', sbSignIn);
