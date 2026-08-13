@@ -1777,6 +1777,13 @@
     .auth-btn.primary:hover  { opacity: 0.88; }
     .auth-btn.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
     .auth-btn.secondary:hover { background: var(--accent-light); }
+    .auth-btn.ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      font-weight: 500;
+    }
+    .auth-btn.ghost:hover { color: var(--text); background: var(--bg); }
     .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .auth-error {
       background: var(--danger-surface, #3b0f0f); border: 1px solid var(--danger-border, #7f1d1d);
@@ -1784,6 +1791,33 @@
     }
     .auth-error.hidden { display: none; }
     .auth-hint { text-align: center; font-size: 0.75rem; color: var(--text-muted); margin: 0; }
+    .auth-offline-warn {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+      font-size: 0.72rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+      text-align: left;
+    }
+    .auth-offline-warn strong { color: var(--text); font-weight: 600; }
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
 
     .toast {
       position: fixed; bottom: 24px; right: 24px;
@@ -2679,7 +2713,7 @@
 
     .customize-toggle {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
       padding: 8px 6px;
       border-radius: 7px;
@@ -2687,6 +2721,7 @@
       color: var(--text);
       cursor: pointer;
       user-select: none;
+      line-height: 1.35;
     }
     .customize-toggle:hover { background: color-mix(in srgb, var(--accent) 8%, var(--panel-bg)); }
     .customize-toggle input {
@@ -2695,7 +2730,45 @@
       accent-color: var(--accent);
       flex-shrink: 0;
       cursor: pointer;
+      margin-top: 2px;
     }
+    .customize-toggle-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .customize-toggle-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .col-subsection-label.collapsible {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      text-align: left;
+      width: 100%;
+      color: inherit;
+    }
+    .col-subsection-label.collapsible:hover { color: var(--accent); }
+    .col-collapse-chevron {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      transition: transform 0.15s ease;
+    }
+    .col-subsection.collapsed .col-collapse-chevron { transform: rotate(-90deg); }
+    .col-subsection.collapsed .items { display: none; }
+    .col-collapse-hint {
+      display: none;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding: 4px 2px 8px;
+      margin: 0;
+    }
+    .col-subsection.collapsed .col-collapse-hint { display: block; }
 
     /* ── Compact board density ─────────────────────────────────────────── */
     #desk-view[data-density="compact"] .board-column .items { gap: 3px; }
@@ -4056,6 +4129,32 @@
 
       .type-toggle { margin-bottom: 6px; }
 
+      /* Bottom sticky capture dock — always reachable while scrolling the board */
+      #desk-view .add-form {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 45;
+        margin: 0;
+        border-radius: 14px 14px 0 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.18);
+        padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+        background: var(--surface);
+      }
+      #desk-view .desk-board-area {
+        padding-bottom: calc(150px + env(safe-area-inset-bottom));
+      }
+      /* Placeholder so sticky header layout doesn't collapse when add-form is fixed */
+      #desk-view .desk-sticky::after {
+        content: '';
+        display: block;
+        height: 0;
+      }
+
       .context-badge,
       .today-badge {
         font-size: 0.62rem;
@@ -4100,8 +4199,15 @@
       <div class="auth-actions">
         <button id="auth-signin-btn" class="auth-btn primary" type="button">Sign in</button>
         <button id="auth-signup-btn" class="auth-btn secondary" type="button">Create account</button>
+        <p class="auth-divider">or</p>
+        <button id="auth-offline-btn" class="auth-btn ghost" type="button">Continue offline</button>
       </div>
-      <p class="auth-hint">Your data is private and encrypted in the cloud.</p>
+      <p class="auth-offline-warn">
+        <strong>Offline data stays in this browser only.</strong>
+        Clearing site data, some browser updates, or private/incognito mode can wipe it.
+        Create an account when you can so your desk is backed up in the cloud.
+      </p>
+      <p class="auth-hint">Signed-in data is private to your account and synced across devices.</p>
     </div>
   </div>
   <div class="app">
@@ -4237,7 +4343,19 @@
                   <p class="density-popout-label">Comments</p>
                   <label class="customize-toggle" title="When on, opening comments on one task won't collapse others">
                     <input id="keep-comments-open-toggle" type="checkbox" />
-                    <span>Keep comments open</span>
+                    <span class="customize-toggle-text">
+                      <span>Keep comments open</span>
+                      <span class="customize-toggle-sub">Opening one panel won’t close another</span>
+                    </span>
+                  </label>
+
+                  <p class="density-popout-label">Completed</p>
+                  <label class="customize-toggle" title="When Completed has 5 or more items, collapse the list until you expand it">
+                    <input id="auto-collapse-completed-toggle" type="checkbox" />
+                    <span class="customize-toggle-text">
+                      <span>Auto-collapse Completed</span>
+                      <span class="customize-toggle-sub">Collapse when there are 5+ completed items</span>
+                    </span>
                   </label>
                 </div>
               </div>
@@ -4407,6 +4525,7 @@
         <ul>
           <li><strong>Card density &amp; theme</strong> — use the customize button (⊟) near the date to switch between <em>Comfortable</em> and <em>Compact</em> layouts and to change the color theme</li>
           <li><strong>Keep comments open</strong> — in the same customize menu, turn this on so opening comments on one task doesn’t collapse another</li>
+          <li><strong>Auto-collapse Completed</strong> — optionally collapse the Completed list when it has 5+ items (tap the heading to expand)</li>
           <li><strong>Left accent bar</strong> — each card has a colored left border matching its column (New = accent, Active = hover accent, Done = done color, Notes = muted)</li>
           <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
           <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
@@ -4440,6 +4559,7 @@
         <h3>Cloud sync &amp; data</h3>
         <ul>
           <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
+          <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared, so create an account when you can</li>
           <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
           <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
@@ -4456,6 +4576,7 @@
           <li>Once installed, opens in its own window without browser chrome and works offline</li>
           <li>Use the action links under each card (edit / move / comment) and the <strong>⋮</strong> overflow menu for the rest</li>
           <li>Tap the <strong>checkbox</strong> to complete a task</li>
+          <li>The add bar sticks to the bottom of the screen so you can capture a task without scrolling up</li>
           <li>The week strip above the board replaces the sidebar calendar on smaller screens</li>
           <li>Account email, Sign out, and Export/Import stay available in the sidebar on mobile</li>
         </ul>
@@ -4566,6 +4687,9 @@
       editingComment: null,
       expandedTaskIds: new Set(),
       keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
+      // Default on — toggle off in Customize if you want Completed always expanded
+      autoCollapseCompleted: localStorage.getItem('work-desk-auto-collapse-completed') !== 'false',
+      expandedCompletedDates: new Set(),
       autoOpenEditor: null,
       movingItemId: null,
       pendingImport: null,
@@ -5733,6 +5857,20 @@
         });
       }
 
+      const autoCollapseToggle = document.getElementById('auto-collapse-completed-toggle');
+      if (autoCollapseToggle) {
+        autoCollapseToggle.checked = state.autoCollapseCompleted;
+        autoCollapseToggle.addEventListener('change', () => {
+          state.autoCollapseCompleted = autoCollapseToggle.checked;
+          localStorage.setItem(
+            'work-desk-auto-collapse-completed',
+            state.autoCollapseCompleted ? 'true' : 'false'
+          );
+          if (!state.autoCollapseCompleted) state.expandedCompletedDates.clear();
+          render();
+        });
+      }
+
       document.addEventListener('click', (e) => {
         if (!popout.classList.contains('hidden') && !popout.contains(e.target) && e.target !== btn) {
           closeDensityPopout();
@@ -6637,6 +6775,7 @@
     }
 
     function showAuthModal() {
+      if (localStorage.getItem('work-desk-continue-offline') === 'true') return;
       document.getElementById('auth-modal').classList.remove('hidden');
     }
     function hideAuthModal(email) {
@@ -6645,7 +6784,17 @@
       if (email) {
         document.getElementById('account-email').textContent = email;
         document.getElementById('account-avatar').textContent = email.charAt(0).toUpperCase();
+        localStorage.removeItem('work-desk-continue-offline');
       }
+    }
+
+    function continueOffline() {
+      localStorage.setItem('work-desk-continue-offline', 'true');
+      document.getElementById('auth-modal').classList.add('hidden');
+      document.getElementById('account-email').textContent = 'Offline (this browser)';
+      document.getElementById('account-avatar').textContent = '∅';
+      document.getElementById('sb-signout-btn').classList.add('hidden');
+      showToast('Working offline — create an account to back up your desk');
     }
     function setAuthError(msg) {
       const el = document.getElementById('auth-error');
@@ -9014,12 +9163,46 @@
       header.innerHTML = `Completed / Shelved<span class="col-count">${completed.length}&thinsp;/&thinsp;${shelved.length}</span>`;
       col.appendChild(header);
 
+      const COMPLETED_COLLAPSE_AT = 5;
+      const dateKey = state.selectedDate;
+      const shouldAutoCollapse = state.autoCollapseCompleted && completed.length >= COMPLETED_COLLAPSE_AT;
+      const isExpanded = state.expandedCompletedDates.has(dateKey);
+      const collapsed = shouldAutoCollapse && !isExpanded;
+
       const completedSection = document.createElement('div');
-      completedSection.className = 'col-subsection';
-      const completedLabel = document.createElement('p');
-      completedLabel.className = 'col-subsection-label done-sub';
-      completedLabel.textContent = `Completed (${completed.length})`;
+      completedSection.className = 'col-subsection' + (collapsed ? ' collapsed' : '');
+      let completedLabel;
+      if (shouldAutoCollapse) {
+        completedLabel = document.createElement('button');
+        completedLabel.type = 'button';
+        completedLabel.className = 'col-subsection-label done-sub collapsible';
+        const chevron = document.createElement('span');
+        chevron.className = 'col-collapse-chevron';
+        chevron.setAttribute('aria-hidden', 'true');
+        chevron.textContent = '▾';
+        completedLabel.appendChild(chevron);
+        completedLabel.appendChild(document.createTextNode(`Completed (${completed.length})`));
+        completedLabel.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        completedLabel.title = collapsed ? 'Show completed tasks' : 'Hide completed tasks';
+        completedLabel.addEventListener('click', () => {
+          if (state.expandedCompletedDates.has(dateKey)) state.expandedCompletedDates.delete(dateKey);
+          else state.expandedCompletedDates.add(dateKey);
+          render();
+        });
+      } else {
+        completedLabel = document.createElement('p');
+        completedLabel.className = 'col-subsection-label done-sub';
+        completedLabel.textContent = `Completed (${completed.length})`;
+      }
       completedSection.appendChild(completedLabel);
+
+      if (collapsed) {
+        const hint = document.createElement('p');
+        hint.className = 'col-collapse-hint';
+        hint.textContent = `Tap to show ${completed.length} completed task${completed.length === 1 ? '' : 's'}`;
+        completedSection.appendChild(hint);
+      }
+
       const completedItems = renderColumnItems(completed, COLUMN_HINTS.completed);
       completedSection.appendChild(completedItems);
       setupDropZone(completedSection, 'completed');
@@ -10402,10 +10585,15 @@
     maybeAutoArchive();
     maybeAutoCarryForward();
     injectDueTemplates();
+    if (localStorage.getItem('work-desk-continue-offline') === 'true') {
+      document.getElementById('account-email').textContent = 'Offline (this browser)';
+      document.getElementById('account-avatar').textContent = '∅';
+    }
     render();
     // Auth modal buttons
     document.getElementById('auth-signin-btn').addEventListener('click', sbSignIn);
     document.getElementById('auth-signup-btn').addEventListener('click', sbSignUp);
+    document.getElementById('auth-offline-btn').addEventListener('click', continueOffline);
     document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') sbSignIn(); });
     document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') sbSignIn(); });
 
@@ -10416,6 +10604,9 @@
       sbSynced = false;
       sbSetStatus('idle');
       document.getElementById('sb-signout-btn').classList.add('hidden');
+      localStorage.removeItem('work-desk-continue-offline');
+      document.getElementById('account-email').textContent = 'Not signed in';
+      document.getElementById('account-avatar').textContent = '?';
       showAuthModal();
     });
 
