@@ -4560,6 +4560,7 @@
         <ul>
           <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
           <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared, so create an account when you can</li>
+          <li><strong>Synced preferences</strong> — theme, card density, Keep comments open, Auto-collapse Completed, and Auto carry follow your account across devices</li>
           <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
           <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
@@ -4928,7 +4929,98 @@
       return document.documentElement.dataset.theme || '';
     }
 
-    function applyTheme(id) {
+    const PREFS_UPDATED_AT_KEY = 'work-desk-prefs-updated-at';
+
+    function touchPrefsUpdatedAt() {
+      const ts = new Date().toISOString();
+      localStorage.setItem(PREFS_UPDATED_AT_KEY, ts);
+      return ts;
+    }
+
+    function readLocalPrefs() {
+      return {
+        theme: localStorage.getItem(THEME_KEY) ?? '',
+        density: localStorage.getItem(DENSITY_KEY) || 'comfortable',
+        keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
+        autoCollapseCompleted: localStorage.getItem('work-desk-auto-collapse-completed') !== 'false',
+        autoCarryForward: localStorage.getItem(AUTO_CARRY_FORWARD_KEY) === 'true',
+        updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
+      };
+    }
+
+    function schedulePrefsPush() {
+      touchPrefsUpdatedAt();
+      if (sbSynced) sbSchedulePush();
+    }
+
+    /** Apply cloud prefs when remote is newer (or force). Returns true if UI prefs changed. */
+    function applyCloudPrefs(prefs, { force = false } = {}) {
+      if (!prefs || typeof prefs !== 'object') return false;
+      const localTs = localStorage.getItem(PREFS_UPDATED_AT_KEY) || '';
+      const remoteTs = prefs.updatedAt || '';
+      if (!force) {
+        if (remoteTs && localTs && localTs >= remoteTs) return false;
+        // Remote payload without a stamp shouldn't clobber a device that already chose prefs
+        if (!remoteTs && localTs) return false;
+      }
+
+      let changed = false;
+
+      if (typeof prefs.theme === 'string' && THEMES.some(t => t.id === prefs.theme)) {
+        if ((localStorage.getItem(THEME_KEY) ?? '') !== prefs.theme) {
+          applyTheme(prefs.theme, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      if (prefs.density === 'compact' || prefs.density === 'comfortable') {
+        if ((localStorage.getItem(DENSITY_KEY) || 'comfortable') !== prefs.density) {
+          applyDensity(prefs.density, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.keepCommentsOpen === 'boolean') {
+        const next = prefs.keepCommentsOpen;
+        if (state.keepCommentsOpen !== next) {
+          state.keepCommentsOpen = next;
+          localStorage.setItem('work-desk-keep-comments-open', next ? 'true' : 'false');
+          const el = document.getElementById('keep-comments-open-toggle');
+          if (el) el.checked = next;
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.autoCollapseCompleted === 'boolean') {
+        const next = prefs.autoCollapseCompleted;
+        if (state.autoCollapseCompleted !== next) {
+          state.autoCollapseCompleted = next;
+          localStorage.setItem('work-desk-auto-collapse-completed', next ? 'true' : 'false');
+          const el = document.getElementById('auto-collapse-completed-toggle');
+          if (el) el.checked = next;
+          if (!next) state.expandedCompletedDates.clear();
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.autoCarryForward === 'boolean') {
+        const next = prefs.autoCarryForward;
+        if (state.autoCarryForward !== next) {
+          state.autoCarryForward = next;
+          localStorage.setItem(AUTO_CARRY_FORWARD_KEY, next ? 'true' : 'false');
+          if (els.autoCarryToggle) els.autoCarryToggle.checked = next;
+          changed = true;
+        }
+      }
+
+      if (remoteTs) localStorage.setItem(PREFS_UPDATED_AT_KEY, remoteTs);
+      else if (changed) touchPrefsUpdatedAt();
+
+      return changed;
+    }
+
+    function applyTheme(id, options = {}) {
+      const { fromSync = false } = options;
       // First rAF: let the browser register the transition rules on all elements.
       // Second rAF: swap the theme so the already-armed transitions fire together.
       document.body.classList.add('theme-transitioning');
@@ -4945,12 +5037,13 @@
         });
       });
       localStorage.setItem(THEME_KEY, id);
+      if (!fromSync) schedulePrefsPush();
     }
 
     function initTheme() {
       const stored = localStorage.getItem(THEME_KEY);
       const valid = THEMES.some(t => t.id === stored);
-      if (stored !== null && valid) applyTheme(stored);
+      if (stored !== null && valid) applyTheme(stored, { fromSync: true });
       renderThemeSwatches();
     }
 
@@ -5775,7 +5868,8 @@
       openComments(itemId);
     }
 
-    function applyDensity(mode) {
+    function applyDensity(mode, options = {}) {
+      const { fromSync = false } = options;
       const view   = document.getElementById('desk-view');
       const popout = document.getElementById('density-popout');
       if (mode === 'compact') {
@@ -5783,10 +5877,13 @@
       } else {
         delete view.dataset.density;
       }
-      popout.querySelectorAll('.density-option').forEach(opt => {
-        opt.classList.toggle('active', opt.dataset.density === mode);
-      });
+      if (popout) {
+        popout.querySelectorAll('.density-option').forEach(opt => {
+          opt.classList.toggle('active', opt.dataset.density === mode);
+        });
+      }
       localStorage.setItem(DENSITY_KEY, mode);
+      if (!fromSync) schedulePrefsPush();
     }
 
     function openDensityPopout() {
@@ -5827,7 +5924,7 @@
       const popout = document.getElementById('density-popout');
 
       const stored = localStorage.getItem(DENSITY_KEY) || 'comfortable';
-      applyDensity(stored);
+      applyDensity(stored, { fromSync: true });
 
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -5847,6 +5944,7 @@
         keepCommentsToggle.addEventListener('change', () => {
           state.keepCommentsOpen = keepCommentsToggle.checked;
           localStorage.setItem('work-desk-keep-comments-open', state.keepCommentsOpen ? 'true' : 'false');
+          schedulePrefsPush();
           // Turning the preference off collapses down to a single open panel
           if (!state.keepCommentsOpen && state.expandedTaskIds.size > 1) {
             const keep = [...state.expandedTaskIds].pop();
@@ -5866,6 +5964,7 @@
             'work-desk-auto-collapse-completed',
             state.autoCollapseCompleted ? 'true' : 'false'
           );
+          schedulePrefsPush();
           if (!state.autoCollapseCompleted) state.expandedCompletedDates.clear();
           render();
         });
@@ -5903,6 +6002,7 @@
       els.autoCarryToggle.addEventListener('change', () => {
         state.autoCarryForward = els.autoCarryToggle.checked;
         localStorage.setItem(AUTO_CARRY_FORWARD_KEY, state.autoCarryForward ? 'true' : 'false');
+        schedulePrefsPush();
         els.carryForwardWrap.classList.toggle('auto-on', state.autoCarryForward);
         if (state.autoCarryForward) maybeAutoCarryForward();
       });
@@ -6721,6 +6821,7 @@
           personal: get('work-desk-recurring-personal') || { templates: [] },
           work:     get('work-desk-recurring-work')     || { templates: [] },
         },
+        prefs: readLocalPrefs(),
       };
     }
 
@@ -7073,6 +7174,11 @@
               changed = true;
             }
           });
+        }
+
+        // Theme + Customize prefs (later updatedAt wins)
+        if (remote.data.prefs) {
+          if (applyCloudPrefs(remote.data.prefs)) changed = true;
         }
 
         if (changed) {
