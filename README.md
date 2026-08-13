@@ -1,151 +1,459 @@
-# Work Desk
+Work Desk
 
-A personal task and notes management app with cloud sync, designed for daily productivity tracking.
+A personal daily desk for tasks, notes, and light project tracking — with optional cloud sync and a PWA install.
 
-![Work Desk Screenshot](https://img.shields.io/badge/PWA-Ready-blue) ![Self Hosted](https://img.shields.io/badge/Self--Hosted-GitHub%20Pages-green)
+PWA Ready Self Hosted Vanilla JS
 
-## Features
+Features
 
-### Task Management
-- **Kanban-style board** — tasks flow through New → Active → Completed columns
-- **Drag and drop** — reorder tasks or move between columns
-- **Shelving** — temporarily set aside tasks without deleting them
-- **Carry forward** — automatically or manually bring unfinished tasks to today
-- **Recurring tasks** — create templates that auto-inject on specific days/intervals
+Task management
 
-### Notes
-- **Quick notes** — capture thoughts alongside tasks
-- **Updates/comments** — append timestamped follow-up entries to notes (like a mini-journal)
-- **Rich text** — bold, italic, underline formatting
-- **Paragraph spacing** — multi-paragraph notes render with proper breathing room
 
-### Organization
-- **Date-based navigation** — calendar picker and week strip for quick date access
-- **Work/Personal contexts** — separate lists with one-click switching
-- **Search** — find tasks and notes across all dates and contexts
 
-### Insights
-- **Daily/Monthly/Yearly views** — track completion rates over time
-- **Activity heatmap** — GitHub-style visualization of your productivity
-- **Progress bar** — visual breakdown of task states per day
 
-### Customization
-- **32 themes** — 16 light and 16 dark themes (Synthwave, Nord, Dracula, Forest, etc.)
-- **Dynamic favicons** — browser tab icon changes with your theme
-- **Comfortable/Compact density** — toggle card layout density
-- **Collapsible sidebar** — maximize board space when needed
 
-### Cloud Sync (Optional)
-- **Supabase integration** — sync across devices with email sign-in
-- **Automatic sync** — changes push to cloud within seconds
-- **Offline-first** — works without internet, syncs when reconnected
-- **Local backup** — export/import JSON backups anytime
+Kanban board — New → Active → Completed / Shelved
 
-### Mobile & PWA
-- **Responsive design** — adapts to phone, tablet, and desktop
-- **Installable** — add to home screen for app-like experience
-- **Offline support** — service worker caches the app for offline use
-- **Touch-friendly** — swipe week strip, tap-to-complete
 
-## Tech Stack
 
-- **Single HTML file** — entire app in one `index.html` (~8,000 lines)
-- **Vanilla JS** — no frameworks, no build step
-- **CSS Variables** — theming via custom properties
-- **localStorage** — primary data store
-- **Supabase** — optional cloud backend (PostgreSQL + Auth)
-- **Web Crypto API** — secure ID generation
+Drag and drop — reorder within a day or move between columns
 
-## Getting Started
 
-### Local Use (No Setup)
-1. Download `index.html` (or `work-desk.html`)
-2. Open in any modern browser
-3. Start adding tasks
 
-### GitHub Pages Deployment
-1. Create a new GitHub repository
-2. Upload these files:
-   - `index.html`
-   - `manifest.json`
-   - `sw.js`
-   - `icon-192.png`
-   - `icon-512.png`
-3. Go to Settings → Pages → Deploy from `main` branch
-4. Access at `https://yourusername.github.io/repo-name/`
+Shelving — park a task without deleting it
 
-### Supabase Cloud Sync Setup
-1. Create a free [Supabase](https://supabase.com) project
-2. Run this SQL in the SQL Editor:
-   ```sql
-   CREATE TABLE user_data (
-     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-     data JSONB NOT NULL DEFAULT '{}'::jsonb,
-     updated_at TIMESTAMPTZ DEFAULT now()
-   );
 
-   ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
 
-   CREATE POLICY "Users can manage their own data"
-     ON user_data FOR ALL
-     USING (auth.uid() = user_id)
-     WITH CHECK (auth.uid() = user_id);
-   ```
-3. In Authentication → Providers, ensure Email is enabled
-4. In Authentication → Settings, disable "Confirm email" for easier signup
-5. Update the `SB_URL` and `SB_KEY` constants in the HTML with your project values
+Carry forward — manual or auto-carry unfinished open tasks from past days into today
 
-## File Structure
 
-```
+
+Recurring templates — daily / weekdays / weekly / custom; injects once per due day (completed instances count)
+
+
+
+Comments / updates — timestamped follow-ups on tasks
+
+
+
+Move to another day — keeps a single ID (no dual-day clones)
+
+
+
+Notes & projects
+
+
+
+
+
+Quick notes — alongside the task board
+
+
+
+Rich text — bold, italic, underline, bullets
+
+
+
+Projects — third context for longer-lived notes and tasks with updates
+
+
+
+Organization
+
+
+
+
+
+Work / Personal / Projects — separate contexts
+
+
+
+Date navigation — sidebar calendar (desktop) and week strip (narrow screens)
+
+
+
+Search — current list or both Work & Personal
+
+
+
+Repair duplicates — cleans same-ID and same-day recurring copies left by sync races
+
+
+
+Insights
+
+
+
+
+
+Week / month / year completion charts
+
+
+
+Activity heatmap (year view)
+
+
+
+Day-by-day progress breakdown
+
+
+
+Customization
+
+
+
+
+
+32 themes — light and dark (Nord, Dracula, Synthwave, etc.)
+
+
+
+Comfortable / Compact card density
+
+
+
+Keep comments open — multiple comment panels at once
+
+
+
+Auto-collapse Completed — collapses the Completed list at 5+ items (tap heading to expand)
+
+
+
+Collapsible sidebar on desktop
+
+
+
+Cloud sync & offline
+
+
+
+
+
+Optional Supabase sync — email sign-in; devices merge rather than overwrite
+
+
+
+Continue offline — use the desk without an account; data stays in this browser only (clearing site data can wipe it — create an account to back up)
+
+
+
+Export / import JSON backups (includes delete tombstones)
+
+
+
+Auto-prune of days older than 1 year from the local cache (cloud keeps history)
+
+
+
+Mobile & PWA
+
+
+
+
+
+Responsive layout for phone, tablet, and desktop
+
+
+
+Sticky bottom add bar on mobile so capture stays reachable while scrolling
+
+
+
+Installable home-screen app + service worker offline shell
+
+
+
+Touch-friendly week strip and tap-to-complete
+
+
+
+Tech stack
+
+
+
+
+
+Single-file app: index.html / work-desk.html (vanilla JS, no build required to run)
+
+
+
+localStorage for local state; Supabase for optional cloud
+
+
+
+CSS variables for theming
+
+
+
+Optional Node test tooling (lib/, tests/, Playwright e2e/)
+
+
+
+Getting started
+
+
+
+Local use (no setup)
+
+
+
+
+
+Open index.html or work-desk.html in a modern browser
+
+
+
+Choose Continue offline or create / sign in to an account
+
+
+
+Start adding tasks
+
+
+
+GitHub Pages
+
+
+
+
+
+Push at least:
+
+
+
+
+
+index.html
+
+
+
+manifest.json
+
+
+
+sw.js
+
+
+
+icon-192.png
+
+
+
+icon-512.png
+
+
+
+Settings → Pages → deploy from main
+
+
+
+Visit https://<user>.github.io/<repo>/
+
+Update sw.js / manifest paths if your Pages site is not served under /work_desk/.
+
+Supabase (optional cloud sync)
+
+
+
+
+
+Create a Supabase project
+
+
+
+Run:
+
+CREATE TABLE user_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own data"
+  ON user_data FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+
+
+
+
+Enable Email auth; optionally disable “Confirm email” for easier local signup
+
+
+
+Set SB_URL and SB_KEY in the HTML to your project values
+
+
+
+File structure
+
 work-desk/
-├── index.html          # Main app (deploy this)
-├── work-desk.html      # Development copy
-├── manifest.json       # PWA manifest
-├── sw.js               # Service worker for offline
-├── icon-192.png        # PWA icon (192x192)
-├── icon-512.png        # PWA icon (512x512)
-└── README.md           # This file
-```
+├── index.html              # Deployable app
+├── work-desk.html          # Dev copy (kept in sync with index.html)
+├── manifest.json           # PWA manifest
+├── sw.js                   # Service worker
+├── icon-192.png / icon-512.png
+├── lib/desk-logic.mjs      # Pure sync/recurring helpers (unit-tested)
+├── tests/desk-logic.test.mjs
+├── e2e/smoke.spec.ts       # Playwright smoke tests
+├── playwright.config.ts
+├── package.json            # Optional: unit + e2e scripts
+└── README.md
 
-## Keyboard Shortcuts
 
-| Action | Shortcut |
-|--------|----------|
-| Add task/note | `Ctrl/Cmd + Enter` |
-| Bold | `Ctrl/Cmd + B` |
-| Italic | `Ctrl/Cmd + I` |
-| Underline | `Ctrl/Cmd + U` |
-| Cancel/Close | `Escape` |
 
-## Data Storage
+Keyboard shortcuts
 
-- **Local**: `localStorage` keys `work-desk-data-work` and `work-desk-data-personal`
-- **Cloud**: Supabase `user_data` table with JSONB column
-- **Auto-pruning**: Days older than 1 year are removed from local cache (cloud retains full history)
-- **Backup**: Export/Import JSON files for manual backup
 
-## Browser Support
 
-- Chrome/Edge 90+
-- Firefox 90+
-- Safari 14+
-- Mobile browsers with PWA support
 
-## Themes
 
-### Light
-Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Mint, Lavender, Solarized, Tokyo Day, Vaporwave, Synthwave, Cyberpunk, Outrun
 
-### Dark
-Default, Nord, Dracula, Solarized, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Synthwave, Cyberpunk, Outrun, Vaporwave
 
-## Future Improvements
+Action
 
-- **Google Assistant integration** — voice commands for task management
-- **Data encryption** — optional PIN/passphrase encryption for cloud data
 
-## License
+
+Shortcut
+
+
+
+
+
+Add task / note
+
+
+
+Ctrl/Cmd + Enter
+
+
+
+
+
+Bold / Italic / Underline
+
+
+
+Ctrl/Cmd + B / I / U
+
+
+
+
+
+Cancel / close
+
+
+
+Escape
+
+
+
+Data storage
+
+
+
+
+
+
+
+Store
+
+
+
+Contents
+
+
+
+
+
+Local
+
+
+
+work-desk-data-work, work-desk-data-personal, projects + recurring keys, preferences
+
+
+
+
+
+Cloud
+
+
+
+Supabase user_data.data JSON (work, personal, projects, recurring)
+
+
+
+
+
+Backup
+
+
+
+Export JSON includes days + deletedIds tombstones
+
+Tips:
+
+
+
+
+
+Prefer signing in if you care about durability across browsers or devices  
+
+
+
+Use Export backup before clearing site data or switching machines  
+
+
+
+Repair duplicates if sync ever leaves twin cards
+
+
+
+Testing
+
+Requires Node.js. Unit tests need no extra packages; E2E needs Playwright (and a working npm registry).
+
+npm test                 # unit: node --test tests/desk-logic.test.mjs
+npm run test:e2e         # Playwright smoke (serves app on :4173)
+npm run test:e2e:ui      # Playwright UI mode
+npm run test:all         # unit + e2e
+
+E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, and move-to-date ID uniqueness. The auth modal is dismissed via Continue offline.
+
+Browser support
+
+
+
+
+
+Chrome / Edge 90+  
+
+
+
+Firefox 90+  
+
+
+
+Safari 14+  
+
+
+
+Mobile browsers with PWA support
+
+
+
+Themes
+
+Light: Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Mint, Lavender, Solarized, Tokyo Day, Vaporwave, Synthwave, Cyberpunk, Outrun  
+
+Dark: Default, Nord, Dracula, Solarized, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Synthwave, Cyberpunk, Outrun, Vaporwave  
+
+License
 
 Personal use. Feel free to fork and customize for your own productivity needs.
