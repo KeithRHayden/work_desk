@@ -7093,7 +7093,8 @@
       }
     }
 
-    // Merge two day data structures, keeping all unique items and preferring newer versions of duplicates
+    // Merge two day data structures. Same ID is resolved globally so a stale open
+    // copy on one device cannot resurrect a task completed/shelved on another day.
     function mergeDaysData(local, remote) {
       const localDays = local?.days || {};
       const remoteDays = remote?.days || {};
@@ -7101,7 +7102,6 @@
         ...(remote?.deletedIds || {}),
         ...(local?.deletedIds || {}),
       });
-      // Later tombstone wins if both exist
       for (const [id, ts] of Object.entries(remote?.deletedIds || {})) {
         if (!local?.deletedIds?.[id] || new Date(ts) > new Date(local.deletedIds[id])) {
           deletedIds[id] = ts;
@@ -7113,13 +7113,10 @@
         }
       }
 
-      // Where each item ID currently lives in local data (after carry/move)
-      const localIdDates = new Map();
-      for (const [date, day] of Object.entries(localDays)) {
+      const localIds = new Set();
+      for (const day of Object.values(localDays)) {
         for (const item of day.items || []) {
-          if (!item?.id) continue;
-          if (!localIdDates.has(item.id)) localIdDates.set(item.id, new Set());
-          localIdDates.get(item.id).add(date);
+          if (item?.id) localIds.add(item.id);
         }
       }
 
@@ -7127,6 +7124,8 @@
         (item.comments?.length || 0) * 10 +
         (item.completed ? 100 : 0) +
         (item.shelved ? 50 : 0);
+
+      const itemStateRank = item => (item.completed ? 2 : item.shelved ? 1 : 0);
 
       const mergeItemPair = (a, b) => {
         const scoreA = scoreItem(a);
@@ -7145,54 +7144,59 @@
         return merged;
       };
 
-      const shouldTakeRemoteItem = (item, date) => {
-        if (!item?.id) return false;
-        if (deletedIds[item.id] && !localIdDates.has(item.id)) return false;
-        // If local already has this ID on another day (carried/moved), don't resurrect it here
-        const localDates = localIdDates.get(item.id);
-        if (localDates && !localDates.has(date)) return false;
-        return true;
+      const pickBestPlacement = (a, b) => {
+        const rankA = itemStateRank(a.item);
+        const rankB = itemStateRank(b.item);
+        const scoreA = scoreItem(a.item);
+        const scoreB = scoreItem(b.item);
+        let winner = a;
+        let loser = b;
+        if (rankB > rankA || (rankB === rankA && scoreB > scoreA)) {
+          winner = b;
+          loser = a;
+        } else if (rankB === rankA && scoreB === scoreA && b.date > a.date) {
+          winner = b;
+          loser = a;
+        }
+        return { date: winner.date, item: mergeItemPair(winner.item, loser.item) };
       };
 
-      const mergeDayItems = (date, localItems, remoteItems) => {
-        const itemMap = new Map();
-        for (const item of localItems || []) {
-          if (item?.id) itemMap.set(item.id, item);
-        }
-        for (const item of remoteItems || []) {
-          if (!shouldTakeRemoteItem(item, date)) continue;
-          const existing = itemMap.get(item.id);
-          if (!existing) {
-            itemMap.set(item.id, item);
-          } else {
-            itemMap.set(item.id, mergeItemPair(existing, item));
-          }
-        }
-        return Array.from(itemMap.values());
+      const placements = new Map();
+      const addCandidate = (date, item) => {
+        if (!item?.id) return;
+        if (deletedIds[item.id] && !localIds.has(item.id)) return;
+        const cand = { date, item };
+        const prev = placements.get(item.id);
+        placements.set(item.id, prev ? pickBestPlacement(prev, cand) : cand);
       };
 
-      const mergedDays = {};
-      const allDates = new Set([...Object.keys(localDays), ...Object.keys(remoteDays)]);
-
-      for (const date of allDates) {
-        const localDay = localDays[date];
-        const remoteDay = remoteDays[date];
-        let items;
-
-        if (!localDay && remoteDay) {
-          items = (remoteDay.items || []).filter(item => shouldTakeRemoteItem(item, date));
-        } else if (localDay && !remoteDay) {
-          items = localDay.items || [];
-        } else {
-          items = mergeDayItems(date, localDay.items, remoteDay.items);
-        }
-
-        if (items.length > 0) {
-          mergedDays[date] = { date, items: deduplicateDayItems(items.map(normalizeItem)) };
-        }
+      for (const [date, day] of Object.entries(localDays)) {
+        for (const item of day.items || []) addCandidate(date, item);
+      }
+      for (const [date, day] of Object.entries(remoteDays)) {
+        for (const item of day.items || []) addCandidate(date, item);
       }
 
-      // Final pass: one ID → one day
+      const mergedDays = {};
+      for (const { date, item } of placements.values()) {
+        if (!mergedDays[date]) mergedDays[date] = { date, items: [] };
+        mergedDays[date].items.push(item);
+      }
+
+      for (const [date, day] of Object.entries({ ...remoteDays, ...localDays })) {
+        const orphans = (day.items || []).filter(i => !i?.id);
+        if (!orphans.length) continue;
+        if (!mergedDays[date]) mergedDays[date] = { date, items: [] };
+        mergedDays[date].items.push(...orphans);
+      }
+
+      for (const date of Object.keys(mergedDays)) {
+        mergedDays[date] = {
+          date,
+          items: deduplicateDayItems(mergedDays[date].items.map(normalizeItem)),
+        };
+      }
+
       const { days } = deduplicateAcrossDays(mergedDays);
       return { days, deletedIds };
     }
@@ -7322,14 +7326,18 @@
 
         if (changed) {
           state.data = loadData();
-          // Carry before inject so yesterday's open recurring isn't duplicated
-          if (state.listContext === 'work' || state.listContext === 'personal') {
-            carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
-            injectDueTemplates();
-          }
-          render();
           if (!silent) showToast('Synced from cloud ☁️');
+        } else {
+          state.data = loadData();
         }
+
+        // Carry/inject after merge so stale local opens aren't promoted before cloud state wins
+        if (state.listContext === 'work' || state.listContext === 'personal') {
+          carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
+          injectDueTemplates();
+          localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
+        }
+        render();
 
         // Always push merged data back to ensure cloud has the complete set
         localStorage.setItem(SB_TS_KEY, new Date().toISOString());
@@ -7337,6 +7345,11 @@
         sbSetStatus('ok');
       } else {
         // No remote data, just push local
+        if (state.listContext === 'work' || state.listContext === 'personal') {
+          carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
+          injectDueTemplates();
+          localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
+        }
         await sbPush();
         if (!silent) showToast('Data backed up to cloud ☁️');
         sbSetStatus('ok');
@@ -7400,20 +7413,36 @@
 
     async function sbStartSync() {
       await sbInit();
-      // If user is already signed in, sbInit skips the modal and we sync immediately
-      if (!sbClient) return;
+      if (!sbClient) {
+        maybeAutoCarryForward();
+        injectDueTemplates();
+        render();
+        return;
+      }
       const { data: { session } } = await sbClient.auth.getSession();
       if (session) {
         hideAuthModal(session.user?.email);
-        await sbPostAuthSync();
+        // Sync before carry so stale local opens can't beat cloud completed/shelved
+        await sbPostAuthSync({ force: true });
+      } else {
+        maybeAutoCarryForward();
+        injectDueTemplates();
+        render();
       }
     }
 
-    function saveData() {
+    function saveData(options = {}) {
+      const { flush = false } = options;
       localStorage.setItem(getStorageKey(), JSON.stringify(state.data));
       // Update local timestamp immediately so a refresh before push won't overwrite local changes
       localStorage.setItem(SB_TS_KEY, new Date().toISOString());
-      if (sbSynced) sbSchedulePush();
+      if (!sbSynced) return;
+      if (flush) {
+        clearTimeout(sbSyncTimer);
+        sbPush();
+      } else {
+        sbSchedulePush();
+      }
     }
 
     function clearPendingUndo() {
@@ -8583,7 +8612,7 @@
           if (markingComplete && items[idx].recurringTemplateId) {
             markTemplateInjectedForDate(items[idx].recurringTemplateId, date);
           }
-          saveData();
+          saveData({ flush: true });
           if (markingComplete) celebrateTaskComplete(id);
           render();
           return;
@@ -8633,7 +8662,7 @@
       if (justCompleted && next.recurringTemplateId) {
         markTemplateInjectedForDate(next.recurringTemplateId, found.date);
       }
-      saveData();
+      saveData({ flush: target === 'completed' || target === 'shelved' });
 
       const messages = {
         new: 'Moved to New',
@@ -10828,8 +10857,7 @@
     initCarryForwardMenu();
     initDensityToggle();
     maybeAutoArchive();
-    maybeAutoCarryForward();
-    injectDueTemplates();
+    // Carry/inject run after sync when signed in (sbStartSync); offline/guest path carries there too
     if (localStorage.getItem('work-desk-continue-offline') === 'true') {
       updateAccountChrome('offline');
     } else {
@@ -10856,7 +10884,7 @@
       showAuthModal({ force: true });
     });
 
-    sbStartSync(); // cloud sync — non-blocking, runs after first render
+    sbStartSync(); // cloud sync — carry/inject after merge when signed in
 
     // Register service worker for PWA / offline support
     if ('serviceWorker' in navigator) {
