@@ -6477,6 +6477,8 @@
 
     // Collapse same-day copies of the same recurring template (different item IDs).
     // Prefer completed > shelved > open; merge comments onto the winner.
+    // Also collapses identical content when at least one copy is linked to a template
+    // (duplicate templates / cross-device inject with different template ids).
     function deduplicateRecurringSameDay(items, templates = []) {
       if (!Array.isArray(items) || items.length < 2) return { items: items || [], removed: 0 };
       const stateRank = item => (item.completed ? 2 : item.shelved ? 1 : 0);
@@ -6509,10 +6511,10 @@
         }
       }
 
-      const kept = [...passthrough];
+      let afterTemplate = [...passthrough];
       for (const group of groups.values()) {
         if (group.length === 1) {
-          kept.push(group[0]);
+          afterTemplate.push(group[0]);
           continue;
         }
         group.sort((a, b) => {
@@ -6532,23 +6534,73 @@
           }
         }
         if (mergedComments.length) winner.comments = mergedComments;
-        kept.push(winner);
+        afterTemplate.push(winner);
+        removed += group.length - 1;
+      }
+
+      const byContent = new Map();
+      const rest = [];
+      for (const item of afterTemplate) {
+        if (item.type !== 'task') {
+          rest.push(item);
+          continue;
+        }
+        const key = recurringContentKey(item.content);
+        if (!key) {
+          rest.push(item);
+          continue;
+        }
+        const list = byContent.get(key) || [];
+        list.push(item);
+        byContent.set(key, list);
+      }
+
+      const collapsed = [...rest];
+      for (const group of byContent.values()) {
+        if (group.length === 1 || !group.some(i => i.recurringTemplateId)) {
+          collapsed.push(...group);
+          continue;
+        }
+        group.sort((a, b) => {
+          const r = stateRank(b) - stateRank(a);
+          if (r) return r;
+          const ta = a.recurringTemplateId ? 1 : 0;
+          const tb = b.recurringTemplateId ? 1 : 0;
+          if (tb !== ta) return tb - ta;
+          return (b.comments?.length || 0) - (a.comments?.length || 0);
+        });
+        const winner = { ...group[0] };
+        const commentIds = new Set((winner.comments || []).map(c => c.id));
+        const mergedComments = [...(winner.comments || [])];
+        for (const loser of group.slice(1)) {
+          for (const c of loser.comments || []) {
+            if (c?.id && !commentIds.has(c.id)) {
+              commentIds.add(c.id);
+              mergedComments.push(c);
+            }
+          }
+          if (!winner.recurringTemplateId && loser.recurringTemplateId) {
+            winner.recurringTemplateId = loser.recurringTemplateId;
+          }
+        }
+        if (mergedComments.length) winner.comments = mergedComments;
+        collapsed.push(winner);
         removed += group.length - 1;
       }
 
       // Preserve original relative order where possible
-      const keptIds = new Set(kept.map(i => i.id));
+      const keptIds = new Set(collapsed.map(i => i.id));
       const ordered = [];
       const used = new Set();
       for (const item of items) {
         if (!keptIds.has(item.id) || used.has(item.id)) continue;
-        const k = kept.find(x => x.id === item.id);
+        const k = collapsed.find(x => x.id === item.id);
         if (k) {
           ordered.push(k);
           used.add(item.id);
         }
       }
-      for (const k of kept) {
+      for (const k of collapsed) {
         if (!used.has(k.id)) ordered.push(k);
       }
       return { items: ordered, removed };
@@ -6650,19 +6702,30 @@
         const raw = localStorage.getItem(getStorageKey(context));
         if (raw) {
           const parsed = JSON.parse(raw);
+          const templates = loadRecurringTemplates(context);
           const days = {};
+          let recurRemoved = 0;
           for (const [date, day] of Object.entries(parsed.days || {})) {
             if (!day || !Array.isArray(day.items)) continue;
+            let items = deduplicateDayItems(day.items.map(normalizeItem));
+            const recur = deduplicateRecurringSameDay(items, templates);
+            recurRemoved += recur.removed;
+            items = recur.items;
             days[date] = {
               date,
-              items: deduplicateDayItems(day.items.map(normalizeItem)),
+              items,
             };
           }
           const { days: cleaned } = deduplicateAcrossDays(days);
-          return {
+          const result = {
             days: cleaned,
             deletedIds: parsed.deletedIds && typeof parsed.deletedIds === 'object' ? parsed.deletedIds : {},
           };
+          // Persist healed recurring collapse so sync doesn't keep re-pushing dupes
+          if (recurRemoved > 0) {
+            localStorage.setItem(getStorageKey(context), JSON.stringify(result));
+          }
+          return result;
         }
       } catch (_) {}
       return { days: {}, deletedIds: {} };
@@ -7963,14 +8026,22 @@
       const templates = loadRecurringTemplates();
       const today = todayKey();
       const toInject = [];
+      const pendingTemplateIds = new Set();
+      const pendingContentKeys = new Set();
       let dayMutated = false;
       const existingDay = state.data.days[today];
       const day = existingDay || { date: today, items: [] };
 
       const updated = templates.map(t => {
+        const contentKey = recurringContentKey(t.content);
         // Always skip inject when today's instance already exists (any status)
-        if (dayHasRecurringInstance(day, t)) {
-          if (stampRecurringTemplateId(day, t)) dayMutated = true;
+        // or when another due template with the same content is already queued.
+        if (
+          dayHasRecurringInstance(day, t) ||
+          pendingTemplateIds.has(t.id) ||
+          (contentKey && pendingContentKeys.has(contentKey))
+        ) {
+          if (dayHasRecurringInstance(day, t) && stampRecurringTemplateId(day, t)) dayMutated = true;
           return { ...t, lastInjectedDate: today };
         }
         if (!isDueToday(t)) return t;
@@ -7985,10 +8056,12 @@
           createdAt: new Date().toISOString(),
           recurringTemplateId: t.id,
         });
+        pendingTemplateIds.add(t.id);
+        if (contentKey) pendingContentKeys.add(contentKey);
         return { ...t, lastInjectedDate: today };
       });
 
-      // Collapse any same-template copies left from older bugs
+      // Collapse any same-template / same-content copies left from older bugs
       const collapsed = deduplicateRecurringSameDay(
         [...toInject, ...(day.items || [])],
         updated
@@ -8003,7 +8076,7 @@
           state.data.days[today] = { date: today, items: finalItems };
         }
         saveRecurringTemplates(updated);
-        saveData();
+        saveData({ flush: true });
       } else {
         saveRecurringTemplates(updated);
       }
@@ -8231,8 +8304,7 @@
     }
 
     function mergeImportData(imported) {
-      // Union tombstones (later wins), merge days by ID, strip resurrected deletes,
-      // then enforce one ID → one day.
+      // Same global ID resolution as cloud sync: completed/shelved beat open across days.
       const deletedIds = pruneDeletedIds({
         ...(state.data.deletedIds || {}),
         ...(imported.deletedIds || {}),
@@ -8248,24 +8320,73 @@
         }
       }
 
-      const mergedDays = { ...(state.data.days || {}) };
-      for (const [date, day] of Object.entries(imported.days || {})) {
-        if (!mergedDays[date]) {
-          mergedDays[date] = { date, items: [...(day.items || [])] };
-          continue;
+      const itemStateRank = item => (item.completed ? 2 : item.shelved ? 1 : 0);
+      const scoreItem = item =>
+        (item.comments?.length || 0) * 10 +
+        (item.completed ? 100 : 0) +
+        (item.shelved ? 50 : 0);
+
+      const mergeItemPair = (a, b) => {
+        const scoreA = scoreItem(a);
+        const scoreB = scoreItem(b);
+        const winner = scoreB > scoreA ? b : a;
+        const loser = scoreB > scoreA ? a : b;
+        const baseComments = winner.comments || [];
+        const commentIds = new Set(baseComments.map(c => c.id));
+        const extras = (loser.comments || []).filter(c => c?.id && !commentIds.has(c.id));
+        const merged = extras.length
+          ? { ...winner, comments: [...baseComments, ...extras] }
+          : winner;
+        if (!merged.recurringTemplateId && loser.recurringTemplateId) {
+          return { ...merged, recurringTemplateId: loser.recurringTemplateId };
         }
-        const existingIds = new Set(mergedDays[date].items.map(i => i.id));
-        const newItems = (day.items || []).filter(i => i?.id && !existingIds.has(i.id));
-        mergedDays[date] = {
-          date,
-          items: [...mergedDays[date].items, ...newItems],
-        };
+        return merged;
+      };
+
+      const pickBestPlacement = (a, b) => {
+        const rankA = itemStateRank(a.item);
+        const rankB = itemStateRank(b.item);
+        const scoreA = scoreItem(a.item);
+        const scoreB = scoreItem(b.item);
+        let winner = a;
+        let loser = b;
+        if (rankB > rankA || (rankB === rankA && scoreB > scoreA)) {
+          winner = b;
+          loser = a;
+        } else if (rankB === rankA && scoreB === scoreA && b.date > a.date) {
+          winner = b;
+          loser = a;
+        }
+        return { date: winner.date, item: mergeItemPair(winner.item, loser.item) };
+      };
+
+      const placements = new Map();
+      const addCandidate = (date, item) => {
+        if (!item?.id) return;
+        if (deletedIds[item.id]) return;
+        const cand = { date, item };
+        const prev = placements.get(item.id);
+        placements.set(item.id, prev ? pickBestPlacement(prev, cand) : cand);
+      };
+
+      for (const [date, day] of Object.entries(state.data.days || {})) {
+        for (const item of day.items || []) addCandidate(date, item);
+      }
+      for (const [date, day] of Object.entries(imported.days || {})) {
+        for (const item of day.items || []) addCandidate(date, item);
       }
 
-      for (const [date, day] of Object.entries(mergedDays)) {
-        const items = (day.items || []).filter(i => !i?.id || !deletedIds[i.id]);
-        if (items.length === 0) delete mergedDays[date];
-        else mergedDays[date] = { date, items };
+      const mergedDays = {};
+      for (const { date, item } of placements.values()) {
+        if (!mergedDays[date]) mergedDays[date] = { date, items: [] };
+        mergedDays[date].items.push(item);
+      }
+
+      for (const date of Object.keys(mergedDays)) {
+        mergedDays[date] = {
+          date,
+          items: deduplicateDayItems(mergedDays[date].items.map(normalizeItem)),
+        };
       }
 
       const { days } = deduplicateAcrossDays(mergedDays);
@@ -8320,7 +8441,7 @@
         state.data = mergeImportData(state.pendingImport);
       }
 
-      saveData();
+      saveData({ flush: true });
       state.pendingImport = null;
       clearEditing();
       clearExpandedComments();
