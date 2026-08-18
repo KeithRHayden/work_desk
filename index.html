@@ -7326,29 +7326,40 @@
       // Debounce rapid sync requests
       const now = Date.now();
       if (!force && now - lastSyncTime < SYNC_DEBOUNCE) {
+        console.log('[sync] debounced, skipping');
         return;
       }
       lastSyncTime = now;
 
+      console.log('[sync] starting sbPostAuthSync...');
       sbSetStatus('syncing');
       const remote = await sbPull();
+      console.log('[sync] remote data:', remote ? 'exists' : 'null');
 
       if (remote && remote.data) {
+        console.log('[sync] remote.data keys:', Object.keys(remote.data));
         let changed = false;
 
         // Merge daily data for each context
         ['personal', 'work'].forEach(ctx => {
+          console.log(`[sync] processing context: ${ctx}`);
           if (remote.data[ctx]) {
+            console.log(`[sync] remote.data.${ctx} days:`, Object.keys(remote.data[ctx].days || {}).length);
             const localRaw = localStorage.getItem(`work-desk-data-${ctx}`);
             const localData = localRaw ? JSON.parse(localRaw) : { days: {} };
+            console.log(`[sync] local ${ctx} days:`, Object.keys(localData.days || {}).length);
             const merged = mergeDaysData(localData, remote.data[ctx]);
+            console.log(`[sync] merged ${ctx} days:`, Object.keys(merged.days || {}).length);
 
             // Check if merge resulted in changes
             const mergedStr = JSON.stringify(merged);
             if (mergedStr !== localRaw) {
               localStorage.setItem(`work-desk-data-${ctx}`, mergedStr);
+              console.log(`[sync] saved merged ${ctx} to localStorage`);
               changed = true;
             }
+          } else {
+            console.log(`[sync] no remote.data.${ctx}`);
           }
         });
 
@@ -7368,18 +7379,23 @@
 
         // Merge recurring templates (keeps lastInjectedDate in sync across devices)
         if (remote.data.recurring) {
+          console.log('[sync] merging recurring templates');
           ['personal', 'work'].forEach(ctx => {
             const remoteBlock = remote.data.recurring[ctx];
             const remoteList = Array.isArray(remoteBlock)
               ? remoteBlock
               : (remoteBlock?.templates || []);
             const localList = loadRecurringTemplates(ctx);
+            console.log(`[sync] ${ctx} templates - local: ${localList.length}, remote: ${remoteList.length}`);
             const mergedList = mergeRecurringTemplates(localList, remoteList);
             if (JSON.stringify(mergedList) !== JSON.stringify(localList)) {
               saveRecurringTemplates(mergedList, ctx);
+              console.log(`[sync] saved ${ctx} templates (${mergedList.length})`);
               changed = true;
             }
           });
+        } else {
+          console.log('[sync] no remote.data.recurring');
         }
 
         // Theme + Customize prefs (later updatedAt wins)
@@ -7388,25 +7404,31 @@
         }
 
         if (changed) {
+          console.log('[sync] changes detected, reloading state.data');
           state.data = loadData();
           if (!silent) showToast('Synced from cloud ☁️');
         } else {
+          console.log('[sync] no changes detected, reloading state.data anyway');
           state.data = loadData();
         }
 
         // Carry/inject after merge so stale local opens aren't promoted before cloud state wins
         if (state.listContext === 'work' || state.listContext === 'personal') {
+          console.log('[sync] running carry forward and inject');
           carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
           injectDueTemplates();
           localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
         }
         render();
+        console.log('[sync] rendered, state.data.days:', Object.keys(state.data.days || {}).length);
 
         // Always push merged data back to ensure cloud has the complete set
         localStorage.setItem(SB_TS_KEY, new Date().toISOString());
         await sbPush();
         sbSetStatus('ok');
+        console.log('[sync] sbPostAuthSync complete');
       } else {
+        console.log('[sync] no remote data, pushing local');
         // No remote data, just push local
         if (state.listContext === 'work' || state.listContext === 'personal') {
           carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
@@ -7416,6 +7438,7 @@
         await sbPush();
         if (!silent) showToast('Data backed up to cloud ☁️');
         sbSetStatus('ok');
+        console.log('[sync] push complete');
       }
 
       sbSynced = true;
@@ -11004,6 +11027,64 @@
       updateAccountChrome('guest');
       showAuthModal({ force: true });
     });
+
+    // Expose recovery functions to console (for debugging/manual recovery)
+    window.deskRecovery = {
+      async forceSync() {
+        console.log('[recovery] forcing full sync...');
+        if (!sbClient) {
+          console.error('[recovery] not signed in or sbClient unavailable');
+          return;
+        }
+        await sbPostAuthSync({ force: true, silent: false });
+        console.log('[recovery] sync complete');
+      },
+      async pullAndReplace() {
+        console.log('[recovery] pulling from cloud and replacing local...');
+        if (!sbClient) {
+          console.error('[recovery] not signed in or sbClient unavailable');
+          return;
+        }
+        const remote = await sbPull();
+        if (!remote || !remote.data) {
+          console.error('[recovery] no remote data found');
+          return;
+        }
+        // Force write remote data to localStorage
+        ['personal', 'work'].forEach(ctx => {
+          if (remote.data[ctx]) {
+            localStorage.setItem(`work-desk-data-${ctx}`, JSON.stringify(remote.data[ctx]));
+            console.log(`[recovery] wrote remote ${ctx} data to localStorage`);
+          }
+        });
+        if (remote.data.recurring) {
+          ['personal', 'work'].forEach(ctx => {
+            const remoteBlock = remote.data.recurring[ctx];
+            const remoteList = Array.isArray(remoteBlock) ? remoteBlock : (remoteBlock?.templates || []);
+            if (remoteList.length > 0) {
+              saveRecurringTemplates(remoteList, ctx);
+              console.log(`[recovery] wrote ${remoteList.length} ${ctx} templates`);
+            }
+          });
+        }
+        if (remote.data.prefs) {
+          applyCloudPrefs(remote.data.prefs);
+          console.log('[recovery] applied cloud prefs');
+        }
+        state.data = loadData();
+        render();
+        console.log('[recovery] complete! Reloading page in 2s...');
+        setTimeout(() => location.reload(), 2000);
+      },
+      checkStatus() {
+        console.log('[recovery] checking status...');
+        console.log('  sbClient:', !!sbClient);
+        console.log('  sbSynced:', sbSynced);
+        console.log('  listContext:', state.listContext);
+        console.log('  localStorage keys:', Object.keys(localStorage).filter(k => k.startsWith('work-desk')));
+        console.log('  state.data.days:', Object.keys(state.data.days || {}).length);
+      }
+    };
 
     sbStartSync(); // cloud sync — carry/inject after merge when signed in
 
