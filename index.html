@@ -7159,8 +7159,24 @@
     // Merge two day data structures. Same ID is resolved globally so a stale open
     // copy on one device cannot resurrect a task completed/shelved on another day.
     function mergeDaysData(local, remote) {
+      console.log('[merge] starting mergeDaysData');
       const localDays = local?.days || {};
       const remoteDays = remote?.days || {};
+      console.log('[merge] local days:', Object.keys(localDays).length);
+      console.log('[merge] remote days:', Object.keys(remoteDays).length);
+      
+      // Count total items
+      let localItemCount = 0;
+      for (const day of Object.values(localDays)) {
+        localItemCount += (day.items || []).length;
+      }
+      let remoteItemCount = 0;
+      for (const day of Object.values(remoteDays)) {
+        remoteItemCount += (day.items || []).length;
+      }
+      console.log('[merge] local items:', localItemCount);
+      console.log('[merge] remote items:', remoteItemCount);
+      
       const deletedIds = pruneDeletedIds({
         ...(remote?.deletedIds || {}),
         ...(local?.deletedIds || {}),
@@ -7175,6 +7191,7 @@
           deletedIds[id] = ts;
         }
       }
+      console.log('[merge] deletedIds count:', Object.keys(deletedIds).length);
 
       const localIds = new Set();
       for (const day of Object.values(localDays)) {
@@ -7182,6 +7199,7 @@
           if (item?.id) localIds.add(item.id);
         }
       }
+      console.log('[merge] localIds count:', localIds.size);
 
       const scoreItem = item =>
         (item.comments?.length || 0) * 10 +
@@ -7225,9 +7243,18 @@
       };
 
       const placements = new Map();
+      let filteredByDeletedIds = 0;
+      let filteredByNoId = 0;
       const addCandidate = (date, item) => {
-        if (!item?.id) return;
-        if (deletedIds[item.id] && !localIds.has(item.id)) return;
+        if (!item?.id) {
+          filteredByNoId++;
+          return;
+        }
+        if (deletedIds[item.id] && !localIds.has(item.id)) {
+          filteredByDeletedIds++;
+          console.log('[merge] filtered out deleted item:', item.id, 'content:', item.content?.substring(0, 50));
+          return;
+        }
         const cand = { date, item };
         const prev = placements.get(item.id);
         placements.set(item.id, prev ? pickBestPlacement(prev, cand) : cand);
@@ -7239,6 +7266,9 @@
       for (const [date, day] of Object.entries(remoteDays)) {
         for (const item of day.items || []) addCandidate(date, item);
       }
+      console.log('[merge] placements after candidates:', placements.size);
+      console.log('[merge] filtered by deletedIds:', filteredByDeletedIds);
+      console.log('[merge] filtered by no ID:', filteredByNoId);
 
       const mergedDays = {};
       for (const { date, item } of placements.values()) {
@@ -7253,6 +7283,13 @@
         mergedDays[date].items.push(...orphans);
       }
 
+      console.log('[merge] mergedDays before dedup:', Object.keys(mergedDays).length);
+      let itemsBeforeDedup = 0;
+      for (const day of Object.values(mergedDays)) {
+        itemsBeforeDedup += (day.items || []).length;
+      }
+      console.log('[merge] items before dedup:', itemsBeforeDedup);
+
       for (const date of Object.keys(mergedDays)) {
         mergedDays[date] = {
           date,
@@ -7260,7 +7297,14 @@
         };
       }
 
-      const { days } = deduplicateAcrossDays(mergedDays);
+      const { days, removed } = deduplicateAcrossDays(mergedDays);
+      console.log('[merge] days after deduplicateAcrossDays:', Object.keys(days).length);
+      console.log('[merge] items removed by deduplicateAcrossDays:', removed);
+      let itemsAfterDedup = 0;
+      for (const day of Object.values(days)) {
+        itemsAfterDedup += (day.items || []).length;
+      }
+      console.log('[merge] items after dedup:', itemsAfterDedup);
       return { days, deletedIds };
     }
 
