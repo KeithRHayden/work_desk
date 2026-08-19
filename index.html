@@ -2712,18 +2712,18 @@
 
     .streak-heatmap {
       display: grid;
-      grid-template-columns: repeat(90, 1fr);
+      grid-template-columns: repeat(90, minmax(0, 1fr));
       gap: 2px;
-      margin-top: 12px;
+      margin-top: 14px;
       width: 100%;
-      max-width: 100%;
-      overflow: hidden;
+      box-sizing: border-box;
     }
 
     .streak-heatmap .heatmap-cell {
-      height: 9px;
+      height: 10px;
       width: 100%;
-      aspect-ratio: 1;
+      border-radius: 2px;
+      min-width: 0;
     }
 
     /* ── Chart Type Selector ─────────────────────────────────── */
@@ -10381,17 +10381,20 @@
 
     // Compute streak data
     function computeStreaks() {
-      const allDays = Object.keys(state.data.days).sort();
-      if (allDays.length === 0) return { current: 0, longest: 0, recent: [] };
+      const activeDays = Object.keys(state.data.days || {})
+        .filter(k => (state.data.days[k]?.items || []).length > 0)
+        .sort();
+      if (activeDays.length === 0) return { current: 0, longest: 0, recent: [] };
 
       let currentStreak = 0;
       let longestStreak = 0;
       let streak = 0;
       const today = todayKey();
+      const yesterday = yesterdayKey();
       
       // Calculate streaks
-      for (let i = 0; i < allDays.length; i++) {
-        if (i === 0 || isConsecutiveDay(allDays[i - 1], allDays[i])) {
+      for (let i = 0; i < activeDays.length; i++) {
+        if (i === 0 || isConsecutiveDay(activeDays[i - 1], activeDays[i])) {
           streak++;
         } else {
           longestStreak = Math.max(longestStreak, streak);
@@ -10400,25 +10403,22 @@
       }
       longestStreak = Math.max(longestStreak, streak);
 
-      // Check if current streak is active (includes today or yesterday)
-      const lastDay = allDays[allDays.length - 1];
-      if (lastDay === today || lastDay === yesterdayKey()) {
+      // Check if current streak is active (last active day is today or yesterday)
+      const lastActiveDay = activeDays[activeDays.length - 1];
+      if (lastActiveDay === today || lastActiveDay === yesterday) {
         currentStreak = streak;
       }
 
-      // Get last 90 days for heatmap
+      // Get exactly last 90 days (from today-89 to today) for heatmap
       const recent = [];
-      const ninetyDaysAgo = (() => {
+      for (let i = 89; i >= 0; i--) {
         const d = new Date();
-        d.setDate(d.getDate() - 90);
-        return formatDateKey(d);
-      })();
-      
-      eachDateInRange(ninetyDaysAgo, today, (dayKey) => {
+        d.setDate(d.getDate() - i);
+        const dayKey = formatDateKey(d);
         const day = state.data.days[dayKey];
-        const tasksCount = day ? day.items.filter(i => i.type === 'task').length : 0;
+        const tasksCount = day ? (day.items || []).filter(item => item.type === 'task').length : 0;
         recent.push({ dayKey, count: tasksCount });
-      });
+      }
 
       return { current: currentStreak, longest: longestStreak, recent };
     }
