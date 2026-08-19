@@ -6329,6 +6329,10 @@
       if (!found) return;
 
       const item = cloneData(found.item);
+      // Clear carriedFrom when sending to another context - this is intentional organization
+      if (item.type === 'task' && item.carriedFrom) {
+        delete item.carriedFrom;
+      }
       const targetContext = state.listContext === 'work' ? 'personal' : 'work';
       const targetLabel = targetContext === 'work' ? 'Work' : 'Personal';
       const date = found.date;
@@ -6370,6 +6374,10 @@
       // Prefer the copy from the source day we found; strip EVERY occurrence of this ID
       // so move can't leave the same ID on two days.
       const item = JSON.parse(JSON.stringify(found.item));
+      // Clear carriedFrom when manually moving - this is intentional rescheduling, not a carry-over
+      if (item.type === 'task' && item.carriedFrom) {
+        delete item.carriedFrom;
+      }
       for (const date of Object.keys(state.data.days)) {
         const day = state.data.days[date];
         const remaining = day.items.filter(i => i.id !== itemId);
@@ -6462,6 +6470,10 @@
         // cannot see today's instance and recreates the recurring task.
         if (item.recurringTemplateId) {
           normalized.recurringTemplateId = item.recurringTemplateId;
+        }
+        // Preserve carry-over tracking for accurate insights
+        if (item.carriedFrom && typeof item.carriedFrom === 'string') {
+          normalized.carriedFrom = item.carriedFrom;
         }
       }
       // Preserve comments for both tasks and notes
@@ -6625,12 +6637,22 @@
         } else {
           // Keep the more advanced state, but always preserve comments from either copy
           const base = stateRank(item) >= stateRank(existing) ? item : existing;
-          const otherComments = (stateRank(item) >= stateRank(existing) ? existing : item).comments || [];
+          const other = stateRank(item) >= stateRank(existing) ? existing : item;
           const baseComments = base.comments || [];
+          const otherComments = other.comments || [];
           // Merge comments by ID, deduplicating
           const commentIds = new Set(baseComments.map(c => c.id));
           const mergedComments = [...baseComments, ...otherComments.filter(c => !commentIds.has(c.id))];
-          seen.set(item.id, { ...base, comments: mergedComments.length > 0 ? mergedComments : undefined });
+          let merged = { ...base, comments: mergedComments.length > 0 ? mergedComments : undefined };
+          // Preserve carriedFrom from either copy
+          if (!merged.carriedFrom && other.carriedFrom) {
+            merged = { ...merged, carriedFrom: other.carriedFrom };
+          }
+          // Preserve recurringTemplateId from either copy
+          if (!merged.recurringTemplateId && other.recurringTemplateId) {
+            merged = { ...merged, recurringTemplateId: other.recurringTemplateId };
+          }
+          seen.set(item.id, merged);
         }
       }
       return [...seen.values()];
@@ -7841,7 +7863,12 @@
           for (const item of unfinished) {
             if (existingIds.has(item.id)) continue;
             existingIds.add(item.id);
-            toAdd.push(JSON.parse(JSON.stringify(item)));
+            const cloned = JSON.parse(JSON.stringify(item));
+            // Mark as carried from this source date for accurate insights tracking
+            if (cloned.type === 'task') {
+              cloned.carriedFrom = sourceDateKey;
+            }
+            toAdd.push(cloned);
           }
         }
 
@@ -7909,7 +7936,14 @@
       }
 
       // Deep clone items to preserve all properties including comments (same IDs = move)
-      const clonedItems = toAdd.map(i => JSON.parse(JSON.stringify(i)));
+      const clonedItems = toAdd.map(i => {
+        const cloned = JSON.parse(JSON.stringify(i));
+        // Mark as carried from source date for accurate insights tracking
+        if (cloned.type === 'task') {
+          cloned.carriedFrom = sourceDate;
+        }
+        return cloned;
+      });
       for (const item of clonedItems) clearItemDeleted(item.id);
       let todayItems = [...targetDay.items, ...clonedItems];
       // Collapse same-template recurring copies (e.g. inject raced ahead of carry)
@@ -9832,17 +9866,24 @@
       let comments = 0;
 
       for (const task of tasks) {
+        // Use carriedFrom field for accurate carry-over tracking
+        if (task.carriedFrom) {
+          carriedOver++;
+        }
+        
         const created = createdDateKey(task);
-        if (created && created < dayKey) carriedOver++;
         if (created === dayKey) createdToday++;
         comments += (task.comments || []).length;
       }
 
       // Split still-open tasks into new (created today) vs carried (from earlier days)
       for (const task of [...buckets.new, ...buckets.active]) {
-        const created = createdDateKey(task);
-        if (created && created < dayKey) openCarried++;
-        else openNew++;
+        // Use carriedFrom for accurate tracking
+        if (task.carriedFrom) {
+          openCarried++;
+        } else {
+          openNew++;
+        }
       }
 
       return {
