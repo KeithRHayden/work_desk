@@ -5818,10 +5818,12 @@
     function createRichEditor({ className, placeholder, initialHtml, onInput }) {
       const wrap = document.createElement('div');
       wrap.className = 'rich-editor-wrap';
+      wrap.draggable = false;
 
       const editor = document.createElement('div');
       editor.className = `rich-editor ${className || ''}`;
       editor.contentEditable = 'true';
+      editor.draggable = false;
       editor.dataset.placeholder = placeholder || '';
       editor.setAttribute('role', 'textbox');
       editor.setAttribute('aria-multiline', 'true');
@@ -5942,7 +5944,10 @@
     }
 
     function clearExpandedComments() {
-      state.expandedTaskIds.clear();
+      // Respect "keep comments open" setting - only clear if it's disabled
+      if (!state.keepCommentsOpen) {
+        state.expandedTaskIds.clear();
+      }
     }
 
     function openComments(itemId, { autoOpenEditor = false } = {}) {
@@ -9298,6 +9303,7 @@
 
       const panel = document.createElement('div');
       panel.className = 'comments-panel';
+      panel.draggable = false;
 
       const comments = item.comments || [];
 
@@ -9312,10 +9318,12 @@
 
           const li = document.createElement('li');
           li.className = 'comment';
+          li.draggable = false;
 
           if (isEditingComment) {
             const editWrap = document.createElement('div');
             editWrap.className = 'comment-edit-wrap';
+            editWrap.draggable = false;
             const { wrap, editor } = createRichEditor({
               className: 'comment-input',
               placeholder: 'Edit…',
@@ -9349,10 +9357,12 @@
             // Comment text
             const body = document.createElement('div');
             body.className = 'comment-body';
+            body.draggable = false;
             const text = document.createElement('div');
             text.className = 'comment-text rich-content';
             text.innerHTML = sanitizeHtml(comment.content);
             text.title = 'Double-click to edit';
+            text.draggable = false;
             text.addEventListener('dblclick', () => startEditComment(item.id, comment.id));
             body.appendChild(text);
             li.appendChild(body);
@@ -9367,6 +9377,7 @@
       function buildAddForm() {
         const form = document.createElement('form');
         form.className = 'add-comment-form';
+        form.draggable = false;
 
         const { wrap: editorWrap, editor: commentEditor } = createRichEditor({
           className: 'comment-input',
