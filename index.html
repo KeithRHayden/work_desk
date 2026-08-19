@@ -2283,8 +2283,11 @@
 
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 12px;
+      justify-items: center;
+      max-width: 1000px;
+      margin: 0 auto;
     }
 
     .stat-card {
@@ -2486,8 +2489,14 @@
 
     .metrics-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
+    }
+    
+    @media (max-width: 768px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
     .metric-item {
@@ -2688,15 +2697,18 @@
     }
 
     .streak-heatmap {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(8px, 1fr));
+      display: flex;
+      flex-wrap: wrap;
       gap: 3px;
       margin-top: 12px;
+      width: 100%;
     }
 
     .streak-heatmap .heatmap-cell {
-      height: 8px;
-      width: 100%;
+      height: 10px;
+      flex: 1 1 calc((100% - 270px) / 90);
+      min-width: 8px;
+      max-width: 14px;
     }
 
     /* ── Chart Type Selector ─────────────────────────────────── */
@@ -2744,11 +2756,18 @@
     .pie-chart-wrap {
       display: flex;
       justify-content: center;
-      padding: 20px 0;
+      padding: 10px 0;
+      min-height: 400px;
+      align-items: center;
     }
 
     .line-chart-canvas,
-    .stacked-chart-canvas,
+    .stacked-chart-canvas {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+    }
+    
     .pie-chart-canvas {
       max-width: 100%;
       height: auto;
@@ -10440,8 +10459,8 @@
       
       const canvas = document.createElement('canvas');
       canvas.className = 'line-chart-canvas';
-      canvas.width = 800;
-      canvas.height = 300;
+      canvas.width = 1000;
+      canvas.height = 400;
       
       const ctx = canvas.getContext('2d');
       const padding = { top: 20, right: 20, bottom: 40, left: 50 };
@@ -10527,8 +10546,8 @@
       
       const canvas = document.createElement('canvas');
       canvas.className = 'stacked-chart-canvas';
-      canvas.width = 800;
-      canvas.height = 300;
+      canvas.width = 1000;
+      canvas.height = 400;
       
       const ctx = canvas.getContext('2d');
       const padding = { top: 20, right: 20, bottom: 40, left: 50 };
@@ -10597,13 +10616,14 @@
       
       const canvas = document.createElement('canvas');
       canvas.className = 'pie-chart-canvas';
-      canvas.width = 400;
-      canvas.height = 400;
+      canvas.width = 500;
+      canvas.height = 500;
+      canvas.style.cursor = 'pointer';
       
       const ctx = canvas.getContext('2d');
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const radius = Math.min(centerX, centerY) - 60;
+      const radius = Math.min(centerX, centerY) - 40;
       
       const colors = [
         getComputedStyle(document.body).getPropertyValue('--accent').trim(),
@@ -10614,11 +10634,23 @@
       const labels = ['Completed', 'Shelved', 'Open (new)', 'Open (carried)'];
       const values = [totals.completed, totals.shelved, totals.openNew, totals.openCarried];
       
+      const slices = [];
       let currentAngle = -Math.PI / 2;
       
+      // Draw slices and store their data
       values.forEach((val, i) => {
         if (val > 0) {
           const sliceAngle = (val / total) * Math.PI * 2;
+          const pct = Math.round((val / total) * 100);
+          
+          slices.push({
+            startAngle: currentAngle,
+            endAngle: currentAngle + sliceAngle,
+            color: colors[i],
+            label: labels[i],
+            value: val,
+            pct,
+          });
           
           ctx.fillStyle = colors[i];
           ctx.beginPath();
@@ -10627,37 +10659,95 @@
           ctx.closePath();
           ctx.fill();
           
-          // Draw percentage label
-          const labelAngle = currentAngle + sliceAngle / 2;
-          const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
-          const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
-          const pct = Math.round((val / total) * 100);
-          
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 14px system-ui';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(`${pct}%`, labelX, labelY);
+          // Only draw percentage if slice is large enough (> 5%)
+          if (pct >= 5) {
+            const labelAngle = currentAngle + sliceAngle / 2;
+            const labelX = centerX + Math.cos(labelAngle) * (radius * 0.65);
+            const labelY = centerY + Math.sin(labelAngle) * (radius * 0.65);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 16px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 3;
+            ctx.fillText(`${pct}%`, labelX, labelY);
+            ctx.shadowBlur = 0;
+          }
           
           currentAngle += sliceAngle;
         }
       });
       
-      // Draw legend
-      const legendY = centerY + radius + 40;
-      ctx.textAlign = 'left';
-      ctx.font = '12px system-ui';
-      labels.forEach((label, i) => {
-        if (values[i] > 0) {
-          const x = 40;
-          const y = legendY + i * 20;
+      // Create tooltip element
+      const tooltip = document.createElement('div');
+      tooltip.className = 'pie-chart-tooltip';
+      tooltip.style.cssText = `
+        position: absolute;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 100;
+      `;
+      wrap.appendChild(tooltip);
+      
+      // Add hover interaction
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+        
+        const dx = x - centerX;
+        const dy = y - centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance <= radius) {
+          let angle = Math.atan2(dy, dx);
+          // Normalize angle to match our starting point (-PI/2)
+          angle = angle + Math.PI / 2;
+          if (angle < 0) angle += Math.PI * 2;
           
-          ctx.fillStyle = colors[i];
-          ctx.fillRect(x, y - 8, 12, 12);
+          const hoveredSlice = slices.find(s => {
+            let start = s.startAngle + Math.PI / 2;
+            let end = s.endAngle + Math.PI / 2;
+            if (start < 0) start += Math.PI * 2;
+            if (end < 0) end += Math.PI * 2;
+            if (start > end) {
+              return angle >= start || angle <= end;
+            }
+            return angle >= start && angle <= end;
+          });
           
-          ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim();
-          ctx.fillText(`${label}: ${values[i]}`, x + 18, y);
+          if (hoveredSlice) {
+            tooltip.innerHTML = `
+              <div style="font-weight: 600; margin-bottom: 2px;">${hoveredSlice.label}</div>
+              <div style="color: var(--text-muted);">${hoveredSlice.value} tasks (${hoveredSlice.pct}%)</div>
+            `;
+            tooltip.style.opacity = '1';
+            tooltip.style.left = `${e.clientX - rect.left + 15}px`;
+            tooltip.style.top = `${e.clientY - rect.top + 15}px`;
+            canvas.style.opacity = '0.9';
+          } else {
+            tooltip.style.opacity = '0';
+            canvas.style.opacity = '1';
+          }
+        } else {
+          tooltip.style.opacity = '0';
+          canvas.style.opacity = '1';
         }
+      });
+      
+      canvas.addEventListener('mouseleave', () => {
+        tooltip.style.opacity = '0';
+        canvas.style.opacity = '1';
       });
       
       wrap.appendChild(canvas);
