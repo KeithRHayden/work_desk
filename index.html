@@ -2712,18 +2712,31 @@
 
     .streak-heatmap {
       display: grid;
-      grid-template-columns: repeat(90, minmax(0, 1fr));
-      gap: 2px;
       margin-top: 14px;
       width: 100%;
       box-sizing: border-box;
     }
 
     .streak-heatmap .heatmap-cell {
-      height: 10px;
+      height: 12px;
       width: 100%;
-      border-radius: 2px;
+      border-radius: 3px;
       min-width: 0;
+    }
+
+    .streak-heatmap.period-week .heatmap-cell {
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .streak-heatmap.period-month .heatmap-cell {
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .streak-heatmap.period-year .heatmap-cell {
+      height: 9px;
+      border-radius: 1px;
     }
 
     /* ── Chart Type Selector ─────────────────────────────────── */
@@ -10384,7 +10397,7 @@
       const activeDays = Object.keys(state.data.days || {})
         .filter(k => (state.data.days[k]?.items || []).length > 0)
         .sort();
-      if (activeDays.length === 0) return { current: 0, longest: 0, recent: [] };
+      if (activeDays.length === 0) return { current: 0, longest: 0 };
 
       let currentStreak = 0;
       let longestStreak = 0;
@@ -10409,18 +10422,7 @@
         currentStreak = streak;
       }
 
-      // Get exactly last 90 days (from today-89 to today) for heatmap
-      const recent = [];
-      for (let i = 89; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dayKey = formatDateKey(d);
-        const day = state.data.days[dayKey];
-        const tasksCount = day ? (day.items || []).filter(item => item.type === 'task').length : 0;
-        recent.push({ dayKey, count: tasksCount });
-      }
-
-      return { current: currentStreak, longest: longestStreak, recent };
+      return { current: currentStreak, longest: longestStreak };
     }
 
     function isConsecutiveDay(day1, day2) {
@@ -11277,7 +11279,7 @@
 
       // Streak Tracking
       const streaks = computeStreaks();
-      if (streaks.current > 0 || streaks.longest > 0) {
+      if (streaks.current > 0 || streaks.longest > 0 || daily.length > 0) {
         const streakCard = document.createElement('div');
         streakCard.className = 'streak-card';
         
@@ -11295,18 +11297,32 @@
           </div>
         `;
         
-        // Heatmap (last 90 days)
+        // Activity strip matched to the selected period
         const heatmap = document.createElement('div');
         heatmap.className = 'streak-heatmap';
-        const maxCount = Math.max(...streaks.recent.map(d => d.count), 1);
+        if (state.insightsPeriod === 'week') {
+          heatmap.classList.add('period-week');
+          heatmap.style.gap = '6px';
+        } else if (state.insightsPeriod === 'month') {
+          heatmap.classList.add('period-month');
+          heatmap.style.gap = '3px';
+        } else {
+          heatmap.classList.add('period-year');
+          heatmap.style.gap = '1px';
+        }
+        heatmap.style.gridTemplateColumns = `repeat(${daily.length}, minmax(0, 1fr))`;
+
+        const maxCount = Math.max(...daily.map(d => d.tasks), 1);
         
-        streaks.recent.forEach(day => {
+        daily.forEach(day => {
           const cell = document.createElement('div');
           cell.className = 'heatmap-cell';
-          cell.title = `${day.dayKey}: ${day.count} task${day.count === 1 ? '' : 's'}`;
+          const dObj = dateFromKey(day.dayKey);
+          const dateLabel = dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          cell.title = `${dateLabel}: ${day.completed} completed, ${day.tasks} total tasks`;
           
-          if (day.count > 0) {
-            const intensity = Math.ceil((day.count / maxCount) * 4);
+          if (day.tasks > 0) {
+            const intensity = Math.ceil((day.tasks / maxCount) * 4);
             cell.classList.add('has-data');
             cell.dataset.intensity = Math.min(intensity, 4);
           }
