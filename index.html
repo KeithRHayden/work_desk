@@ -2712,17 +2712,18 @@
 
     .streak-heatmap {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(9px, 1fr));
-      gap: 3px;
+      grid-template-columns: repeat(90, 1fr);
+      gap: 2px;
       margin-top: 12px;
       width: 100%;
       max-width: 100%;
+      overflow: hidden;
     }
 
     .streak-heatmap .heatmap-cell {
-      height: 10px;
+      height: 9px;
       width: 100%;
-      min-width: 0;
+      aspect-ratio: 1;
     }
 
     /* ── Chart Type Selector ─────────────────────────────────── */
