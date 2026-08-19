@@ -2285,9 +2285,23 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 12px;
-      justify-items: center;
-      max-width: 1000px;
-      margin: 0 auto;
+    }
+    
+    /* Center only the last row if it has fewer items */
+    .stat-grid .stat-card:nth-last-child(-n+3):nth-child(n+7) {
+      grid-column: span 1;
+    }
+    
+    .stat-grid:has(.stat-card:nth-child(9)) {
+      grid-auto-flow: dense;
+    }
+    
+    @supports not (selector(:has(*))) {
+      .stat-grid {
+        justify-items: center;
+        max-width: 1000px;
+        margin: 0 auto;
+      }
     }
 
     .stat-card {
@@ -2697,18 +2711,18 @@
     }
 
     .streak-heatmap {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(9px, 1fr));
       gap: 3px;
       margin-top: 12px;
       width: 100%;
+      max-width: 100%;
     }
 
     .streak-heatmap .heatmap-cell {
       height: 10px;
-      flex: 1 1 calc((100% - 270px) / 90);
-      min-width: 8px;
-      max-width: 14px;
+      width: 100%;
+      min-width: 0;
     }
 
     /* ── Chart Type Selector ─────────────────────────────────── */
@@ -2756,20 +2770,24 @@
     .pie-chart-wrap {
       display: flex;
       justify-content: center;
-      padding: 10px 0;
-      min-height: 400px;
       align-items: center;
+      padding: 20px;
+      min-height: 450px;
+      max-height: 450px;
+      position: relative;
     }
 
     .line-chart-canvas,
     .stacked-chart-canvas {
       width: 100%;
       max-width: 100%;
-      height: auto;
+      height: 400px;
+      max-height: 400px;
     }
     
     .pie-chart-canvas {
-      max-width: 100%;
+      max-width: 450px;
+      max-height: 400px;
       height: auto;
     }
 
@@ -5000,6 +5018,10 @@
     const AUTO_CARRY_LAST_KEY = 'work-desk-auto-carry-last';
     const PROJECTS_STORAGE_KEY = 'work-desk-projects';
     const SELECTED_PROJECT_KEY = 'work-desk-selected-project';
+    const ACTIVE_TAB_KEY = 'work-desk-active-tab';
+    const SELECTED_DATE_KEY = 'work-desk-selected-date';
+    const INSIGHTS_PERIOD_KEY = 'work-desk-insights-period';
+    const INSIGHTS_ANCHOR_KEY = 'work-desk-insights-anchor';
     const RETENTION_MONTHS = 12;
     const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -5043,7 +5065,7 @@
     const state = {
       listContext: getListContext(),
       data: null,
-      selectedDate: todayKey(),
+      selectedDate: localStorage.getItem(SELECTED_DATE_KEY) || todayKey(),
       itemType: 'task',
       editingId: null,
       editingComment: null,
@@ -5063,9 +5085,9 @@
       searchAllContexts: localStorage.getItem(SEARCH_ALL_CONTEXTS_KEY) === 'true',
       autoCarryForward: localStorage.getItem(AUTO_CARRY_FORWARD_KEY) === 'true',
       highlightItemId: null,
-      activeTab: 'desk',
-    insightsPeriod: 'week',
-    insightsAnchor: todayKey(),
+      activeTab: localStorage.getItem(ACTIVE_TAB_KEY) || 'desk',
+    insightsPeriod: localStorage.getItem(INSIGHTS_PERIOD_KEY) || 'week',
+    insightsAnchor: localStorage.getItem(INSIGHTS_ANCHOR_KEY) || todayKey(),
     insightsChartType: 'bar', // bar, line, pie, stacked
       calendarView: null,
       weekAnchorKey: null,
@@ -6489,6 +6511,7 @@
 
     function jumpToToday() {
       state.selectedDate = todayKey();
+      localStorage.setItem(SELECTED_DATE_KEY, state.selectedDate);
       syncCalendarViewToSelected();
       clearEditing();
       clearMoveModal();
@@ -8965,8 +8988,10 @@
 
     function selectCalendarDate(dateKey) {
       state.selectedDate = dateKey;
+      localStorage.setItem(SELECTED_DATE_KEY, dateKey);
       syncCalendarViewToSelected();
       state.activeTab = 'desk';
+      localStorage.setItem(ACTIVE_TAB_KEY, 'desk');
       clearEditing();
       clearMoveModal();
       clearExpandedComments();
@@ -9560,6 +9585,7 @@
       const d = new Date(state.selectedDate + 'T12:00:00');
       d.setDate(d.getDate() + offset);
       state.selectedDate = formatDateKey(d);
+      localStorage.setItem(SELECTED_DATE_KEY, state.selectedDate);
       syncCalendarViewToSelected();
       clearEditing();
       clearMoveModal();
@@ -10155,6 +10181,7 @@
         d.setFullYear(d.getFullYear() + delta);
       }
       state.insightsAnchor = formatDateKey(d);
+      localStorage.setItem(INSIGHTS_ANCHOR_KEY, state.insightsAnchor);
     }
 
     function createdDateKey(item) {
@@ -10683,7 +10710,7 @@
       const tooltip = document.createElement('div');
       tooltip.className = 'pie-chart-tooltip';
       tooltip.style.cssText = `
-        position: absolute;
+        position: fixed;
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: 6px;
@@ -10693,9 +10720,9 @@
         opacity: 0;
         transition: opacity 0.15s;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 100;
+        z-index: 1000;
       `;
-      wrap.appendChild(tooltip);
+      document.body.appendChild(tooltip);
       
       // Add hover interaction
       canvas.addEventListener('mousemove', (e) => {
@@ -10732,8 +10759,8 @@
               <div style="color: var(--text-muted);">${hoveredSlice.value} tasks (${hoveredSlice.pct}%)</div>
             `;
             tooltip.style.opacity = '1';
-            tooltip.style.left = `${e.clientX - rect.left + 15}px`;
-            tooltip.style.top = `${e.clientY - rect.top + 15}px`;
+            tooltip.style.left = `${e.clientX + 15}px`;
+            tooltip.style.top = `${e.clientY + 15}px`;
             canvas.style.opacity = '0.9';
           } else {
             tooltip.style.opacity = '0';
@@ -10749,6 +10776,15 @@
         tooltip.style.opacity = '0';
         canvas.style.opacity = '1';
       });
+      
+      // Clean up tooltip when element is removed
+      const observer = new MutationObserver(() => {
+        if (!document.body.contains(canvas)) {
+          tooltip.remove();
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
       
       wrap.appendChild(canvas);
       return wrap;
@@ -10930,6 +10966,8 @@
         btn.addEventListener('click', () => {
           state.insightsPeriod = p;
           state.insightsAnchor = todayKey();
+          localStorage.setItem(INSIGHTS_PERIOD_KEY, p);
+          localStorage.setItem(INSIGHTS_ANCHOR_KEY, state.insightsAnchor);
           render();
         });
         periodTabs.appendChild(btn);
@@ -11241,6 +11279,7 @@
 
     function setActiveTab(tab) {
       state.activeTab = tab;
+      localStorage.setItem(ACTIVE_TAB_KEY, tab);
       if (tab === 'desk') {
         clearEditing();
         clearMoveModal();
