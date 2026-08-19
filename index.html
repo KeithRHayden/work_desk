@@ -2469,6 +2469,291 @@
       height: 12px;
     }
 
+    /* ── Productivity Metrics Card ─────────────────────────────── */
+    .productivity-metrics-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .metrics-card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+    }
+
+    .metric-item {
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .metric-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Week-over-Week Comparison ─────────────────────────────── */
+    .comparison-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .comparison-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+
+    .comparison-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .comparison-row {
+      display: grid;
+      grid-template-columns: 140px 60px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comparison-row:last-child {
+      border-bottom: none;
+    }
+
+    .comp-label {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .comp-current {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-align: right;
+    }
+
+    .comp-previous {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .change-up {
+      color: #10b981;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .change-down {
+      color: #ef4444;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .change-neutral {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── Carry-Over Analysis ─────────────────────────────────── */
+    .carryover-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .carryover-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .carryover-summary {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .carryover-subtitle {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .carryover-by-day {
+      margin-top: 12px;
+    }
+
+    .carryover-day-row {
+      display: grid;
+      grid-template-columns: 40px 1fr 40px;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .carryover-day-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .carryover-day-bar {
+      height: 20px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .carryover-day-fill {
+      height: 100%;
+      background: #f59e0b;
+      transition: width 0.3s ease;
+    }
+
+    .carryover-day-count {
+      font-size: 0.82rem;
+      color: var(--text);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    /* ── Streak Tracking ─────────────────────────────────── */
+    .streak-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .streak-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .streak-stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    .streak-stat {
+      text-align: center;
+      flex: 1;
+    }
+
+    .streak-value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .streak-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .streak-heatmap {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8px, 1fr));
+      gap: 3px;
+      margin-top: 12px;
+    }
+
+    .streak-heatmap .heatmap-cell {
+      height: 8px;
+      width: 100%;
+    }
+
+    /* ── Chart Type Selector ─────────────────────────────────── */
+    .chart-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .chart-type-selector {
+      display: flex;
+      gap: 4px;
+      background: var(--panel-bg);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .chart-type-btn {
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+
+    .chart-type-btn:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .chart-type-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* ── Chart Canvases ─────────────────────────────────── */
+    .line-chart-wrap,
+    .stacked-chart-wrap,
+    .pie-chart-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 20px 0;
+    }
+
+    .line-chart-canvas,
+    .stacked-chart-canvas,
+    .pie-chart-canvas {
+      max-width: 100%;
+      height: auto;
+    }
+
     .insight-table {
       width: 100%;
       border-collapse: collapse;
@@ -4760,8 +5045,9 @@
       autoCarryForward: localStorage.getItem(AUTO_CARRY_FORWARD_KEY) === 'true',
       highlightItemId: null,
       activeTab: 'desk',
-      insightsPeriod: 'week',
-      insightsAnchor: todayKey(),
+    insightsPeriod: 'week',
+    insightsAnchor: todayKey(),
+    insightsChartType: 'bar', // bar, line, pie, stacked
       calendarView: null,
       weekAnchorKey: null,
       projectsData: null,
@@ -9997,6 +10283,106 @@
       return { range, totals, daily, segments, completionRate };
     }
 
+    // Compute week-over-week comparison
+    function computeWeekComparison(currentData, anchorKey) {
+      const lastWeekAnchor = (() => {
+        const d = dateFromKey(anchorKey);
+        d.setDate(d.getDate() - 7);
+        return formatDateKey(d);
+      })();
+      const lastWeekData = computeInsights('week', lastWeekAnchor);
+      
+      return {
+        current: currentData.totals,
+        previous: lastWeekData.totals,
+        change: {
+          completed: currentData.totals.completed - lastWeekData.totals.completed,
+          carriedOver: currentData.totals.carriedOver - lastWeekData.totals.carriedOver,
+          completionRate: currentData.completionRate - (lastWeekData.completionRate || 0),
+        },
+      };
+    }
+
+    // Analyze carry-over patterns
+    function analyzeCarryOverPatterns(daily) {
+      const patterns = {
+        avgDaysCarried: 0,
+        carryOverByDay: { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 },
+        tasksWithCarryOver: new Map(), // taskId -> count
+      };
+
+      let totalCarried = 0;
+      for (const day of daily) {
+        const dayName = dateFromKey(day.dayKey).toLocaleDateString('en-US', { weekday: 'short' });
+        patterns.carryOverByDay[dayName] += day.carriedOver;
+        totalCarried += day.carriedOver;
+      }
+
+      // Find most carried tasks
+      for (const dayKey of Object.keys(state.data.days)) {
+        const day = state.data.days[dayKey];
+        for (const item of day.items || []) {
+          if (item.type === 'task' && item.carriedFrom) {
+            const count = patterns.tasksWithCarryOver.get(item.id) || 0;
+            patterns.tasksWithCarryOver.set(item.id, count + 1);
+          }
+        }
+      }
+
+      return patterns;
+    }
+
+    // Compute streak data
+    function computeStreaks() {
+      const allDays = Object.keys(state.data.days).sort();
+      if (allDays.length === 0) return { current: 0, longest: 0, recent: [] };
+
+      let currentStreak = 0;
+      let longestStreak = 0;
+      let streak = 0;
+      const today = todayKey();
+      
+      // Calculate streaks
+      for (let i = 0; i < allDays.length; i++) {
+        if (i === 0 || isConsecutiveDay(allDays[i - 1], allDays[i])) {
+          streak++;
+        } else {
+          longestStreak = Math.max(longestStreak, streak);
+          streak = 1;
+        }
+      }
+      longestStreak = Math.max(longestStreak, streak);
+
+      // Check if current streak is active (includes today or yesterday)
+      const lastDay = allDays[allDays.length - 1];
+      if (lastDay === today || lastDay === yesterdayKey()) {
+        currentStreak = streak;
+      }
+
+      // Get last 90 days for heatmap
+      const recent = [];
+      const ninetyDaysAgo = (() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 90);
+        return formatDateKey(d);
+      })();
+      
+      eachDateInRange(ninetyDaysAgo, today, (dayKey) => {
+        const day = state.data.days[dayKey];
+        const tasksCount = day ? day.items.filter(i => i.type === 'task').length : 0;
+        recent.push({ dayKey, count: tasksCount });
+      });
+
+      return { current: currentStreak, longest: longestStreak, recent };
+    }
+
+    function isConsecutiveDay(day1, day2) {
+      const d1 = dateFromKey(day1);
+      const d2 = dateFromKey(day2);
+      d1.setDate(d1.getDate() + 1);
+      return formatDateKey(d1) === day2;
+    }
+
     function renderInsightBars(segments) {
       const wrap = document.createElement('div');
       wrap.className = 'insight-bars';
@@ -10043,6 +10429,238 @@
         wrap.appendChild(row);
       }
 
+      return wrap;
+    }
+
+    function renderLineChart(segments) {
+      const wrap = document.createElement('div');
+      wrap.className = 'line-chart-wrap';
+      
+      if (segments.length === 0) return wrap;
+      
+      const canvas = document.createElement('canvas');
+      canvas.className = 'line-chart-canvas';
+      canvas.width = 800;
+      canvas.height = 300;
+      
+      const ctx = canvas.getContext('2d');
+      const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+      const chartWidth = canvas.width - padding.left - padding.right;
+      const chartHeight = canvas.height - padding.top - padding.bottom;
+      
+      // Find max value
+      const maxVal = Math.max(...segments.map(s => s.completed + s.shelved + s.openNew + s.openCarried), 1);
+      
+      // Draw axes
+      ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border').trim();
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, padding.top + chartHeight);
+      ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+      ctx.stroke();
+      
+      // Draw grid lines
+      ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--panel-bg').trim();
+      for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(padding.left + chartWidth, y);
+        ctx.stroke();
+      }
+      
+      // Draw lines for each category
+      const drawLine = (data, color) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        data.forEach((val, i) => {
+          const x = padding.left + (chartWidth / (segments.length - 1 || 1)) * i;
+          const y = padding.top + chartHeight - (val / maxVal) * chartHeight;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        
+        // Draw points
+        ctx.fillStyle = color;
+        data.forEach((val, i) => {
+          const x = padding.left + (chartWidth / (segments.length - 1 || 1)) * i;
+          const y = padding.top + chartHeight - (val / maxVal) * chartHeight;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+      
+      const completed = segments.map(s => s.completed);
+      const shelved = segments.map(s => s.shelved);
+      const openNew = segments.map(s => s.openNew);
+      const openCarried = segments.map(s => s.openCarried);
+      
+      drawLine(completed, getComputedStyle(document.body).getPropertyValue('--accent').trim());
+      drawLine(shelved, '#9ca3af');
+      drawLine(openNew, '#94a3b8');
+      drawLine(openCarried, '#f59e0b');
+      
+      // Draw labels
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-muted').trim();
+      ctx.font = '11px system-ui';
+      ctx.textAlign = 'center';
+      segments.forEach((seg, i) => {
+        const x = padding.left + (chartWidth / (segments.length - 1 || 1)) * i;
+        const label = seg.label.replace(/<[^>]+>/g, '').substring(0, 10);
+        ctx.fillText(label, x, canvas.height - 10);
+      });
+      
+      wrap.appendChild(canvas);
+      return wrap;
+    }
+
+    function renderStackedChart(segments) {
+      const wrap = document.createElement('div');
+      wrap.className = 'stacked-chart-wrap';
+      
+      if (segments.length === 0) return wrap;
+      
+      const canvas = document.createElement('canvas');
+      canvas.className = 'stacked-chart-canvas';
+      canvas.width = 800;
+      canvas.height = 300;
+      
+      const ctx = canvas.getContext('2d');
+      const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+      const chartWidth = canvas.width - padding.left - padding.right;
+      const chartHeight = canvas.height - padding.top - padding.bottom;
+      
+      const maxVal = Math.max(...segments.map(s => s.completed + s.shelved + s.openNew + s.openCarried), 1);
+      
+      // Draw axes
+      ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border').trim();
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, padding.top + chartHeight);
+      ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+      ctx.stroke();
+      
+      const barWidth = chartWidth / segments.length * 0.8;
+      const barSpacing = chartWidth / segments.length * 0.2;
+      
+      segments.forEach((seg, i) => {
+        const x = padding.left + (chartWidth / segments.length) * i + barSpacing / 2;
+        let y = padding.top + chartHeight;
+        
+        const categories = [
+          { val: seg.completed, color: getComputedStyle(document.body).getPropertyValue('--accent').trim() },
+          { val: seg.shelved, color: '#9ca3af' },
+          { val: seg.openNew, color: '#94a3b8' },
+          { val: seg.openCarried, color: '#f59e0b' },
+        ];
+        
+        categories.forEach(cat => {
+          if (cat.val > 0) {
+            const h = (cat.val / maxVal) * chartHeight;
+            ctx.fillStyle = cat.color;
+            ctx.fillRect(x, y - h, barWidth, h);
+            y -= h;
+          }
+        });
+        
+        // Label
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-muted').trim();
+        ctx.font = '11px system-ui';
+        ctx.textAlign = 'center';
+        const label = seg.label.replace(/<[^>]+>/g, '').substring(0, 10);
+        ctx.fillText(label, x + barWidth / 2, canvas.height - 10);
+      });
+      
+      wrap.appendChild(canvas);
+      return wrap;
+    }
+
+    function renderPieChart(segments) {
+      const wrap = document.createElement('div');
+      wrap.className = 'pie-chart-wrap';
+      
+      const totals = {
+        completed: segments.reduce((sum, s) => sum + s.completed, 0),
+        shelved: segments.reduce((sum, s) => sum + s.shelved, 0),
+        openNew: segments.reduce((sum, s) => sum + s.openNew, 0),
+        openCarried: segments.reduce((sum, s) => sum + s.openCarried, 0),
+      };
+      
+      const total = totals.completed + totals.shelved + totals.openNew + totals.openCarried;
+      if (total === 0) return wrap;
+      
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pie-chart-canvas';
+      canvas.width = 400;
+      canvas.height = 400;
+      
+      const ctx = canvas.getContext('2d');
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(centerX, centerY) - 60;
+      
+      const colors = [
+        getComputedStyle(document.body).getPropertyValue('--accent').trim(),
+        '#9ca3af',
+        '#94a3b8',
+        '#f59e0b',
+      ];
+      const labels = ['Completed', 'Shelved', 'Open (new)', 'Open (carried)'];
+      const values = [totals.completed, totals.shelved, totals.openNew, totals.openCarried];
+      
+      let currentAngle = -Math.PI / 2;
+      
+      values.forEach((val, i) => {
+        if (val > 0) {
+          const sliceAngle = (val / total) * Math.PI * 2;
+          
+          ctx.fillStyle = colors[i];
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+          ctx.closePath();
+          ctx.fill();
+          
+          // Draw percentage label
+          const labelAngle = currentAngle + sliceAngle / 2;
+          const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
+          const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
+          const pct = Math.round((val / total) * 100);
+          
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 14px system-ui';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${pct}%`, labelX, labelY);
+          
+          currentAngle += sliceAngle;
+        }
+      });
+      
+      // Draw legend
+      const legendY = centerY + radius + 40;
+      ctx.textAlign = 'left';
+      ctx.font = '12px system-ui';
+      labels.forEach((label, i) => {
+        if (values[i] > 0) {
+          const x = 40;
+          const y = legendY + i * 20;
+          
+          ctx.fillStyle = colors[i];
+          ctx.fillRect(x, y - 8, 12, 12);
+          
+          ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim();
+          ctx.fillText(`${label}: ${values[i]}`, x + 18, y);
+        }
+      });
+      
+      wrap.appendChild(canvas);
       return wrap;
     }
 
@@ -10266,6 +10884,171 @@
         return;
       }
 
+      // Productivity Metrics Card (new!)
+      const metricsCard = document.createElement('div');
+      metricsCard.className = 'productivity-metrics-card';
+      
+      const avgDailyCompletion = totals.activeDays > 0 
+        ? Math.round(totals.completed / totals.activeDays * 10) / 10 
+        : 0;
+      const carryOverRate = totals.tasks > 0
+        ? Math.round((totals.carriedOver / totals.tasks) * 100)
+        : 0;
+      
+      // Find best day of week
+      const dayStats = {};
+      for (const day of daily) {
+        const dayName = dateFromKey(day.dayKey).toLocaleDateString('en-US', { weekday: 'long' });
+        if (!dayStats[dayName]) dayStats[dayName] = { completed: 0, total: 0 };
+        dayStats[dayName].completed += day.completed;
+        dayStats[dayName].total += day.tasks;
+      }
+      let bestDay = 'N/A';
+      let bestRate = 0;
+      for (const [day, stats] of Object.entries(dayStats)) {
+        if (stats.total > 0) {
+          const rate = stats.completed / stats.total;
+          if (rate > bestRate) {
+            bestRate = rate;
+            bestDay = day;
+          }
+        }
+      }
+
+      metricsCard.innerHTML = `
+        <h3 class="metrics-card-title">Productivity Summary</h3>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-value">${completionRate !== null ? completionRate + '%' : 'N/A'}</div>
+            <div class="metric-label">Completion Rate</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value">${avgDailyCompletion}</div>
+            <div class="metric-label">Avg Daily Completions</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value">${carryOverRate}%</div>
+            <div class="metric-label">Carry-Over Rate</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value">${bestDay}</div>
+            <div class="metric-label">Most Productive Day</div>
+          </div>
+        </div>
+      `;
+      panel.appendChild(metricsCard);
+
+      // Week-over-Week Comparison (for week view only)
+      if (state.insightsPeriod === 'week' && totals.activeDays > 0) {
+        const comparison = computeWeekComparison(data, state.insightsAnchor);
+        const compCard = document.createElement('div');
+        compCard.className = 'comparison-card';
+        
+        const formatChange = (val) => {
+          if (val > 0) return `<span class="change-up">+${val} ↑</span>`;
+          if (val < 0) return `<span class="change-down">${val} ↓</span>`;
+          return `<span class="change-neutral">—</span>`;
+        };
+
+        compCard.innerHTML = `
+          <h3 class="comparison-title">Week-over-Week</h3>
+          <div class="comparison-grid">
+            <div class="comparison-row">
+              <span class="comp-label">Completed:</span>
+              <span class="comp-current">${comparison.current.completed}</span>
+              <span class="comp-previous">(${comparison.previous.completed} last week)</span>
+              ${formatChange(comparison.change.completed)}
+            </div>
+            <div class="comparison-row">
+              <span class="comp-label">Carried Over:</span>
+              <span class="comp-current">${comparison.current.carriedOver}</span>
+              <span class="comp-previous">(${comparison.previous.carriedOver} last week)</span>
+              ${formatChange(comparison.change.carriedOver)}
+            </div>
+            <div class="comparison-row">
+              <span class="comp-label">Completion Rate:</span>
+              <span class="comp-current">${comparison.current.completed + comparison.current.shelved + comparison.current.unfinished > 0 ? Math.round((comparison.current.completed / (comparison.current.completed + comparison.current.shelved + comparison.current.unfinished)) * 100) : 0}%</span>
+              <span class="comp-previous">(${comparison.previous.completed + comparison.previous.shelved + comparison.previous.unfinished > 0 ? Math.round((comparison.previous.completed / (comparison.previous.completed + comparison.previous.shelved + comparison.previous.unfinished)) * 100) : 0}% last week)</span>
+              ${formatChange(comparison.change.completionRate)}
+            </div>
+          </div>
+        `;
+        panel.appendChild(compCard);
+      }
+
+      // Carry-Over Analysis
+      if (totals.carriedOver > 0) {
+        const carryPatterns = analyzeCarryOverPatterns(daily);
+        const carryCard = document.createElement('div');
+        carryCard.className = 'carryover-card';
+        
+        const dayBars = Object.entries(carryPatterns.carryOverByDay)
+          .map(([day, count]) => {
+            const pct = totals.carriedOver > 0 ? (count / totals.carriedOver) * 100 : 0;
+            return `
+              <div class="carryover-day-row">
+                <span class="carryover-day-label">${day}</span>
+                <div class="carryover-day-bar">
+                  <div class="carryover-day-fill" style="width: ${pct}%"></div>
+                </div>
+                <span class="carryover-day-count">${count}</span>
+              </div>
+            `;
+          }).join('');
+
+        carryCard.innerHTML = `
+          <h3 class="carryover-title">Carry-Over Analysis</h3>
+          <p class="carryover-summary">${totals.carriedOver} task${totals.carriedOver === 1 ? '' : 's'} carried forward this period</p>
+          <div class="carryover-by-day">
+            <h4 class="carryover-subtitle">Carry-Over by Day of Week</h4>
+            ${dayBars}
+          </div>
+        `;
+        panel.appendChild(carryCard);
+      }
+
+      // Streak Tracking
+      const streaks = computeStreaks();
+      if (streaks.current > 0 || streaks.longest > 0) {
+        const streakCard = document.createElement('div');
+        streakCard.className = 'streak-card';
+        
+        streakCard.innerHTML = `
+          <h3 class="streak-title">Streak Tracking</h3>
+          <div class="streak-stats">
+            <div class="streak-stat">
+              <div class="streak-value">${streaks.current}</div>
+              <div class="streak-label">Current Streak</div>
+            </div>
+            <div class="streak-stat">
+              <div class="streak-value">${streaks.longest}</div>
+              <div class="streak-label">Longest Streak</div>
+            </div>
+          </div>
+        `;
+        
+        // Heatmap (last 90 days)
+        const heatmap = document.createElement('div');
+        heatmap.className = 'streak-heatmap';
+        const maxCount = Math.max(...streaks.recent.map(d => d.count), 1);
+        
+        streaks.recent.forEach(day => {
+          const cell = document.createElement('div');
+          cell.className = 'heatmap-cell';
+          cell.title = `${day.dayKey}: ${day.count} task${day.count === 1 ? '' : 's'}`;
+          
+          if (day.count > 0) {
+            const intensity = Math.ceil((day.count / maxCount) * 4);
+            cell.classList.add('has-data');
+            cell.dataset.intensity = Math.min(intensity, 4);
+          }
+          heatmap.appendChild(cell);
+        });
+        
+        streakCard.appendChild(heatmap);
+        panel.appendChild(streakCard);
+      }
+
       const statGrid = document.createElement('div');
       statGrid.className = 'stat-grid';
       const statCards = [
@@ -10302,6 +11085,27 @@
           : 'Weekly breakdown';
       chartSection.appendChild(chartTitle);
 
+      // Add chart type selector
+      const chartHeader = document.createElement('div');
+      chartHeader.className = 'chart-section-header';
+      
+      const chartTypeSelector = document.createElement('div');
+      chartTypeSelector.className = 'chart-type-selector';
+      for (const type of ['bar', 'line', 'stacked', 'pie']) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chart-type-btn' + (state.insightsChartType === type ? ' active' : '');
+        btn.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        btn.addEventListener('click', () => {
+          state.insightsChartType = type;
+          render();
+        });
+        chartTypeSelector.appendChild(btn);
+      }
+      
+      chartHeader.appendChild(chartTypeSelector);
+      chartSection.appendChild(chartHeader);
+      
       const legend = document.createElement('div');
       legend.className = 'insight-legend';
       legend.innerHTML =
@@ -10310,7 +11114,18 @@
         '<span class="legend-item"><span class="legend-swatch unfinished"></span>Open (new today)</span>' +
         '<span class="legend-item"><span class="legend-swatch carried"></span>Open (carried over)</span>';
       chartSection.appendChild(legend);
-      chartSection.appendChild(renderInsightBars(segments));
+      
+      // Render chart based on selected type
+      if (state.insightsChartType === 'bar') {
+        chartSection.appendChild(renderInsightBars(segments));
+      } else if (state.insightsChartType === 'line') {
+        chartSection.appendChild(renderLineChart(segments));
+      } else if (state.insightsChartType === 'stacked') {
+        chartSection.appendChild(renderStackedChart(segments));
+      } else if (state.insightsChartType === 'pie') {
+        chartSection.appendChild(renderPieChart(segments));
+      }
+      
       panel.appendChild(chartSection);
 
       // Activity heatmap — year view only
