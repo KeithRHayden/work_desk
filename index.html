@@ -2283,8 +2283,8 @@
 
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
     }
     
     /* Center only the last row if it has fewer items */
@@ -2308,7 +2308,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 16px;
+      padding: 14px 10px;
       box-shadow: var(--shadow);
     }
 
@@ -10561,6 +10561,76 @@
         ctx.fillText(label, x, canvas.height - 10);
       });
       
+      // Create tooltip for line chart
+      const tooltip = document.createElement('div');
+      tooltip.className = 'chart-tooltip';
+      tooltip.style.cssText = `
+        position: fixed;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+      `;
+      document.body.appendChild(tooltip);
+      
+      // Add hover interaction
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        
+        // Find closest segment
+        const segmentWidth = chartWidth / (segments.length - 1 || 1);
+        let closestIdx = Math.round((mouseX - padding.left) / segmentWidth);
+        closestIdx = Math.max(0, Math.min(segments.length - 1, closestIdx));
+        
+        const seg = segments[closestIdx];
+        if (seg) {
+          tooltip.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 4px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">${seg.label.replace(/<[^>]+>/g, '')}</div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: var(--accent); border-radius: 2px;"></span>
+              <span>Completed: ${seg.completed}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: #9ca3af; border-radius: 2px;"></span>
+              <span>Shelved: ${seg.shelved}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: #94a3b8; border-radius: 2px;"></span>
+              <span>Open (new): ${seg.openNew}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: #f59e0b; border-radius: 2px;"></span>
+              <span>Open (carried): ${seg.openCarried}</span>
+            </div>
+          `;
+          tooltip.style.opacity = '1';
+          tooltip.style.left = `${e.clientX + 15}px`;
+          tooltip.style.top = `${e.clientY + 15}px`;
+        }
+      });
+      
+      canvas.addEventListener('mouseleave', () => {
+        tooltip.style.opacity = '0';
+      });
+      
+      // Cleanup
+      const observer = new MutationObserver(() => {
+        if (!document.body.contains(canvas)) {
+          tooltip.remove();
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      
       wrap.appendChild(canvas);
       return wrap;
     }
@@ -10622,6 +10692,75 @@
         const label = seg.label.replace(/<[^>]+>/g, '').substring(0, 10);
         ctx.fillText(label, x + barWidth / 2, canvas.height - 10);
       });
+      
+      // Create tooltip for stacked chart
+      const tooltip = document.createElement('div');
+      tooltip.className = 'chart-tooltip';
+      tooltip.style.cssText = `
+        position: fixed;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+      `;
+      document.body.appendChild(tooltip);
+      
+      // Add hover interaction
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        
+        // Find which bar is hovered
+        const barTotalWidth = chartWidth / segments.length;
+        let hoveredIdx = Math.floor((mouseX - padding.left) / barTotalWidth);
+        hoveredIdx = Math.max(0, Math.min(segments.length - 1, hoveredIdx));
+        
+        const seg = segments[hoveredIdx];
+        if (seg) {
+          tooltip.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 4px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">${seg.label.replace(/<[^>]+>/g, '')}</div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: var(--accent); border-radius: 2px;"></span>
+              <span>Completed: ${seg.completed}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: #9ca3af; border-radius: 2px;"></span>
+              <span>Shelved: ${seg.shelved}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: #94a3b8; border-radius: 2px;"></span>
+              <span>Open (new): ${seg.openNew}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: #f59e0b; border-radius: 2px;"></span>
+              <span>Open (carried): ${seg.openCarried}</span>
+            </div>
+          `;
+          tooltip.style.opacity = '1';
+          tooltip.style.left = `${e.clientX + 15}px`;
+          tooltip.style.top = `${e.clientY + 15}px`;
+        }
+      });
+      
+      canvas.addEventListener('mouseleave', () => {
+        tooltip.style.opacity = '0';
+      });
+      
+      // Cleanup
+      const observer = new MutationObserver(() => {
+        if (!document.body.contains(canvas)) {
+          tooltip.remove();
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
       
       wrap.appendChild(canvas);
       return wrap;
