@@ -4650,16 +4650,23 @@
     .card-action.has-comments { color: var(--accent); opacity: 0.8; }
     .card-action.has-comments:hover { opacity: 1; }
 
-    /* Tag chips — top-right of the card's content row */
-    .item.has-tags { align-items: flex-start; }
+    /* Tag chips — floated at the top-right corner of the card, same pattern as
+       .item-trigger-area (bottom-right). Board-column cards use CSS Grid for
+       check/content (checkbox stacked above wrapped text), so a chip row can't
+       be a normal grid/flex sibling without landing in its own unstyled row —
+       absolute positioning sidesteps that regardless of which layout mode the
+       card is in (grid, flex, mobile, edit, menu-open, etc). */
+    .item.has-tags .item-content { padding-right: 96px; }
     .tag-chip-row {
+      position: absolute;
+      top: 14px;
+      right: 16px;
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
       justify-content: flex-end;
-      flex: 0 0 auto;
-      max-width: 42%;
-      margin-top: 1px;
+      max-width: 150px;
+      z-index: 3;
     }
     .tag-chip {
       display: inline-flex;
@@ -11022,10 +11029,10 @@
           content.appendChild(badge);
         }
         row.appendChild(content);
-        if (tags.length) row.appendChild(buildTagChipRow(item, tags));
       }
 
       card.appendChild(row);
+      if (!isEditing && tags.length) card.appendChild(buildTagChipRow(item, tags));
 
       // ── Inline action bar at bottom of card ───────────────────────────────
       if (!isEditing) {
