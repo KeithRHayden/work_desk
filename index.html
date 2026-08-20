@@ -2309,10 +2309,14 @@
     }
 
     .header-actions {
+      margin-bottom: 16px;
+    }
+
+    .stats-footer-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 12px;
-      margin-bottom: 16px;
       flex-wrap: wrap;
     }
 
@@ -2320,6 +2324,7 @@
       position: relative;
       display: inline-flex;
       align-items: stretch;
+      flex-shrink: 0;
     }
     .carry-forward-wrap.hidden { display: none; }
 
@@ -2328,39 +2333,11 @@
       background: var(--accent-light);
       color: var(--accent);
       border: 1px solid var(--accent-light);
-      border-radius: 8px 0 0 8px;
-      font-size: 0.82rem;
-      font-weight: 500;
-      border-right: none;
-    }
-    .carry-forward-wrap.menu-only .carry-forward-btn { display: none; }
-
-    .carry-forward-menu-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 32px;
-      padding: 7px 10px;
-      background: var(--accent-light);
-      color: var(--accent);
-      border: 1px solid var(--accent-light);
-      border-radius: 0 8px 8px 0;
-      font-size: 0.72rem;
-      line-height: 1;
-    }
-    .carry-forward-wrap.menu-only .carry-forward-menu-btn {
       border-radius: 8px;
-      padding: 7px 12px;
       font-size: 0.82rem;
       font-weight: 500;
-      gap: 4px;
     }
-    .carry-forward-wrap.menu-only .carry-forward-menu-btn::before {
-      content: 'Carry';
-    }
-
-    .carry-forward-wrap:hover .carry-forward-btn:not(:disabled),
-    .carry-forward-wrap:hover .carry-forward-menu-btn {
+    .carry-forward-wrap:hover .carry-forward-btn:not(:disabled) {
       background: var(--accent);
       color: white;
       border-color: var(--accent);
@@ -2369,66 +2346,11 @@
       opacity: 0.45;
       cursor: not-allowed;
     }
-    .carry-forward-wrap.auto-on .carry-forward-btn::after,
-    .carry-forward-wrap.auto-on.menu-only .carry-forward-menu-btn::after {
+    .carry-forward-wrap.auto-on .carry-forward-btn::after {
       content: ' · Auto';
       font-size: 0.72rem;
       font-weight: 600;
       opacity: 0.9;
-    }
-
-    .carry-forward-menu {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      min-width: 200px;
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 6px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      z-index: 200;
-    }
-    .carry-forward-menu.hidden { display: none; }
-
-    .carry-forward-menu-item {
-      display: block;
-      width: 100%;
-      text-align: left;
-      padding: 8px 10px;
-      border-radius: 7px;
-      font-size: 0.82rem;
-      color: var(--text);
-      border: none;
-      background: transparent;
-    }
-    .carry-forward-menu-item:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 8%, var(--panel-bg)); }
-    .carry-forward-menu-item:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .carry-forward-menu-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 7px;
-      font-size: 0.82rem;
-      color: var(--text);
-      cursor: pointer;
-      user-select: none;
-      border-top: 1px solid var(--border);
-      margin-top: 4px;
-      padding-top: 10px;
-    }
-    .carry-forward-menu-toggle:hover { background: color-mix(in srgb, var(--accent) 8%, var(--panel-bg)); }
-    .carry-forward-menu-toggle input {
-      width: 14px;
-      height: 14px;
-      accent-color: var(--accent);
-      flex-shrink: 0;
-      cursor: pointer;
     }
 
     .item-card.search-highlight {
@@ -2499,9 +2421,11 @@
       position: sticky;
       top: 0;
       z-index: 15;
-      background: var(--bg);
-      padding-bottom: 4px;
+      background: var(--panel-bg);
+      padding: 12px 12px 2px;
       margin-bottom: 12px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px var(--shadow);
     }
 
     .desk-board-area { min-height: 120px; }
@@ -3679,8 +3603,14 @@
     }
 
     .today-badge {
-      background: var(--accent-light); color: var(--accent);
-      font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       flex-shrink: 0;
     }
     .today-badge.hidden { display: none; }
@@ -3712,7 +3642,7 @@
       opacity: 0.9;
     }
 
-    .stats-block { flex: 1; min-width: 0; }
+    .stats-block { min-width: 0; }
 
     .progress-bar {
       height: 8px;
@@ -3724,11 +3654,22 @@
     }
     .progress-bar.hidden { display: none; }
 
+    .stats-headline-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .stats-done { font-size: 0.78rem; color: var(--text-muted); margin: 0; line-height: 1.4; }
+    .stats-done strong { color: var(--text); font-weight: 600; }
+
     .progress-legend {
       display: flex;
       flex-wrap: wrap;
       gap: 10px 14px;
-      margin-bottom: 6px;
       font-size: 0.72rem;
       color: var(--text-muted);
     }
@@ -3768,8 +3709,12 @@
     .stats-row strong { color: var(--text); }
 
     .add-form {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 10px 12px; margin-bottom: 0; box-shadow: var(--shadow);
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px var(--shadow);
     }
 
     .add-form .format-toolbar { display: none; }
@@ -5010,6 +4955,9 @@
 
       .header-actions {
         margin-bottom: 8px;
+      }
+
+      .stats-footer-row {
         gap: 8px;
       }
 
@@ -5362,20 +5310,17 @@
                   <div id="progress-new" class="progress-seg new"></div>
                   <div id="progress-shelved" class="progress-seg shelved"></div>
                 </div>
-                <div id="progress-legend" class="progress-legend hidden" aria-label=""></div>
-                <p id="stats-summary" class="stats-summary"></p>
-              </div>
-              <div id="carry-forward-wrap" class="carry-forward-wrap hidden">
-                <button id="carry-forward-btn" class="carry-forward-btn" type="button">
-                  Carry unfinished to today
-                </button>
-                <button id="carry-forward-menu-btn" class="carry-forward-menu-btn" type="button" aria-label="Carry options" aria-expanded="false" aria-haspopup="true">▾</button>
-                <div id="carry-forward-menu" class="carry-forward-menu hidden" role="menu">
-                  <button id="carry-forward-menu-now" class="carry-forward-menu-item" type="button" role="menuitem">Carry now</button>
-                  <label class="carry-forward-menu-toggle">
-                    <input id="auto-carry-toggle" type="checkbox" />
-                    <span>Auto carry each day</span>
-                  </label>
+                <div class="stats-headline-row">
+                  <p id="stats-done" class="stats-done"></p>
+                  <div id="progress-legend" class="progress-legend hidden" aria-label=""></div>
+                </div>
+                <div class="stats-footer-row">
+                  <p id="stats-summary" class="stats-summary"></p>
+                  <div id="carry-forward-wrap" class="carry-forward-wrap hidden">
+                    <button id="carry-forward-btn" class="carry-forward-btn" type="button">
+                      Carry unfinished to today
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -5776,6 +5721,7 @@
       dateTitle: document.getElementById('date-title'),
       contextBadge: document.getElementById('context-badge'),
       todayBadge: document.getElementById('today-badge'),
+      statsDone: document.getElementById('stats-done'),
       statsSummary: document.getElementById('stats-summary'),
       progressBar: document.getElementById('progress-bar'),
       progressLegend: document.getElementById('progress-legend'),
@@ -5826,10 +5772,6 @@
       searchResults: document.getElementById('search-results'),
       carryForwardWrap: document.getElementById('carry-forward-wrap'),
       carryForwardBtn: document.getElementById('carry-forward-btn'),
-      carryForwardMenuBtn: document.getElementById('carry-forward-menu-btn'),
-      carryForwardMenu: document.getElementById('carry-forward-menu'),
-      carryForwardMenuNow: document.getElementById('carry-forward-menu-now'),
-      autoCarryToggle: document.getElementById('auto-carry-toggle'),
       tabDesk: document.getElementById('tab-desk'),
       tabInsights: document.getElementById('tab-insights'),
       tabWork: document.getElementById('tab-work'),
@@ -7000,16 +6942,6 @@
       });
     }
 
-    function openCarryForwardMenu() {
-      els.carryForwardMenu.classList.remove('hidden');
-      els.carryForwardMenuBtn.setAttribute('aria-expanded', 'true');
-    }
-
-    function closeCarryForwardMenu() {
-      els.carryForwardMenu.classList.add('hidden');
-      els.carryForwardMenuBtn.setAttribute('aria-expanded', 'false');
-    }
-
     function syncCarryForwardUi(carryCount) {
       const today = todayKey();
       const carryLabel = state.selectedDate === today
@@ -7017,9 +6949,9 @@
         : `Carry ${carryCount} to today`;
       els.carryForwardBtn.textContent = carryLabel;
       els.carryForwardBtn.disabled = carryCount === 0;
-      els.carryForwardMenuNow.textContent = carryCount > 0 ? carryLabel : 'Carry now';
-      els.carryForwardMenuNow.disabled = carryCount === 0;
-      els.autoCarryToggle.checked = state.autoCarryForward;
+      els.carryForwardBtn.title = carryCount > 0
+        ? `Pull ${carryCount} unfinished ${carryCount === 1 ? 'task' : 'tasks'} to today`
+        : '';
       els.carryForwardWrap.classList.toggle('auto-on', state.autoCarryForward);
     }
 
@@ -7208,8 +7140,9 @@
         autoCarryPopout.addEventListener('change', () => {
           state.autoCarryForward = autoCarryPopout.checked;
           localStorage.setItem(AUTO_CARRY_FORWARD_KEY, state.autoCarryForward ? 'true' : 'false');
-          if (els.autoCarryToggle) els.autoCarryToggle.checked = state.autoCarryForward;
           schedulePrefsPush();
+          els.carryForwardWrap.classList.toggle('auto-on', state.autoCarryForward);
+          if (state.autoCarryForward) maybeAutoCarryForward();
         });
       }
 
@@ -7263,27 +7196,6 @@
     function initCarryForwardMenu() {
       els.carryForwardBtn.addEventListener('click', () => {
         carryForwardUnfinished(getCarryForwardSource());
-        closeCarryForwardMenu();
-      });
-
-      els.carryForwardMenuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        els.carryForwardMenu.classList.contains('hidden')
-          ? openCarryForwardMenu()
-          : closeCarryForwardMenu();
-      });
-
-      els.carryForwardMenuNow.addEventListener('click', () => {
-        carryForwardUnfinished(getCarryForwardSource());
-        closeCarryForwardMenu();
-      });
-
-      els.autoCarryToggle.addEventListener('change', () => {
-        state.autoCarryForward = els.autoCarryToggle.checked;
-        localStorage.setItem(AUTO_CARRY_FORWARD_KEY, state.autoCarryForward ? 'true' : 'false');
-        schedulePrefsPush();
-        els.carryForwardWrap.classList.toggle('auto-on', state.autoCarryForward);
-        if (state.autoCarryForward) maybeAutoCarryForward();
       });
     }
 
@@ -13164,15 +13076,11 @@
       renderProgressBar(stats);
       renderProgressLegend(stats);
 
+      els.statsDone.innerHTML = stats.totalTasks > 0
+        ? `<strong>${stats.completedTasks}</strong> of <strong>${stats.totalTasks}</strong> done`
+        : 'No tasks yet';
+
       let summaryParts = [];
-      if (stats.totalTasks > 0) {
-        summaryParts.push(`<strong>${stats.completedTasks}</strong> of <strong>${stats.totalTasks}</strong> done`);
-      } else {
-        summaryParts.push('No tasks yet');
-      }
-      if (stats.newTasks > 0) summaryParts.push(`<strong>${stats.newTasks}</strong> new`);
-      if (stats.activeTasks > 0) summaryParts.push(`<strong>${stats.activeTasks}</strong> active`);
-      if (stats.shelvedTasks > 0) summaryParts.push(`<strong>${stats.shelvedTasks}</strong> shelved`);
       if (stats.notes > 0) {
         summaryParts.push(`<strong>${stats.notes}</strong> ${stats.notes === 1 ? 'note' : 'notes'}`);
       }
@@ -13183,10 +13091,8 @@
       const today = todayKey();
       const carrySource = getCarryForwardSource();
       const carryCount = countUnfinishedTasks(carrySource);
-      const showCarry = carrySource <= today && carryCount > 0;
-      const showCarryWrap = isToday || showCarry;
+      const showCarryWrap = carrySource <= today && carryCount > 0;
       els.carryForwardWrap.classList.toggle('hidden', !showCarryWrap);
-      els.carryForwardWrap.classList.toggle('menu-only', carryCount === 0);
       if (showCarryWrap) syncCarryForwardUi(carryCount);
 
       setAddPlaceholder();
@@ -13331,11 +13237,6 @@
       if (e.target === els.moveModal) clearMoveModal();
     });
 
-    document.addEventListener('click', (e) => {
-      if (!els.carryForwardWrap.contains(e.target)) {
-        closeCarryForwardMenu();
-      }
-    });
 
     // ── Sidebar collapse ─────────────────────────────────────────────────────
     function setSidebarCollapsed(collapsed) {
