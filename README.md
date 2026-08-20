@@ -13,7 +13,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Kanban board** — New → Active → Completed / Shelved
 - **Drag and drop** — reorder within a day or move between columns
 - **Shelving** — park a task without deleting it
-- **Carry forward** — manual or auto-carry unfinished open tasks from past days into today
+- **Carry forward** — a one-click button that only appears when there's something to carry; enable auto-carry (Options → Behavior) to pull it in every time you open the desk
 - **Recurring templates** — daily / weekdays / weekly / custom; injects once per due day (completed instances count)
 - **Comments / updates** — timestamped follow-ups on tasks
 - **Move to another day** — keeps a single ID (no dual-day clones)
@@ -28,29 +28,35 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **Work / Personal / Projects** — separate contexts
 - **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens)
-- **Search** — current list or both Work and Personal
+- **Tags** — tag a task or note by typing `#word` inline or clicking the `tag` action; chips render top-right on the card, always uppercase and case-insensitive (`#ACE` == `#ace`)
+- **Search** — floating overlay with a result count; search current list or both Work and Personal, and use `#tagname` to filter by tag
 - **Repair duplicates** — cleans same-ID and same-day recurring copies left by sync races
 
 ### Insights
 
-- Week / month / year completion charts
-- Activity heatmap (year view)
-- Day-by-day progress breakdown
+- Week / month / year views with a period selector and prev/next navigation
+- **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day
+- **Week-over-week** comparison (week view)
+- **Carry-over analysis** — which weekdays tasks most often carry over from
+- **Streak tracking** — current/longest completion streaks with a heatmap matched to the selected period
+- **Charts** — bar, line, stacked, and pie, each with hover tooltips
+- Activity heatmap (year view) and a day-by-day progress breakdown table
 
 ### Customization
 
-- **32 themes** — light and dark (Nord, Dracula, Synthwave, etc.)
-- **Comfortable / Compact** card density
-- **Keep comments open** — multiple comment panels at once
-- **Auto-collapse Completed** — collapses the Completed list after a count you choose (3–20; default 5); tap the heading to expand
-- Collapsible sidebar on desktop
+- **40 themes** — 20 light + 20 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, etc.), browsed as mini wireframe previews, filterable by Light/Dark/All
+- **Options menu** — tabbed **Appearance** / **Behavior** panels (customize button ⊟ near the date)
+  - Appearance: theme, Comfortable/Compact density, strike-through completed tasks
+  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view (remember last viewed vs. always open Today), celebration confetti
+- **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
+- Collapsible sidebar on desktop, with a "Today's Progress" mini card that always reflects today regardless of which day you're viewing
 
 ### Cloud sync and offline
 
 - **Optional Supabase sync** — email sign-in; devices merge rather than overwrite
-- **Synced preferences** — theme, density, comment/completed/auto-carry toggles follow your account (last change wins)
+- **Synced preferences** — theme, density, strike-through, comment/completed/auto-carry toggles, week start day, startup view, and confetti follow your account (last change wins)
 - **Continue offline** — use the desk without an account; data stays in this browser only (clearing site data can wipe it). Use **Sign in** in the sidebar account footer when you’re ready to sync.
-- Export / import JSON backups (includes delete tombstones)
+- Export / import JSON backups (side-by-side buttons in the sidebar; includes delete tombstones)
 - Auto-prune of days older than 1 year from the local cache (cloud keeps history)
 
 ### Mobile and PWA
@@ -163,7 +169,7 @@ npm run test:e2e:ui      # Playwright UI mode
 npm run test:all         # unit + e2e
 ```
 
-E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, and move-to-date ID uniqueness. The auth modal is dismissed via **Continue offline**.
+E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), and the search overlay (result count, `#tagname` filtering, close/outside-click). The auth modal is dismissed via **Continue offline**.
 
 ## Browser support
 
@@ -174,9 +180,11 @@ E2E covers add → New, complete/uncomplete, reload persistence, export tombston
 
 ## Themes
 
-**Light:** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Mint, Lavender, Solarized, Tokyo Day, Vaporwave, Synthwave, Cyberpunk, Outrun
+40 presets — 20 light + 20 dark — browsable as mini wireframe previews in Options → Appearance, filterable by Light/Dark/All.
 
-**Dark:** Default, Nord, Dracula, Solarized, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Synthwave, Cyberpunk, Outrun, Vaporwave
+**Light (20):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Solarized, Sepia, Tokyo Day, Nord Light, Vaporwave, Synthwave, Cyberpunk, Outrun
+
+**Dark (20):** Default, OLED, Nord, Dracula, Catppuccin, Tokyo Storm, Solarized, Gruvbox, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Synthwave, Cyberpunk, Outrun, Vaporwave
 
 ## License
 
