@@ -5076,6 +5076,28 @@
       );
     }
 
+    function getExpandedCommentsKey(context = state?.listContext || getListContext()) {
+      return `work-desk-expanded-comments-${context}`;
+    }
+
+    function loadExpandedComments(context = state?.listContext || getListContext()) {
+      try {
+        const raw = localStorage.getItem(getExpandedCommentsKey(context));
+        if (!raw) return new Set();
+        const arr = JSON.parse(raw);
+        return new Set(Array.isArray(arr) ? arr : []);
+      } catch (_) {
+        return new Set();
+      }
+    }
+
+    function saveExpandedComments() {
+      try {
+        const key = getExpandedCommentsKey();
+        localStorage.setItem(key, JSON.stringify([...state.expandedTaskIds]));
+      } catch (_) {}
+    }
+
     const state = {
       listContext: getListContext(),
       data: null,
@@ -5083,7 +5105,7 @@
       itemType: 'task',
       editingId: null,
       editingComment: null,
-      expandedTaskIds: new Set(),
+      expandedTaskIds: loadExpandedComments(getListContext()),
       keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
       // Default on — toggle off in Customize if you want Completed always expanded
       autoCollapseCompleted: localStorage.getItem('work-desk-auto-collapse-completed') !== 'false',
@@ -6288,6 +6310,7 @@
       // Respect "keep comments open" setting - only clear if it's disabled
       if (!state.keepCommentsOpen) {
         state.expandedTaskIds.clear();
+        saveExpandedComments();
       }
     }
 
@@ -6296,12 +6319,14 @@
         state.expandedTaskIds.clear();
       }
       state.expandedTaskIds.add(itemId);
+      saveExpandedComments();
       if (autoOpenEditor) state.autoOpenEditor = itemId;
     }
 
     function toggleComments(itemId) {
       if (state.expandedTaskIds.has(itemId)) {
         state.expandedTaskIds.delete(itemId);
+        saveExpandedComments();
         return;
       }
       openComments(itemId);
@@ -6389,6 +6414,7 @@
             const keep = [...state.expandedTaskIds].pop();
             state.expandedTaskIds.clear();
             if (keep) state.expandedTaskIds.add(keep);
+            saveExpandedComments();
             render();
           }
         });
@@ -6529,7 +6555,7 @@
       syncCalendarViewToSelected();
       clearEditing();
       clearMoveModal();
-      state.expandedTaskIds.clear();
+      clearExpandedComments();
       render();
     }
 
@@ -9550,6 +9576,10 @@
       if (!deleted) return;
 
       markItemDeleted(id);
+      if (state.expandedTaskIds.has(id)) {
+        state.expandedTaskIds.delete(id);
+        saveExpandedComments();
+      }
       if (deleted.recurringTemplateId) {
         markTemplateInjectedForDate(deleted.recurringTemplateId, deletedDate);
       }
@@ -11466,7 +11496,7 @@
         state.data = loadData(ctx);
         clearEditing();
         clearMoveModal();
-        clearExpandedComments();
+        state.expandedTaskIds = loadExpandedComments(ctx);
         state.pendingImport = null;
         if (!preserveSearch) {
           state.searchQuery = '';
