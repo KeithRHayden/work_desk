@@ -903,42 +903,84 @@
       font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
       letter-spacing: 0.09em; color: var(--text-muted); margin-bottom: 10px;
     }
-    .theme-section { display: flex; flex-direction: column; gap: 6px; }
+    .theme-section { display: flex; flex-direction: column; gap: 8px; }
     .theme-section-label {
       font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
       letter-spacing: 0.08em; color: var(--text-muted);
     }
     .theme-section-divider {
-      border: none; border-top: 1px solid var(--border); margin: 6px 0;
+      border: none; border-top: 1px solid var(--border); margin: 8px 0;
     }
     .theme-picker-grid {
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
     }
     .theme-swatch {
       display: flex; flex-direction: column; align-items: center;
-      gap: 4px; cursor: pointer; padding: 4px 2px; border-radius: 6px;
+      gap: 5px; cursor: pointer; padding: 4px 2px; border-radius: 8px;
+      background: transparent; border: 1px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
     }
-    .theme-swatch:hover { background: var(--bg); }
+    .theme-swatch:hover {
+      background: var(--panel-bg);
+      border-color: var(--border);
+    }
+    .theme-swatch.active {
+      background: var(--panel-bg);
+    }
     .theme-swatch-preview {
-      width: 44px; height: 32px; border-radius: 6px;
-      position: relative; border: 2px solid transparent;
-      transition: border-color 0.15s; overflow: hidden;
+      width: 48px; height: 32px; border-radius: 6px;
+      position: relative; border: 1px solid rgba(128, 128, 128, 0.2);
+      transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s;
+      overflow: hidden; display: flex; flex-direction: row;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      flex-shrink: 0;
     }
-    .theme-swatch.active .theme-swatch-preview { border-color: var(--accent); }
-    /* Bottom sidebar strip — only visible for light themes */
+    .theme-swatch:hover .theme-swatch-preview {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+    .theme-swatch.active .theme-swatch-preview {
+      box-shadow: 0 0 0 2px var(--accent);
+      border-color: transparent;
+    }
     .theme-swatch-sidebar {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      height: 10px;
+      width: 13px; height: 100%; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center;
+      padding-top: 4px; gap: 2.5px;
+      border-right: 1px solid rgba(0, 0, 0, 0.1);
     }
-    .theme-swatch-dot {
-      position: absolute; bottom: 2px; right: 5px;
-      width: 10px; height: 10px; border-radius: 50%;
-      border: 1.5px solid rgba(255,255,255,0.4);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    .theme-swatch-sidebar-pill {
+      width: 7px; height: 2.5px; border-radius: 1.5px;
+      opacity: 0.95;
+    }
+    .theme-swatch-content {
+      flex: 1; height: 100%;
+      padding: 3.5px 3px 3px 3.5px;
+      display: flex; flex-direction: column; gap: 2.5px;
+      overflow: hidden;
+    }
+    .theme-swatch-card {
+      width: 100%; height: 11px; border-radius: 2px;
+      box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.12);
+      border: 0.5px solid rgba(128, 128, 128, 0.18);
+      display: flex; align-items: center; padding: 0 2.5px;
+    }
+    .theme-swatch-card-line {
+      width: 11px; height: 2px; border-radius: 1px;
+    }
+    .theme-swatch-card.secondary {
+      height: 8px; opacity: 0.75;
+      box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.08);
+      border: 0.5px solid rgba(128, 128, 128, 0.15);
     }
     .theme-swatch-name {
-      font-size: 0.64rem; color: var(--text-muted);
+      font-size: 0.63rem; font-weight: 500; color: var(--text-muted);
       text-align: center; white-space: nowrap;
+      max-width: 54px; overflow: hidden; text-overflow: ellipsis;
+      line-height: 1.15;
+    }
+    .theme-swatch.active .theme-swatch-name {
+      color: var(--text); font-weight: 600;
     }
 
     .sidebar-header {
@@ -5309,45 +5351,45 @@
     // ── Theme system ───────────────────────────────────────────────────────────
     const THEMES = [
       // Light — Neutral/minimal
-      { id: '',                name: 'Default',   sidebar: '#1e2433', bg: '#f4f6fb', accent: '#3b6fd9', dark: false },
-      { id: 'slate',           name: 'Slate',     sidebar: '#334155', bg: '#f1f5f9', accent: '#3b82f6', dark: false },
-      { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', bg: '#f0f6ff', accent: '#0ea5e9', dark: false },
-      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', accent: '#555555', dark: false },
+      { id: '',                name: 'Default',   sidebar: '#1e2433', bg: '#f4f2ee', surface: '#ffffff', accent: '#3b6fd9', dark: false },
+      { id: 'slate',           name: 'Slate',     sidebar: '#334155', bg: '#f1f5f9', surface: '#ffffff', accent: '#3b82f6', dark: false },
+      { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', bg: '#f0f6ff', surface: '#ffffff', accent: '#0ea5e9', dark: false },
+      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', surface: '#ffffff', accent: '#555555', dark: false },
       // Light — Warm/earthy
-      { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', bg: '#fdf6ee', accent: '#b5611a', dark: false },
-      { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', bg: '#f7f0e6', accent: '#d2691e', dark: false },
-      { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', bg: '#fff5f0', accent: '#f05040', dark: false },
-      { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', bg: '#fff1f2', accent: '#f43f5e', dark: false },
+      { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', bg: '#fdf6ee', surface: '#ffffff', accent: '#b5611a', dark: false },
+      { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', bg: '#f7f0e6', surface: '#fffcf8', accent: '#d2691e', dark: false },
+      { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', bg: '#fff5f0', surface: '#ffffff', accent: '#f05040', dark: false },
+      { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', bg: '#fff1f2', surface: '#ffffff', accent: '#f43f5e', dark: false },
       // Light — Nature/elegant
-      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', bg: '#f0faf4', accent: '#16a34a', dark: false },
-      { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', bg: '#f3f0fa', accent: '#7c3aed', dark: false },
-      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', bg: '#fdf6e3', accent: '#268bd2', dark: false },
-      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', accent: '#7aa2f7', dark: false },
+      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', bg: '#f0faf4', surface: '#ffffff', accent: '#16a34a', dark: false },
+      { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', bg: '#f3f0fa', surface: '#ffffff', accent: '#7c3aed', dark: false },
+      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', bg: '#fdf6e3', surface: '#eee8d5', accent: '#268bd2', dark: false },
+      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', surface: '#e9e9ec', accent: '#7aa2f7', dark: false },
       // Light — Neon/vibrant
-      { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#d8c0f0', accent: '#ff1493', dark: false },
-      { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', bg: '#ffe0c8', accent: '#ff2d95', dark: false },
-      { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', bg: '#a8e8ff', accent: '#00d084', dark: false },
-      { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', bg: '#552266', accent: '#ff2d95', dark: false },
+      { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#a8e8ff', surface: '#ccf4ff', accent: '#ff1493', dark: false },
+      { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', bg: '#d8c0f0', surface: '#ece0f8', accent: '#ff2d95', dark: false },
+      { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', bg: '#d9dce3', surface: '#f3f5f8', accent: '#00d084', dark: false },
+      { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', bg: '#ffe0c8', surface: '#fff0e4', accent: '#ff2d95', dark: false },
       // Dark — Base/neutral
-      { id: 'dark',            name: 'Default',   sidebar: '#0d1017', bg: '#12151c', accent: '#5b8def', dark: true  },
-      { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', bg: '#242933', accent: '#88c0d0', dark: true  },
-      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', accent: '#bd93f9', dark: true  },
-      { id: 'solarized-dark',  name: 'Solarized', sidebar: '#011d27', bg: '#002b36', accent: '#268bd2', dark: true  },
+      { id: 'dark',            name: 'Default',   sidebar: '#0d1017', bg: '#12151c', surface: '#1a1f2b', accent: '#5b8def', dark: true  },
+      { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', bg: '#242933', surface: '#2e3440', accent: '#88c0d0', dark: true  },
+      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', surface: '#383a4a', accent: '#bd93f9', dark: true  },
+      { id: 'solarized-dark',  name: 'Solarized', sidebar: '#011d27', bg: '#002b36', surface: '#073642', accent: '#268bd2', dark: true  },
       // Dark — Atmospheric
-      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', bg: '#051320', accent: '#22d3ee', dark: true  },
-      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', accent: '#46d17c', dark: true  },
-      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0c0020', accent: '#a78bfa', dark: true  },
-      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', accent: '#f59e0b', dark: true  },
+      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', bg: '#051320', surface: '#07192b', accent: '#22d3ee', dark: true  },
+      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', surface: '#143323', accent: '#46d17c', dark: true  },
+      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0e0620', surface: '#160a30', accent: '#a78bfa', dark: true  },
+      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', surface: '#1e1006', accent: '#f59e0b', dark: true  },
       // Dark — Moody/rich
-      { id: 'midnight',        name: 'Midnight',  sidebar: '#050810', bg: '#070a14', accent: '#6080e8', dark: true  },
-      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', accent: '#c8a84a', dark: true  },
-      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', accent: '#d4883c', dark: true  },
-      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', accent: '#e8608a', dark: true  },
+      { id: 'midnight',        name: 'Midnight',  sidebar: '#050810', bg: '#070a14', surface: '#0d1224', accent: '#6080e8', dark: true  },
+      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', surface: '#1c1c1c', accent: '#c8a84a', dark: true  },
+      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', surface: '#261610', accent: '#d4883c', dark: true  },
+      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', surface: '#2a1018', accent: '#e8608a', dark: true  },
       // Dark — Neon/vibrant
-      { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', accent: '#ff71ce', dark: true  },
-      { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', accent: '#00ff9f', dark: true  },
-      { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', bg: '#1a0828', accent: '#ff2d95', dark: true  },
-      { id: 'vaporwave-dark',  name: 'Vaporwave', sidebar: '#1a1030', bg: '#120a24', accent: '#ff77c8', dark: true  },
+      { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', surface: '#16082e', accent: '#ff71ce', dark: true  },
+      { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', surface: '#121218', accent: '#00ff9f', dark: true  },
+      { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', bg: '#1a0828', surface: '#280a3a', accent: '#ff2d95', dark: true  },
+      { id: 'vaporwave-dark',  name: 'Vaporwave', sidebar: '#1a1030', bg: '#120a24', surface: '#24163d', accent: '#ff77c8', dark: true  },
     ];
 
     function getCurrentThemeId() {
@@ -5529,11 +5571,18 @@
           sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
           sw.type = 'button';
           sw.title = t.name;
-          // All themes: main bg fill + sidebar strip at bottom + accent dot
+          // Mini app wireframe: Left sidebar + Canvas BG with mini surface cards + accent indicator
           sw.innerHTML = `
-            <div class="theme-swatch-preview" style="background:${t.bg || t.sidebar}">
-              <div class="theme-swatch-sidebar" style="background:${t.sidebar}"></div>
-              <div class="theme-swatch-dot" style="background:${t.accent}"></div>
+            <div class="theme-swatch-preview" style="background:${t.bg}">
+              <div class="theme-swatch-sidebar" style="background:${t.sidebar}">
+                <div class="theme-swatch-sidebar-pill" style="background:${t.accent}"></div>
+              </div>
+              <div class="theme-swatch-content">
+                <div class="theme-swatch-card" style="background:${t.surface}">
+                  <div class="theme-swatch-card-line" style="background:${t.accent}"></div>
+                </div>
+                <div class="theme-swatch-card secondary" style="background:${t.surface}"></div>
+              </div>
             </div>
             <span class="theme-swatch-name">${t.name}</span>`;
           sw.addEventListener('click', () => { applyTheme(t.id); closeDensityPopout(); });
