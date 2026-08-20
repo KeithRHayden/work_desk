@@ -5539,9 +5539,9 @@
       <div class="help-modal-body">
         <h3>Quick start</h3>
         <ol>
-          <li>Sign in with your email to enable cloud sync across devices.</li>
+          <li>Sign in with your email to enable cloud sync across devices, or click <strong>Continue offline</strong> to use the desk locally.</li>
           <li>Pick a day on the calendar, or use the arrows at the top of the desk.</li>
-          <li>Choose <strong>Task</strong> or <strong>Note</strong>, type your entry, and click <strong>Add</strong>.</li>
+          <li>Choose <strong>Task</strong> or <strong>Note</strong>, type your entry — add <code>#tagname</code> anywhere in the text to tag it — and click <strong>Add</strong>.</li>
           <li>Everything saves automatically and syncs to the cloud within a few seconds.</li>
         </ol>
 
@@ -5550,26 +5550,36 @@
           <li><strong>Daily desk</strong> — tasks and notes organized by day in New / Active / Done / Shelved columns</li>
           <li><strong>Work, Personal &amp; Projects</strong> — three separate contexts, toggled in the sidebar</li>
           <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
+          <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card; tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
           <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
-          <li><strong>Search</strong> — find tasks and notes across any day; use the <strong>Both</strong> chip to search Work and Personal together</li>
-          <li><strong>Carry forward</strong> — bring unfinished tasks into today; use the <strong>▾</strong> menu on the carry button to turn on <strong>Auto carry each day</strong> (pulls open tasks from all past days, not just yesterday)</li>
+          <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag</li>
+          <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define</li>
-          <li><strong>Insights</strong> — weekly, monthly, and yearly stats with a daily breakdown chart and activity heatmap</li>
+          <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
           <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
-          <li><strong>Themes</strong> — light and dark presets including Synthwave, Cyberpunk, Outrun, Vaporwave, Forest, and more</li>
+          <li><strong>Themes</strong> — 40 light and dark presets (20 each), browsable as mini wireframe previews in Options → Appearance</li>
           <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
         </ul>
 
         <h3>Task &amp; note cards</h3>
         <ul>
-          <li><strong>Action bar</strong> — common actions sit along the bottom of each card: <em>edit</em>, <em>move</em>, and <em>comment</em> / <em>add update</em></li>
+          <li><strong>Action bar</strong> — common actions sit along the bottom of each card: <em>edit</em>, <em>move</em>, <em>comment</em> / <em>add update</em>, and <em>tag</em></li>
           <li><strong>Overflow menu (⋮)</strong> — less common actions live here: delete, convert, send to Work/Personal, shelve/unshelve, and start (move to Active)</li>
           <li><strong>Convert</strong> — switch a task into a note or vice versa from the overflow menu</li>
           <li><strong>Shelving</strong> — move a task to Shelved when it isn't done but isn't today's focus; unshelf it later from the Done/Shelved column</li>
           <li><strong>Move to another day</strong> — reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
           <li><strong>Send to Work / Personal</strong> — moves a task or note to the other context list</li>
-          <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough; hover to see them clearly</li>
+          <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough (toggle this off in Options → Appearance); hover to see them clearly</li>
+        </ul>
+
+        <h3>Tags</h3>
+        <ul>
+          <li><strong>Type it inline</strong> — write <code>#ace</code> (or any <code>#word</code>) anywhere in a task or note and it's pulled out into a tag automatically when you save; a lone hashtag with no other text is left as visible text instead</li>
+          <li><strong>Or use the button</strong> — click <em>tag</em> in the action bar to add one without touching the card's text</li>
+          <li><strong>Case-insensitive</strong> — <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
+          <li><strong>Chips</strong> — shown in the top-right corner of the card; click the <strong>×</strong> on a chip to remove that tag</li>
+          <li><strong>Find by tag</strong> — search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
         </ul>
 
         <h3>Comments &amp; updates</h3>
@@ -5577,7 +5587,7 @@
           <li><strong>Tasks</strong> — click <em>comment</em> on a card to open the thread; add timestamped comments with bold, italic, underline, and bullet formatting</li>
           <li><strong>Notes</strong> — use <em>add update</em> for the same threaded follow-ups (handy for living documents)</li>
           <li><strong>Indent</strong> — comments sit slightly indented under the card so they read as replies, not another task</li>
-          <li><strong>Keep comments open</strong> — in Customize (⊟), turn this on so opening comments on one task doesn't collapse another; click <em>comment</em> again to close just that thread</li>
+          <li><strong>Keep comments open</strong> — in Options → Behavior, turn this on so opening comments on one task doesn't collapse another; it also survives day navigation and page refresh once enabled</li>
           <li><strong>Multi-line</strong> — press Enter for new lines; numbered lists like <code>1)</code> and bullets stay formatted when you save</li>
         </ul>
 
@@ -5591,13 +5601,18 @@
 
         <h3>Board layout</h3>
         <ul>
-          <li><strong>Card density &amp; theme</strong> — use the customize button (⊟) near the date to switch between <em>Comfortable</em> and <em>Compact</em> layouts and to change the color theme</li>
-          <li><strong>Keep comments open</strong> — in the same customize menu, turn this on so opening comments on one task doesn’t collapse another</li>
-          <li><strong>Auto-collapse Completed</strong> — optionally collapse the Completed list after a count you choose (3–20); tap the heading to expand</li>
+          <li><strong>Today's Progress</strong> — the sidebar mini card always shows today's completion percentage, even while you're viewing a different day; click it to jump straight back to today</li>
           <li><strong>Left accent bar</strong> — each card has a colored left border matching its column (New = accent, Active = hover accent, Done = done color, Notes = muted)</li>
           <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
           <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
           <li>Drag tasks between columns or reorder within a column (desktop)</li>
+        </ul>
+
+        <h3>Options menu</h3>
+        <ul>
+          <li>Open with the customize button (⊟) near the date; settings are split into <strong>Appearance</strong> and <strong>Behavior</strong> tabs</li>
+          <li><strong>Appearance</strong> — theme picker (40 presets with mini wireframe previews, filterable by Light/Dark/All), Comfortable/Compact card layout, and a strike-through toggle for completed tasks</li>
+          <li><strong>Behavior</strong> — Keep comments open, Auto-collapse Completed (with a 3–20 threshold), Auto carry each day, first day of the week (Sunday/Monday), Startup view (remember last viewed vs. always open Today), and the celebration confetti toggle</li>
         </ul>
 
         <h3>Navigation</h3>
@@ -5605,7 +5620,16 @@
           <li><strong>Calendar</strong> — pick any day; dots mean data exists; red badges on past days show open tasks left behind</li>
           <li><strong>Arrow buttons</strong> — step day by day at the top of the desk</li>
           <li><strong>Today</strong> — click <strong>Back to today</strong> beside the date to return instantly</li>
-          <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board; use <strong>&lt;</strong> / <strong>&gt;</strong> to jump week by week (Monday-aligned)</li>
+          <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board; use <strong>&lt;</strong> / <strong>&gt;</strong> to jump week by week (start day follows your Options → Behavior setting)</li>
+          <li><strong>On refresh</strong> — the app reopens to whatever tab and date you last had open; set Startup view to <em>Always open Today</em> in Options → Behavior if you'd rather it always land on today's Work desk</li>
+        </ul>
+
+        <h3>Search</h3>
+        <ul>
+          <li>Click into the sidebar search box to open a floating results overlay that stays clear of the input so you can keep typing</li>
+          <li>Matches task/note text, comments, and — with <code>#tagname</code> — tags, across every day</li>
+          <li>Use the <strong>Work / Personal / Both</strong> chip next to the box to search one context or both together</li>
+          <li>Click a result to jump straight to that day and item; press <strong>Escape</strong> or the <strong>×</strong> to close, or click outside the overlay</li>
         </ul>
 
         <h3>Recurring tasks</h3>
@@ -5618,8 +5642,12 @@
 
         <h3>Insights</h3>
         <ul>
-          <li>Switch between <strong>Week</strong>, <strong>Month</strong>, and <strong>Year</strong> views</li>
-          <li>Bar chart shows completed, shelved, open (new today), and open (carried over) per period</li>
+          <li>Switch between <strong>Week</strong>, <strong>Month</strong>, and <strong>Year</strong> views, and step back/forward with the arrows</li>
+          <li><strong>Productivity summary</strong> — completion rate, average daily completions, carry-over rate, and your most productive day</li>
+          <li><strong>Week-over-week</strong> (week view) — compares this week's completions against the previous one</li>
+          <li><strong>Carry-over analysis</strong> — which days of the week tasks most often carry over from</li>
+          <li><strong>Streak tracking</strong> — current and longest completion streaks, plus a heatmap matched to the period you're viewing</li>
+          <li><strong>Charts</strong> — switch between bar, line, stacked, and pie; hover any segment or point for exact counts</li>
           <li><strong>Activity heatmap</strong> (year view) — GitHub-style grid showing completion intensity by day; color adapts to your active theme</li>
           <li>Day-by-day detail table shows full breakdown including carried-over and newly created counts</li>
         </ul>
@@ -5628,12 +5656,12 @@
         <ul>
           <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
           <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in</strong> at the bottom of the sidebar when you’re ready to create an account or sync</li>
-          <li><strong>Synced preferences</strong> — theme, card density, Keep comments open, Auto-collapse Completed, and Auto carry follow your account across devices</li>
+          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, and confetti all follow your account across devices</li>
           <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
           <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
           <li>Opening on a new device: sign in and your history loads automatically (devices merge rather than overwrite)</li>
-          <li><strong>Backup / restore</strong> — Export backup and Import backup in the sidebar for a local JSON safety copy (includes Projects when you're in that context)</li>
+          <li><strong>Backup / restore</strong> — side-by-side Export and Import buttons in the sidebar for a local JSON safety copy (includes Projects when you're in that context)</li>
           <li><strong>Repair duplicates</strong> — cleans duplicate task IDs within a day and across days, and collapses same-day copies of the same recurring task if sync ever left extras behind</li>
           <li><strong>Auto-pruning</strong> — on each app startup, days older than 1 year are silently removed from the local cache; full history remains in the cloud</li>
         </ul>
@@ -5652,12 +5680,13 @@
 
         <h3>Tips</h3>
         <ul>
+          <li>Type <code>#tagname</code> while writing a task or note to tag it on the spot — no extra clicks needed</li>
           <li>Double-click a task or comment to edit it on desktop</li>
           <li>Click <strong>Aa</strong> next to the input box to show bold, italic, underline, and bullet formatting buttons</li>
           <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
           <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box to submit without clicking Add</li>
           <li>Use the sidebar collapse button (‹) to give the board more room</li>
-          <li>Completing a task triggers a small confetti burst</li>
+          <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
           <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors</li>
         </ul>
 
