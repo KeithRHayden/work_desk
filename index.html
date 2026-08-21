@@ -9038,23 +9038,38 @@
     }
 
     function collectSearchMatches(data, listContext, q, results) {
-      const isTagQuery = q.startsWith('#') && q.length > 1;
-      const tagQuery = isTagQuery ? q.slice(1) : null;
+      // A "#tag" token can appear anywhere in the query — start, middle, or end —
+      // not just at position 0. Whichever #word comes first is the tag filter;
+      // every other word (in any order, doesn't need to be contiguous with the
+      // tag or with each other) must also appear somewhere in the item's text
+      // or comments. This lets "set up #ace" and "#ace set up" find the same
+      // results instead of one of them silently returning nothing.
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const tagTokenIdx = tokens.findIndex(t => t.length > 1 && t.startsWith('#'));
+      const isTagQuery = tagTokenIdx !== -1;
+      const tagQuery = isTagQuery ? tokens[tagTokenIdx].slice(1) : null;
+      const textWords = isTagQuery ? tokens.filter((_, i) => i !== tagTokenIdx) : [];
       for (const date of Object.keys(data.days).sort((a, b) => b.localeCompare(a))) {
         const day = data.days[date];
         for (const item of day.items) {
           if (isTagQuery) {
             const tags = Array.isArray(item.tags) ? item.tags : [];
-            if (tags.some(t => t.includes(tagQuery))) {
-              results.push({
-                date,
-                itemId: item.id,
-                itemType: item.type,
-                matchType: 'tag',
-                preview: plainTextPreview(item.content, 100),
-                listContext,
-              });
+            if (!tagQuery || !tags.some(t => t.includes(tagQuery))) continue;
+            if (textWords.length) {
+              const haystack = [
+                plainTextPreview(item.content, 20000),
+                ...(item.comments || []).map(c => plainTextPreview(c.content, 20000)),
+              ].join(' ').toLowerCase();
+              if (!textWords.every(w => haystack.includes(w))) continue;
             }
+            results.push({
+              date,
+              itemId: item.id,
+              itemType: item.type,
+              matchType: 'tag',
+              preview: plainTextPreview(item.content, 100),
+              listContext,
+            });
             continue;
           }
           if (plainTextPreview(item.content, 20000).toLowerCase().includes(q)) {
