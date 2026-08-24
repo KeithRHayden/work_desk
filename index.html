@@ -2055,25 +2055,52 @@
     .modal-text { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px; }
 
     .move-label {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
       font-size: 0.82rem;
       font-weight: 500;
       color: var(--text);
-      margin-bottom: 20px;
+      margin-bottom: 8px;
     }
 
-    .move-date-input {
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.95rem;
-      outline: none;
-      background: var(--input-bg);
-      color: var(--text);
+    /* Move-to-date calendar — reuses the sidebar calendar's structural classes
+       (.cal-header/.cal-weekdays/.cal-grid/.cal-day) so week-start-day logic
+       stays in one place, but repaints colors with the main content palette
+       instead of --sidebar-* vars, since this sits on the modal surface, not
+       the sidebar's own (often much darker) background. */
+    .move-calendar {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 20px;
     }
-    .move-date-input:focus { border-color: var(--accent); }
+    .move-calendar .cal-title { color: var(--text); }
+    .move-calendar .cal-nav-btn {
+      border: 1px solid var(--border);
+      color: var(--text);
+      background: transparent;
+    }
+    .move-calendar .cal-nav-btn:hover { background: var(--bg); color: var(--accent); }
+    .move-calendar .cal-weekday { color: var(--text-muted); }
+    .move-calendar .cal-day { color: var(--text); }
+    .move-calendar .cal-day:hover { background: var(--bg); color: var(--accent); }
+    .move-calendar .cal-day.other-month { color: var(--text-muted); opacity: 0.45; }
+    .move-calendar .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+    .move-calendar .cal-day.selected {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .move-calendar .cal-day.selected.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+    .move-calendar .cal-day.has-data:not(.selected)::after {
+      content: '';
+      position: absolute;
+      bottom: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
 
     .modal-actions { display: flex; flex-direction: column; gap: 8px; }
 
@@ -5519,10 +5546,9 @@
     <div class="modal-box">
       <p class="modal-title">Move to another day</p>
       <p id="move-modal-text" class="modal-text"></p>
-      <label class="move-label" for="move-date-input">
-        Choose date
-        <input id="move-date-input" class="move-date-input" type="date" />
-      </label>
+      <p class="move-label">Choose date</p>
+      <div id="move-calendar" class="move-calendar" role="group" aria-label="Choose date"></div>
+      <input id="move-date-input" type="hidden" />
       <div class="modal-actions">
         <button id="move-confirm" class="modal-btn primary">Move</button>
         <button id="move-cancel" class="modal-btn ghost">Cancel</button>
@@ -5860,6 +5886,7 @@
       insightsAnchor: localStorage.getItem(INSIGHTS_ANCHOR_KEY) || todayKey(),
       insightsChartType: 'bar', // bar, line, pie, stacked
       calendarView: null,
+      moveCalendarView: null,
       weekAnchorKey: null,
       projectsData: null,
       selectedProjectId: localStorage.getItem(SELECTED_PROJECT_KEY) || null,
@@ -5917,6 +5944,7 @@
       importCancel: document.getElementById('import-cancel'),
       moveModal: document.getElementById('move-modal'),
       moveModalText: document.getElementById('move-modal-text'),
+      moveCalendar: document.getElementById('move-calendar'),
       moveDateInput: document.getElementById('move-date-input'),
       moveConfirm: document.getElementById('move-confirm'),
       moveCancel: document.getElementById('move-cancel'),
@@ -7317,6 +7345,7 @@
           schedulePrefsPush();
           renderCalendar();
           renderWeekStrip();
+          if (state.moveCalendarView && !els.moveModal.classList.contains('hidden')) renderMoveCalendar();
         });
       }
 
@@ -7545,7 +7574,129 @@
 
     function clearMoveModal() {
       state.movingItemId = null;
+      state.moveCalendarView = null;
       els.moveModal.classList.add('hidden');
+    }
+
+    function shiftMoveCalendarMonth(delta) {
+      const view = state.moveCalendarView;
+      if (!view) return;
+      const d = new Date(view.year, view.month + delta, 1);
+      state.moveCalendarView = { year: d.getFullYear(), month: d.getMonth() };
+      renderMoveCalendar();
+    }
+
+    function selectMoveCalendarDate(dateKey) {
+      els.moveDateInput.value = dateKey;
+      renderMoveCalendar();
+    }
+
+    // Same day-of-week math as renderCalendar() (respects state.weekStart), but
+    // targets the move modal's own view/selection state instead of the sidebar's,
+    // so picking a move-to date never disturbs the desk you're currently viewing.
+    function renderMoveCalendar() {
+      const host = els.moveCalendar;
+      if (!host || !state.moveCalendarView) return;
+      host.innerHTML = '';
+
+      const { year, month } = state.moveCalendarView;
+      const today = todayKey();
+      const selectedKey = els.moveDateInput.value;
+
+      const header = document.createElement('div');
+      header.className = 'cal-header';
+
+      const prevBtn = document.createElement('button');
+      prevBtn.type = 'button';
+      prevBtn.className = 'cal-nav-btn';
+      prevBtn.setAttribute('aria-label', 'Previous month');
+      prevBtn.textContent = '‹';
+      prevBtn.addEventListener('click', () => shiftMoveCalendarMonth(-1));
+
+      const title = document.createElement('div');
+      title.className = 'cal-title';
+      title.textContent = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      const nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.className = 'cal-nav-btn';
+      nextBtn.setAttribute('aria-label', 'Next month');
+      nextBtn.textContent = '›';
+      nextBtn.addEventListener('click', () => shiftMoveCalendarMonth(1));
+
+      header.append(prevBtn, title, nextBtn);
+      host.appendChild(header);
+
+      const isMondayStart = state.weekStart === 'monday';
+      const weekdaysList = isMondayStart
+        ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+        : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+      const weekdays = document.createElement('div');
+      weekdays.className = 'cal-weekdays';
+      weekdaysList.forEach((label) => {
+        const el = document.createElement('div');
+        el.className = 'cal-weekday';
+        el.textContent = label;
+        weekdays.appendChild(el);
+      });
+      host.appendChild(weekdays);
+
+      const grid = document.createElement('div');
+      grid.className = 'cal-grid';
+      grid.setAttribute('role', 'grid');
+
+      const rawOffset = new Date(year, month, 1).getDay();
+      const startOffset = isMondayStart ? (rawOffset + 6) % 7 : rawOffset;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month, 0).getDate();
+      const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+      for (let i = 0; i < totalCells; i++) {
+        let dayNum;
+        let cellYear = year;
+        let cellMonth = month;
+        let isOtherMonth = false;
+
+        if (i < startOffset) {
+          dayNum = daysInPrevMonth - startOffset + i + 1;
+          cellMonth = month - 1;
+          if (cellMonth < 0) { cellMonth = 11; cellYear = year - 1; }
+          isOtherMonth = true;
+        } else if (i >= startOffset + daysInMonth) {
+          dayNum = i - startOffset - daysInMonth + 1;
+          cellMonth = month + 1;
+          if (cellMonth > 11) { cellMonth = 0; cellYear = year + 1; }
+          isOtherMonth = true;
+        } else {
+          dayNum = i - startOffset + 1;
+        }
+
+        const dateKey = formatDateKey(new Date(cellYear, cellMonth, dayNum));
+        const day = state.data.days[dateKey];
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cal-day';
+        btn.setAttribute('role', 'gridcell');
+        btn.textContent = String(dayNum);
+
+        if (isOtherMonth) btn.classList.add('other-month');
+        if (dateKey === today) btn.classList.add('today');
+        if (dateKey === selectedKey) btn.classList.add('selected');
+        if (day && day.items.length > 0) btn.classList.add('has-data');
+
+        const monthLabel = new Date(cellYear, cellMonth, dayNum).toLocaleDateString('en-US', {
+          month: 'long', day: 'numeric', year: 'numeric',
+        });
+        btn.title = monthLabel;
+        btn.setAttribute('aria-label', monthLabel + (dateKey === selectedKey ? ' (selected)' : ''));
+
+        btn.addEventListener('click', () => selectMoveCalendarDate(dateKey));
+        grid.appendChild(btn);
+      }
+
+      host.appendChild(grid);
     }
 
     function plainTextPreview(html, maxLen = 60) {
@@ -7573,8 +7724,9 @@
       const defaultDate = new Date(state.selectedDate + 'T12:00:00');
       defaultDate.setDate(defaultDate.getDate() + 1);
       els.moveDateInput.value = formatDateKey(defaultDate);
+      state.moveCalendarView = { year: defaultDate.getFullYear(), month: defaultDate.getMonth() };
+      renderMoveCalendar();
       els.moveModal.classList.remove('hidden');
-      els.moveDateInput.focus();
     }
 
     function sendItemToOtherContext(itemId) {
