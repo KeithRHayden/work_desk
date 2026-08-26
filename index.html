@@ -5891,6 +5891,10 @@
       projectsData: null,
       selectedProjectId: localStorage.getItem(SELECTED_PROJECT_KEY) || null,
       editingProjectItemId: null,
+      // Content the item had *before* this edit session started, so Cancel can
+      // revert cleanly even if a background re-render captured in-progress typing
+      // into state in the meantime (see renderProjectDetail).
+      editingProjectItemOriginalContent: null,
       editingProjectComment: null,
     };
 
@@ -8261,10 +8265,19 @@
         const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          return { projects: parsed.projects || [] };
+          return { projects: parsed.projects || [], deletedIds: parsed.deletedIds || {} };
         }
       } catch (_) {}
-      return { projects: [] };
+      return { projects: [], deletedIds: {} };
+    }
+
+    // Tombstone for a deleted project task/note, mirroring markItemDeleted() for
+    // desk items — without this, a cloud sync pull can resurrect an item that
+    // was deleted locally but still exists in a stale remote copy.
+    function markProjectItemDeleted(id) {
+      if (!id) return;
+      if (!state.projectsData.deletedIds) state.projectsData.deletedIds = {};
+      state.projectsData.deletedIds[id] = new Date().toISOString();
     }
 
     function saveProjectsData() {
@@ -8374,12 +8387,14 @@
       let idx = project.notes.findIndex(n => n.id === itemId);
       if (idx !== -1) {
         project.notes.splice(idx, 1);
+        markProjectItemDeleted(itemId);
         saveProjectsData();
         return true;
       }
       idx = project.tasks.findIndex(t => t.id === itemId);
       if (idx !== -1) {
         project.tasks.splice(idx, 1);
+        markProjectItemDeleted(itemId);
         saveProjectsData();
         return true;
       }
@@ -8851,7 +8866,26 @@
 
     // Merge two projects data structures
     function mergeProjectsData(local, remote) {
-      const merged = { projects: [] };
+      // Union tombstones from both sides so a task/note deleted on either
+      // device stays deleted, instead of a stale remote (or local) copy
+      // resurrecting it on the next sync. Later timestamp wins, matching
+      // the same pattern used for day-item deletedIds in mergeDaysData.
+      const deletedIds = pruneDeletedIds({
+        ...(remote?.deletedIds || {}),
+        ...(local?.deletedIds || {}),
+      });
+      for (const [id, ts] of Object.entries(remote?.deletedIds || {})) {
+        if (!local?.deletedIds?.[id] || new Date(ts) > new Date(local.deletedIds[id])) {
+          deletedIds[id] = ts;
+        }
+      }
+      for (const [id, ts] of Object.entries(local?.deletedIds || {})) {
+        if (!deletedIds[id] || new Date(ts) >= new Date(deletedIds[id])) {
+          deletedIds[id] = ts;
+        }
+      }
+
+      const merged = { projects: [], deletedIds };
       const projectMap = new Map();
 
       // Add all local projects
@@ -8863,23 +8897,28 @@
       for (const remoteProj of remote?.projects || []) {
         const existing = projectMap.get(remoteProj.id);
         if (!existing) {
-          projectMap.set(remoteProj.id, remoteProj);
+          const cloned = JSON.parse(JSON.stringify(remoteProj));
+          cloned.notes = (cloned.notes || []).filter(n => !deletedIds[n.id]);
+          cloned.tasks = (cloned.tasks || []).filter(t => !deletedIds[t.id]);
+          projectMap.set(remoteProj.id, cloned);
         } else {
           // Merge notes
           const noteMap = new Map();
           for (const note of existing.notes || []) noteMap.set(note.id, note);
           for (const note of remoteProj.notes || []) {
+            if (deletedIds[note.id]) continue;
             const existingNote = noteMap.get(note.id);
             if (!existingNote || (note.comments?.length || 0) > (existingNote.comments?.length || 0)) {
               noteMap.set(note.id, note);
             }
           }
-          existing.notes = Array.from(noteMap.values());
+          existing.notes = Array.from(noteMap.values()).filter(n => !deletedIds[n.id]);
 
           // Merge tasks
           const taskMap = new Map();
           for (const task of existing.tasks || []) taskMap.set(task.id, task);
           for (const task of remoteProj.tasks || []) {
+            if (deletedIds[task.id]) continue;
             const existingTask = taskMap.get(task.id);
             if (!existingTask) {
               taskMap.set(task.id, task);
@@ -8891,7 +8930,7 @@
               }
             }
           }
-          existing.tasks = Array.from(taskMap.values());
+          existing.tasks = Array.from(taskMap.values()).filter(t => !deletedIds[t.id]);
 
           projectMap.set(remoteProj.id, existing);
         }
@@ -10086,7 +10125,12 @@
       // Handle projects import
       if (state.pendingImport.type === 'projects') {
         if (mode === 'replace') {
-          state.projectsData = { projects: state.pendingImport.projects };
+          // Keep current tombstones so replace can't resurrect items that were
+          // already deleted, just because an older backup still has them.
+          state.projectsData = {
+            projects: state.pendingImport.projects,
+            deletedIds: state.projectsData.deletedIds || {},
+          };
         } else {
           // Merge: add projects that don't exist by ID
           const existingIds = new Set(state.projectsData.projects.map(p => p.id));
@@ -12926,6 +12970,7 @@
         injectDueTemplates();
       } else {
         state.editingProjectItemId = null;
+        state.editingProjectItemOriginalContent = null;
       }
 
       render();
@@ -13028,6 +13073,24 @@
         return;
       }
 
+      // A task/note mid-edit exists only inside a live contenteditable — its
+      // typed text is never written to state until Save. Background sync
+      // (window focus / periodic pull) calls render() at arbitrary moments,
+      // which used to wipe that DOM node and rebuild it from the stale (often
+      // still-empty) state value, silently discarding whatever the user was
+      // mid-typing. Pull the live DOM content back into state first so any
+      // rebuild below reflects it instead of erasing it.
+      if (state.editingProjectItemId && els.projectTasksList && els.projectNotesList) {
+        const openEditor = els.projectTasksList.querySelector('.project-item-editor')
+          || els.projectNotesList.querySelector('.project-item-editor');
+        if (openEditor) {
+          const liveHtml = openEditor.innerHTML;
+          const openItem = (project.tasks || []).find(t => t.id === state.editingProjectItemId)
+            || (project.notes || []).find(n => n.id === state.editingProjectItemId);
+          if (openItem) openItem.content = liveHtml;
+        }
+      }
+
       els.projectEmpty.classList.add('hidden');
       els.projectDetail.classList.remove('hidden');
 
@@ -13092,8 +13155,15 @@
         saveBtn.style.marginTop = '8px';
         saveBtn.addEventListener('click', () => {
           const newContent = serializeEditorHtml(editor);
-          updateProjectItem(projectId, note.id, { content: newContent });
+          if (isEmptyHtml(newContent)) {
+            // Nothing was ever typed (or it was cleared back to nothing) —
+            // drop the shell instead of persisting a blank note card.
+            deleteProjectItem(projectId, note.id);
+          } else {
+            updateProjectItem(projectId, note.id, { content: newContent });
+          }
           state.editingProjectItemId = null;
+          state.editingProjectItemOriginalContent = null;
           renderProjectDetail();
         });
 
@@ -13105,7 +13175,17 @@
         cancelBtn.style.marginLeft = '8px';
         cancelBtn.style.color = 'var(--text-muted)';
         cancelBtn.addEventListener('click', () => {
+          // Revert to whatever the note held before this edit session — not
+          // whatever renderProjectDetail's live-draft capture last wrote in —
+          // and drop it entirely if it was a freshly-added, never-saved note.
+          const original = state.editingProjectItemOriginalContent || '';
+          if (isEmptyHtml(original)) {
+            deleteProjectItem(projectId, note.id);
+          } else {
+            updateProjectItem(projectId, note.id, { content: original });
+          }
           state.editingProjectItemId = null;
+          state.editingProjectItemOriginalContent = null;
           renderProjectDetail();
         });
 
@@ -13145,6 +13225,7 @@
         editBtn.textContent = 'edit';
         editBtn.addEventListener('click', () => {
           state.editingProjectItemId = note.id;
+          state.editingProjectItemOriginalContent = note.content || '';
           renderProjectDetail();
         });
 
@@ -13348,8 +13429,15 @@
         saveBtn.style.marginTop = '8px';
         saveBtn.addEventListener('click', () => {
           const newContent = serializeEditorHtml(editor);
-          updateProjectItem(projectId, task.id, { content: newContent });
+          if (isEmptyHtml(newContent)) {
+            // Nothing was ever typed (or it was cleared back to nothing) —
+            // drop the shell instead of persisting a blank task card.
+            deleteProjectItem(projectId, task.id);
+          } else {
+            updateProjectItem(projectId, task.id, { content: newContent });
+          }
           state.editingProjectItemId = null;
+          state.editingProjectItemOriginalContent = null;
           renderProjectDetail();
         });
 
@@ -13361,7 +13449,17 @@
         cancelBtn.style.marginLeft = '8px';
         cancelBtn.style.color = 'var(--text-muted)';
         cancelBtn.addEventListener('click', () => {
+          // Revert to whatever the task held before this edit session — not
+          // whatever renderProjectDetail's live-draft capture last wrote in —
+          // and drop it entirely if it was a freshly-added, never-saved task.
+          const original = state.editingProjectItemOriginalContent || '';
+          if (isEmptyHtml(original)) {
+            deleteProjectItem(projectId, task.id);
+          } else {
+            updateProjectItem(projectId, task.id, { content: original });
+          }
           state.editingProjectItemId = null;
+          state.editingProjectItemOriginalContent = null;
           renderProjectDetail();
         });
 
@@ -13392,6 +13490,7 @@
         editBtn.textContent = 'edit';
         editBtn.addEventListener('click', () => {
           state.editingProjectItemId = task.id;
+          state.editingProjectItemOriginalContent = task.content || '';
           renderProjectDetail();
         });
 
@@ -13889,6 +13988,7 @@
       const note = addProjectNote(state.selectedProjectId, '');
       if (note) {
         state.editingProjectItemId = note.id;
+        state.editingProjectItemOriginalContent = '';
         renderProjectDetail();
       }
     });
@@ -13898,6 +13998,7 @@
       const task = addProjectTask(state.selectedProjectId, '');
       if (task) {
         state.editingProjectItemId = task.id;
+        state.editingProjectItemOriginalContent = '';
         renderProjectDetail();
       }
     });
