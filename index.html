@@ -13477,6 +13477,15 @@
         const textSpan = document.createElement('span');
         textSpan.className = 'project-task-text' + (task.completed ? ' completed' : '');
         textSpan.innerHTML = sanitizeHtml(task.content || '');
+        textSpan.style.cursor = 'text';
+        textSpan.title = 'Double-click to edit';
+
+        const startEditTask = () => {
+          state.editingProjectItemId = task.id;
+          state.editingProjectItemOriginalContent = task.content || '';
+          renderProjectDetail();
+        };
+        textSpan.addEventListener('dblclick', startEditTask);
 
         const meta = document.createElement('div');
         meta.className = 'project-item-meta';
@@ -13488,11 +13497,7 @@
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.textContent = 'edit';
-        editBtn.addEventListener('click', () => {
-          state.editingProjectItemId = task.id;
-          state.editingProjectItemOriginalContent = task.content || '';
-          renderProjectDetail();
-        });
+        editBtn.addEventListener('click', startEditTask);
 
         const commentBtn = document.createElement('button');
         commentBtn.type = 'button';
