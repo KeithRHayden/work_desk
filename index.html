@@ -7556,10 +7556,22 @@
       if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
     }
 
+    // "today" / "tomorrow" / "yesterday" for nearby days, else a short date
+    // (e.g. "Sep 3") so the add-form placeholder always matches the day
+    // actually being viewed instead of always claiming "today".
+    function relativeDayPhrase(dateKey) {
+      const today = todayKey();
+      if (dateKey === today) return 'today';
+      const diffDays = Math.round((dateFromKey(dateKey) - dateFromKey(today)) / 86400000);
+      if (diffDays === 1) return 'tomorrow';
+      if (diffDays === -1) return 'yesterday';
+      return dateFromKey(dateKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
     function setAddPlaceholder() {
       if (!addEditor) return;
       addEditor.dataset.placeholder = state.itemType === 'task'
-        ? 'Add a task for today…'
+        ? `Add a task for ${relativeDayPhrase(state.selectedDate)}…`
         : 'Write a quick note…';
     }
 
