@@ -22,7 +22,10 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **Quick notes** — alongside the task board
 - **Rich text** — bold, italic, underline, bullets
-- **Projects** — third context for longer-lived notes and tasks with updates
+- **Projects** — third context for longer-lived notes and tasks with updates; organized into **Notes | Tasks** tabs per project
+- **Note preview** — long project notes are truncated to a few lines with a *show more* toggle (configurable in Options → Behavior)
+- **Archive** — archive notes or tasks you're done with; completing a project task auto-archives it; archived items live in a collapsed accordion at the bottom of each tab
+- **Double-click to edit** — double-click any project note, task, or comment to jump into the editor
 
 ### Organization
 
@@ -47,7 +50,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **40 themes** — 20 light + 20 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, etc.), browsed as mini wireframe previews, filterable by Light/Dark/All
 - **Options menu** — tabbed **Appearance** / **Behavior** panels (customize button ⊟ near the date)
   - Appearance: theme, Comfortable/Compact density, strike-through completed tasks
-  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view (remember last viewed vs. always open Today), celebration confetti
+  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view (remember last viewed vs. always open Today), celebration confetti, truncate long project notes
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
 - Collapsible sidebar on desktop, with a "Today's Progress" mini card that always reflects today regardless of which day you're viewing
 
@@ -56,7 +59,8 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Optional Supabase sync** — email sign-in; devices merge rather than overwrite
 - **Synced preferences** — theme, density, strike-through, comment/completed/auto-carry toggles, week start day, startup view, and confetti follow your account (last change wins)
 - **Continue offline** — use the desk without an account; data stays in this browser only (clearing site data can wipe it). Use **Sign in** in the sidebar account footer when you’re ready to sync.
-- Export / import JSON backups (side-by-side buttons in the sidebar; includes delete tombstones)
+- **Export / Import Desk** — save or restore a single tab (Work, Personal, or Projects) as a JSON file; the export stamps which desk it came from, and importing into the wrong tab shows a confirmation warning
+- **Export / Import All** — bundles Work + Personal + Projects into a single file for a complete one-click backup and restore
 - Auto-prune of days older than 1 year from the local cache (cloud keeps history)
 
 ### Mobile and PWA
@@ -150,12 +154,12 @@ work-desk/
 |-------|----------|
 | Local | `work-desk-data-work`, `work-desk-data-personal`, projects + recurring keys, preferences |
 | Cloud | Supabase `user_data.data` JSON (work, personal, projects, recurring, prefs) |
-| Backup | Export JSON includes `days` + `deletedIds` tombstones |
+| Backup | Single-desk export includes `days` + `deletedIds` + `context`; Export All bundles all three desks |
 
 Tips:
 
 - Prefer signing in if you care about durability across browsers or devices
-- Use **Export backup** before clearing site data or switching machines
+- Use **Export All** before clearing site data or switching machines
 - **Repair duplicates** if sync ever leaves twin cards
 
 ## Testing
@@ -169,7 +173,7 @@ npm run test:e2e:ui      # Playwright UI mode
 npm run test:all         # unit + e2e
 ```
 
-E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), and the search overlay (result count, `#tagname` filtering, close/outside-click). The auth modal is dismissed via **Continue offline**.
+E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), search overlay (result count, `#tagname` filtering, close/outside-click), project tasks (mid-edit preservation, empty-save deletion, cancel revert, tombstone tracking, double-click editing), dynamic add-form placeholder, and project note list padding. The auth modal is dismissed via **Continue offline**.
 
 ## Browser support
 
