@@ -5371,11 +5371,16 @@
         <div class="sidebar-backup">
           <p class="nav-label" style="margin-bottom:0;">Backup</p>
           <div class="sidebar-backup-btns">
-            <button id="export-btn" class="backup-btn" type="button" title="Export all tasks & notes as JSON backup">⬇ Export</button>
-            <button id="import-btn" class="backup-btn" type="button" title="Import tasks from a JSON backup file">⬆ Import…</button>
+            <button id="export-btn" class="backup-btn" type="button" title="Export current desk as JSON backup">⬇ Export Desk</button>
+            <button id="import-btn" class="backup-btn" type="button" title="Import into current desk from a JSON backup">⬆ Import Desk…</button>
+          </div>
+          <div class="sidebar-backup-btns" style="margin-top:2px;">
+            <button id="export-all-btn" class="backup-btn" type="button" title="Export Work + Personal + Projects in one file">⬇ Export All</button>
+            <button id="import-all-btn" class="backup-btn" type="button" title="Import a combined backup into all desks">⬆ Import All…</button>
           </div>
           <button id="repair-btn" class="sidebar-repair-link" type="button" title="Scan for and remove duplicate tasks (same ID or recurring template)">🔧 Repair duplicates</button>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
+          <input id="import-all-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
       </div>
 
@@ -5750,7 +5755,11 @@
         <ul>
           <li><strong>What it's for</strong> — capture notes and tasks for long-running projects, side ideas, or collaborations that don't fit the daily workflow</li>
           <li><strong>Create a project</strong> — click the <strong>Projects</strong> tab in the sidebar, then click <strong>+</strong> to add a new project</li>
-          <li><strong>Notes &amp; tasks</strong> — each project has its own notes and tasks; notes support updates (like comments) to track progress over time</li>
+          <li><strong>Notes | Tasks tabs</strong> — each project organizes content into two tabs so you're never scrolling through both at once</li>
+          <li><strong>Note preview</strong> — long notes are truncated to a few lines with a <em>show more</em> toggle; turn this off in Options → Behavior → <strong>Truncate long notes</strong></li>
+          <li><strong>Archive</strong> — click <em>archive</em> on any note or task to move it into a collapsed <strong>Archived (n)</strong> section at the bottom of its tab; completing a task automatically archives it</li>
+          <li><strong>Double-click to edit</strong> — double-click a note's content or a task's text to jump straight into the editor</li>
+          <li><strong>Customize button</strong> — the gear icon in the project header opens the same Appearance / Behavior options available on the desk</li>
           <li><strong>Cloud sync</strong> — projects sync to the cloud alongside your Work and Personal data</li>
         </ul>
 
@@ -5767,7 +5776,7 @@
         <ul>
           <li>Open with the customize button (⊟) near the date; settings are split into <strong>Appearance</strong> and <strong>Behavior</strong> tabs</li>
           <li><strong>Appearance</strong> — theme picker (40 presets with mini wireframe previews, filterable by Light/Dark/All), Comfortable/Compact card layout, and a strike-through toggle for completed tasks</li>
-          <li><strong>Behavior</strong> — Keep comments open, Auto-collapse Completed (with a 3–20 threshold), Auto carry each day, first day of the week (Sunday/Monday), Startup view (remember last viewed vs. always open Today), and the celebration confetti toggle</li>
+          <li><strong>Behavior</strong> — Keep comments open, Auto-collapse Completed (with a 3–20 threshold), Auto carry each day, first day of the week (Sunday/Monday), Startup view (remember last viewed vs. always open Today), celebration confetti toggle, and <strong>Truncate long notes</strong> (project note preview on/off)</li>
         </ul>
 
         <h3>Navigation</h3>
@@ -5816,7 +5825,7 @@
           <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
           <li>Opening on a new device: sign in and your history loads automatically (devices merge rather than overwrite)</li>
-          <li><strong>Backup / restore</strong> — side-by-side Export and Import buttons in the sidebar for a local JSON safety copy (includes Projects when you're in that context)</li>
+          <li><strong>Backup / restore</strong> — <em>Export/Import Desk</em> saves or restores the current tab (Work, Personal, or Projects) individually; <em>Export/Import All</em> bundles every desk into a single file for a complete backup; importing a file from a different desk shows a confirmation warning before proceeding</li>
           <li><strong>Repair duplicates</strong> — cleans duplicate task IDs within a day and across days, and collapses same-day copies of the same recurring task if sync ever left extras behind</li>
           <li><strong>Auto-pruning</strong> — on each app startup, days older than 1 year are silently removed from the local cache; full history remains in the cloud</li>
         </ul>
@@ -5836,7 +5845,7 @@
         <h3>Tips</h3>
         <ul>
           <li>Type <code>#tagname</code> while writing a task or note to tag it on the spot — no extra clicks needed</li>
-          <li>Double-click a task or comment to edit it on desktop</li>
+          <li>Double-click a task, note, or comment to edit it on desktop</li>
           <li>Click <strong>Aa</strong> next to the input box to show bold, italic, underline, and bullet formatting buttons</li>
           <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
           <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box to submit without clicking Add</li>
@@ -5999,6 +6008,7 @@
       autoOpenEditor: null,
       movingItemId: null,
       pendingImport: null,
+      pendingImportAll: null,
       searchQuery: '',
       searchAllContexts: localStorage.getItem(SEARCH_ALL_CONTEXTS_KEY) === 'true',
       autoCarryForward: localStorage.getItem(AUTO_CARRY_FORWARD_KEY) === 'true',
@@ -6070,6 +6080,9 @@
       exportBtn: document.getElementById('export-btn'),
       importBtn: document.getElementById('import-btn'),
       importFile: document.getElementById('import-file'),
+      exportAllBtn: document.getElementById('export-all-btn'),
+      importAllBtn: document.getElementById('import-all-btn'),
+      importAllFile: document.getElementById('import-all-file'),
       importModal: document.getElementById('import-modal'),
       importModalText: document.getElementById('import-modal-text'),
       helpBtn: document.getElementById('help-btn'),
@@ -10194,6 +10207,7 @@
           exportedAt: new Date().toISOString(),
           app: 'work-desk',
           type: 'projects',
+          context: 'projects',
           projects: state.projectsData.projects,
         };
         filename = `work-desk-backup-projects-${todayKey()}.json`;
@@ -10204,6 +10218,7 @@
           version: 1,
           exportedAt: new Date().toISOString(),
           app: 'work-desk',
+          context: state.listContext,
           days: state.data.days,
           deletedIds: pruneDeletedIds(state.data.deletedIds || {}),
         };
@@ -10221,6 +10236,171 @@
       URL.revokeObjectURL(url);
 
       showToast(toastMsg);
+    }
+
+    function exportAll() {
+      const workData = loadData('work');
+      const personalData = loadData('personal');
+      const projectsData = loadProjectsData();
+
+      const payload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        app: 'work-desk',
+        type: 'all',
+        work: {
+          days: workData.days,
+          deletedIds: pruneDeletedIds(workData.deletedIds || {}),
+        },
+        personal: {
+          days: personalData.days,
+          deletedIds: pruneDeletedIds(personalData.deletedIds || {}),
+        },
+        projects: projectsData.projects,
+      };
+
+      const filename = `work-desk-backup-all-${todayKey()}.json`;
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      const wStats = countItems(workData);
+      const pStats = countItems(personalData);
+      const projCount = projectsData.projects.length;
+      showToast(`Exported all — Work: ${wStats.items} items, Personal: ${pStats.items} items, ${projCount} project${projCount !== 1 ? 's' : ''}`);
+    }
+
+    function handleImportAllFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (parsed.type !== 'all' || !parsed.work || !parsed.personal) {
+            showToast('This is not an Export All backup — use Import Desk for single-desk files');
+            return;
+          }
+
+          const wValidated = validateImportData(parsed.work);
+          const pValidated = validateImportData(parsed.personal);
+          const projValidated = parsed.projects
+            ? validateImportData({ type: 'projects', projects: parsed.projects })
+            : null;
+
+          const wItems = wValidated ? countItems(wValidated) : { days: 0, items: 0 };
+          const pItems = pValidated ? countItems(pValidated) : { days: 0, items: 0 };
+          const projCount = projValidated ? projValidated.projects.length : 0;
+
+          state.pendingImportAll = { work: wValidated, personal: pValidated, projects: projValidated };
+
+          els.importModalText.textContent =
+            `Import All backup: Work (${wItems.items} items, ${wItems.days} days), ` +
+            `Personal (${pItems.items} items, ${pItems.days} days), ` +
+            `${projCount} project${projCount !== 1 ? 's' : ''}. ` +
+            'Merge adds new items alongside yours. Replace overwrites all desks.';
+          els.importModal.classList.remove('hidden');
+        } catch (_) {
+          showToast('Could not read backup file');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function applyImportAll(mode) {
+      if (!state.pendingImportAll) return;
+      const { work, personal, projects } = state.pendingImportAll;
+
+      // Save current context's data before switching
+      if (state.listContext !== 'projects') saveData();
+
+      // Import Work
+      if (work) {
+        const workData = loadData('work');
+        if (mode === 'replace') {
+          const deletedIds = pruneDeletedIds({
+            ...(workData.deletedIds || {}),
+            ...(work.deletedIds || {}),
+          });
+          let days = work.days || {};
+          for (const [date, day] of Object.entries(days)) {
+            const items = (day.items || []).filter(i => !i?.id || !deletedIds[i.id]);
+            if (items.length === 0) delete days[date];
+            else days[date] = { date, items };
+          }
+          const deduped = deduplicateAcrossDays(days);
+          localStorage.setItem(getStorageKey('work'), JSON.stringify({ days: deduped.days, deletedIds }));
+        } else {
+          const merged = mergeImportInto(workData, work);
+          localStorage.setItem(getStorageKey('work'), JSON.stringify(merged));
+        }
+      }
+
+      // Import Personal
+      if (personal) {
+        const personalData = loadData('personal');
+        if (mode === 'replace') {
+          const deletedIds = pruneDeletedIds({
+            ...(personalData.deletedIds || {}),
+            ...(personal.deletedIds || {}),
+          });
+          let days = personal.days || {};
+          for (const [date, day] of Object.entries(days)) {
+            const items = (day.items || []).filter(i => !i?.id || !deletedIds[i.id]);
+            if (items.length === 0) delete days[date];
+            else days[date] = { date, items };
+          }
+          const deduped = deduplicateAcrossDays(days);
+          localStorage.setItem(getStorageKey('personal'), JSON.stringify({ days: deduped.days, deletedIds }));
+        } else {
+          const merged = mergeImportInto(personalData, personal);
+          localStorage.setItem(getStorageKey('personal'), JSON.stringify(merged));
+        }
+      }
+
+      // Import Projects
+      if (projects) {
+        if (mode === 'replace') {
+          state.projectsData = {
+            projects: projects.projects,
+            deletedIds: state.projectsData.deletedIds || {},
+          };
+        } else {
+          const existingIds = new Set(state.projectsData.projects.map(p => p.id));
+          for (const proj of projects.projects) {
+            if (!existingIds.has(proj.id)) {
+              state.projectsData.projects.push(proj);
+            }
+          }
+        }
+        saveProjectsData();
+      }
+
+      // Reload active context
+      state.data = loadData(state.listContext === 'projects' ? 'work' : state.listContext);
+
+      state.pendingImportAll = null;
+      state.pendingImport = null;
+      clearEditing();
+      clearExpandedComments();
+      els.importModal.classList.add('hidden');
+      els.importAllFile.value = '';
+
+      showToast(mode === 'replace'
+        ? 'Replaced all desks from backup'
+        : 'Merged backup into all desks');
+      render();
+    }
+
+    function mergeImportInto(existingData, imported) {
+      // Reuse the existing mergeImportData logic, but with explicit data instead of state.data
+      const savedData = state.data;
+      state.data = existingData;
+      const result = mergeImportData(imported);
+      state.data = savedData;
+      return result;
     }
 
     function mergeImportData(imported) {
@@ -10316,6 +10496,12 @@
     }
 
     function applyImport(mode) {
+      // Handle Import All
+      if (state.pendingImportAll) {
+        applyImportAll(mode);
+        return;
+      }
+
       if (!state.pendingImport) return;
 
       // Handle projects import
@@ -10387,10 +10573,31 @@
       reader.onload = () => {
         try {
           const parsed = JSON.parse(reader.result);
+
+          // Reject Import All files — user should use the Import All button
+          if (parsed.type === 'all') {
+            showToast('This is an Export All backup — use Import All instead');
+            return;
+          }
+
           const validated = validateImportData(parsed);
           if (!validated) {
             showToast('Invalid backup file');
             return;
+          }
+
+          // Check for context mismatch (old backups without context still import fine)
+          const fileContext = parsed.context || validated.type || null;
+          if (fileContext && fileContext !== state.listContext) {
+            const fileLabel = getContextLabel(fileContext);
+            const currentLabel = getContextLabel();
+            if (!confirm(
+              `This backup is from your ${fileLabel} desk, but you're on the ${currentLabel} tab.\n\n` +
+              `Import into ${currentLabel} anyway?`
+            )) {
+              els.importFile.value = '';
+              return;
+            }
           }
 
           // Handle projects import
@@ -13199,6 +13406,12 @@
       els.sidebarDaily.classList.toggle('hidden', isProjects);
       els.sidebarProjects.classList.toggle('hidden', !isProjects);
 
+      const deskLabel = isProjects ? 'Projects' : isPersonal ? 'Personal' : 'Work';
+      els.exportBtn.textContent = `⬇ Export ${deskLabel}`;
+      els.importBtn.textContent = `⬆ Import ${deskLabel}…`;
+      els.exportBtn.title = `Export ${deskLabel} desk as JSON backup`;
+      els.importBtn.title = `Import into ${deskLabel} desk from a JSON backup`;
+
       document.querySelectorAll('.desk-only').forEach((el) => {
         el.classList.toggle('hidden', !isDesk || isProjects);
       });
@@ -14114,19 +14327,29 @@
     });
 
     els.exportBtn.addEventListener('click', exportBackup);
+    els.exportAllBtn.addEventListener('click', exportAll);
 
     document.getElementById('repair-btn').addEventListener('click', repairData);
 
     els.importBtn.addEventListener('click', () => els.importFile.click());
+    els.importAllBtn.addEventListener('click', () => els.importAllFile.click());
 
     els.importFile.addEventListener('change', () => {
       const file = els.importFile.files[0];
       if (file) handleImportFile(file);
     });
 
+    els.importAllFile.addEventListener('change', () => {
+      const file = els.importAllFile.files[0];
+      if (file) handleImportAllFile(file);
+    });
+
     els.importMerge.addEventListener('click', () => applyImport('merge'));
     els.importReplace.addEventListener('click', () => {
-      if (confirm('This will permanently replace all your current tasks and notes. Continue?')) {
+      const msg = state.pendingImportAll
+        ? 'This will permanently replace ALL your Work, Personal, and Projects data. Continue?'
+        : 'This will permanently replace all your current tasks and notes. Continue?';
+      if (confirm(msg)) {
         applyImport('replace');
       }
     });
@@ -14165,15 +14388,19 @@
 
     els.importCancel.addEventListener('click', () => {
       state.pendingImport = null;
+      state.pendingImportAll = null;
       els.importModal.classList.add('hidden');
       els.importFile.value = '';
+      els.importAllFile.value = '';
     });
 
     els.importModal.addEventListener('click', (e) => {
       if (e.target === els.importModal) {
         state.pendingImport = null;
+        state.pendingImportAll = null;
         els.importModal.classList.add('hidden');
         els.importFile.value = '';
+        els.importAllFile.value = '';
       }
     });
 
