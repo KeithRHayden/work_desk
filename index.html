@@ -2111,6 +2111,36 @@
       font-weight: 500;
       border-radius: 6px;
     }
+    .backup-btn-wrap {
+      position: relative;
+    }
+    .backup-dropdown {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      z-index: 120;
+      overflow: hidden;
+    }
+    .backup-dropdown.hidden { display: none; }
+    .backup-dropdown-item {
+      display: block;
+      width: 100%;
+      padding: 7px 12px;
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s;
+    }
+    .backup-dropdown-item:hover { background: var(--accent-light); color: var(--accent); }
+    .backup-dropdown-item + .backup-dropdown-item { border-top: 1px solid var(--border); }
     .backup-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-active); border-color: color-mix(in srgb, var(--sidebar-muted) 40%, transparent); }
     .backup-btn.replace { color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .backup-btn.replace:hover { background: rgba(239, 68, 68, 0.12); }
@@ -5371,12 +5401,20 @@
         <div class="sidebar-backup">
           <p class="nav-label" style="margin-bottom:0;">Backup</p>
           <div class="sidebar-backup-btns">
-            <button id="export-btn" class="backup-btn" type="button" title="Export current desk as JSON backup">⬇ Export Desk</button>
-            <button id="import-btn" class="backup-btn" type="button" title="Import into current desk from a JSON backup">⬆ Import Desk…</button>
-          </div>
-          <div class="sidebar-backup-btns" style="margin-top:2px;">
-            <button id="export-all-btn" class="backup-btn" type="button" title="Export Work + Personal + Projects in one file">⬇ Export All</button>
-            <button id="import-all-btn" class="backup-btn" type="button" title="Import a combined backup into all desks">⬆ Import All…</button>
+            <div class="backup-btn-wrap">
+              <button id="export-btn" class="backup-btn" type="button" title="Export data as JSON backup">⬇ Export</button>
+              <div id="export-menu" class="backup-dropdown hidden">
+                <button id="export-desk-opt" class="backup-dropdown-item" type="button">Work Desk</button>
+                <button id="export-all-opt" class="backup-dropdown-item" type="button">All Desks</button>
+              </div>
+            </div>
+            <div class="backup-btn-wrap">
+              <button id="import-btn" class="backup-btn" type="button" title="Import from a JSON backup">⬆ Import…</button>
+              <div id="import-menu" class="backup-dropdown hidden">
+                <button id="import-desk-opt" class="backup-dropdown-item" type="button">Work Desk…</button>
+                <button id="import-all-opt" class="backup-dropdown-item" type="button">All Desks…</button>
+              </div>
+            </div>
           </div>
           <button id="repair-btn" class="sidebar-repair-link" type="button" title="Scan for and remove duplicate tasks (same ID or recurring template)">🔧 Repair duplicates</button>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
@@ -6080,9 +6118,9 @@
       exportBtn: document.getElementById('export-btn'),
       importBtn: document.getElementById('import-btn'),
       importFile: document.getElementById('import-file'),
-      exportAllBtn: document.getElementById('export-all-btn'),
-      importAllBtn: document.getElementById('import-all-btn'),
       importAllFile: document.getElementById('import-all-file'),
+      exportMenu: document.getElementById('export-menu'),
+      importMenu: document.getElementById('import-menu'),
       importModal: document.getElementById('import-modal'),
       importModalText: document.getElementById('import-modal-text'),
       helpBtn: document.getElementById('help-btn'),
@@ -13407,10 +13445,10 @@
       els.sidebarProjects.classList.toggle('hidden', !isProjects);
 
       const deskLabel = isProjects ? 'Projects' : isPersonal ? 'Personal' : 'Work';
-      els.exportBtn.textContent = `⬇ Export ${deskLabel}`;
-      els.importBtn.textContent = `⬆ Import ${deskLabel}…`;
-      els.exportBtn.title = `Export ${deskLabel} desk as JSON backup`;
-      els.importBtn.title = `Import into ${deskLabel} desk from a JSON backup`;
+      const exportDeskOpt = document.getElementById('export-desk-opt');
+      const importDeskOpt = document.getElementById('import-desk-opt');
+      if (exportDeskOpt) exportDeskOpt.textContent = `${deskLabel} Desk`;
+      if (importDeskOpt) importDeskOpt.textContent = `${deskLabel} Desk…`;
 
       document.querySelectorAll('.desk-only').forEach((el) => {
         el.classList.toggle('hidden', !isDesk || isProjects);
@@ -14326,13 +14364,51 @@
       addEditor.focus();
     });
 
-    els.exportBtn.addEventListener('click', exportBackup);
-    els.exportAllBtn.addEventListener('click', exportAll);
+    // Backup dropdown menus
+    function closeBackupMenus() {
+      els.exportMenu.classList.add('hidden');
+      els.importMenu.classList.add('hidden');
+    }
+
+    els.exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wasOpen = !els.exportMenu.classList.contains('hidden');
+      closeBackupMenus();
+      if (!wasOpen) els.exportMenu.classList.remove('hidden');
+    });
+
+    els.importBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wasOpen = !els.importMenu.classList.contains('hidden');
+      closeBackupMenus();
+      if (!wasOpen) els.importMenu.classList.remove('hidden');
+    });
+
+    document.getElementById('export-desk-opt').addEventListener('click', () => {
+      closeBackupMenus();
+      exportBackup();
+    });
+
+    document.getElementById('export-all-opt').addEventListener('click', () => {
+      closeBackupMenus();
+      exportAll();
+    });
+
+    document.getElementById('import-desk-opt').addEventListener('click', () => {
+      closeBackupMenus();
+      els.importFile.click();
+    });
+
+    document.getElementById('import-all-opt').addEventListener('click', () => {
+      closeBackupMenus();
+      els.importAllFile.click();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.backup-btn-wrap')) closeBackupMenus();
+    });
 
     document.getElementById('repair-btn').addEventListener('click', repairData);
-
-    els.importBtn.addEventListener('click', () => els.importFile.click());
-    els.importAllBtn.addEventListener('click', () => els.importAllFile.click());
 
     els.importFile.addEventListener('change', () => {
       const file = els.importFile.files[0];
