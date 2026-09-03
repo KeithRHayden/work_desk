@@ -1805,6 +1805,24 @@
     }
     .project-item-content p:last-child { margin-bottom: 0; }
 
+    /* The global `* { margin: 0; padding: 0; }` reset strips the browser's
+       default list indent, so without this, list markers render with a
+       zero-width gutter and bleed past the card's left edge. Mirrors the
+       equivalent fix already applied to .rich-content/.rich-editor. */
+    .project-item-content ul,
+    .project-item-content ol,
+    .project-item-editor ul,
+    .project-item-editor ol {
+      margin: 0.15em 0;
+      padding-left: 1.4em;
+    }
+    .project-item-content ul,
+    .project-item-editor ul { list-style: disc; }
+    .project-item-content ol,
+    .project-item-editor ol { list-style: decimal; }
+    .project-item-content li,
+    .project-item-editor li { margin: 0; padding: 0.1em 0; }
+
     .project-item-meta {
       font-size: 0.72rem;
       color: var(--text-muted);
