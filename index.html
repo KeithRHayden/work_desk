@@ -5555,6 +5555,16 @@
                         <span class="customize-toggle-sub">Burst confetti when checking off tasks</span>
                       </span>
                     </label>
+
+                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                    <p class="density-popout-label">Projects</p>
+                    <label class="customize-toggle" title="Truncate long project notes to a few lines with a show-more toggle">
+                      <input id="truncate-notes-toggle" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>Truncate long notes</span>
+                        <span class="customize-toggle-sub">Collapse project notes to a preview with show more</span>
+                      </span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -5901,6 +5911,7 @@
     const WEEK_START_KEY = 'work-desk-week-start';
     const STARTUP_VIEW_KEY = 'work-desk-startup-view';
     const STRIKE_COMPLETED_KEY = 'work-desk-strike-completed';
+    const TRUNCATE_NOTES_KEY = 'work-desk-truncate-notes';
     const RETENTION_MONTHS = 12;
     const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -5995,6 +6006,7 @@
       weekStart: localStorage.getItem(WEEK_START_KEY) || 'sunday',
       startupView: localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed',
       strikeCompleted: localStorage.getItem(STRIKE_COMPLETED_KEY) !== 'false',
+      truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
       highlightItemId: null,
       activeTab: (() => {
         const mode = localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed';
@@ -6280,6 +6292,7 @@
         weekStart: localStorage.getItem(WEEK_START_KEY) || 'sunday',
         startupView: localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed',
         strikeCompleted: localStorage.getItem(STRIKE_COMPLETED_KEY) !== 'false',
+        truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
         updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
       };
     }
@@ -6419,6 +6432,18 @@
           document.documentElement.dataset.strikeCompleted = next ? 'true' : 'false';
           const el = document.getElementById('strike-completed-toggle');
           if (el) el.checked = next;
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.truncateNotes === 'boolean') {
+        const next = prefs.truncateNotes;
+        if (state.truncateNotes !== next) {
+          state.truncateNotes = next;
+          localStorage.setItem(TRUNCATE_NOTES_KEY, next ? 'true' : 'false');
+          const el = document.getElementById('truncate-notes-toggle');
+          if (el) el.checked = next;
+          renderProjectDetail();
           changed = true;
         }
       }
@@ -7510,6 +7535,17 @@
         });
       }
 
+      const truncateNotesToggle = document.getElementById('truncate-notes-toggle');
+      if (truncateNotesToggle) {
+        truncateNotesToggle.checked = state.truncateNotes;
+        truncateNotesToggle.addEventListener('change', () => {
+          state.truncateNotes = truncateNotesToggle.checked;
+          localStorage.setItem(TRUNCATE_NOTES_KEY, state.truncateNotes ? 'true' : 'false');
+          schedulePrefsPush();
+          renderProjectDetail();
+        });
+      }
+
       document.addEventListener('click', (e) => {
         if (!popout.classList.contains('hidden') && !popout.contains(e.target) && e.target !== btn
             && !els.projectCustomizeBtn.contains(e.target)) {
@@ -8553,6 +8589,7 @@
       const task = project.tasks.find(t => t.id === taskId);
       if (task) {
         task.completed = !task.completed;
+        if (task.completed) task.archived = true;
         saveProjectsData();
         return true;
       }
@@ -13411,7 +13448,7 @@
         }, 0);
       } else {
         const content = document.createElement('div');
-        content.className = 'project-item-content truncated';
+        content.className = 'project-item-content' + (state.truncateNotes ? ' truncated' : '');
         content.style.cursor = 'text';
         content.title = 'Double-click to edit';
         const parts = sanitizeHtml(note.content || '').split(/<br\s*\/?>/gi);
@@ -13428,14 +13465,15 @@
         showMoreBtn.type = 'button';
         showMoreBtn.className = 'note-show-more';
         showMoreBtn.textContent = 'show more';
+        if (!state.truncateNotes) showMoreBtn.style.display = 'none';
         showMoreBtn.addEventListener('click', () => {
-          const expanded = content.classList.toggle('truncated');
+          content.classList.toggle('truncated');
           showMoreBtn.textContent = content.classList.contains('truncated') ? 'show more' : 'show less';
         });
 
         // After DOM insertion, check if truncation is actually needed
         requestAnimationFrame(() => {
-          if (content.scrollHeight <= content.offsetHeight + 2) {
+          if (state.truncateNotes && content.scrollHeight <= content.offsetHeight + 2) {
             content.classList.remove('truncated');
             showMoreBtn.style.display = 'none';
           }
