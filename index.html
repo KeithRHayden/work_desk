@@ -8948,6 +8948,15 @@
       };
     }
 
+    function mergeDeletedIds(localIds, remoteIds) {
+      const merged = { ...(localIds || {}), ...(remoteIds || {}) };
+      for (const id of Object.keys(merged)) {
+        const a = localIds?.[id], b = remoteIds?.[id];
+        if (a && b) merged[id] = a > b ? a : b;
+      }
+      return merged;
+    }
+
     function mergeRecurringTemplates(localList, remoteList) {
       const seen = new Map();
       // Remote first, then local overwrites content/rule but keeps the later lastInjectedDate
@@ -9363,6 +9372,7 @@
 
       console.log('[sync] starting sbPostAuthSync...');
       sbSetStatus('syncing');
+      try {
       const remote = await sbPull();
       console.log('[sync] remote data:', remote ? 'exists' : 'null');
 
@@ -9481,6 +9491,10 @@
       }
 
       sbSynced = true;
+      } catch (e) {
+        console.error('[sync] sbPostAuthSync error:', e.message);
+        sbSetStatus('error');
+      }
     }
 
     // Auto-sync on window focus (when user returns to tab)
@@ -10325,10 +10339,7 @@
       listWrap.className = 'recurring-template-list';
 
       if (templates.length === 0) {
-        const empty = document.createElement('p');
-        empty.className = 'recurring-empty';
-        empty.textContent = 'No recurring tasks yet — add one below.';
-        listWrap.appendChild(empty);
+        // no empty message needed — add form is above
       } else {
         templates.forEach(t => {
           const item = document.createElement('div');
@@ -10438,9 +10449,7 @@
           listWrap.appendChild(item);
         });
       }
-      body.appendChild(listWrap);
-
-      // Add form
+      // Add form (rendered first, above existing list)
       const form = document.createElement('div');
       form.className = 'recurring-add-form';
 
@@ -10577,6 +10586,16 @@
       addActions.appendChild(addBtn);
       updateDayPicker();
       body.appendChild(form);
+
+      // Existing templates section
+      if (templates.length > 0) {
+        const existingHeader = document.createElement('p');
+        existingHeader.className = 'recurring-add-title';
+        existingHeader.style.marginTop = '12px';
+        existingHeader.textContent = `Existing templates (${templates.length})`;
+        body.appendChild(existingHeader);
+      }
+      body.appendChild(listWrap);
     }
 
     function openRecurringEditForm(hostEl, template, opts = {}) {
