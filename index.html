@@ -9415,11 +9415,20 @@
             const remoteList = Array.isArray(remoteBlock)
               ? remoteBlock
               : (remoteBlock?.templates || []);
+            const remoteDeletedIds = (typeof remoteBlock === 'object' && !Array.isArray(remoteBlock))
+              ? (remoteBlock?.deletedIds || {}) : {};
             const localList = loadRecurringTemplates(ctx);
+            const localDeletedIds = loadRecurringDeletedIds(ctx);
             console.log(`[sync] ${ctx} templates - local: ${localList.length}, remote: ${remoteList.length}`);
-            const mergedList = mergeRecurringTemplates(localList, remoteList);
-            if (JSON.stringify(mergedList) !== JSON.stringify(localList)) {
-              saveRecurringTemplates(mergedList, ctx);
+            const mergedDeletedIds = mergeDeletedIds(localDeletedIds, remoteDeletedIds);
+            const mergedList = mergeRecurringTemplates(localList, remoteList)
+              .filter(t => !mergedDeletedIds[t.id]);
+            const data = loadRecurringData(ctx);
+            data.templates = mergedList;
+            data.deletedIds = mergedDeletedIds;
+            if (JSON.stringify(mergedList) !== JSON.stringify(localList) ||
+                JSON.stringify(mergedDeletedIds) !== JSON.stringify(localDeletedIds)) {
+              localStorage.setItem(getRecurringKey(ctx), JSON.stringify(data));
               console.log(`[sync] saved ${ctx} templates (${mergedList.length})`);
               changed = true;
             }
@@ -10070,16 +10079,36 @@
       return `work-desk-recurring-${context}`;
     }
 
-    function loadRecurringTemplates(context = state.listContext) {
+    function loadRecurringData(context = state.listContext) {
       try {
         const raw = localStorage.getItem(getRecurringKey(context));
-        if (raw) return JSON.parse(raw).templates || [];
+        if (raw) return JSON.parse(raw);
       } catch (_) {}
-      return [];
+      return { templates: [], deletedIds: {} };
+    }
+
+    function loadRecurringTemplates(context = state.listContext) {
+      return loadRecurringData(context).templates || [];
+    }
+
+    function loadRecurringDeletedIds(context = state.listContext) {
+      return loadRecurringData(context).deletedIds || {};
     }
 
     function saveRecurringTemplates(templates, context = state.listContext) {
-      localStorage.setItem(getRecurringKey(context), JSON.stringify({ templates }));
+      const existing = loadRecurringData(context);
+      localStorage.setItem(getRecurringKey(context), JSON.stringify({
+        templates,
+        deletedIds: existing.deletedIds || {},
+      }));
+    }
+
+    function markRecurringTemplateDeleted(templateId, context = state.listContext) {
+      const data = loadRecurringData(context);
+      if (!data.deletedIds) data.deletedIds = {};
+      data.deletedIds[templateId] = new Date().toISOString();
+      data.templates = (data.templates || []).filter(t => t.id !== templateId);
+      localStorage.setItem(getRecurringKey(context), JSON.stringify(data));
     }
 
     function recurringRuleLabel(template) {
@@ -10327,8 +10356,7 @@
           delLink.className = 'recurring-action-link danger';
           delLink.textContent = 'delete';
           delLink.addEventListener('click', () => {
-            const updated = loadRecurringTemplates().filter(x => x.id !== t.id);
-            saveRecurringTemplates(updated);
+            markRecurringTemplateDeleted(t.id);
             showToast('Recurring task removed');
             renderRecurringPanel();
           });
@@ -10647,6 +10675,60 @@
       skipHolidayWrap.appendChild(skipHolidayText);
       hostEl.appendChild(skipHolidayWrap);
 
+      // Tag section
+      let editTags = normalizeTagList(template.tags);
+      const tagSection = document.createElement('div');
+      tagSection.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin:4px 0 6px;';
+
+      function renderEditTagChips() {
+        tagSection.innerHTML = '';
+        editTags.forEach(tag => {
+          const chip = document.createElement('span');
+          chip.className = 'tag-chip';
+          chip.style.fontSize = '0.72rem';
+          const label = document.createElement('span');
+          label.textContent = tag.toUpperCase();
+          chip.appendChild(label);
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'tag-chip-remove';
+          removeBtn.textContent = '\u00d7';
+          removeBtn.addEventListener('click', () => {
+            editTags = editTags.filter(t => t !== tag);
+            renderEditTagChips();
+          });
+          chip.appendChild(removeBtn);
+          tagSection.appendChild(chip);
+        });
+        const addTagBtn = document.createElement('button');
+        addTagBtn.type = 'button';
+        addTagBtn.className = 'recurring-action-link';
+        addTagBtn.style.fontSize = '0.74rem';
+        addTagBtn.textContent = '+ tag';
+        addTagBtn.addEventListener('click', () => {
+          addTagBtn.replaceWith(tagInput);
+          tagInput.focus();
+        });
+        const tagInput = document.createElement('input');
+        tagInput.type = 'text';
+        tagInput.placeholder = 'tag name';
+        tagInput.className = 'custom-holiday-input';
+        tagInput.style.cssText = 'width:80px; flex:0 0 auto; font-size:0.74rem;';
+        const commitTagInput = () => {
+          const val = normalizeTag(tagInput.value);
+          if (val && !editTags.includes(val)) editTags.push(val);
+          renderEditTagChips();
+        };
+        tagInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); commitTagInput(); }
+          else if (e.key === 'Escape') renderEditTagChips();
+        });
+        tagInput.addEventListener('blur', () => setTimeout(commitTagInput, 100));
+        tagSection.appendChild(addTagBtn);
+      }
+      renderEditTagChips();
+      hostEl.appendChild(tagSection);
+
       editActions = document.createElement('div');
       editActions.className = 'recurring-add-actions';
 
@@ -10661,13 +10743,14 @@
           showToast('Please choose at least one day'); return;
         }
         const extracted = extractHashtags(content);
-        const newTags = extracted.tags;
-        if (newTags.length && extracted.content) content = extracted.content;
+        if (extracted.tags.length && extracted.content) {
+          content = extracted.content;
+          extracted.tags.forEach(t => { if (!editTags.includes(t)) editTags.push(t); });
+        }
         const templates = loadRecurringTemplates();
         const idx = templates.findIndex(x => x.id === template.id);
         if (idx === -1) { showToast('Template not found'); renderRecurringPanel(); return; }
-        const existingTags = normalizeTagList(templates[idx].tags);
-        const mergedTags = [...new Set([...existingTags, ...newTags])];
+        const mergedTags = [...editTags];
         templates[idx] = {
           ...templates[idx],
           content,
@@ -12327,18 +12410,12 @@
             const templates = loadRecurringTemplates();
             const tmpl = templates.find(x => x.id === item.recurringTemplateId);
             if (!tmpl) { showToast('Recurring template not found'); return; }
-            openRecurringModal();
-            requestAnimationFrame(() => {
-              const items = els.recurringModalBody.querySelectorAll('.recurring-template-item');
-              for (const el of items) {
-                const contentEl = el.querySelector('.recurring-template-content');
-                if (contentEl && recurringContentKey(contentEl.innerHTML) === recurringContentKey(tmpl.content)) {
-                  openRecurringEditForm(el, tmpl);
-                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  break;
-                }
-              }
-            });
+            els.recurringModalBody.innerHTML = '';
+            const hostEl = document.createElement('div');
+            hostEl.className = 'recurring-template-item';
+            els.recurringModalBody.appendChild(hostEl);
+            els.recurringModal.classList.remove('hidden');
+            openRecurringEditForm(hostEl, tmpl);
           });
         }
         // Shelf toggle for tasks
