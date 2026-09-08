@@ -3408,7 +3408,14 @@
       flex-shrink: 0;
       margin-top: 2px;
     }
-    .recurring-template-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .recurring-template-actions { display: flex; gap: 10px; flex-shrink: 0; align-items: flex-start; margin-top: 2px; }
+    .recurring-action-link {
+      background: none; border: none; cursor: pointer; padding: 0;
+      font-size: 0.76rem; color: var(--text-muted);
+      text-decoration: none; font-weight: 500;
+    }
+    .recurring-action-link:hover { color: var(--accent); text-decoration: underline; }
+    .recurring-action-link.danger:hover { color: var(--danger, #ef4444); }
     .recurring-empty {
       text-align: center;
       padding: 24px;
@@ -10296,27 +10303,25 @@
           const actions = document.createElement('div');
           actions.className = 'recurring-template-actions';
 
-          const editBtn = document.createElement('button');
-          editBtn.type = 'button';
-          editBtn.className = 'edit-btn';
-          editBtn.innerHTML = ICON_PENCIL;
-          setTooltip(editBtn, 'Edit recurring task');
-          editBtn.addEventListener('click', () => openRecurringEditForm(item, t));
+          const editLink = document.createElement('button');
+          editLink.type = 'button';
+          editLink.className = 'recurring-action-link';
+          editLink.textContent = 'edit';
+          editLink.addEventListener('click', () => openRecurringEditForm(item, t));
 
-          const delBtn = document.createElement('button');
-          delBtn.type = 'button';
-          delBtn.className = 'delete-btn';
-          delBtn.innerHTML = ICON_TRASH;
-          setTooltip(delBtn, 'Delete recurring task');
-          delBtn.addEventListener('click', () => {
+          const delLink = document.createElement('button');
+          delLink.type = 'button';
+          delLink.className = 'recurring-action-link danger';
+          delLink.textContent = 'delete';
+          delLink.addEventListener('click', () => {
             const updated = loadRecurringTemplates().filter(x => x.id !== t.id);
             saveRecurringTemplates(updated);
             showToast('Recurring task removed');
             renderRecurringPanel();
           });
 
-          actions.appendChild(editBtn);
-          actions.appendChild(delBtn);
+          actions.appendChild(editLink);
+          actions.appendChild(delLink);
           item.appendChild(content);
           item.appendChild(badge);
           if (t.skipHolidays) {
@@ -12226,6 +12231,26 @@
         // "Start" for new tasks
         if (item.type === 'task' && !item.completed && !item.shelved && item.boardColumn === 'new') {
           addMenuItem('Start', () => moveTaskToColumn(item.id, 'active'));
+        }
+        // Edit recurring template (only for recurring-linked tasks)
+        if (item.recurringTemplateId) {
+          addMenuItem('Edit recurring', () => {
+            const templates = loadRecurringTemplates();
+            const tmpl = templates.find(x => x.id === item.recurringTemplateId);
+            if (!tmpl) { showToast('Recurring template not found'); return; }
+            openRecurringModal();
+            requestAnimationFrame(() => {
+              const items = els.recurringModalBody.querySelectorAll('.recurring-template-item');
+              for (const el of items) {
+                const contentEl = el.querySelector('.recurring-template-content');
+                if (contentEl && recurringContentKey(contentEl.innerHTML) === recurringContentKey(tmpl.content)) {
+                  openRecurringEditForm(el, tmpl);
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  break;
+                }
+              }
+            });
+          });
         }
         // Shelf toggle for tasks
         if (item.type === 'task' && !item.completed) {
