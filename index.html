@@ -8959,12 +8959,15 @@
         }
         const a = prev.lastInjectedDate || '';
         const b = t.lastInjectedDate || '';
-        seen.set(t.id, {
+        const unionedTags = mergeTags(prev.tags, t.tags);
+        const merged = {
           ...prev,
           ...t,
           createdAt: prev.createdAt || t.createdAt,
           lastInjectedDate: [a, b].sort().pop() || null,
-        });
+        };
+        if (unionedTags) merged.tags = unionedTags; else delete merged.tags;
+        seen.set(t.id, merged);
       }
       return Array.from(seen.values());
     }
@@ -10226,7 +10229,7 @@
           return { ...t, lastInjectedDate: today };
         }
         if (!isDueToday(t)) return t;
-        toInject.push({
+        const injected = {
           id: newId(),
           type: 'task',
           content: t.content,
@@ -10236,7 +10239,9 @@
           comments: [],
           createdAt: new Date().toISOString(),
           recurringTemplateId: t.id,
-        });
+        };
+        if (Array.isArray(t.tags) && t.tags.length) injected.tags = [...t.tags];
+        toInject.push(injected);
         pendingTemplateIds.add(t.id);
         if (contentKey) pendingContentKeys.add(contentKey);
         return { ...t, lastInjectedDate: today };
@@ -10277,6 +10282,13 @@
       const templates = loadRecurringTemplates();
       const body = els.recurringModalBody;
       body.innerHTML = '';
+
+      // Detect content duplicates so we can flag them
+      const contentCounts = new Map();
+      templates.forEach(t => {
+        const key = recurringContentKey(t.content);
+        contentCounts.set(key, (contentCounts.get(key) || 0) + 1);
+      });
 
       // Template list
       const listWrap = document.createElement('div');
@@ -10320,9 +10332,61 @@
             renderRecurringPanel();
           });
 
+          const tagLink = document.createElement('button');
+          tagLink.type = 'button';
+          tagLink.className = 'recurring-action-link';
+          tagLink.textContent = 'tag';
+          tagLink.addEventListener('click', () => {
+            const input = prompt('Add tag (e.g. ace):');
+            if (!input) return;
+            const tag = normalizeTag(input);
+            if (!tag) return;
+            const templates = loadRecurringTemplates();
+            const idx = templates.findIndex(x => x.id === t.id);
+            if (idx === -1) return;
+            const existing = normalizeTagList(templates[idx].tags);
+            if (existing.includes(tag)) { showToast('Tag already exists'); return; }
+            templates[idx].tags = [...existing, tag];
+            saveRecurringTemplates(templates);
+            showToast(`Tag "${tag.toUpperCase()}" added`);
+            renderRecurringPanel();
+          });
+
           actions.appendChild(editLink);
+          actions.appendChild(tagLink);
           actions.appendChild(delLink);
           item.appendChild(content);
+
+          // Tag chips
+          const tplTags = normalizeTagList(t.tags);
+          if (tplTags.length) {
+            const chipRow = document.createElement('div');
+            chipRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; width:100%; margin-top:4px;';
+            tplTags.forEach(tag => {
+              const chip = document.createElement('span');
+              chip.className = 'tag-chip';
+              chip.style.fontSize = '0.68rem';
+              const label = document.createElement('span');
+              label.textContent = tag.toUpperCase();
+              chip.appendChild(label);
+              const removeBtn = document.createElement('button');
+              removeBtn.type = 'button';
+              removeBtn.className = 'tag-chip-remove';
+              removeBtn.textContent = '\u00d7';
+              removeBtn.addEventListener('click', () => {
+                const templates = loadRecurringTemplates();
+                const idx = templates.findIndex(x => x.id === t.id);
+                if (idx === -1) return;
+                templates[idx].tags = normalizeTagList(templates[idx].tags).filter(x => x !== tag);
+                saveRecurringTemplates(templates);
+                renderRecurringPanel();
+              });
+              chip.appendChild(removeBtn);
+              chipRow.appendChild(chip);
+            });
+            item.appendChild(chipRow);
+          }
+
           item.appendChild(badge);
           if (t.skipHolidays) {
             const skipBadge = document.createElement('span');
@@ -10332,6 +10396,16 @@
             item.appendChild(skipBadge);
           }
           item.appendChild(actions);
+
+          // Flag duplicate content so user can clean up
+          const ck = recurringContentKey(t.content);
+          if (contentCounts.get(ck) > 1) {
+            const dupHint = document.createElement('div');
+            dupHint.style.cssText = 'font-size:0.7rem; color:var(--danger,#ef4444); margin-top:4px; width:100%;';
+            dupHint.textContent = 'Duplicate — consider deleting one of these';
+            item.appendChild(dupHint);
+          }
+
           listWrap.appendChild(item);
         });
       }
@@ -10443,11 +10517,14 @@
       addBtn.className = 'modal-btn primary';
       addBtn.textContent = 'Add';
       addBtn.addEventListener('click', () => {
-        const content = sanitizeHtml(getEditorHtml(editor));
+        let content = sanitizeHtml(getEditorHtml(editor));
         if (isEmptyHtml(content)) { showToast('Please enter a task description'); return; }
         if ((selectedRule === 'weekly' || selectedRule === 'custom') && selectedDays.length === 0) {
           showToast('Please choose at least one day'); return;
         }
+        const extracted = extractHashtags(content);
+        const tags = extracted.tags;
+        if (tags.length && extracted.content) content = extracted.content;
         const template = {
           id: newId(),
           content,
@@ -10457,6 +10534,7 @@
           createdAt: new Date().toISOString(),
           lastInjectedDate: null,
         };
+        if (tags.length) template.tags = tags;
         const updated = [...loadRecurringTemplates(), template];
         saveRecurringTemplates(updated);
         // Inject immediately if due today
@@ -10473,6 +10551,10 @@
     }
 
     function openRecurringEditForm(hostEl, template) {
+      // Hide the "Add recurring task" form while editing
+      const addForm = els.recurringModalBody.querySelector('.recurring-add-form');
+      if (addForm) addForm.classList.add('hidden');
+
       hostEl.innerHTML = '';
       hostEl.style.flexDirection = 'column';
 
@@ -10572,20 +10654,26 @@
       saveBtn.className = 'modal-btn primary';
       saveBtn.textContent = 'Save';
       saveBtn.addEventListener('click', () => {
-        const content = sanitizeHtml(getEditorHtml(editor));
+        let content = sanitizeHtml(getEditorHtml(editor));
         if (isEmptyHtml(content)) { showToast('Please enter a task description'); return; }
         if ((selectedRule === 'weekly' || selectedRule === 'custom') && selectedDays.length === 0) {
           showToast('Please choose at least one day'); return;
         }
+        const extracted = extractHashtags(content);
+        const newTags = extracted.tags;
+        if (newTags.length && extracted.content) content = extracted.content;
         const templates = loadRecurringTemplates();
         const idx = templates.findIndex(x => x.id === template.id);
         if (idx === -1) { showToast('Template not found'); renderRecurringPanel(); return; }
+        const existingTags = normalizeTagList(templates[idx].tags);
+        const mergedTags = [...new Set([...existingTags, ...newTags])];
         templates[idx] = {
           ...templates[idx],
           content,
           rule: selectedRule,
           days: (selectedRule === 'weekly' || selectedRule === 'custom') ? selectedDays : null,
           skipHolidays: skipHolidayCb.checked,
+          tags: mergedTags.length ? mergedTags : undefined,
         };
         saveRecurringTemplates(templates);
         showToast('Recurring task updated');
