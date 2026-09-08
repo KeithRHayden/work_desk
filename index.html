@@ -4709,8 +4709,9 @@
 
     .checkbox {
       width: 22px; height: 22px; min-width: 22px;
-      border: 2px solid var(--border); border-radius: 6px;
+      border: 2px solid color-mix(in srgb, var(--text) 35%, transparent); border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
+      transition: border-color .15s, background .15s;
     }
     .item:not(.completed) .checkbox:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
     .item.completed .checkbox { background: var(--accent); border-color: var(--accent); }
@@ -10295,6 +10296,13 @@
           const actions = document.createElement('div');
           actions.className = 'recurring-template-actions';
 
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'edit-btn';
+          editBtn.innerHTML = ICON_PENCIL;
+          setTooltip(editBtn, 'Edit recurring task');
+          editBtn.addEventListener('click', () => openRecurringEditForm(item, t));
+
           const delBtn = document.createElement('button');
           delBtn.type = 'button';
           delBtn.className = 'delete-btn';
@@ -10307,6 +10315,7 @@
             renderRecurringPanel();
           });
 
+          actions.appendChild(editBtn);
           actions.appendChild(delBtn);
           item.appendChild(content);
           item.appendChild(badge);
@@ -10456,6 +10465,138 @@
       addActions.appendChild(addBtn);
       updateDayPicker();
       body.appendChild(form);
+    }
+
+    function openRecurringEditForm(hostEl, template) {
+      hostEl.innerHTML = '';
+      hostEl.style.flexDirection = 'column';
+
+      const formTitle = document.createElement('p');
+      formTitle.className = 'recurring-add-title';
+      formTitle.textContent = 'Edit recurring task';
+      hostEl.appendChild(formTitle);
+
+      const { wrap: editorWrap, editor } = createRichEditor({
+        className: 'recurring-editor',
+        placeholder: 'Task description…',
+      });
+      setEditorHtml(editor, template.content);
+      hostEl.appendChild(editorWrap);
+
+      const ruleLabel = document.createElement('p');
+      ruleLabel.className = 'recurring-rule-label';
+      ruleLabel.textContent = 'Repeats';
+      hostEl.appendChild(ruleLabel);
+
+      let selectedRule = template.rule || 'weekdays';
+      let selectedDays = template.days ? [...template.days] : [];
+
+      const ruleBtns = document.createElement('div');
+      ruleBtns.className = 'recurring-rule-btns';
+      let dayPickerEl = null;
+      let editActions; // forward ref for insertBefore
+
+      function updateDayPicker() {
+        if (dayPickerEl) dayPickerEl.remove();
+        if (selectedRule !== 'weekly' && selectedRule !== 'custom') return;
+        dayPickerEl = document.createElement('div');
+        dayPickerEl.className = 'day-picker';
+        const isMulti = selectedRule === 'custom';
+        if (selectedRule === 'weekly' && selectedDays.length > 1) selectedDays = [selectedDays[0]];
+        DAY_LABELS.forEach((label, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'day-btn' + (selectedDays.includes(idx) ? ' active' : '');
+          btn.textContent = label.slice(0, 1);
+          btn.title = label;
+          btn.addEventListener('click', () => {
+            if (isMulti) {
+              selectedDays = selectedDays.includes(idx)
+                ? selectedDays.filter(d => d !== idx)
+                : [...selectedDays, idx].sort((a, b) => a - b);
+            } else {
+              selectedDays = [idx];
+            }
+            updateDayPicker();
+          });
+          dayPickerEl.appendChild(btn);
+        });
+        hostEl.insertBefore(dayPickerEl, editActions);
+      }
+
+      const rules = [
+        { value: 'daily', label: 'Daily' },
+        { value: 'weekdays', label: 'Weekdays' },
+        { value: 'weekly', label: 'Weekly' },
+        { value: 'custom', label: 'Custom' },
+      ];
+      rules.forEach(r => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rule-btn' + (r.value === selectedRule ? ' active' : '');
+        btn.textContent = r.label;
+        btn.addEventListener('click', () => {
+          selectedRule = r.value;
+          selectedDays = [];
+          ruleBtns.querySelectorAll('.rule-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          updateDayPicker();
+        });
+        ruleBtns.appendChild(btn);
+      });
+      hostEl.appendChild(ruleBtns);
+
+      const skipHolidayWrap = document.createElement('label');
+      skipHolidayWrap.className = 'customize-toggle';
+      skipHolidayWrap.style.cssText = 'margin: 2px 0 4px; font-size: 0.78rem;';
+      const skipHolidayCb = document.createElement('input');
+      skipHolidayCb.type = 'checkbox';
+      skipHolidayCb.checked = !!template.skipHolidays;
+      skipHolidayWrap.appendChild(skipHolidayCb);
+      const skipHolidayText = document.createElement('span');
+      skipHolidayText.className = 'customize-toggle-text';
+      skipHolidayText.innerHTML = '<span>Skip holidays</span>';
+      skipHolidayWrap.appendChild(skipHolidayText);
+      hostEl.appendChild(skipHolidayWrap);
+
+      editActions = document.createElement('div');
+      editActions.className = 'recurring-add-actions';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'modal-btn primary';
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => {
+        const content = sanitizeHtml(getEditorHtml(editor));
+        if (isEmptyHtml(content)) { showToast('Please enter a task description'); return; }
+        if ((selectedRule === 'weekly' || selectedRule === 'custom') && selectedDays.length === 0) {
+          showToast('Please choose at least one day'); return;
+        }
+        const templates = loadRecurringTemplates();
+        const idx = templates.findIndex(x => x.id === template.id);
+        if (idx === -1) { showToast('Template not found'); renderRecurringPanel(); return; }
+        templates[idx] = {
+          ...templates[idx],
+          content,
+          rule: selectedRule,
+          days: (selectedRule === 'weekly' || selectedRule === 'custom') ? selectedDays : null,
+          skipHolidays: skipHolidayCb.checked,
+        };
+        saveRecurringTemplates(templates);
+        showToast('Recurring task updated');
+        renderRecurringPanel();
+      });
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'modal-btn';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', () => renderRecurringPanel());
+
+      editActions.appendChild(cancelBtn);
+      editActions.appendChild(saveBtn);
+      hostEl.appendChild(editActions);
+      updateDayPicker();
     }
 
     // ── End recurring ──────────────────────────────────────────────────
