@@ -5607,18 +5607,40 @@
                   </div>
 
                   <!-- Behavior Tab Pane -->
-                  <div class="options-pane hidden" id="options-pane-behavior">
-                    <p class="density-popout-label">Comments</p>
-                    <label class="customize-toggle" title="When on, opening comments on one task won't collapse others">
-                      <input id="keep-comments-open-toggle" type="checkbox" />
+                                    <div class="options-pane hidden" id="options-pane-behavior">
+
+                    <p class="density-popout-label">General</p>
+                    <div class="customize-select-row">
+                      <label for="startup-view-select">On launch</label>
+                      <select id="startup-view-select" aria-label="Startup view">
+                        <option value="last_viewed">Remember last viewed</option>
+                        <option value="today">Always open Today</option>
+                      </select>
+                    </div>
+                    <div class="customize-select-row">
+                      <label for="week-start-select">First day of week</label>
+                      <select id="week-start-select" aria-label="First day of week">
+                        <option value="sunday">Sunday</option>
+                        <option value="monday">Monday</option>
+                      </select>
+                    </div>
+                    <label class="customize-toggle" title="Ask for confirmation before permanently deleting a task">
+                      <input id="confirm-delete-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
-                        <span>Keep comments open</span>
-                        <span class="customize-toggle-sub">Opening one panel won’t close another</span>
+                        <span>Confirm before delete</span>
+                        <span class="customize-toggle-sub">Show a prompt before permanently removing tasks</span>
                       </span>
                     </label>
 
                     <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Completed Column</p>
+                    <p class="density-popout-label">Tasks</p>
+                    <label class="customize-toggle" title="Automatically bring forward unfinished tasks when opening today">
+                      <input id="auto-carry-toggle-popout" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>Auto carry-forward</span>
+                        <span class="customize-toggle-sub">Bring open tasks from past days to today</span>
+                      </span>
+                    </label>
                     <label class="customize-toggle" title="Collapse the Completed list when it reaches your chosen count">
                       <input id="auto-collapse-completed-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -5637,39 +5659,13 @@
                         <option value="20">20 items</option>
                       </select>
                     </div>
-
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Task Automation</p>
-                    <label class="customize-toggle" title="Automatically bring forward unfinished tasks when opening today">
-                      <input id="auto-carry-toggle-popout" type="checkbox" />
+                    <label class="customize-toggle" title="When on, opening comments on one task won't collapse others">
+                      <input id="keep-comments-open-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
-                        <span>Auto carry-forward</span>
-                        <span class="customize-toggle-sub">Bring open tasks from past days to today</span>
+                        <span>Keep comments open</span>
+                        <span class="customize-toggle-sub">Opening one panel won't close another</span>
                       </span>
                     </label>
-
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Calendar &amp; Schedule</p>
-                    <div class="customize-select-row">
-                      <label for="week-start-select">First day of week</label>
-                      <select id="week-start-select" aria-label="First day of week">
-                        <option value="sunday">Sunday</option>
-                        <option value="monday">Monday</option>
-                      </select>
-                    </div>
-
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Startup View</p>
-                    <div class="customize-select-row">
-                      <label for="startup-view-select">On launch</label>
-                      <select id="startup-view-select" aria-label="Startup view">
-                        <option value="last_viewed">Remember last viewed</option>
-                        <option value="today">Always open Today</option>
-                      </select>
-                    </div>
-
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Celebration</p>
                     <label class="customize-toggle" title="Confetti burst when completing tasks">
                       <input id="confetti-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -6057,6 +6053,7 @@
     const STARTUP_VIEW_KEY = 'work-desk-startup-view';
     const STRIKE_COMPLETED_KEY = 'work-desk-strike-completed';
     const TRUNCATE_NOTES_KEY = 'work-desk-truncate-notes';
+    const CONFIRM_DELETE_KEY = 'work-desk-confirm-delete';
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const CUSTOM_HOLIDAYS_KEY = 'work-desk-custom-holidays';
     const RETENTION_MONTHS = 12;
@@ -6155,6 +6152,7 @@
       startupView: localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed',
       strikeCompleted: localStorage.getItem(STRIKE_COMPLETED_KEY) !== 'false',
       truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
+      confirmDelete: localStorage.getItem(CONFIRM_DELETE_KEY) === 'true',
       useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
       customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
       highlightItemId: null,
@@ -6446,6 +6444,7 @@
         startupView: localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed',
         strikeCompleted: localStorage.getItem(STRIKE_COMPLETED_KEY) !== 'false',
         truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
+        confirmDelete: localStorage.getItem(CONFIRM_DELETE_KEY) === 'true',
         useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
         customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
         updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
@@ -6599,6 +6598,17 @@
           const el = document.getElementById('truncate-notes-toggle');
           if (el) el.checked = next;
           renderProjectDetail();
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.confirmDelete === 'boolean') {
+        const next = prefs.confirmDelete;
+        if (state.confirmDelete !== next) {
+          state.confirmDelete = next;
+          localStorage.setItem(CONFIRM_DELETE_KEY, next ? 'true' : 'false');
+          const el = document.getElementById('confirm-delete-toggle');
+          if (el) el.checked = next;
           changed = true;
         }
       }
@@ -7720,6 +7730,17 @@
           localStorage.setItem(TRUNCATE_NOTES_KEY, state.truncateNotes ? 'true' : 'false');
           schedulePrefsPush();
           renderProjectDetail();
+        });
+      }
+
+      // Confirm before delete
+      const confirmDeleteToggle = document.getElementById('confirm-delete-toggle');
+      if (confirmDeleteToggle) {
+        confirmDeleteToggle.checked = state.confirmDelete;
+        confirmDeleteToggle.addEventListener('change', () => {
+          state.confirmDelete = confirmDeleteToggle.checked;
+          localStorage.setItem(CONFIRM_DELETE_KEY, state.confirmDelete ? 'true' : 'false');
+          schedulePrefsPush();
         });
       }
 
@@ -11881,7 +11902,9 @@
         if (cc) extra += ` It has ${cc} comment${cc === 1 ? '' : 's'}.`;
         if (item.recurringTemplateId) extra += ' It came from a recurring template.';
       }
-      if (!confirm(`Delete this ${label}?${extra}`)) return;
+      if (state.confirmDelete) {
+        if (!confirm(`Delete this ${label}?${extra}`)) return;
+      }
 
       clearPendingUndo();
 
