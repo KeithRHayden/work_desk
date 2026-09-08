@@ -10579,7 +10579,8 @@
       body.appendChild(form);
     }
 
-    function openRecurringEditForm(hostEl, template) {
+    function openRecurringEditForm(hostEl, template, opts = {}) {
+      const closeOnDone = opts.closeOnDone || false;
       // Hide the "Add recurring task" form while editing
       const addForm = els.recurringModalBody.querySelector('.recurring-add-form');
       if (addForm) addForm.classList.add('hidden');
@@ -10761,14 +10762,18 @@
         };
         saveRecurringTemplates(templates);
         showToast('Recurring task updated');
-        renderRecurringPanel();
+        if (closeOnDone) { els.recurringModal.classList.add('hidden'); renderBoard(); }
+        else renderRecurringPanel();
       });
 
       const cancelBtn = document.createElement('button');
       cancelBtn.type = 'button';
       cancelBtn.className = 'modal-btn';
       cancelBtn.textContent = 'Cancel';
-      cancelBtn.addEventListener('click', () => renderRecurringPanel());
+      cancelBtn.addEventListener('click', () => {
+        if (closeOnDone) els.recurringModal.classList.add('hidden');
+        else renderRecurringPanel();
+      });
 
       editActions.appendChild(cancelBtn);
       editActions.appendChild(saveBtn);
@@ -12415,7 +12420,7 @@
             hostEl.className = 'recurring-template-item';
             els.recurringModalBody.appendChild(hostEl);
             els.recurringModal.classList.remove('hidden');
-            openRecurringEditForm(hostEl, tmpl);
+            openRecurringEditForm(hostEl, tmpl, { closeOnDone: true });
           });
         }
         // Shelf toggle for tasks
