@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Work Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="google-fonts-link" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Merriweather:wght@400;700&display=swap">
   <!-- Pre-layout-refresh design: work-desk.classic.html (same folder) -->
   <script>
     (function () {
@@ -999,6 +1002,16 @@
       padding: 0;
       overflow: hidden;
     }
+
+    /* Sidebar position: right */
+    [data-sidebar-position="right"] .app { flex-direction: row-reverse; }
+    [data-sidebar-position="right"] .sidebar-collapse-btn { left: auto; right: 256px; transform: translateX(50%); }
+    [data-sidebar-position="right"] .app.sidebar-collapsed .sidebar-collapse-btn { left: auto; right: 12px; transform: translateX(0); }
+
+    /* Font size presets */
+    [data-font-size="small"]   { font-size: 13px; }
+    [data-font-size="default"] { font-size: 15px; }
+    [data-font-size="large"]   { font-size: 17px; }
 
     /* Boundary toggle button — sits on the sidebar/main edge */
     .app { position: relative; }
@@ -5596,14 +5609,40 @@
                     </div>
 
                     <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Display</p>
-                    <label class="customize-toggle" title="Add strike-through line across completed task titles">
-                      <input id="strike-completed-toggle" type="checkbox" />
-                      <span class="customize-toggle-text">
-                        <span>Strike-through completed tasks</span>
-                        <span class="customize-toggle-sub">Cross out text when a task is checked done</span>
-                      </span>
-                    </label>
+                    <p class="density-popout-label">Typography</p>
+                    <div class="customize-select-row">
+                      <label for="font-size-select">Text size</label>
+                      <select id="font-size-select" aria-label="Font size">
+                        <option value="small">Small</option>
+                        <option value="default">Default</option>
+                        <option value="large">Large</option>
+                      </select>
+                    </div>
+                    <div class="customize-select-row">
+                      <label for="font-family-select">Font</label>
+                      <select id="font-family-select" aria-label="Font family">
+                        <option value="system">System default</option>
+                        <option value="inter">Inter</option>
+                        <option value="roboto">Roboto</option>
+                        <option value="source-sans">Source Sans 3</option>
+                        <option value="open-sans">Open Sans</option>
+                        <option value="lato">Lato</option>
+                        <option value="nunito">Nunito</option>
+                        <option value="jetbrains">JetBrains Mono</option>
+                        <option value="merriweather">Merriweather</option>
+                      </select>
+                    </div>
+
+                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                    <p class="density-popout-label">Layout</p>
+                    <div class="customize-select-row">
+                      <label for="sidebar-position-select">Sidebar position</label>
+                      <select id="sidebar-position-select" aria-label="Sidebar position">
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </div>
+
                   </div>
 
                   <!-- Behavior Tab Pane -->
@@ -5671,6 +5710,13 @@
                       <span class="customize-toggle-text">
                         <span>Celebration confetti</span>
                         <span class="customize-toggle-sub">Burst confetti when checking off tasks</span>
+                      </span>
+                    </label>
+                    <label class="customize-toggle" title="Add strike-through line across completed task titles">
+                      <input id="strike-completed-toggle" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>Strike-through completed tasks</span>
+                        <span class="customize-toggle-sub">Cross out text when a task is checked done</span>
                       </span>
                     </label>
 
@@ -6054,7 +6100,22 @@
     const STRIKE_COMPLETED_KEY = 'work-desk-strike-completed';
     const TRUNCATE_NOTES_KEY = 'work-desk-truncate-notes';
     const CONFIRM_DELETE_KEY = 'work-desk-confirm-delete';
+    const FONT_SIZE_KEY = 'work-desk-font-size';
+    const FONT_FAMILY_KEY = 'work-desk-font-family';
+    const SIDEBAR_POSITION_KEY = 'work-desk-sidebar-position';
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
+
+    const FONT_MAP = {
+      system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
+      inter: '"Inter", sans-serif',
+      roboto: '"Roboto", sans-serif',
+      'source-sans': '"Source Sans 3", sans-serif',
+      'open-sans': '"Open Sans", sans-serif',
+      lato: '"Lato", sans-serif',
+      nunito: '"Nunito", sans-serif',
+      jetbrains: '"JetBrains Mono", monospace',
+      merriweather: '"Merriweather", serif',
+    };
     const CUSTOM_HOLIDAYS_KEY = 'work-desk-custom-holidays';
     const RETENTION_MONTHS = 12;
     const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -6432,6 +6493,9 @@
       return {
         theme: localStorage.getItem(THEME_KEY) ?? '',
         density: localStorage.getItem(DENSITY_KEY) || 'comfortable',
+        fontSize: localStorage.getItem(FONT_SIZE_KEY) || 'default',
+        fontFamily: localStorage.getItem(FONT_FAMILY_KEY) || 'system',
+        sidebarPosition: localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left',
         keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
         autoCollapseCompleted: localStorage.getItem('work-desk-auto-collapse-completed') !== 'false',
         autoCollapseCompletedAt: (() => {
@@ -6493,6 +6557,27 @@
       if (prefs.density === 'compact' || prefs.density === 'comfortable') {
         if ((localStorage.getItem(DENSITY_KEY) || 'comfortable') !== prefs.density) {
           applyDensity(prefs.density, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      if (prefs.fontSize && ['small', 'default', 'large'].includes(prefs.fontSize)) {
+        if ((localStorage.getItem(FONT_SIZE_KEY) || 'default') !== prefs.fontSize) {
+          applyFontSize(prefs.fontSize, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      if (prefs.fontFamily && FONT_MAP[prefs.fontFamily]) {
+        if ((localStorage.getItem(FONT_FAMILY_KEY) || 'system') !== prefs.fontFamily) {
+          applyFontFamily(prefs.fontFamily, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      if (prefs.sidebarPosition && ['left', 'right'].includes(prefs.sidebarPosition)) {
+        if ((localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left') !== prefs.sidebarPosition) {
+          applySidebarPosition(prefs.sidebarPosition, { fromSync: true });
           changed = true;
         }
       }
@@ -7535,6 +7620,34 @@
       if (!fromSync) schedulePrefsPush();
     }
 
+    function applyFontSize(size, options = {}) {
+      const { fromSync = false } = options;
+      document.documentElement.dataset.fontSize = size;
+      const el = document.getElementById('font-size-select');
+      if (el) el.value = size;
+      localStorage.setItem(FONT_SIZE_KEY, size);
+      if (!fromSync) schedulePrefsPush();
+    }
+
+    function applyFontFamily(family, options = {}) {
+      const { fromSync = false } = options;
+      const stack = FONT_MAP[family] || FONT_MAP.system;
+      document.documentElement.style.fontFamily = stack;
+      const el = document.getElementById('font-family-select');
+      if (el) el.value = family;
+      localStorage.setItem(FONT_FAMILY_KEY, family);
+      if (!fromSync) schedulePrefsPush();
+    }
+
+    function applySidebarPosition(pos, options = {}) {
+      const { fromSync = false } = options;
+      document.documentElement.dataset.sidebarPosition = pos;
+      const el = document.getElementById('sidebar-position-select');
+      if (el) el.value = pos;
+      localStorage.setItem(SIDEBAR_POSITION_KEY, pos);
+      if (!fromSync) schedulePrefsPush();
+    }
+
     function openDensityPopout() {
       renderThemeSwatches();
       const btn    = document.getElementById('density-toggle');
@@ -7583,6 +7696,30 @@
 
       const stored = localStorage.getItem(DENSITY_KEY) || 'comfortable';
       applyDensity(stored, { fromSync: true });
+
+      // Font size
+      applyFontSize(localStorage.getItem(FONT_SIZE_KEY) || 'default', { fromSync: true });
+      const fontSizeSelect = document.getElementById('font-size-select');
+      if (fontSizeSelect) {
+        fontSizeSelect.value = localStorage.getItem(FONT_SIZE_KEY) || 'default';
+        fontSizeSelect.addEventListener('change', () => applyFontSize(fontSizeSelect.value));
+      }
+
+      // Font family
+      applyFontFamily(localStorage.getItem(FONT_FAMILY_KEY) || 'system', { fromSync: true });
+      const fontFamilySelect = document.getElementById('font-family-select');
+      if (fontFamilySelect) {
+        fontFamilySelect.value = localStorage.getItem(FONT_FAMILY_KEY) || 'system';
+        fontFamilySelect.addEventListener('change', () => applyFontFamily(fontFamilySelect.value));
+      }
+
+      // Sidebar position
+      applySidebarPosition(localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left', { fromSync: true });
+      const sidebarPosSelect = document.getElementById('sidebar-position-select');
+      if (sidebarPosSelect) {
+        sidebarPosSelect.value = localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left';
+        sidebarPosSelect.addEventListener('change', () => applySidebarPosition(sidebarPosSelect.value));
+      }
 
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
