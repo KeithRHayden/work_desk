@@ -1415,6 +1415,19 @@
       color: #f87171;
     }
 
+    .cal-day.holiday { color: var(--accent); font-weight: 600; }
+    .cal-day.holiday.has-data:not(.selected)::after { display: none; }
+    .cal-holiday-dot {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
     .date-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
 
     .date-item {
@@ -3686,6 +3699,63 @@
       cursor: not-allowed;
     }
 
+    /* ── Custom holidays ─────────────────────────────── */
+    .custom-holidays-section { margin-top: 2px; }
+    .custom-holidays-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-bottom: 6px;
+    }
+    .custom-holiday-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      padding: 3px 0;
+    }
+    .custom-holiday-item .holiday-date { font-weight: 600; color: var(--text); min-width: 78px; }
+    .custom-holiday-item .holiday-label { flex: 1; }
+    .custom-holiday-item .holiday-remove {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      font-size: 0.72rem;
+      cursor: pointer;
+      padding: 0 4px;
+      opacity: 0.6;
+    }
+    .custom-holiday-item .holiday-remove:hover { opacity: 1; }
+    .custom-holiday-add-row {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .custom-holiday-input {
+      font-size: 0.74rem;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+    }
+    .custom-holiday-input[type="date"] { flex: 0 0 auto; width: 120px; }
+    .custom-holiday-add-btn {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .custom-holiday-add-btn:hover { background: var(--accent-light); }
+
     .col-subsection-label.collapsible {
       cursor: pointer;
       user-select: none;
@@ -5608,6 +5678,25 @@
                         <span class="customize-toggle-sub">Collapse project notes to a preview with show more</span>
                       </span>
                     </label>
+
+                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                    <p class="density-popout-label">Holidays</p>
+                    <label class="customize-toggle" title="Skip recurring tasks on US federal holidays">
+                      <input id="us-federal-holidays-toggle" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>US federal holidays</span>
+                        <span class="customize-toggle-sub">Recognized when recurring tasks have "skip holidays" on</span>
+                      </span>
+                    </label>
+                    <div id="custom-holidays-section" class="custom-holidays-section">
+                      <p class="density-popout-label" style="margin-top:6px;">Custom holidays</p>
+                      <div id="custom-holidays-list" class="custom-holidays-list"></div>
+                      <div class="custom-holiday-add-row">
+                        <input id="custom-holiday-date" type="date" class="custom-holiday-input" />
+                        <input id="custom-holiday-label" type="text" class="custom-holiday-input" placeholder="Label (optional)" />
+                        <button id="custom-holiday-add-btn" type="button" class="custom-holiday-add-btn">Add</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -5959,6 +6048,8 @@
     const STARTUP_VIEW_KEY = 'work-desk-startup-view';
     const STRIKE_COMPLETED_KEY = 'work-desk-strike-completed';
     const TRUNCATE_NOTES_KEY = 'work-desk-truncate-notes';
+    const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
+    const CUSTOM_HOLIDAYS_KEY = 'work-desk-custom-holidays';
     const RETENTION_MONTHS = 12;
     const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -6055,6 +6146,8 @@
       startupView: localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed',
       strikeCompleted: localStorage.getItem(STRIKE_COMPLETED_KEY) !== 'false',
       truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
+      useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
+      customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
       highlightItemId: null,
       activeTab: (() => {
         const mode = localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed';
@@ -6344,6 +6437,8 @@
         startupView: localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed',
         strikeCompleted: localStorage.getItem(STRIKE_COMPLETED_KEY) !== 'false',
         truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
+        useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
+        customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
         updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
       };
     }
@@ -6495,6 +6590,28 @@
           const el = document.getElementById('truncate-notes-toggle');
           if (el) el.checked = next;
           renderProjectDetail();
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.useFederalHolidays === 'boolean') {
+        const next = prefs.useFederalHolidays;
+        if (state.useFederalHolidays !== next) {
+          state.useFederalHolidays = next;
+          localStorage.setItem(US_FEDERAL_HOLIDAYS_KEY, next ? 'true' : 'false');
+          const el = document.getElementById('us-federal-holidays-toggle');
+          if (el) el.checked = next;
+          changed = true;
+        }
+      }
+
+      if (Array.isArray(prefs.customHolidays)) {
+        const next = prefs.customHolidays;
+        const cur = JSON.stringify(state.customHolidays);
+        if (JSON.stringify(next) !== cur) {
+          state.customHolidays = next;
+          localStorage.setItem(CUSTOM_HOLIDAYS_KEY, JSON.stringify(next));
+          renderCustomHolidaysList();
           changed = true;
         }
       }
@@ -7596,6 +7713,36 @@
           renderProjectDetail();
         });
       }
+
+      // Holidays
+      const usFederalToggle = document.getElementById('us-federal-holidays-toggle');
+      if (usFederalToggle) {
+        usFederalToggle.checked = state.useFederalHolidays;
+        usFederalToggle.addEventListener('change', () => {
+          state.useFederalHolidays = usFederalToggle.checked;
+          localStorage.setItem(US_FEDERAL_HOLIDAYS_KEY, state.useFederalHolidays ? 'true' : 'false');
+          schedulePrefsPush();
+          renderCalendar();
+        });
+      }
+
+      renderCustomHolidaysList();
+
+      document.getElementById('custom-holiday-add-btn').addEventListener('click', () => {
+        const dateInput = document.getElementById('custom-holiday-date');
+        const labelInput = document.getElementById('custom-holiday-label');
+        const date = dateInput.value;
+        if (!date) { showToast('Pick a date first'); return; }
+        if (state.customHolidays.some(h => h.date === date)) { showToast('That date is already added'); return; }
+        state.customHolidays.push({ date, label: labelInput.value.trim() || '' });
+        state.customHolidays.sort((a, b) => a.date.localeCompare(b.date));
+        localStorage.setItem(CUSTOM_HOLIDAYS_KEY, JSON.stringify(state.customHolidays));
+        schedulePrefsPush();
+        dateInput.value = '';
+        labelInput.value = '';
+        renderCustomHolidaysList();
+        renderCalendar();
+      });
 
       document.addEventListener('click', (e) => {
         if (!popout.classList.contains('hidden') && !popout.contains(e.target) && e.target !== btn
@@ -9939,18 +10086,73 @@
       }
     }
 
+    // ── Holiday computation ───────────────────────────────────────────
+    function nthWeekdayOfMonth(year, month, weekday, n) {
+      const first = new Date(year, month, 1);
+      let diff = (weekday - first.getDay() + 7) % 7;
+      const day = 1 + diff + (n - 1) * 7;
+      return new Date(year, month, day);
+    }
+
+    function lastWeekdayOfMonth(year, month, weekday) {
+      const last = new Date(year, month + 1, 0);
+      let diff = (last.getDay() - weekday + 7) % 7;
+      return new Date(year, month, last.getDate() - diff);
+    }
+
+    function holidayObservedDate(d) {
+      const dow = d.getDay();
+      if (dow === 6) return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+      if (dow === 0) return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+      return d;
+    }
+
+    function getUSFederalHolidays(year) {
+      const holidays = new Map();
+      const add = (d, label) => holidays.set(formatDateKey(d), label);
+
+      add(holidayObservedDate(new Date(year, 0, 1)),   'New Year\'s Day');
+      add(holidayObservedDate(new Date(year, 5, 19)),  'Juneteenth');
+      add(holidayObservedDate(new Date(year, 6, 4)),   'Independence Day');
+      add(holidayObservedDate(new Date(year, 10, 11)), 'Veterans Day');
+      add(holidayObservedDate(new Date(year, 11, 25)), 'Christmas Day');
+
+      add(nthWeekdayOfMonth(year, 0, 1, 3),  'MLK Day');
+      add(nthWeekdayOfMonth(year, 1, 1, 3),  'Presidents\' Day');
+      add(lastWeekdayOfMonth(year, 4, 1),     'Memorial Day');
+      add(nthWeekdayOfMonth(year, 8, 1, 1),  'Labor Day');
+      add(nthWeekdayOfMonth(year, 9, 1, 2),  'Columbus Day');
+      add(nthWeekdayOfMonth(year, 10, 4, 4), 'Thanksgiving');
+
+      return holidays;
+    }
+
+    function checkHoliday(dateKey) {
+      if (state.useFederalHolidays) {
+        const year = parseInt(dateKey.slice(0, 4), 10);
+        const fed = getUSFederalHolidays(year);
+        if (fed.has(dateKey)) return { isHoliday: true, label: fed.get(dateKey) };
+      }
+      const custom = (state.customHolidays || []).find(h => h.date === dateKey);
+      if (custom) return { isHoliday: true, label: custom.label || 'Holiday' };
+      return { isHoliday: false, label: null };
+    }
+
     function isDueToday(template) {
       const today = todayKey();
       if (template.lastInjectedDate === today) return false;
       const d = new Date(today + 'T12:00:00');
       const dow = d.getDay();
+      let due = false;
       switch (template.rule) {
-        case 'daily': return true;
-        case 'weekdays': return dow >= 1 && dow <= 5;
-        case 'weekly': return Array.isArray(template.days) && template.days.includes(dow);
-        case 'custom':  return Array.isArray(template.days) && template.days.includes(dow);
+        case 'daily': due = true; break;
+        case 'weekdays': due = dow >= 1 && dow <= 5; break;
+        case 'weekly':
+        case 'custom': due = Array.isArray(template.days) && template.days.includes(dow); break;
         default: return false;
       }
+      if (due && template.skipHolidays && checkHoliday(today).isHoliday) return false;
+      return due;
     }
 
     function markTemplateInjectedForDate(templateId, dateKey, context = state.listContext) {
@@ -10108,6 +10310,13 @@
           actions.appendChild(delBtn);
           item.appendChild(content);
           item.appendChild(badge);
+          if (t.skipHolidays) {
+            const skipBadge = document.createElement('span');
+            skipBadge.className = 'recurring-rule-badge';
+            skipBadge.style.cssText = 'opacity:0.7; font-size:0.66rem;';
+            skipBadge.textContent = 'skip holidays';
+            item.appendChild(skipBadge);
+          }
           item.appendChild(actions);
           listWrap.appendChild(item);
         });
@@ -10198,6 +10407,20 @@
       });
       form.appendChild(ruleBtns);
 
+      // Skip holidays checkbox
+      const skipHolidayWrap = document.createElement('label');
+      skipHolidayWrap.className = 'customize-toggle';
+      skipHolidayWrap.style.cssText = 'margin: 2px 0 4px; font-size: 0.78rem;';
+      const skipHolidayCb = document.createElement('input');
+      skipHolidayCb.type = 'checkbox';
+      skipHolidayCb.id = 'recurring-skip-holidays';
+      skipHolidayWrap.appendChild(skipHolidayCb);
+      const skipHolidayText = document.createElement('span');
+      skipHolidayText.className = 'customize-toggle-text';
+      skipHolidayText.innerHTML = '<span>Skip holidays</span>';
+      skipHolidayWrap.appendChild(skipHolidayText);
+      form.appendChild(skipHolidayWrap);
+
       const addActions = document.createElement('div');
       addActions.className = 'recurring-add-actions';
 
@@ -10216,6 +10439,7 @@
           content,
           rule: selectedRule,
           days: (selectedRule === 'weekly' || selectedRule === 'custom') ? selectedDays : null,
+          skipHolidays: skipHolidayCb.checked,
           createdAt: new Date().toISOString(),
           lastInjectedDate: null,
         };
@@ -10702,6 +10926,34 @@
       render();
     }
 
+    function renderCustomHolidaysList() {
+      const list = document.getElementById('custom-holidays-list');
+      if (!list) return;
+      list.innerHTML = '';
+      if (!state.customHolidays.length) {
+        list.innerHTML = '<span style="font-size:.72rem;color:var(--text-muted)">None added yet</span>';
+        return;
+      }
+      for (const h of state.customHolidays) {
+        const row = document.createElement('div');
+        row.className = 'custom-holiday-item';
+        row.innerHTML = `<span class="holiday-date">${h.date}</span><span class="holiday-label">${h.label || '(no label)'}</span>`;
+        const btn = document.createElement('button');
+        btn.className = 'holiday-remove';
+        btn.textContent = '✕';
+        btn.title = 'Remove';
+        btn.addEventListener('click', () => {
+          state.customHolidays = state.customHolidays.filter(x => x.date !== h.date);
+          localStorage.setItem(CUSTOM_HOLIDAYS_KEY, JSON.stringify(state.customHolidays));
+          schedulePrefsPush();
+          renderCustomHolidaysList();
+          renderCalendar();
+        });
+        row.appendChild(btn);
+        list.appendChild(row);
+      }
+    }
+
     function renderCalendar() {
       const host = els.sidebarCalendar;
       if (!host) return;
@@ -10806,10 +11058,18 @@
           btn.appendChild(badge);
         }
 
+        const hol = checkHoliday(dateKey);
+        if (hol.isHoliday) {
+          btn.classList.add('holiday');
+          const dot = document.createElement('span');
+          dot.className = 'cal-holiday-dot';
+          btn.appendChild(dot);
+        }
+
         const monthLabel = new Date(cellYear, cellMonth, dayNum).toLocaleDateString('en-US', {
           month: 'long', day: 'numeric', year: 'numeric',
         });
-        btn.title = monthLabel;
+        btn.title = monthLabel + (hol.isHoliday ? ` — ${hol.label}` : '');
         btn.setAttribute('aria-label', monthLabel + (dateKey === state.selectedDate ? ' (selected)' : ''));
 
         btn.addEventListener('click', () => selectCalendarDate(dateKey));
