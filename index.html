@@ -4145,6 +4145,7 @@
     }
 
     .add-row { display: flex; gap: 6px; align-items: center; }
+    #add-editor-host { flex: 1; min-width: 0; }
 
     .format-toggle-btn {
       width: 32px;
@@ -15514,10 +15515,90 @@
       }
     }
 
+    function captureCommentDraft() {
+      const draft = {};
+      try {
+        const form = document.querySelector('.add-comment-form');
+        if (form) {
+          const editor = form.querySelector('.comment-input');
+          if (editor && editor.childNodes) {
+            const html = getEditorHtml(editor);
+            if (!isEmptyHtml(html)) {
+              const card = form.closest('.item-card');
+              if (card) draft.add = { taskId: card.id.replace(/^item-/, ''), html };
+            }
+          }
+        }
+        if (state.editingComment) {
+          const editWrap = document.querySelector('.comment-edit-wrap');
+          if (editWrap) {
+            const editor = editWrap.querySelector('.comment-input');
+            if (editor && editor.childNodes) {
+              draft.edit = { taskId: state.editingComment.taskId, commentId: state.editingComment.commentId, html: getEditorHtml(editor) };
+            }
+          }
+        }
+      } catch (_) {}
+      return (draft.add || draft.edit) ? draft : null;
+    }
+
+    function restoreCommentDraft(draft) {
+      if (!draft) return;
+
+      if (draft.edit) {
+        const editWrap = document.querySelector('.comment-edit-wrap');
+        if (editWrap) {
+          const ed = editWrap.querySelector('.comment-input');
+          if (ed) { ed.innerHTML = draft.edit.html; setTimeout(() => ed.focus(), 0); }
+        }
+      }
+
+      if (draft.add) {
+        const card = document.getElementById(`item-${draft.add.taskId}`);
+        if (!card) return;
+        const panel = card.querySelector('.comments-panel');
+        if (!panel) return;
+        const trigger = panel.querySelector('.add-comment-trigger-wrap');
+        if (trigger) trigger.remove();
+        const existing = panel.querySelector('.add-comment-form');
+        if (existing) {
+          const ed = existing.querySelector('.comment-input');
+          if (ed) { ed.innerHTML = draft.add.html; setTimeout(() => ed.focus(), 0); }
+          return;
+        }
+        const item = findItem(draft.add.taskId)?.item;
+        if (!item) return;
+        const isNote = item.type === 'note';
+        const addPlaceholder = isNote ? 'Add an update…' : 'Add a comment…';
+        const form = document.createElement('form');
+        form.className = 'add-comment-form';
+        form.draggable = false;
+        const { wrap: editorWrap, editor: commentEditor } = createRichEditor({
+          className: 'comment-input',
+          placeholder: addPlaceholder,
+        });
+        commentEditor.innerHTML = draft.add.html;
+        const addBtn = document.createElement('button');
+        addBtn.className = 'comment-add-btn';
+        addBtn.type = 'submit';
+        addBtn.textContent = 'Add';
+        addBtn.disabled = isEmptyHtml(draft.add.html);
+        commentEditor.addEventListener('input', () => { addBtn.disabled = isEmptyHtml(getEditorHtml(commentEditor)); });
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          addComment(draft.add.taskId, getEditorHtml(commentEditor));
+        });
+        form.appendChild(editorWrap);
+        form.appendChild(addBtn);
+        panel.appendChild(form);
+        setTimeout(() => commentEditor.focus(), 0);
+      }
+    }
+
     function render() {
+      const draft = captureCommentDraft();
       renderSidebar();
       if (state.listContext === 'projects') {
-        // Projects view is rendered in renderSidebar
         return;
       }
       if (state.activeTab === 'insights') {
@@ -15525,6 +15606,7 @@
       } else {
         renderDesk();
       }
+      if (draft) restoreCommentDraft(draft);
     }
 
     els.headerTodayBtn.addEventListener('click', jumpToToday);
@@ -15643,6 +15725,7 @@
     const versionDot = document.getElementById('version-new-dot');
 
     const CHANGELOG_RECENT_COUNT = 5;
+    const CHANGELOG_OLDER_LIMIT = 3;
     const CHANGELOG_GITHUB_URL = 'https://github.com/KeithRHayden/work_desk/blob/main/CHANGELOG.md';
 
     function renderVersionBlock(release, isLast) {
@@ -15668,19 +15751,20 @@
       const older = CHANGELOG.slice(CHANGELOG_RECENT_COUNT);
 
       recent.forEach((release, idx) => {
-        const isLast = older.length === 0 && idx === recent.length - 1;
+        const isLast = idx === recent.length - 1;
         changelogBody.appendChild(renderVersionBlock(release, isLast));
       });
 
       if (older.length > 0) {
+        const shown = older.slice(0, CHANGELOG_OLDER_LIMIT);
         const accordion = document.createElement('details');
         accordion.className = 'changelog-older';
         const summary = document.createElement('summary');
         summary.className = 'changelog-older-toggle';
-        summary.textContent = `Older versions (${older.length})`;
+        summary.textContent = `Older versions (${shown.length})`;
         accordion.appendChild(summary);
-        older.forEach((release, idx) => {
-          accordion.appendChild(renderVersionBlock(release, idx === older.length - 1));
+        shown.forEach((release, idx) => {
+          accordion.appendChild(renderVersionBlock(release, idx === shown.length - 1));
         });
         changelogBody.appendChild(accordion);
       }
