@@ -1307,22 +1307,24 @@
       color: var(--sidebar-active);
     }
 
-    .version-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding-top: 6px;
-    }
     .version-btn {
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       color: var(--sidebar-muted);
+      opacity: 0.7;
       cursor: pointer;
       background: none;
-      border: none;
-      padding: 2px 0;
-      transition: color 0.15s;
+      border: 1px solid color-mix(in srgb, var(--sidebar-muted) 30%, transparent);
+      border-radius: 8px;
+      padding: 0 5px;
+      line-height: 1.4;
+      transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
     }
-    .version-btn:hover { color: var(--sidebar-active); }
+    .version-btn:hover {
+      opacity: 1;
+      color: var(--sidebar-active);
+      border-color: var(--sidebar-active);
+    }
     .version-new-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
@@ -1349,6 +1351,28 @@
     .changelog-cat-label.fixed { color: #f87171; }
     .changelog-cat-label.improved { color: #60a5fa; }
     .changelog-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0 12px; }
+
+    .changelog-older { margin-top: 4px; }
+    .changelog-older-toggle {
+      font-size: 0.76rem; font-weight: 600; color: var(--accent);
+      cursor: pointer; padding: 8px 0; list-style: none;
+      border-top: 1px solid var(--border);
+      transition: color 0.15s;
+    }
+    .changelog-older-toggle::-webkit-details-marker { display: none; }
+    .changelog-older-toggle::before { content: '▸ '; font-size: 0.7rem; }
+    .changelog-older[open] > .changelog-older-toggle::before { content: '▾ '; }
+    .changelog-older-toggle:hover { color: var(--text); }
+
+    .changelog-github-link {
+      text-align: center; margin: 16px 0 4px;
+      padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    .changelog-github-link a {
+      font-size: 0.74rem; color: var(--accent);
+      text-decoration: none; transition: color 0.15s;
+    }
+    .changelog-github-link a:hover { color: var(--text); text-decoration: underline; }
     }
     .sb-account-btn.hidden { display: none; }
 
@@ -5493,6 +5517,8 @@
           <p id="logo-sub" class="logo-sub">
             <span id="logo-sub-text"></span>
             <button id="help-btn" class="logo-help-btn" type="button" aria-label="How to use this app" title="How to use this app">?</button>
+            <button id="version-btn" class="version-btn" type="button" title="What's new"></button>
+            <span id="version-new-dot" class="version-new-dot hidden"></span>
           </p>
         </div>
       </div>
@@ -5588,10 +5614,6 @@
           <button id="sb-signin-btn" class="sb-account-btn hidden" type="button" title="Sign in to sync your desk">Sign in to sync</button>
           <button id="sb-signout-btn" class="sb-account-btn hidden" type="button" title="Sign out">Sign out</button>
         </div>
-      </div>
-      <div class="version-row">
-        <button id="version-btn" class="version-btn" type="button" title="What's new"></button>
-        <span id="version-new-dot" class="version-new-dot hidden"></span>
       </div>
     </aside>
 
@@ -15511,24 +15533,53 @@
     const versionBtn = document.getElementById('version-btn');
     const versionDot = document.getElementById('version-new-dot');
 
+    const CHANGELOG_RECENT_COUNT = 5;
+    const CHANGELOG_GITHUB_URL = 'https://github.com/KeithRHayden/work_desk/blob/main/CHANGELOG.md';
+
+    function renderVersionBlock(release, isLast) {
+      const block = document.createElement('div');
+      block.className = 'changelog-version';
+      let hdr = `<div class="changelog-version-header"><span class="changelog-version-num">v${release.version}</span><span class="changelog-version-date">${release.date}</span>`;
+      if (release.tag) hdr += `<span class="changelog-version-tag">${release.tag}</span>`;
+      hdr += '</div>';
+      let body = '';
+      release.sections.forEach(sec => {
+        body += `<p class="changelog-cat-label ${sec.label.toLowerCase()}">${sec.label}</p><ul>`;
+        sec.items.forEach(it => { body += `<li>${it}</li>`; });
+        body += '</ul>';
+      });
+      if (!isLast) body += '<hr class="changelog-divider">';
+      block.innerHTML = hdr + body;
+      return block;
+    }
+
     function renderChangelog() {
       changelogBody.innerHTML = '';
-      CHANGELOG.forEach((release, idx) => {
-        const block = document.createElement('div');
-        block.className = 'changelog-version';
-        let hdr = `<div class="changelog-version-header"><span class="changelog-version-num">v${release.version}</span><span class="changelog-version-date">${release.date}</span>`;
-        if (release.tag) hdr += `<span class="changelog-version-tag">${release.tag}</span>`;
-        hdr += '</div>';
-        let body = '';
-        release.sections.forEach(sec => {
-          body += `<p class="changelog-cat-label ${sec.label.toLowerCase()}">${sec.label}</p><ul>`;
-          sec.items.forEach(it => { body += `<li>${it}</li>`; });
-          body += '</ul>';
-        });
-        if (idx < CHANGELOG.length - 1) body += '<hr class="changelog-divider">';
-        block.innerHTML = hdr + body;
-        changelogBody.appendChild(block);
+      const recent = CHANGELOG.slice(0, CHANGELOG_RECENT_COUNT);
+      const older = CHANGELOG.slice(CHANGELOG_RECENT_COUNT);
+
+      recent.forEach((release, idx) => {
+        const isLast = older.length === 0 && idx === recent.length - 1;
+        changelogBody.appendChild(renderVersionBlock(release, isLast));
       });
+
+      if (older.length > 0) {
+        const accordion = document.createElement('details');
+        accordion.className = 'changelog-older';
+        const summary = document.createElement('summary');
+        summary.className = 'changelog-older-toggle';
+        summary.textContent = `Older versions (${older.length})`;
+        accordion.appendChild(summary);
+        older.forEach((release, idx) => {
+          accordion.appendChild(renderVersionBlock(release, idx === older.length - 1));
+        });
+        changelogBody.appendChild(accordion);
+      }
+
+      const linkRow = document.createElement('p');
+      linkRow.className = 'changelog-github-link';
+      linkRow.innerHTML = `<a href="${CHANGELOG_GITHUB_URL}" target="_blank" rel="noopener">View full changelog on GitHub →</a>`;
+      changelogBody.appendChild(linkRow);
     }
 
     function openChangelog() {
