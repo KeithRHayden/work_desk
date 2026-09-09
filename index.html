@@ -1013,6 +1013,24 @@
     [data-font-size="default"] { font-size: 15px; }
     [data-font-size="large"]   { font-size: 17px; }
 
+    /* Card glow on hover */
+    [data-card-glow="true"] .item-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 25%, transparent),
+                  0 0 28px rgba(0,0,0,0.15);
+    }
+    [data-card-glow="true"] .item-card {
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    /* Gradient header */
+    [data-gradient-header="true"] .desk-sticky {
+      background: linear-gradient(135deg,
+        color-mix(in srgb, var(--accent) 7%, var(--bg)),
+        color-mix(in srgb, var(--accent) 1.5%, var(--bg)));
+      border-bottom-color: color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
     /* Boundary toggle button — sits on the sidebar/main edge */
     .app { position: relative; }
 
@@ -5643,6 +5661,23 @@
                       </select>
                     </div>
 
+                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                    <p class="density-popout-label">Effects</p>
+                    <label class="customize-toggle" title="Accent-colored glow around task cards on hover">
+                      <input id="card-glow-toggle" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>Card glow on hover</span>
+                        <span class="customize-toggle-sub">Subtle accent glow when hovering task cards</span>
+                      </span>
+                    </label>
+                    <label class="customize-toggle" title="Tint the sticky header with a subtle accent gradient">
+                      <input id="gradient-header-toggle" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>Gradient header</span>
+                        <span class="customize-toggle-sub">Accent-tinted gradient on the top header bar</span>
+                      </span>
+                    </label>
+
                   </div>
 
                   <!-- Behavior Tab Pane -->
@@ -6103,6 +6138,8 @@
     const FONT_SIZE_KEY = 'work-desk-font-size';
     const FONT_FAMILY_KEY = 'work-desk-font-family';
     const SIDEBAR_POSITION_KEY = 'work-desk-sidebar-position';
+    const CARD_GLOW_KEY = 'work-desk-card-glow';
+    const GRADIENT_HEADER_KEY = 'work-desk-gradient-header';
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
 
     const FONT_MAP = {
@@ -6496,6 +6533,8 @@
         fontSize: localStorage.getItem(FONT_SIZE_KEY) || 'default',
         fontFamily: localStorage.getItem(FONT_FAMILY_KEY) || 'system',
         sidebarPosition: localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left',
+        cardGlow: localStorage.getItem(CARD_GLOW_KEY) === 'true',
+        gradientHeader: localStorage.getItem(GRADIENT_HEADER_KEY) === 'true',
         keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
         autoCollapseCompleted: localStorage.getItem('work-desk-auto-collapse-completed') !== 'false',
         autoCollapseCompletedAt: (() => {
@@ -6578,6 +6617,20 @@
       if (prefs.sidebarPosition && ['left', 'right'].includes(prefs.sidebarPosition)) {
         if ((localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left') !== prefs.sidebarPosition) {
           applySidebarPosition(prefs.sidebarPosition, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.cardGlow === 'boolean') {
+        if ((localStorage.getItem(CARD_GLOW_KEY) === 'true') !== prefs.cardGlow) {
+          applyCardGlow(prefs.cardGlow, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.gradientHeader === 'boolean') {
+        if ((localStorage.getItem(GRADIENT_HEADER_KEY) === 'true') !== prefs.gradientHeader) {
+          applyGradientHeader(prefs.gradientHeader, { fromSync: true });
           changed = true;
         }
       }
@@ -7648,6 +7701,24 @@
       if (!fromSync) schedulePrefsPush();
     }
 
+    function applyCardGlow(on, options = {}) {
+      const { fromSync = false } = options;
+      document.documentElement.dataset.cardGlow = on ? 'true' : 'false';
+      const el = document.getElementById('card-glow-toggle');
+      if (el) el.checked = on;
+      localStorage.setItem(CARD_GLOW_KEY, on ? 'true' : 'false');
+      if (!fromSync) schedulePrefsPush();
+    }
+
+    function applyGradientHeader(on, options = {}) {
+      const { fromSync = false } = options;
+      document.documentElement.dataset.gradientHeader = on ? 'true' : 'false';
+      const el = document.getElementById('gradient-header-toggle');
+      if (el) el.checked = on;
+      localStorage.setItem(GRADIENT_HEADER_KEY, on ? 'true' : 'false');
+      if (!fromSync) schedulePrefsPush();
+    }
+
     function openDensityPopout() {
       renderThemeSwatches();
       const btn    = document.getElementById('density-toggle');
@@ -7719,6 +7790,22 @@
       if (sidebarPosSelect) {
         sidebarPosSelect.value = localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left';
         sidebarPosSelect.addEventListener('change', () => applySidebarPosition(sidebarPosSelect.value));
+      }
+
+      // Card glow
+      applyCardGlow(localStorage.getItem(CARD_GLOW_KEY) === 'true', { fromSync: true });
+      const cardGlowToggle = document.getElementById('card-glow-toggle');
+      if (cardGlowToggle) {
+        cardGlowToggle.checked = localStorage.getItem(CARD_GLOW_KEY) === 'true';
+        cardGlowToggle.addEventListener('change', () => applyCardGlow(cardGlowToggle.checked));
+      }
+
+      // Gradient header
+      applyGradientHeader(localStorage.getItem(GRADIENT_HEADER_KEY) === 'true', { fromSync: true });
+      const gradientHeaderToggle = document.getElementById('gradient-header-toggle');
+      if (gradientHeaderToggle) {
+        gradientHeaderToggle.checked = localStorage.getItem(GRADIENT_HEADER_KEY) === 'true';
+        gradientHeaderToggle.addEventListener('change', () => applyGradientHeader(gradientHeaderToggle.checked));
       }
 
       btn.addEventListener('click', (e) => {
