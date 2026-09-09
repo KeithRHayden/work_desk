@@ -959,7 +959,7 @@
     }
 
     body {
-      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-family: var(--font-family, system-ui, -apple-system, 'Segoe UI', sans-serif);
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
@@ -7685,7 +7685,7 @@
     function applyFontFamily(family, options = {}) {
       const { fromSync = false } = options;
       const stack = FONT_MAP[family] || FONT_MAP.system;
-      document.documentElement.style.fontFamily = stack;
+      document.documentElement.style.setProperty('--font-family', stack);
       const el = document.getElementById('font-family-select');
       if (el) el.value = family;
       localStorage.setItem(FONT_FAMILY_KEY, family);
