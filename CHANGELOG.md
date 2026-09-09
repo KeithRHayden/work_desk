@@ -6,6 +6,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.4.1] — 2026-09-09
+
+### Added
+- **What's New changelog** — version button next to the help `?` opens a modal with full version history, collapsible "Older versions" accordion, and a link to the GitHub changelog
+- **CHANGELOG.md** — permanent version history file for the GitHub repo
+
+### Improved
+- Add-task text field stretches to fill available horizontal space on desktop
+- Changelog modal shows last 5 versions in full detail; older ones collapse into an accordion capped at 3
+- Version button relocated from sidebar footer to the subtitle row next to the `?` help button
+
+### Fixed
+- Extra divider line between v1.0.0 and the Older Versions accordion in the changelog modal
+- **Comment draft lost on background sync** — typing a comment and clicking away (or waiting for the 5-minute auto-sync) no longer destroys unsaved text; drafts are captured before render and restored after
+
+---
+
 ## [1.4.0] — 2026-09-09
 
 ### Added
@@ -19,7 +36,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 - **Sidebar position** — move the sidebar to the left or right
 - **Card glow effect** — accent-colored hover glow (Options → Appearance → Effects)
 - **Gradient header** — subtle accent tint on the sticky header bar
-- **What's New changelog** — version button in the sidebar opens a changelog modal with full history
 
 ### Improved
 - Behavior tab reorganized into General, Tasks, Projects, and Holidays sections
