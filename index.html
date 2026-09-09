@@ -12551,6 +12551,10 @@
       items[found.idx] = { ...items[found.idx], comments };
       state.data.days[found.date] = { ...found.day, items };
       state.editingComment = null;
+      // Clear the edit form before render so captureCommentDraft doesn't
+      // re-capture the just-saved text as an unsaved draft.
+      const editWrap = document.querySelector('.comment-edit-wrap');
+      if (editWrap) { const ed = editWrap.querySelector('.comment-input'); if (ed) ed.innerHTML = ''; }
       saveData();
       render();
     }
@@ -12631,6 +12635,10 @@
       items[found.idx] = { ...items[found.idx], comments };
       state.data.days[found.date] = { ...found.day, items };
       openComments(taskId);
+      // Clear the form before render so captureCommentDraft doesn't
+      // re-capture the just-saved text as an unsaved draft.
+      const form = document.querySelector('.add-comment-form');
+      if (form) { const ed = form.querySelector('.comment-input'); if (ed) ed.innerHTML = ''; }
       saveData();
       render();
     }
