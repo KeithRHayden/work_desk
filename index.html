@@ -6232,12 +6232,31 @@
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.4.0';
+    const APP_VERSION = '1.4.1';
     const CHANGELOG = [
+      {
+        version: '1.4.1',
+        date: 'Sep 9, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'What\'s New changelog — version button next to the ? opens a modal with full history',
+            'CHANGELOG.md — permanent version history file for the GitHub repo',
+          ]},
+          { label: 'Improved', items: [
+            'Add-task text field stretches to fill available space on desktop',
+            'Changelog modal: last 5 versions in detail, older ones in a collapsible accordion',
+            'Version button relocated to subtitle row next to the ? help button',
+          ]},
+          { label: 'Fixed', items: [
+            'Extra divider line in the changelog modal between last version and Older Versions',
+            'Comment draft lost when background sync or window focus triggered a re-render',
+          ]},
+        ],
+      },
       {
         version: '1.4.0',
         date: 'Sep 9, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Holiday-aware recurring tasks — skip US federal holidays or custom dates you define',
@@ -6250,7 +6269,6 @@
             'Sidebar position — move the sidebar to the left or right',
             'Card glow effect — accent-colored hover glow (Options → Appearance → Effects)',
             'Gradient header — subtle accent tint on the sticky header bar',
-            'What\'s New changelog — you\'re looking at it!',
           ]},
           { label: 'Improved', items: [
             'Behavior tab reorganized into General, Tasks, Projects, and Holidays sections',
