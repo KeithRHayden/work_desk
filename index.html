@@ -1306,6 +1306,50 @@
       border-color: var(--sidebar-muted);
       color: var(--sidebar-active);
     }
+
+    .version-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 6px;
+    }
+    .version-btn {
+      font-size: 0.68rem;
+      color: var(--sidebar-muted);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 2px 0;
+      transition: color 0.15s;
+    }
+    .version-btn:hover { color: var(--sidebar-active); }
+    .version-new-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: version-pulse 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes version-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .changelog-version { margin-bottom: 4px; }
+    .changelog-version-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+    .changelog-version-num { font-size: 0.88rem; font-weight: 700; color: var(--accent); }
+    .changelog-version-date { font-size: 0.72rem; color: var(--text-muted); }
+    .changelog-version-tag {
+      font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1px;
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      color: var(--accent); padding: 2px 8px; border-radius: 3px; font-weight: 600;
+    }
+    .changelog-cat-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .changelog-cat-label.added { color: #34d399; }
+    .changelog-cat-label.fixed { color: #f87171; }
+    .changelog-cat-label.improved { color: #60a5fa; }
+    .changelog-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0 12px; }
+    }
     .sb-account-btn.hidden { display: none; }
 
     .theme-toggle-unused {
@@ -5545,6 +5589,10 @@
           <button id="sb-signout-btn" class="sb-account-btn hidden" type="button" title="Sign out">Sign out</button>
         </div>
       </div>
+      <div class="version-row">
+        <button id="version-btn" class="version-btn" type="button" title="What's new"></button>
+        <span id="version-new-dot" class="version-new-dot hidden"></span>
+      </div>
     </aside>
 
     <button id="sidebar-toggle" class="sidebar-collapse-btn" type="button" aria-label="Collapse sidebar">
@@ -5927,12 +5975,14 @@
           <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
           <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag</li>
           <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
-          <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define</li>
+          <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define; optionally skip holidays</li>
+          <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar shows holiday dots</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
           <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
           <li><strong>Themes</strong> — 40 light and dark presets (20 each), browsable as mini wireframe previews in Options → Appearance</li>
           <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
+          <li><strong>What's New</strong> — click the version number at the bottom of the sidebar to see the latest changes; a pulsing dot appears when there's an unread update</li>
         </ul>
 
         <h3>Task &amp; note cards</h3>
@@ -5943,7 +5993,7 @@
           <li><strong>Shelving</strong> — move a task to Shelved when it isn't done but isn't today's focus; unshelf it later from the Done/Shelved column</li>
           <li><strong>Move to another day</strong> — reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
           <li><strong>Send to Work / Personal</strong> — moves a task or note to the other context list</li>
-          <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough (toggle this off in Options → Appearance); hover to see them clearly</li>
+          <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough (toggle this off in Options → Behavior → Tasks); hover to see them clearly</li>
         </ul>
 
         <h3>Tags</h3>
@@ -5988,8 +6038,8 @@
         <h3>Options menu</h3>
         <ul>
           <li>Open with the customize button (⊟) near the date; settings are split into <strong>Appearance</strong> and <strong>Behavior</strong> tabs</li>
-          <li><strong>Appearance</strong> — theme picker (40 presets with mini wireframe previews, filterable by Light/Dark/All), Comfortable/Compact card layout, and a strike-through toggle for completed tasks</li>
-          <li><strong>Behavior</strong> — Keep comments open, Auto-collapse Completed (with a 3–20 threshold), Auto carry each day, first day of the week (Sunday/Monday), Startup view (remember last viewed vs. always open Today), celebration confetti toggle, and <strong>Truncate long notes</strong> (project note preview on/off)</li>
+          <li><strong>Appearance</strong> — theme picker (40 presets with mini wireframe previews, filterable by Light/Dark/All), Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
+          <li><strong>Behavior</strong> — organized into General, Tasks, Projects, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
         </ul>
 
         <h3>Navigation</h3>
@@ -6014,7 +6064,10 @@
           <li>Open via the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
           <li>Templates auto-add on the schedule you set (daily, weekly, specific days, etc.)</li>
           <li>Injected tasks show a <strong>🔁</strong> badge on the card</li>
-          <li>Edit or delete templates from the recurring panel; changes apply to future injections only</li>
+          <li><strong>Edit or delete</strong> — click <em>edit</em> or <em>delete</em> on any template in the recurring panel, or use the overflow menu (⋮) on an injected task card and choose <em>Edit recurring</em></li>
+          <li><strong>Tags on templates</strong> — add tags via the <em>tag</em> link or type <code>#tagname</code> in the content; every injected task inherits them</li>
+          <li><strong>Skip holidays</strong> — tick the checkbox to skip US federal and custom holidays; requires holidays to be enabled in Options → Behavior</li>
+          <li>Duplicate detection — the panel highlights templates with identical content so you can clean up extras</li>
         </ul>
 
         <h3>Insights</h3>
@@ -6033,7 +6086,7 @@
         <ul>
           <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
           <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in</strong> at the bottom of the sidebar when you’re ready to create an account or sync</li>
-          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, and confetti all follow your account across devices</li>
+          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, confetti, confirm before delete, font size, font family, sidebar position, card glow, gradient header, and holiday settings all follow your account across devices</li>
           <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
           <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
@@ -6065,7 +6118,7 @@
           <li>Use the sidebar collapse button (‹) to give the board more room</li>
           <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
           <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors</li>
-        </ul>
+          <li>Click the version number (<strong>v1.x.x</strong>) at the bottom of the sidebar to see the full changelog; a pulsing dot means there's something new</li>
 
         <h3>Keyboard shortcuts</h3>
         <ul>
@@ -6084,6 +6137,19 @@
       </div>
       <div class="help-modal-footer">
         <button id="help-modal-dismiss" class="modal-btn primary" type="button">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="changelog-modal" class="modal hidden help-modal" role="dialog" aria-labelledby="changelog-modal-title">
+    <div class="modal-box">
+      <div class="help-modal-header">
+        <h2 id="changelog-modal-title" class="modal-title" style="margin:0">What's New</h2>
+        <button id="changelog-modal-close" class="help-modal-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div id="changelog-body" class="help-modal-body"></div>
+      <div class="help-modal-footer">
+        <button id="changelog-modal-dismiss" class="modal-btn primary" type="button">Got it</button>
       </div>
     </div>
   </div>
@@ -6141,6 +6207,135 @@
     const CARD_GLOW_KEY = 'work-desk-card-glow';
     const GRADIENT_HEADER_KEY = 'work-desk-gradient-header';
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
+    const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
+
+    const APP_VERSION = '1.4.0';
+    const CHANGELOG = [
+      {
+        version: '1.4.0',
+        date: 'Sep 9, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Holiday-aware recurring tasks — skip US federal holidays or custom dates you define',
+            'Custom holidays — add your own dates in Options → Behavior → Holidays',
+            'Recurring task editing — edit templates from the card overflow menu or the recurring panel',
+            'Tags on recurring templates — tag a template and every injected task inherits the tags',
+            'Confirm before delete — optional prompt in Options → Behavior → General',
+            'Font picker — choose from 8 font families in Options → Appearance',
+            'Text size selector — Small / Default / Large',
+            'Sidebar position — move the sidebar to the left or right',
+            'Card glow effect — accent-colored hover glow (Options → Appearance → Effects)',
+            'Gradient header — subtle accent tint on the sticky header bar',
+            'What\'s New changelog — you\'re looking at it!',
+          ]},
+          { label: 'Improved', items: [
+            'Behavior tab reorganized into General, Tasks, Projects, and Holidays sections',
+            'Recurring panel restructured — add form at top, existing templates listed below',
+            'Checkbox contrast improved on dark themes',
+            'Recurring template tombstoning — deleted templates stay deleted across syncs',
+            'Context-aware recurring modal — closes after editing from a task card, returns to panel from sidebar',
+          ]},
+          { label: 'Fixed', items: [
+            'Sync icon stuck spinning when a merge error occurred',
+            'Duplicate recurring template detection with cleanup hints',
+            'Font family selection not applying to the page',
+          ]},
+        ],
+      },
+      {
+        version: '1.3.0',
+        date: 'Sep 3, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Export All / Import All — single-file backup across Work, Personal, and Projects',
+            'Import context safeguard — warns when importing a file from a different desk',
+            'Project tabbed layout — Notes and Tasks in separate tabs per project',
+            'Project archiving — completed tasks auto-archive; manual archive for notes',
+            'Note truncation with show more / show less toggle',
+            'Customize (gear) button added to project tab header',
+            'Double-click to edit project notes and tasks',
+            'Date-aware add placeholder — shows "Add a task for tomorrow…" when viewing future days',
+          ]},
+          { label: 'Improved', items: [
+            'Export / Import buttons renamed to "Export [current] Desk" and "Import [current] Desk"',
+            'Sidebar backup section streamlined — side-by-side Export and Import buttons',
+            'Project item tombstoning — deleted items stay deleted across syncs',
+            'Bullet-point styling fixed in project note content',
+          ]},
+          { label: 'Fixed', items: [
+            'Project tasks disappearing mid-typing due to background sync re-render',
+            'Deleted project items reappearing after refresh',
+          ]},
+        ],
+      },
+      {
+        version: '1.2.0',
+        date: 'Aug 21, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Tags — type #word inline or use the tag button; chips appear top-right of cards',
+            'Tag search — search #tagname to filter; combine with text for narrower results',
+            'Search overlay — floating results dropdown that doesn\'t cover the search input',
+            'In-column quick add — add tasks directly inside New and Active columns',
+          ]},
+          { label: 'Improved', items: [
+            'Sticky header restyled — background tint, shadow, rounded top corners, carded add form',
+            'Progress bar layout — legend moved right, done count moved left',
+            'Carry button only visible when there\'s something to carry',
+            'Help modal fully updated with tag, search, and layout documentation',
+          ]},
+          { label: 'Fixed', items: [
+            'Tag search failing when combining a #tag with additional words',
+            'Move-task calendar ignoring week-start-day setting',
+            'Comment text selection triggering drag instead of highlight',
+          ]},
+        ],
+      },
+      {
+        version: '1.1.0',
+        date: 'Aug 19, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Insights tab — weekly, monthly, and yearly views with productivity metrics',
+            'Week-over-week comparison, carry-over analysis, and streak tracking',
+            'Hoverable charts — bar, line, stacked, pie with tooltips',
+            'Activity heatmap — GitHub-style grid in the year view',
+            'Carry-over tracking with carriedFrom field',
+            'Remember last tab and date on refresh',
+            '40 themes — 20 light, 20 dark with mini wireframe swatches',
+            'Confetti toggle, week start day, and startup view options',
+          ]},
+          { label: 'Improved', items: [
+            'Shelved tasks excluded from completion percentage',
+            'Auto-collapse threshold now user-selectable (3–20)',
+            'Persistent expanded comment IDs across navigation and refresh',
+            'Options menu tabbed into Appearance and Behavior',
+          ]},
+          { label: 'Fixed', items: [
+            'Duplicate recurring tasks on multi-device sync',
+            'Cloud merge producing stale data on secondary devices',
+            'Comments collapsing after page refresh',
+          ]},
+        ],
+      },
+      {
+        version: '1.0.0',
+        date: 'Aug 14, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Daily task and note desk with New / Active / Done / Shelved columns',
+            'Work, Personal, and Projects contexts',
+            'Supabase cloud sync with offline-first support',
+            'Recurring task templates with daily, weekly, and custom schedules',
+            'Comments and timestamped updates on tasks and notes',
+            'Calendar navigation with open-task badges on past days',
+            'PWA installable on desktop and mobile',
+            'Dark and light themes',
+          ]},
+        ],
+      },
+    ];
 
     const FONT_MAP = {
       system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
@@ -15307,8 +15502,56 @@
     els.helpModal.addEventListener('click', (e) => {
       if (e.target === els.helpModal) closeHelpModal();
     });
+
+    /* ── Changelog / What's New ── */
+    const changelogModal = document.getElementById('changelog-modal');
+    const changelogBody = document.getElementById('changelog-body');
+    const changelogClose = document.getElementById('changelog-modal-close');
+    const changelogDismiss = document.getElementById('changelog-modal-dismiss');
+    const versionBtn = document.getElementById('version-btn');
+    const versionDot = document.getElementById('version-new-dot');
+
+    function renderChangelog() {
+      changelogBody.innerHTML = '';
+      CHANGELOG.forEach((release, idx) => {
+        const block = document.createElement('div');
+        block.className = 'changelog-version';
+        let hdr = `<div class="changelog-version-header"><span class="changelog-version-num">v${release.version}</span><span class="changelog-version-date">${release.date}</span>`;
+        if (release.tag) hdr += `<span class="changelog-version-tag">${release.tag}</span>`;
+        hdr += '</div>';
+        let body = '';
+        release.sections.forEach(sec => {
+          body += `<p class="changelog-cat-label ${sec.label.toLowerCase()}">${sec.label}</p><ul>`;
+          sec.items.forEach(it => { body += `<li>${it}</li>`; });
+          body += '</ul>';
+        });
+        if (idx < CHANGELOG.length - 1) body += '<hr class="changelog-divider">';
+        block.innerHTML = hdr + body;
+        changelogBody.appendChild(block);
+      });
+    }
+
+    function openChangelog() {
+      renderChangelog();
+      changelogModal.classList.remove('hidden');
+      localStorage.setItem(LAST_SEEN_VERSION_KEY, APP_VERSION);
+      versionDot.classList.add('hidden');
+    }
+    function closeChangelog() { changelogModal.classList.add('hidden'); }
+
+    versionBtn.textContent = `v${APP_VERSION}`;
+    if (localStorage.getItem(LAST_SEEN_VERSION_KEY) !== APP_VERSION) {
+      versionDot.classList.remove('hidden');
+    }
+
+    versionBtn.addEventListener('click', openChangelog);
+    changelogClose.addEventListener('click', closeChangelog);
+    changelogDismiss.addEventListener('click', closeChangelog);
+    changelogModal.addEventListener('click', (e) => { if (e.target === changelogModal) closeChangelog(); });
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !els.helpModal.classList.contains('hidden')) closeHelpModal();
+      if (e.key === 'Escape' && !changelogModal.classList.contains('hidden')) closeChangelog();
       if (e.key === 'Escape' && openMenuId) closeItemMenu();
     });
 
