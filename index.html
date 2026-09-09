@@ -6346,14 +6346,123 @@
         date: 'Aug 14, 2026',
         sections: [
           { label: 'Added', items: [
-            'Daily task and note desk with New / Active / Done / Shelved columns',
-            'Work, Personal, and Projects contexts',
-            'Supabase cloud sync with offline-first support',
-            'Recurring task templates with daily, weekly, and custom schedules',
-            'Comments and timestamped updates on tasks and notes',
-            'Calendar navigation with open-task badges on past days',
-            'PWA installable on desktop and mobile',
-            'Dark and light themes',
+            'Auto-collapse Completed column — configurable threshold, toggle in Customize',
+            'Sign-in from offline mode — "Sign in to sync" button in sidebar footer',
+            'Sticky mobile add bar — docks to bottom on ≤768px screens',
+          ]},
+          { label: 'Improved', items: [
+            'Theme + density + preferences now sync to the cloud',
+          ]},
+        ],
+      },
+      {
+        version: '0.9.0',
+        date: 'Aug 13, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Persistent theme and preference sync across devices',
+          ]},
+          { label: 'Fixed', items: [
+            'Recurring task sync stripping recurringTemplateId during normalize, causing duplicates',
+            'Repair duplicates now collapses same-day copies of recurring templates',
+          ]},
+        ],
+      },
+      {
+        version: '0.8.0',
+        date: 'Aug 12, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Keep Comments Open toggle — multiple comment panels stay open at once',
+            '"How to use Work Desk" help modal — comprehensive in-app documentation',
+          ]},
+          { label: 'Fixed', items: [
+            'Merge no longer resurrects tasks on old days if they live on another day locally',
+            'Deletes remembered via tombstones so sync doesn\'t undo them',
+            'Carry-forward, delete, and repair logic overhauled for reliability',
+            'Import merge keeps tombstones and strips resurrected IDs',
+            'Auto-carry now pulls from all past days, not just one',
+          ]},
+        ],
+      },
+      {
+        version: '0.7.0',
+        date: 'Aug 10, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Comment indentation — comments sit indented under the card',
+            'Bullet points in tasks, comments, and notes',
+          ]},
+        ],
+      },
+      {
+        version: '0.6.0',
+        date: 'Aug 6, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Smart merge sync — unions items from both devices, keeps version with more comments or completed status',
+            'Auto sync triggers — window focus and periodic 5-minute silent sync',
+          ]},
+        ],
+      },
+      {
+        version: '0.5.0',
+        date: 'Aug 3, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Projects tab — long-term notes and tasks not tied to daily workflow',
+            'Text-based action buttons — cleaner labels, destructive actions behind ⋮ overflow',
+          ]},
+          { label: 'Fixed', items: [
+            'Race condition with Supabase sync — local timestamp updates immediately',
+            'Note comments not saving (normalizeItem was stripping comments from notes)',
+            'Email signup redirect URLs corrected',
+          ]},
+        ],
+      },
+      {
+        version: '0.4.0',
+        date: 'Jul 21, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Comments on notes — timestamped updates and threaded follow-ups',
+            'Paragraph spacing in notes',
+          ]},
+        ],
+      },
+      {
+        version: '0.3.0',
+        date: 'Jul 20, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Theme favicons — each theme gets a matching favicon',
+            'Task deduplication logic and Repair duplicates button',
+            'Improved sign-out button visibility on mobile',
+          ]},
+        ],
+      },
+      {
+        version: '0.2.0',
+        date: 'Jul 18, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Multiple themes — light and dark presets',
+            'Mobile calendar navigation — week strip with smooth scrolling',
+          ]},
+          { label: 'Fixed', items: [
+            'Timezone issues — switched from UTC to device local timezone',
+          ]},
+        ],
+      },
+      {
+        version: '0.1.0',
+        date: 'Jul 16, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Initial release — daily task and note desk with kanban columns',
+            'Supabase cloud sync with email sign-in / sign-out',
+            'PWA support — installable on desktop and mobile',
+            'In-app documentation',
           ]},
         ],
       },
