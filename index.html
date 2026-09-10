@@ -1643,6 +1643,10 @@
       gap: 6px;
       width: 100%;
     }
+    .sidebar-backup-btns .backup-btn-wrap {
+      min-width: 0;
+      width: 100%;
+    }
     .sidebar-repair-link {
       background: transparent;
       border: none;
@@ -5334,12 +5338,22 @@
 
       .sidebar-header { align-items: center; }
       .logo { font-size: 1.1rem; }
-      .logo-sub { display: none; }
+      /* Keep help (?) and version visible — hide only the subtitle text to save space */
+      .logo-sub { display: flex; margin-top: 4px; }
+      #logo-sub-text { display: none; }
       .sidebar-account { margin-top: 0; padding-top: 10px; }
       .sidebar-backup { margin-top: 0; }
       .sidebar-backup .nav-label { display: none; }
-      .sidebar-backup-btns { display: flex; gap: 6px; }
-      .sidebar-backup-btns .backup-btn { flex: 1; }
+      /* Keep equal-width Export / Import — flex was applied to buttons inside
+         wraps that don't expand, which left them squished on the left */
+      .sidebar-backup-btns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        width: 100%;
+      }
+      .sidebar-backup-btns .backup-btn-wrap { min-width: 0; width: 100%; }
+      .sidebar-backup-btns .backup-btn { width: 100%; }
 
       .sidebar-body {
         width: 100%;
@@ -6232,12 +6246,23 @@
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.4.1';
+    const APP_VERSION = '1.4.2';
     const CHANGELOG = [
+      {
+        version: '1.4.2',
+        date: 'Sep 10, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Mobile: Help (?) and version button were hidden — subtitle row is visible again with compact controls',
+            'Mobile: Export / Import buttons were squished to the left — now equal-width and full card width',
+            'Saving a comment no longer re-opens a duplicate Add form with the same text',
+          ]},
+        ],
+      },
       {
         version: '1.4.1',
         date: 'Sep 9, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'What\'s New changelog — version button next to the ? opens a modal with full history',
