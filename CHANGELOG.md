@@ -6,6 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.4.2] — 2026-09-10
+
+### Fixed
+- **Mobile sidebar** — Help (`?`) and version button were hidden because the entire subtitle row was `display: none`; the row is visible again with a compact layout
+- **Mobile Export / Import** — buttons were squished to the left; they now span the card in equal-width columns
+- **Comment save ghost form** — saving a comment no longer re-opens a pre-filled Add form with the same text
+
+---
+
 ## [1.4.1] — 2026-09-09
 
 ### Added
