@@ -13,7 +13,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 - **Mobile Export / Import** — buttons were squished to the left; they now span the card in equal-width columns
 - **Comment save ghost form** — saving a comment no longer re-opens a pre-filled Add form with the same text
 - **Holiday calendar dates** — fixed-date holidays (e.g. Independence Day) now highlight on the actual calendar date; when federal observance shifts (Sat→Fri / Sun→Mon), the observed day is also marked so skip-holidays still covers the day off
-- **Desktop sticky header** — date/add-form card no longer scrolls away with the board; pinned via flex layout so only the task columns scroll
+- **Desktop sticky header** — date/add-form card stays pinned while only the task board scrolls (flex layout on `#desk-view`)
+- **Desktop scroll regression** — an earlier flex-pin attempt targeted a non-existent `.desk-view` class and blocked scrolling; selector corrected to `#desk-view`
+- **Layout / CSS tests** — Playwright checks for desktop board scroll + pinned header, and mobile help/version + backup button width; unit invariants cover the `#desk-view` selector and mobile media rules
 
 ---
 
