@@ -2753,7 +2753,8 @@
       flex-direction: column;
     }
 
-    .desk-view {
+    /* Use #desk-view — the element is id-only (no class) in the markup */
+    #desk-view {
       max-width: 1240px;
       margin: 0 auto;
       width: 100%;
@@ -2765,8 +2766,7 @@
     }
 
     .desk-sticky {
-      /* Pinned via flex layout (not sticky) so the header stays put while
-         only the board scrolls — sticky was unreliable across scroll ancestors */
+      /* Pinned via flex layout so the header stays put while only the board scrolls */
       position: relative;
       flex-shrink: 0;
       z-index: 15;
@@ -5432,8 +5432,7 @@
         display: block;
       }
 
-      #desk-view,
-      .desk-view {
+      #desk-view {
         flex: none;
         height: auto;
         min-height: 0;
@@ -6309,6 +6308,9 @@
             'Mobile: Export / Import buttons were squished to the left — now equal-width and full card width',
             'Saving a comment no longer re-opens a duplicate Add form with the same text',
             'Holidays like Independence Day highlight on the actual date (Jul 4); observed weekday off is marked separately',
+            'Desktop: date/add-form header stays pinned while only the task board scrolls',
+            'Desktop scroll regression — flex pin targeted a missing .desk-view class; now uses #desk-view',
+            'Layout/CSS regression tests — desktop scroll+pin and mobile help/backup button checks',
           ]},
         ],
       },
