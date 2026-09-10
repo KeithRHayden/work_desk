@@ -12,6 +12,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 - **Mobile sidebar** — Help (`?`) and version button were hidden because the entire subtitle row was `display: none`; the row is visible again with a compact layout
 - **Mobile Export / Import** — buttons were squished to the left; they now span the card in equal-width columns
 - **Comment save ghost form** — saving a comment no longer re-opens a pre-filled Add form with the same text
+- **Holiday calendar dates** — fixed-date holidays (e.g. Independence Day) now highlight on the actual calendar date; when federal observance shifts (Sat→Fri / Sun→Mon), the observed day is also marked so skip-holidays still covers the day off
+- **Desktop sticky header** — date/add-form card no longer scrolls away with the board; pinned via flex layout so only the task columns scroll
 
 ---
 
