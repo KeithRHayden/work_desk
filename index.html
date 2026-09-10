@@ -2742,17 +2742,33 @@
     .desk-only.hidden,
     .insights-only.hidden { display: none !important; }
 
-    .main { flex: 1; padding: 24px 32px; max-width: 100%; min-width: 0; overflow-y: auto; height: 100vh; }
+    .main {
+      flex: 1;
+      padding: 24px 32px;
+      max-width: 100%;
+      min-width: 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
 
     .desk-view {
       max-width: 1240px;
       margin: 0 auto;
       width: 100%;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .desk-sticky {
-      position: sticky;
-      top: 0;
+      /* Pinned via flex layout (not sticky) so the header stays put while
+         only the board scrolls — sticky was unreliable across scroll ancestors */
+      position: relative;
+      flex-shrink: 0;
       z-index: 15;
       background: var(--panel-bg);
       padding: 12px 12px 2px;
@@ -2761,7 +2777,19 @@
       box-shadow: 0 2px 8px var(--shadow);
     }
 
-    .desk-board-area { min-height: 120px; }
+    .desk-board-area {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    #insights-view:not(.hidden),
+    #projects-view:not(.hidden) {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      width: 100%;
+    }
 
     .week-strip-row {
       display: none;
@@ -5401,6 +5429,29 @@
         overflow-y: visible;
         padding: 10px 14px 28px;
         flex: 1;
+        display: block;
+      }
+
+      #desk-view,
+      .desk-view {
+        flex: none;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+        display: block;
+      }
+
+      .desk-board-area {
+        flex: none;
+        overflow: visible;
+        min-height: 120px;
+      }
+
+      #insights-view:not(.hidden),
+      #projects-view:not(.hidden) {
+        flex: none;
+        overflow: visible;
+        height: auto;
       }
 
       .desk-sticky {
@@ -6013,7 +6064,7 @@
           <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag</li>
           <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define; optionally skip holidays</li>
-          <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar shows holiday dots</li>
+          <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
           <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
           <li><strong>Themes</strong> — 40 light and dark presets (20 each), browsable as mini wireframe previews in Options → Appearance</li>
@@ -6257,6 +6308,7 @@
             'Mobile: Help (?) and version button were hidden — subtitle row is visible again with compact controls',
             'Mobile: Export / Import buttons were squished to the left — now equal-width and full card width',
             'Saving a comment no longer re-opens a duplicate Add form with the same text',
+            'Holidays like Independence Day highlight on the actual date (Jul 4); observed weekday off is marked separately',
           ]},
         ],
       },
@@ -10781,11 +10833,23 @@
       const holidays = new Map();
       const add = (d, label) => holidays.set(formatDateKey(d), label);
 
-      add(holidayObservedDate(new Date(year, 0, 1)),   'New Year\'s Day');
-      add(holidayObservedDate(new Date(year, 5, 19)),  'Juneteenth');
-      add(holidayObservedDate(new Date(year, 6, 4)),   'Independence Day');
-      add(holidayObservedDate(new Date(year, 10, 11)), 'Veterans Day');
-      add(holidayObservedDate(new Date(year, 11, 25)), 'Christmas Day');
+      // Fixed-date: mark the actual calendar date, and also the federal
+      // observed day when it shifts (Sat→Fri / Sun→Mon) so the calendar
+      // shows e.g. Independence Day on Jul 4 while skip-holidays still
+      // covers the Friday/Monday people actually have off.
+      const addFixed = (actual, label) => {
+        add(actual, label);
+        const observed = holidayObservedDate(actual);
+        if (formatDateKey(observed) !== formatDateKey(actual)) {
+          add(observed, `${label} (observed)`);
+        }
+      };
+
+      addFixed(new Date(year, 0, 1),   'New Year\'s Day');
+      addFixed(new Date(year, 5, 19),  'Juneteenth');
+      addFixed(new Date(year, 6, 4),   'Independence Day');
+      addFixed(new Date(year, 10, 11), 'Veterans Day');
+      addFixed(new Date(year, 11, 25), 'Christmas Day');
 
       add(nthWeekdayOfMonth(year, 0, 1, 3),  'MLK Day');
       add(nthWeekdayOfMonth(year, 1, 1, 3),  'Presidents\' Day');
