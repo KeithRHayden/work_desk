@@ -2755,8 +2755,6 @@
 
     /* Use #desk-view — the element is id-only (no class) in the markup */
     #desk-view {
-      max-width: 1240px;
-      margin: 0 auto;
       width: 100%;
       flex: 1;
       min-height: 0;
@@ -2781,8 +2779,6 @@
       flex: 1;
       min-height: 0;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
     }
 
     #insights-view:not(.hidden),
@@ -4386,9 +4382,7 @@
       display: grid;
       grid-template-columns: 1.1fr 1.1fr 0.9fr;
       gap: 14px;
-      align-items: stretch;
-      flex: 1;
-      min-height: 0;
+      align-items: start;
       margin-bottom: 24px;
     }
 
