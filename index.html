@@ -2781,6 +2781,8 @@
       flex: 1;
       min-height: 0;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
     }
 
     #insights-view:not(.hidden),
@@ -4384,7 +4386,9 @@
       display: grid;
       grid-template-columns: 1.1fr 1.1fr 0.9fr;
       gap: 14px;
-      align-items: start;
+      align-items: stretch;
+      flex: 1;
+      min-height: 0;
       margin-bottom: 24px;
     }
 
