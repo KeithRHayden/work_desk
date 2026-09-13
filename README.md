@@ -135,6 +135,7 @@ work-desk/
 ├── tests/desk-logic.test.mjs
 ├── scripts/audit-init-order.mjs  # Guards against TDZ boot crashes in state init
 ├── e2e/smoke.spec.ts       # Playwright smoke tests
+├── e2e/layout.spec.ts      # Playwright layout/CSS regressions (scroll pin, mobile chrome)
 ├── playwright.config.ts
 ├── package.json            # Optional: unit + e2e scripts
 └── README.md
@@ -168,10 +169,13 @@ Requires Node.js. Unit tests need no extra packages; E2E needs Playwright (and a
 
 ```bash
 npm test                 # unit tests + init-order (TDZ) audit
-npm run test:e2e         # Playwright smoke (serves app on :4173)
+npm run test:e2e         # Playwright smoke + layout/CSS (serves app on :4173)
 npm run test:e2e:ui      # Playwright UI mode
 npm run test:all         # unit + e2e
 ```
+
+Layout/CSS coverage: unit invariants assert critical selectors (e.g. `#desk-view` flex pin, mobile logo-sub / backup grid). Playwright `e2e/layout.spec.ts` checks desktop board scroll with a pinned sticky header, and mobile help/version + Export/Import button width.
+
 
 E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), search overlay (result count, `#tagname` filtering, close/outside-click), project tasks (mid-edit preservation, empty-save deletion, cancel revert, tombstone tracking, double-click editing), dynamic add-form placeholder, and project note list padding. The auth modal is dismissed via **Continue offline**.
 
