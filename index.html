@@ -5555,8 +5555,8 @@
       </div>
       <div id="auth-error" class="auth-error hidden"></div>
       <div class="auth-fields">
-        <input id="auth-email"    class="auth-input" type="email"    placeholder="Email"    autocomplete="email" />
-        <input id="auth-password" class="auth-input" type="password" placeholder="Password" autocomplete="current-password" />
+        <input id="auth-email"    class="auth-input" type="email"    placeholder="Email"    autocomplete="email" name="email" aria-label="Email" />
+        <input id="auth-password" class="auth-input" type="password" placeholder="Password" autocomplete="current-password" name="password" aria-label="Password" />
       </div>
       <div class="auth-actions">
         <button id="auth-signin-btn" class="auth-btn primary" type="button">Sign in</button>
@@ -5704,14 +5704,9 @@
               </div>
               <button id="next-day" class="nav-arrow" aria-label="Next day">→</button>
               <div class="density-wrap">
-                <button id="density-toggle" class="density-toggle" type="button" aria-label="Customize" aria-haspopup="true" aria-expanded="false" title="Customize">
-                  <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <rect x="1"  y="2.25" width="9"  height="1.5" rx="0.75"/>
-                    <circle cx="13" cy="3"    r="1.75"/>
-                    <rect x="6"  y="7.25" width="9"  height="1.5" rx="0.75"/>
-                    <circle cx="3"  cy="8"    r="1.75"/>
-                    <rect x="1"  y="12.25" width="9" height="1.5" rx="0.75"/>
-                    <circle cx="13" cy="13"   r="1.75"/>
+                <button id="density-toggle" class="density-toggle" type="button" aria-label="Settings" aria-haspopup="true" aria-expanded="false" title="Settings">
+                  <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M19.14 12.94a7.07 7.07 0 0 0 .06-.94c0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.04 7.04 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.37 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>
                   </svg>
                 </button>
                 <div id="density-popout" class="density-popout hidden" role="dialog" aria-label="Customize">
@@ -5982,14 +5977,9 @@
               <button id="project-rename-btn" class="project-action-btn" type="button" title="Rename project">✏️</button>
               <button id="project-delete-btn" class="project-action-btn project-delete-btn" type="button" title="Delete project">🗑️</button>
               <div class="density-wrap">
-                <button id="project-customize-btn" class="project-action-btn" type="button" title="Customize" aria-label="Customize" aria-haspopup="true" aria-expanded="false">
-                  <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:14px;height:14px;">
-                    <rect x="1"  y="2.25" width="9"  height="1.5" rx="0.75"/>
-                    <circle cx="13" cy="3"    r="1.75"/>
-                    <rect x="6"  y="7.25" width="9"  height="1.5" rx="0.75"/>
-                    <circle cx="3"  cy="8"    r="1.75"/>
-                    <rect x="1"  y="12.25" width="9" height="1.5" rx="0.75"/>
-                    <circle cx="13" cy="13"   r="1.75"/>
+                <button id="project-customize-btn" class="project-action-btn" type="button" title="Settings" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
+                  <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:14px;height:14px;">
+                    <path d="M19.14 12.94a7.07 7.07 0 0 0 .06-.94c0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.04 7.04 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.37 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>
                   </svg>
                 </button>
               </div>
