@@ -6,10 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
-## [1.4.3] — 2026-09-16
+## [1.5.0] — 2026-09-16
 
 ### Added
 - **8 new themes** — Honey, Cloud, Peach, Olive (light) and Ember, Glacier, Plum, Storm (dark); total now 48 (24 light + 24 dark)
+- **Custom Theme Builder** — create up to 5 fully custom themes by choosing 5 colors (Background, Surface, Sidebar, Accent, Text) plus light/dark mode; all remaining ~30 CSS variables are automatically derived
+- **"Custom" filter tab** in the theme picker — browse, apply, edit, and delete custom themes alongside the 48 presets
+- **Native OS color picker + hex text input** for each color with a real-time live preview of the full app layout
+- **Cloud sync** for custom themes via the existing Supabase preferences system
+
+---
+
+## [1.4.3] — 2026-09-13
 
 ### Improved
 - **Settings icon** — theme/behavior button changed from horizontal-sliders to a standard gear icon (Material Design)
