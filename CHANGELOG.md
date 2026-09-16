@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.5.1] — 2026-09-16
+
+### Fixed
+- **Strikethrough text** — `<s>` and `<del>` tags were not in the `sanitizeHtml` whitelist, so any re-render (adding a tag, comment, or triggering `render()`) silently stripped strikethrough formatting, altering visible text and breaking word-wrap
+
+---
+
 ## [1.5.0] — 2026-09-16
 
 ### Added
@@ -14,6 +21,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 - **"Custom" filter tab** in the theme picker — browse, apply, edit, and delete custom themes alongside the 48 presets
 - **Native OS color picker + hex text input** for each color with a real-time live preview of the full app layout
 - **Cloud sync** for custom themes via the existing Supabase preferences system
+
+### Improved
+- **Settings popout** split into three tabs — Themes, Appearance, Behavior — so themes get dedicated space and layout/effects are easier to find
 
 ---
 
