@@ -189,7 +189,7 @@ E2E covers add → New, complete/uncomplete, reload persistence, export tombston
 
 ## Themes
 
-48 presets — 24 light + 24 dark — browsable as mini wireframe previews in Options → Appearance, filterable by Light/Dark/All.
+72 presets — 24 light + 24 medium + 24 dark — browsable as mini wireframe previews in Options → Themes, filterable by Light/Med/Dark.
 
 **Light (20):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Solarized, Sepia, Tokyo Day, Nord Light, Vaporwave, Synthwave, Cyberpunk, Outrun
 
