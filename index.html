@@ -9267,10 +9267,13 @@
       });
 
       document.addEventListener('click', (e) => {
-        if (!popout.classList.contains('hidden') && !popout.contains(e.target) && e.target !== btn
-            && !els.projectCustomizeBtn.contains(e.target)) {
-          closeDensityPopout();
-        }
+        if (popout.classList.contains('hidden')) return;
+        if (popout.contains(e.target) || e.target === btn || els.projectCustomizeBtn.contains(e.target)) return;
+        // Guard: buttons inside the custom-theme editor replace innerHTML on click,
+        // detaching the original target before this handler runs. Check bounding rect.
+        const r = popout.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
+        closeDensityPopout();
       });
 
       document.addEventListener('keydown', (e) => {
