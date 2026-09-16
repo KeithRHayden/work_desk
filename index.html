@@ -6007,12 +6007,13 @@
                 </button>
                 <div id="density-popout" class="density-popout hidden" role="dialog" aria-label="Customize">
                   <div class="options-nav">
-                    <button type="button" class="options-nav-btn active" data-options-tab="appearance">Appearance</button>
+                    <button type="button" class="options-nav-btn active" data-options-tab="themes">Themes</button>
+                    <button type="button" class="options-nav-btn" data-options-tab="appearance">Appearance</button>
                     <button type="button" class="options-nav-btn" data-options-tab="behavior">Behavior</button>
                   </div>
 
-                  <!-- Appearance Tab Pane -->
-                  <div class="options-pane" id="options-pane-appearance">
+                  <!-- Themes Tab Pane -->
+                  <div class="options-pane" id="options-pane-themes">
                     <div class="theme-filter-row">
                       <span class="density-popout-label" style="margin-bottom:0;">Theme</span>
                       <div class="theme-filter-group">
@@ -6024,8 +6025,10 @@
                     </div>
                     <div id="customize-theme-grid"></div>
                     <div id="custom-theme-panel" class="custom-theme-panel hidden"></div>
+                  </div>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                  <!-- Appearance Tab Pane -->
+                  <div class="options-pane hidden" id="options-pane-appearance">
                     <p class="density-popout-label">Card layout</p>
                     <div class="density-option-group">
                       <button class="density-option" data-density="comfortable" type="button">
@@ -6410,8 +6413,9 @@
 
         <h3>Options menu</h3>
         <ul>
-          <li>Open with the customize button (⊟) near the date; settings are split into <strong>Appearance</strong> and <strong>Behavior</strong> tabs</li>
-          <li><strong>Appearance</strong> — theme picker (48 presets with mini wireframe previews, filterable by Light/Dark/All, plus a Custom tab to create up to 5 of your own themes), Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
+          <li>Open with the customize button (⊟) near the date; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
+          <li><strong>Themes</strong> — 48 presets with mini wireframe previews, filterable by Light/Dark/All, plus a Custom tab to create up to 5 of your own themes</li>
+          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
           <li><strong>Behavior</strong> — organized into General, Tasks, Projects, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
         </ul>
 
@@ -6582,12 +6586,21 @@
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.5.0';
+    const APP_VERSION = '1.5.1';
     const CHANGELOG = [
+      {
+        version: '1.5.1',
+        date: 'Sep 16, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Strikethrough text (<s>/<del>) was silently stripped on every render — adding a tag, comment, or any re-render would alter the visible text and break word-wrap',
+          ]},
+        ],
+      },
       {
         version: '1.5.0',
         date: 'Sep 16, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             '8 new themes — Honey, Cloud, Peach, Olive (light) and Ember, Glacier, Plum, Storm (dark); total now 48 (24 light + 24 dark)',
@@ -6595,6 +6608,9 @@
             'New "Custom" filter tab in the theme picker — browse, apply, edit, and delete your custom themes alongside the 48 presets',
             'Native OS color picker + hex text input for each color, with a real-time live preview of the full app layout',
             'Custom themes sync across devices via the existing cloud preferences system',
+          ]},
+          { label: 'Improved', items: [
+            'Settings popout split into three tabs — Themes, Appearance, Behavior — so themes get dedicated space and layout/effects are easier to find',
           ]},
         ],
       },
@@ -7863,7 +7879,8 @@
         addBtn.type = 'button';
         addBtn.title = 'Create new theme';
         addBtn.textContent = '+';
-        addBtn.addEventListener('click', () => {
+        addBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
           customEditorState = { id: null, name: '', dark: false, bg: '#f4f2ee', surface: '#ffffff', sidebar: '#1e2433', accent: '#3b6fd9', text: '#1a1f2e' };
           renderCustomThemePanel();
         });
@@ -8082,7 +8099,8 @@
       cancelBtn.className = 'custom-btn custom-btn-secondary';
       cancelBtn.type = 'button';
       cancelBtn.textContent = 'Cancel';
-      cancelBtn.addEventListener('click', () => {
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         customEditorState = null;
         renderCustomThemePanel();
       });
@@ -8092,7 +8110,8 @@
       saveBtn.className = 'custom-btn custom-btn-primary';
       saveBtn.type = 'button';
       saveBtn.textContent = isNew ? 'Create' : 'Save';
-      saveBtn.addEventListener('click', () => {
+      saveBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const trimmed = s.name.trim();
         if (!trimmed) { nameInput.focus(); return; }
         const payload = { name: trimmed, dark: s.dark, bg: s.bg, surface: s.surface, sidebar: s.sidebar, accent: s.accent, text: s.text };
@@ -8382,7 +8401,7 @@
 
     const BULLET_LINE_RE = /^[•\-\*○◦▪▸\u2022\u2023\u25E6\u2043\u2219]\s*(.*)$/;
     const NUMBERED_LINE_RE = /^\d+[.)]\s+\S/;
-    const INLINE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U']);
+    const INLINE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'DEL']);
     const SENTENCE_END_RE = /[.!?:]["'""»)\]]*$/;
 
     function plainTextToRichHtml(text) {
@@ -8628,7 +8647,7 @@
       const tag = node.tagName;
       if (tag === 'BR') return '<br>';
       if (tag === 'UL' || tag === 'OL') return serializeEditorNode(node);
-      if (['B', 'STRONG', 'I', 'EM', 'U'].includes(tag)) {
+      if (['B', 'STRONG', 'I', 'EM', 'U', 'S', 'DEL'].includes(tag)) {
         const inner = Array.from(node.childNodes).map((child) => serializeEditorInline(child)).join('');
         return `<${tag.toLowerCase()}>${inner}</${tag.toLowerCase()}>`;
       }
@@ -8683,7 +8702,7 @@
         return repairMashedBullets(plainTextToRichHtml(decodeHtmlEntities(html)));
       }
 
-      const INLINE_ALLOWED = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR']);
+      const INLINE_ALLOWED = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'DEL', 'BR']);
       const LIST_ALLOWED = new Set(['UL', 'OL', 'LI']);
       const BLOCK_TAGS = new Set([
         'P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
@@ -9086,11 +9105,11 @@
           popout.querySelectorAll('.options-nav-btn').forEach(b => b.classList.remove('active'));
           tabBtn.classList.add('active');
           const targetTab = tabBtn.dataset.optionsTab;
-          const appearancePane = document.getElementById('options-pane-appearance');
-          const behaviorPane = document.getElementById('options-pane-behavior');
-          if (appearancePane) appearancePane.classList.toggle('hidden', targetTab !== 'appearance');
-          if (behaviorPane) behaviorPane.classList.toggle('hidden', targetTab !== 'behavior');
-          if (targetTab === 'appearance') renderThemeSwatches();
+          ['themes', 'appearance', 'behavior'].forEach(p => {
+            const el = document.getElementById('options-pane-' + p);
+            if (el) el.classList.toggle('hidden', p !== targetTab);
+          });
+          if (targetTab === 'themes') renderThemeSwatches();
         });
       });
 
