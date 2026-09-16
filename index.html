@@ -6448,7 +6448,7 @@
     const CHANGELOG = [
       {
         version: '1.4.3',
-        date: 'Sep 13, 2026',
+        date: 'Sep 16, 2026',
         tag: 'latest',
         sections: [
           { label: 'Added', items: [
@@ -7052,59 +7052,61 @@
 
     // ── Theme system ───────────────────────────────────────────────────────────
     const THEMES = [
-      // Light — Neutral/minimal
+      // Light — Blue/cool
       { id: '',                name: 'Default',   sidebar: '#1e2433', bg: '#f4f2ee', surface: '#ffffff', accent: '#3b6fd9', dark: false },
       { id: 'slate',           name: 'Slate',     sidebar: '#334155', bg: '#f1f5f9', surface: '#ffffff', accent: '#3b82f6', dark: false },
       { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', bg: '#f0f6ff', surface: '#ffffff', accent: '#0ea5e9', dark: false },
-      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', surface: '#ffffff', accent: '#555555', dark: false },
+      { id: 'cloud',           name: 'Cloud',     sidebar: '#283848', bg: '#f4f8fc', surface: '#ffffff', accent: '#4a90d9', dark: false },
+      { id: 'nord-light',      name: 'Nord Light',sidebar: '#2e3440', bg: '#eceff4', surface: '#ffffff', accent: '#5e81ac', dark: false },
+      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', surface: '#e9e9ec', accent: '#7aa2f7', dark: false },
+      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', bg: '#fdf6e3', surface: '#eee8d5', accent: '#268bd2', dark: false },
+      // Light — Green/earth
+      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', bg: '#f0faf4', surface: '#ffffff', accent: '#16a34a', dark: false },
+      { id: 'sage',            name: 'Sage',      sidebar: '#1f3024', bg: '#f1f5f2', surface: '#ffffff', accent: '#3b7a57', dark: false },
+      { id: 'olive',           name: 'Olive',     sidebar: '#2a3020', bg: '#f2f0e6', surface: '#fafaf4', accent: '#6a8040', dark: false },
       // Light — Warm/earthy
       { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', bg: '#fdf6ee', surface: '#ffffff', accent: '#b5611a', dark: false },
       { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', bg: '#f7f0e6', surface: '#fffcf8', accent: '#d2691e', dark: false },
+      { id: 'honey',           name: 'Honey',     sidebar: '#4a3010', bg: '#fef9ec', surface: '#fffef8', accent: '#d4940a', dark: false },
+      { id: 'sepia',           name: 'Sepia',     sidebar: '#382a1d', bg: '#f4ecd8', surface: '#faf6eb', accent: '#8c5828', dark: false },
+      // Light — Red/pink
       { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', bg: '#fff5f0', surface: '#ffffff', accent: '#f05040', dark: false },
+      { id: 'peach',           name: 'Peach',     sidebar: '#5a2838', bg: '#fff5ee', surface: '#ffffff', accent: '#e87050', dark: false },
       { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', bg: '#fff1f2', surface: '#ffffff', accent: '#f43f5e', dark: false },
       { id: 'sakura',          name: 'Sakura',    sidebar: '#4a1525', bg: '#fdf2f4', surface: '#ffffff', accent: '#e11d48', dark: false },
-      // Light — Nature/elegant
-      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', bg: '#f0faf4', surface: '#ffffff', accent: '#16a34a', dark: false },
-      { id: 'sage',            name: 'Sage',      sidebar: '#1f3024', bg: '#f1f5f2', surface: '#ffffff', accent: '#3b7a57', dark: false },
+      // Light — Purple/neutral
       { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', bg: '#f3f0fa', surface: '#ffffff', accent: '#7c3aed', dark: false },
-      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', bg: '#fdf6e3', surface: '#eee8d5', accent: '#268bd2', dark: false },
-      { id: 'sepia',           name: 'Sepia',     sidebar: '#382a1d', bg: '#f4ecd8', surface: '#faf6eb', accent: '#8c5828', dark: false },
-      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', surface: '#e9e9ec', accent: '#7aa2f7', dark: false },
-      { id: 'nord-light',      name: 'Nord Light',sidebar: '#2e3440', bg: '#eceff4', surface: '#ffffff', accent: '#5e81ac', dark: false },
-      // Light — Soft/airy
-      { id: 'honey',           name: 'Honey',     sidebar: '#4a3010', bg: '#fef9ec', surface: '#fffef8', accent: '#d4940a', dark: false },
-      { id: 'cloud',           name: 'Cloud',     sidebar: '#283848', bg: '#f4f8fc', surface: '#ffffff', accent: '#4a90d9', dark: false },
-      { id: 'peach',           name: 'Peach',     sidebar: '#5a2838', bg: '#fff5ee', surface: '#ffffff', accent: '#e87050', dark: false },
-      { id: 'olive',           name: 'Olive',     sidebar: '#2a3020', bg: '#f2f0e6', surface: '#fafaf4', accent: '#6a8040', dark: false },
+      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', surface: '#ffffff', accent: '#555555', dark: false },
       // Light — Neon/vibrant
       { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#a8e8ff', surface: '#ccf4ff', accent: '#ff1493', dark: false },
       { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', bg: '#d8c0f0', surface: '#ece0f8', accent: '#ff2d95', dark: false },
       { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', bg: '#d9dce3', surface: '#f3f5f8', accent: '#00d084', dark: false },
       { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', bg: '#ffe0c8', surface: '#fff0e4', accent: '#ff2d95', dark: false },
-      // Dark — Base/neutral
+      // Dark — Blue/cool
       { id: 'dark',            name: 'Default',   sidebar: '#0d1017', bg: '#12151c', surface: '#1a1f2b', accent: '#5b8def', dark: true  },
       { id: 'oled',            name: 'OLED',      sidebar: '#000000', bg: '#000000', surface: '#0c0c0c', accent: '#3b82f6', dark: true  },
       { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', bg: '#242933', surface: '#2e3440', accent: '#88c0d0', dark: true  },
-      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', surface: '#383a4a', accent: '#bd93f9', dark: true  },
-      { id: 'catppuccin',      name: 'Catppuccin',sidebar: '#181825', bg: '#1e1e2e', surface: '#313244', accent: '#cba6f7', dark: true  },
       { id: 'tokyo-storm',     name: 'Tokyo Storm',sidebar: '#1f2335',bg: '#24283b', surface: '#292e42', accent: '#7aa2f7', dark: true  },
       { id: 'solarized-dark',  name: 'Solarized', sidebar: '#011d27', bg: '#002b36', surface: '#073642', accent: '#268bd2', dark: true  },
-      { id: 'gruvbox-dark',    name: 'Gruvbox',   sidebar: '#1d2021', bg: '#282828', surface: '#3c3836', accent: '#fe8019', dark: true  },
-      // Dark — Atmospheric
-      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', bg: '#051320', surface: '#07192b', accent: '#22d3ee', dark: true  },
-      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', surface: '#143323', accent: '#46d17c', dark: true  },
-      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0e0620', surface: '#160a30', accent: '#a78bfa', dark: true  },
-      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', surface: '#1e1006', accent: '#f59e0b', dark: true  },
-      // Dark — Moody/rich
       { id: 'midnight',        name: 'Midnight',  sidebar: '#050810', bg: '#070a14', surface: '#0d1224', accent: '#6080e8', dark: true  },
-      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', surface: '#1c1c1c', accent: '#c8a84a', dark: true  },
-      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', surface: '#261610', accent: '#d4883c', dark: true  },
-      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', surface: '#2a1018', accent: '#e8608a', dark: true  },
-      // Dark — Elemental
-      { id: 'ember',           name: 'Ember',     sidebar: '#100604', bg: '#1a0e08', surface: '#281810', accent: '#e06830', dark: true  },
+      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', bg: '#051320', surface: '#07192b', accent: '#22d3ee', dark: true  },
       { id: 'glacier',         name: 'Glacier',   sidebar: '#04101a', bg: '#08141e', surface: '#0e1e2c', accent: '#40b8e0', dark: true  },
-      { id: 'plum',            name: 'Plum',      sidebar: '#0c0410', bg: '#140818', surface: '#221028', accent: '#b868d8', dark: true  },
       { id: 'storm',           name: 'Storm',     sidebar: '#0a0e12', bg: '#101418', surface: '#181e24', accent: '#6898d0', dark: true  },
+      // Dark — Green/earth
+      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', surface: '#143323', accent: '#46d17c', dark: true  },
+      // Dark — Warm/amber
+      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', surface: '#1e1006', accent: '#f59e0b', dark: true  },
+      { id: 'gruvbox-dark',    name: 'Gruvbox',   sidebar: '#1d2021', bg: '#282828', surface: '#3c3836', accent: '#fe8019', dark: true  },
+      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', surface: '#261610', accent: '#d4883c', dark: true  },
+      { id: 'ember',           name: 'Ember',     sidebar: '#100604', bg: '#1a0e08', surface: '#281810', accent: '#e06830', dark: true  },
+      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', surface: '#1c1c1c', accent: '#c8a84a', dark: true  },
+      // Dark — Red/pink
+      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', surface: '#2a1018', accent: '#e8608a', dark: true  },
+      // Dark — Purple
+      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', surface: '#383a4a', accent: '#bd93f9', dark: true  },
+      { id: 'catppuccin',      name: 'Catppuccin',sidebar: '#181825', bg: '#1e1e2e', surface: '#313244', accent: '#cba6f7', dark: true  },
+      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0e0620', surface: '#160a30', accent: '#a78bfa', dark: true  },
+      { id: 'plum',            name: 'Plum',      sidebar: '#0c0410', bg: '#140818', surface: '#221028', accent: '#b868d8', dark: true  },
       // Dark — Neon/vibrant
       { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', surface: '#16082e', accent: '#ff71ce', dark: true  },
       { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', surface: '#121218', accent: '#00ff9f', dark: true  },
