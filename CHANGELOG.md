@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.4.3] — 2026-09-13
+
+### Added
+- **8 new themes** — Honey, Cloud, Peach, Olive (light) and Ember, Glacier, Plum, Storm (dark); total now 48 (24 light + 24 dark)
+
+### Improved
+- **Settings icon** — theme/behavior button changed from horizontal-sliders to a standard gear icon (Material Design)
+- **Password autofill** — login form fields now have `aria-label` and `name` attributes so password managers can identify them
+
+### Fixed
+- **Board width** — a stale `max-width: 1240px` on `#desk-view` was narrowing the desk on wide screens; removed
+
+---
+
 ## [1.4.2] — 2026-09-10
 
 ### Fixed
