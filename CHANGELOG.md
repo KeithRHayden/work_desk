@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.6.0] — 2026-09-16
+
+### Added
+- **24 medium themes** — a new brightness tier between Light and Dark: Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Lichen, Fern, Tundra, Moss, Basalt, Driftwood, Clay, Sandstone, Umber, Flint, Twilight, Haze, Plum Mid, Mulberry, Ash, Graphite, Concrete
+- **"Med" filter** in the theme picker — browse medium-tone themes grouped by color family (Blue/Cool, Green/Earth, Warm/Earthy, Purple/Pink, Neutral/Gray)
+
+### Improved
+- Theme count raised to **72** (24 light + 24 medium + 24 dark) plus unlimited custom themes
+- **"All" filter removed** — replaced with dedicated Light | Med | Dark | Custom filters for faster browsing
+
+---
+
 ## [1.5.1] — 2026-09-16
 
 ### Fixed
