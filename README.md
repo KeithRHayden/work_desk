@@ -47,7 +47,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 ### Customization
 
-- **40 themes** — 20 light + 20 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, etc.), browsed as mini wireframe previews, filterable by Light/Dark/All
+- **48 themes** — 24 light + 24 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Glacier, Ember, etc.), browsed as mini wireframe previews, filterable by Light/Dark/All
 - **Options menu** — tabbed **Appearance** / **Behavior** panels (customize button ⊟ near the date)
   - Appearance: theme, Comfortable/Compact density, strike-through completed tasks
   - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view (remember last viewed vs. always open Today), celebration confetti, truncate long project notes
@@ -188,7 +188,7 @@ E2E covers add → New, complete/uncomplete, reload persistence, export tombston
 
 ## Themes
 
-40 presets — 20 light + 20 dark — browsable as mini wireframe previews in Options → Appearance, filterable by Light/Dark/All.
+48 presets — 24 light + 24 dark — browsable as mini wireframe previews in Options → Appearance, filterable by Light/Dark/All.
 
 **Light (20):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Solarized, Sepia, Tokyo Day, Nord Light, Vaporwave, Synthwave, Cyberpunk, Outrun
 
