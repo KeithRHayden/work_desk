@@ -193,7 +193,11 @@
     [data-theme="oled"],
     [data-theme="catppuccin"],
     [data-theme="tokyo-storm"],
-    [data-theme="gruvbox-dark"] {
+    [data-theme="gruvbox-dark"],
+    [data-theme="ember"],
+    [data-theme="glacier"],
+    [data-theme="plum"],
+    [data-theme="storm"] {
       --text: #e8ecf3; --text-muted: #919aad; --done: #6b7588;
       --note-bg: #252218; --note-border: #3d3628; --danger: #f07171;
       --shadow: 0 1px 4px rgba(0,0,0,.35); --tooltip-text: #ffffff;
@@ -534,6 +538,78 @@
       --sidebar-tab-active-bg: color-mix(in srgb, #fe8019 28%, transparent);
       --sidebar-cal-selected-bg: color-mix(in srgb, #fe8019 22%, transparent);
       --sidebar-cal-today-ring: color-mix(in srgb, #fe8019 60%, transparent);
+    }
+
+    /* Ember — smoldering charcoal, warm red-orange glow */
+    [data-theme="ember"] {
+      --bg: #1a0e08; --surface: #281810; --panel-bg: #140a06; --input-bg: #281810;
+      --sidebar: #100604; --sidebar-text: #c07848; --sidebar-active: #f0b888;
+      --sidebar-muted: #704028; --sidebar-border: rgba(220,100,40,.12);
+      --sidebar-hover: rgba(220,100,40,.08); --sidebar-btn-border: rgba(220,100,40,.16);
+      --accent: #e06830; --accent-hover: #f09040; --accent-light: #3a1c0c;
+      --text: #f0dcd0; --text-muted: #a08068;
+      --border: #3a2018; --tooltip-bg: #281810;
+      --done: #8a5838; --shelved-label: #b07848;
+      --note-bg: #221410; --note-border: #3a2818;
+      --shelved-border: #3a2818;
+      --move-hover-bg: #281c10; --delete-hover-bg: #2e1010; --shelf-hover-bg: #241814;
+      --sidebar-tab-active-bg: color-mix(in srgb, #e06830 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #e06830 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #f09040 60%, transparent);
+    }
+
+    /* Glacier — deep frozen blue, icy cyan accent */
+    [data-theme="glacier"] {
+      --bg: #08141e; --surface: #0e1e2c; --panel-bg: #060f18; --input-bg: #0e1e2c;
+      --sidebar: #04101a; --sidebar-text: #60a0c0; --sidebar-active: #a0d8f0;
+      --sidebar-muted: #385870; --sidebar-border: rgba(100,200,240,.1);
+      --sidebar-hover: rgba(100,200,240,.07); --sidebar-btn-border: rgba(100,200,240,.14);
+      --accent: #40b8e0; --accent-hover: #60d0f0; --accent-light: #0c2838;
+      --text: #d8ecf4; --text-muted: #6898b0;
+      --border: #183048; --tooltip-bg: #0e1e2c;
+      --done: #386888; --shelved-label: #508098;
+      --note-bg: #0c1c28; --note-border: #1e3850;
+      --shelved-border: #1e3850;
+      --move-hover-bg: #101e2c; --delete-hover-bg: #201418; --shelf-hover-bg: #0e1c28;
+      --sidebar-tab-active-bg: color-mix(in srgb, #40b8e0 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #40b8e0 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #60d0f0 60%, transparent);
+    }
+
+    /* Plum — rich dark wine-purple, amethyst accent */
+    [data-theme="plum"] {
+      --bg: #140818; --surface: #221028; --panel-bg: #100614; --input-bg: #221028;
+      --sidebar: #0c0410; --sidebar-text: #a870b8; --sidebar-active: #d8a8e8;
+      --sidebar-muted: #604870; --sidebar-border: rgba(180,120,200,.12);
+      --sidebar-hover: rgba(180,120,200,.08); --sidebar-btn-border: rgba(180,120,200,.16);
+      --accent: #b868d8; --accent-hover: #d088f0; --accent-light: #2a1238;
+      --text: #e8d8f0; --text-muted: #9878a8;
+      --border: #381e48; --tooltip-bg: #221028;
+      --done: #7a5090; --shelved-label: #a070b8;
+      --note-bg: #1c0e22; --note-border: #3a2048;
+      --shelved-border: #3a2048;
+      --move-hover-bg: #221430; --delete-hover-bg: #281020; --shelf-hover-bg: #1e1028;
+      --sidebar-tab-active-bg: color-mix(in srgb, #b868d8 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #b868d8 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #d088f0 60%, transparent);
+    }
+
+    /* Storm — dark steel-gray, electric white-blue accent */
+    [data-theme="storm"] {
+      --bg: #101418; --surface: #181e24; --panel-bg: #0c1014; --input-bg: #181e24;
+      --sidebar: #0a0e12; --sidebar-text: #7888a0; --sidebar-active: #c0d0e8;
+      --sidebar-muted: #485868; --sidebar-border: rgba(140,170,210,.1);
+      --sidebar-hover: rgba(140,170,210,.07); --sidebar-btn-border: rgba(140,170,210,.14);
+      --accent: #6898d0; --accent-hover: #88b0e0; --accent-light: #1a2838;
+      --text: #d8e0ea; --text-muted: #7888a0;
+      --border: #283040; --tooltip-bg: #181e24;
+      --done: #506880; --shelved-label: #607890;
+      --note-bg: #141a20; --note-border: #283040;
+      --shelved-border: #283040;
+      --move-hover-bg: #182028; --delete-hover-bg: #201418; --shelf-hover-bg: #141c24;
+      --sidebar-tab-active-bg: color-mix(in srgb, #6898d0 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #6898d0 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #88b0e0 60%, transparent);
     }
 
     /* Solarized Light */
@@ -909,6 +985,90 @@
       --sidebar-tab-active-bg: color-mix(in srgb, #8c5828 28%, transparent);
       --sidebar-cal-selected-bg: color-mix(in srgb, #8c5828 22%, transparent);
       --sidebar-cal-today-ring: color-mix(in srgb, #8c5828 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Honey — golden warmth, deep amber sidebar, marigold accent */
+    [data-theme="honey"] {
+      --bg: #fef9ec; --surface: #fffef8; --panel-bg: #f8f0d8; --input-bg: #fffef8;
+      --sidebar: #4a3010; --sidebar-text: #d4a860; --sidebar-active: #fef9ec;
+      --sidebar-muted: #9a7840; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #d4940a; --accent-hover: #b07808; --accent-light: #fdefc0;
+      --text: #2a2008; --text-muted: #7a6838;
+      --border: #e8d8a8; --done: #b0a060;
+      --note-bg: #fffae8; --note-border: #e8d098;
+      --danger: #c0392b; --danger-surface: #fce8e6; --danger-surface-hover: #f8d0cc; --danger-border: #f0b0a8;
+      --shelved-border: #d8c898; --shelved-label: #8a7840;
+      --move-hover-bg: #fffce8; --delete-hover-bg: #fce8e6; --shelf-hover-bg: #f8f0dc;
+      --shadow: 0 1px 4px rgba(60,40,10,.08); --modal-overlay: rgba(42,32,8,.45); --modal-shadow: 0 8px 32px rgba(60,40,10,.14);
+      --tooltip-bg: #4a3010; --tooltip-text: #fef9ec;
+      --sidebar-tab-active-bg: color-mix(in srgb, #d4940a 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #d4940a 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #d4940a 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Cloud — airy sky-white, soft blue-gray sidebar, gentle sky-blue accent */
+    [data-theme="cloud"] {
+      --bg: #f4f8fc; --surface: #ffffff; --panel-bg: #eaf0f8; --input-bg: #ffffff;
+      --sidebar: #283848; --sidebar-text: #90aac0; --sidebar-active: #f4f8fc;
+      --sidebar-muted: #5a7a90; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #4a90d9; --accent-hover: #3578c0; --accent-light: #dce8f8;
+      --text: #1a2838; --text-muted: #5a6878;
+      --border: #d0dce8; --done: #88a0b8;
+      --note-bg: #f8fbff; --note-border: #c8d8e8;
+      --danger: #dc2626; --danger-surface: #fef2f2; --danger-surface-hover: #fee2e2; --danger-border: #fecaca;
+      --shelved-border: #b8c8d8; --shelved-label: #6080a0;
+      --move-hover-bg: #f0f8ff; --delete-hover-bg: #fef2f2; --shelf-hover-bg: #eaf0f8;
+      --shadow: 0 1px 4px rgba(20,40,60,.07); --modal-overlay: rgba(26,40,56,.45); --modal-shadow: 0 8px 32px rgba(20,40,60,.14);
+      --tooltip-bg: #283848; --tooltip-text: #f4f8fc;
+      --sidebar-tab-active-bg: color-mix(in srgb, #4a90d9 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #4a90d9 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #4a90d9 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Peach — warm apricot glow, deep mauve sidebar, salmon-pink accent */
+    [data-theme="peach"] {
+      --bg: #fff5ee; --surface: #ffffff; --panel-bg: #ffeee0; --input-bg: #ffffff;
+      --sidebar: #5a2838; --sidebar-text: #e8a0a8; --sidebar-active: #fff5ee;
+      --sidebar-muted: #b87080; --sidebar-border: rgba(255,255,255,.1);
+      --sidebar-hover: rgba(255,255,255,.08); --sidebar-btn-border: rgba(255,255,255,.15);
+      --accent: #e87050; --accent-hover: #d05838; --accent-light: #ffdcd0;
+      --text: #2a1410; --text-muted: #7a5048;
+      --border: #f0d0c0; --done: #c09080;
+      --note-bg: #fff8f0; --note-border: #f0c8b0;
+      --danger: #c0392b; --danger-surface: #fce8e6; --danger-surface-hover: #f8d0cc; --danger-border: #f0b0a8;
+      --shelved-border: #e8c0b0; --shelved-label: #a07060;
+      --move-hover-bg: #fff8e8; --delete-hover-bg: #fce8e6; --shelf-hover-bg: #ffeee4;
+      --shadow: 0 1px 4px rgba(80,30,20,.08); --modal-overlay: rgba(42,20,16,.45); --modal-shadow: 0 8px 32px rgba(80,30,20,.14);
+      --tooltip-bg: #5a2838; --tooltip-text: #fff5ee;
+      --sidebar-tab-active-bg: color-mix(in srgb, #e87050 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #e87050 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #e87050 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Olive — muted khaki earth, deep olive sidebar, warm olive-green accent */
+    [data-theme="olive"] {
+      --bg: #f2f0e6; --surface: #fafaf4; --panel-bg: #e8e6d8; --input-bg: #fafaf4;
+      --sidebar: #2a3020; --sidebar-text: #a0b088; --sidebar-active: #f2f0e6;
+      --sidebar-muted: #607050; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #6a8040; --accent-hover: #546830; --accent-light: #e0e8d0;
+      --text: #1a2010; --text-muted: #5a6648;
+      --border: #d0ccb8; --done: #98a080;
+      --note-bg: #f8f8ee; --note-border: #d8d4bc;
+      --danger: #b03020; --danger-surface: #fce8e6; --danger-surface-hover: #f8d0cc; --danger-border: #f0b0a8;
+      --shelved-border: #c0bcaa; --shelved-label: #70784e;
+      --move-hover-bg: #f8f8ee; --delete-hover-bg: #fce8e6; --shelf-hover-bg: #ece8dc;
+      --shadow: 0 1px 4px rgba(30,40,20,.08); --modal-overlay: rgba(26,32,16,.45); --modal-shadow: 0 8px 32px rgba(30,40,20,.14);
+      --tooltip-bg: #2a3020; --tooltip-text: #f2f0e6;
+      --sidebar-tab-active-bg: color-mix(in srgb, #6a8040 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #6a8040 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #6a8040 60%, transparent);
       color-scheme: light;
     }
 
@@ -6054,7 +6214,7 @@
           <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
           <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
-          <li><strong>Themes</strong> — 40 light and dark presets (20 each), browsable as mini wireframe previews in Options → Appearance</li>
+          <li><strong>Themes</strong> — 48 light and dark presets (24 each), browsable as mini wireframe previews in Options → Appearance</li>
           <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
           <li><strong>What's New</strong> — click the version number at the bottom of the sidebar to see the latest changes; a pulsing dot appears when there's an unread update</li>
@@ -6284,12 +6444,28 @@
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.4.2';
+    const APP_VERSION = '1.4.3';
     const CHANGELOG = [
+      {
+        version: '1.4.3',
+        date: 'Sep 13, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            '8 new themes — Honey, Cloud, Peach, Olive (light) and Ember, Glacier, Plum, Storm (dark)',
+          ]},
+          { label: 'Improved', items: [
+            'Settings button uses a standard gear icon instead of sliders (Material Design convention)',
+            'Login form: password field has proper aria-label and name for password manager autofill',
+          ]},
+          { label: 'Fixed', items: [
+            'Board width regression — stale max-width: 1240px was limiting the desk panel on wide screens',
+          ]},
+        ],
+      },
       {
         version: '1.4.2',
         date: 'Sep 10, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'Mobile: Help (?) and version button were hidden — subtitle row is visible again with compact controls',
@@ -6411,7 +6587,7 @@
             'Activity heatmap — GitHub-style grid in the year view',
             'Carry-over tracking with carriedFrom field',
             'Remember last tab and date on refresh',
-            '40 themes — 20 light, 20 dark with mini wireframe swatches',
+            '48 themes — 24 light, 24 dark with mini wireframe swatches',
             'Confetti toggle, week start day, and startup view options',
           ]},
           { label: 'Improved', items: [
@@ -6895,6 +7071,11 @@
       { id: 'sepia',           name: 'Sepia',     sidebar: '#382a1d', bg: '#f4ecd8', surface: '#faf6eb', accent: '#8c5828', dark: false },
       { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', surface: '#e9e9ec', accent: '#7aa2f7', dark: false },
       { id: 'nord-light',      name: 'Nord Light',sidebar: '#2e3440', bg: '#eceff4', surface: '#ffffff', accent: '#5e81ac', dark: false },
+      // Light — Soft/airy
+      { id: 'honey',           name: 'Honey',     sidebar: '#4a3010', bg: '#fef9ec', surface: '#fffef8', accent: '#d4940a', dark: false },
+      { id: 'cloud',           name: 'Cloud',     sidebar: '#283848', bg: '#f4f8fc', surface: '#ffffff', accent: '#4a90d9', dark: false },
+      { id: 'peach',           name: 'Peach',     sidebar: '#5a2838', bg: '#fff5ee', surface: '#ffffff', accent: '#e87050', dark: false },
+      { id: 'olive',           name: 'Olive',     sidebar: '#2a3020', bg: '#f2f0e6', surface: '#fafaf4', accent: '#6a8040', dark: false },
       // Light — Neon/vibrant
       { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#a8e8ff', surface: '#ccf4ff', accent: '#ff1493', dark: false },
       { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', bg: '#d8c0f0', surface: '#ece0f8', accent: '#ff2d95', dark: false },
@@ -6919,6 +7100,11 @@
       { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', surface: '#1c1c1c', accent: '#c8a84a', dark: true  },
       { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', surface: '#261610', accent: '#d4883c', dark: true  },
       { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', surface: '#2a1018', accent: '#e8608a', dark: true  },
+      // Dark — Elemental
+      { id: 'ember',           name: 'Ember',     sidebar: '#100604', bg: '#1a0e08', surface: '#281810', accent: '#e06830', dark: true  },
+      { id: 'glacier',         name: 'Glacier',   sidebar: '#04101a', bg: '#08141e', surface: '#0e1e2c', accent: '#40b8e0', dark: true  },
+      { id: 'plum',            name: 'Plum',      sidebar: '#0c0410', bg: '#140818', surface: '#221028', accent: '#b868d8', dark: true  },
+      { id: 'storm',           name: 'Storm',     sidebar: '#0a0e12', bg: '#101418', surface: '#181e24', accent: '#6898d0', dark: true  },
       // Dark — Neon/vibrant
       { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', surface: '#16082e', accent: '#ff71ce', dark: true  },
       { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', surface: '#121218', accent: '#00ff9f', dark: true  },
