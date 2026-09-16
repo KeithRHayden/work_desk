@@ -1342,6 +1342,142 @@
       color: var(--text); font-weight: 600;
     }
 
+    /* ── Custom theme builder ─────────────────────────── */
+    .custom-theme-panel.hidden { display: none; }
+    .custom-theme-panel { margin-top: 2px; }
+
+    .custom-themes-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .custom-count {
+      font-size: 0.65rem; color: var(--text-muted); font-weight: 500;
+    }
+    .custom-swatches-row {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start;
+    }
+    .custom-swatch-wrap {
+      position: relative;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .custom-swatch-delete {
+      position: absolute; top: -1px; right: -1px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--danger); color: #fff;
+      border: 1.5px solid var(--surface);
+      font-size: 8px; font-weight: 700;
+      display: none; align-items: center; justify-content: center;
+      cursor: pointer; line-height: 1; z-index: 1;
+    }
+    .custom-swatch-wrap:hover .custom-swatch-delete { display: flex; }
+    .custom-add-tile {
+      width: 48px; height: 32px; border-radius: 6px;
+      border: 2px dashed var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted);
+      font-size: 16px; font-weight: 400;
+      transition: border-color 0.15s, color 0.15s;
+      background: transparent;
+    }
+    .custom-add-tile:hover { border-color: var(--accent); color: var(--accent); }
+
+    .custom-editor {
+      margin-top: 10px; padding: 10px;
+      background: var(--panel-bg);
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    .custom-editor.hidden { display: none; }
+    .custom-editor-title {
+      font-size: 0.72rem; font-weight: 600; color: var(--text); margin-bottom: 10px;
+    }
+    .custom-editor-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .custom-editor-label {
+      font-size: 0.7rem; font-weight: 500; color: var(--text);
+      width: 68px; flex-shrink: 0;
+    }
+    .custom-editor-name {
+      flex: 1; font-size: 0.72rem; padding: 4px 8px;
+      border-radius: 6px; border: 1px solid var(--border);
+      background: var(--input-bg); color: var(--text); outline: none;
+    }
+    .custom-editor-name:focus { border-color: var(--accent); }
+    .custom-mode-toggle {
+      display: flex; gap: 2px; background: var(--surface);
+      border-radius: 5px; border: 1px solid var(--border);
+    }
+    .custom-mode-btn {
+      padding: 2px 8px; font-size: 0.65rem; font-weight: 500;
+      border: none; border-radius: 4px; cursor: pointer;
+      background: transparent; color: var(--text-muted);
+      transition: all 0.12s;
+    }
+    .custom-mode-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
+    .custom-color-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
+    .custom-color-label {
+      font-size: 0.68rem; font-weight: 500; color: var(--text);
+      width: 68px; flex-shrink: 0;
+    }
+    .custom-color-swatch {
+      width: 24px; height: 24px; border-radius: 6px;
+      border: 1px solid var(--border); cursor: pointer;
+      flex-shrink: 0; position: relative; overflow: hidden;
+    }
+    .custom-color-swatch input[type="color"] {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; cursor: pointer; border: none; padding: 0;
+    }
+    .custom-color-hex {
+      width: 72px; font-size: 0.65rem;
+      font-family: 'Cascadia Mono', 'SF Mono', 'Consolas', monospace;
+      padding: 3px 6px; border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--input-bg); color: var(--text); outline: none;
+    }
+    .custom-color-hex:focus { border-color: var(--accent); }
+    .custom-editor-divider {
+      border: none; border-top: 1px solid var(--border); margin: 8px 0;
+    }
+    .custom-preview-label {
+      font-size: 0.65rem; font-weight: 600; color: var(--text-muted);
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .custom-preview-row {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .custom-preview-app {
+      flex: 1; height: 68px; border-radius: 6px; overflow: hidden;
+      display: flex; border: 1px solid var(--border);
+    }
+    .custom-preview-sidebar {
+      width: 36px; display: flex; flex-direction: column;
+      align-items: center; padding-top: 8px; gap: 3px;
+    }
+    .custom-preview-content {
+      flex: 1; padding: 6px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .custom-editor-actions {
+      display: flex; gap: 6px; justify-content: flex-end; margin-top: 10px;
+    }
+    .custom-btn {
+      padding: 4px 12px; font-size: 0.68rem; font-weight: 600;
+      border-radius: 6px; border: 1px solid transparent; cursor: pointer;
+      transition: all 0.12s;
+    }
+    .custom-btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .custom-btn-primary:hover { filter: brightness(0.9); }
+    .custom-btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+    .custom-btn-secondary:hover { background: var(--panel-bg); }
+    .custom-btn-danger { background: transparent; color: var(--danger); border-color: transparent; font-size: 0.65rem; }
+    .custom-btn-danger:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+    .theme-filter-btn[data-theme-filter="custom"].active {
+      background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+      color: var(--accent); font-weight: 600;
+    }
+
     .sidebar-header {
       display: flex;
       justify-content: space-between;
@@ -5883,9 +6019,11 @@
                         <button type="button" class="theme-filter-btn active" data-theme-filter="light">Light</button>
                         <button type="button" class="theme-filter-btn" data-theme-filter="dark">Dark</button>
                         <button type="button" class="theme-filter-btn" data-theme-filter="all">All</button>
+                        <button type="button" class="theme-filter-btn" data-theme-filter="custom">Custom</button>
                       </div>
                     </div>
                     <div id="customize-theme-grid"></div>
+                    <div id="custom-theme-panel" class="custom-theme-panel hidden"></div>
 
                     <hr class="theme-section-divider" style="margin: 10px 0 8px;">
                     <p class="density-popout-label">Card layout</p>
@@ -6273,7 +6411,7 @@
         <h3>Options menu</h3>
         <ul>
           <li>Open with the customize button (⊟) near the date; settings are split into <strong>Appearance</strong> and <strong>Behavior</strong> tabs</li>
-          <li><strong>Appearance</strong> — theme picker (40 presets with mini wireframe previews, filterable by Light/Dark/All), Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
+          <li><strong>Appearance</strong> — theme picker (48 presets with mini wireframe previews, filterable by Light/Dark/All, plus a Custom tab to create up to 5 of your own themes), Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
           <li><strong>Behavior</strong> — organized into General, Tasks, Projects, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
         </ul>
 
@@ -6352,7 +6490,7 @@
           <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box to submit without clicking Add</li>
           <li>Use the sidebar collapse button (‹) to give the board more room</li>
           <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
-          <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors</li>
+          <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors; use the <strong>Custom</strong> tab to create your own theme from 5 picked colors</li>
           <li>Click the version number (<strong>v1.x.x</strong>) at the bottom of the sidebar to see the full changelog; a pulsing dot means there's something new</li>
 
         <h3>Keyboard shortcuts</h3>
@@ -6444,16 +6582,26 @@
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.4.3';
+    const APP_VERSION = '1.5.0';
     const CHANGELOG = [
       {
-        version: '1.4.3',
+        version: '1.5.0',
         date: 'Sep 16, 2026',
         tag: 'latest',
         sections: [
           { label: 'Added', items: [
-            '8 new themes — Honey, Cloud, Peach, Olive (light) and Ember, Glacier, Plum, Storm (dark)',
+            '8 new themes — Honey, Cloud, Peach, Olive (light) and Ember, Glacier, Plum, Storm (dark); total now 48 (24 light + 24 dark)',
+            'Custom Theme Builder — create up to 5 fully custom themes by choosing 5 colors (Background, Surface, Sidebar, Accent, Text) plus light/dark mode; all remaining CSS variables are auto-derived',
+            'New "Custom" filter tab in the theme picker — browse, apply, edit, and delete your custom themes alongside the 48 presets',
+            'Native OS color picker + hex text input for each color, with a real-time live preview of the full app layout',
+            'Custom themes sync across devices via the existing cloud preferences system',
           ]},
+        ],
+      },
+      {
+        version: '1.4.3',
+        date: 'Sep 13, 2026',
+        sections: [
           { label: 'Improved', items: [
             'Settings button uses a standard gear icon instead of sliders (Material Design convention)',
             'Login form: password field has proper aria-label and name for password manager autofill',
@@ -7118,6 +7266,121 @@
       return document.documentElement.dataset.theme || '';
     }
 
+    // ── Custom theme builder ──────────────────────────────────────────────────
+    const CUSTOM_THEMES_KEY = 'work-desk-custom-themes';
+    const MAX_CUSTOM_THEMES = 5;
+
+    function hexToRgb(hex) {
+      const n = parseInt(hex.replace('#', ''), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(c => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('');
+    }
+    function mixHex(c1, c2, pct) {
+      const [r1, g1, b1] = hexToRgb(c1);
+      const [r2, g2, b2] = hexToRgb(c2);
+      const p = pct / 100;
+      return rgbToHex(r1 + (r2 - r1) * p, g1 + (g2 - g1) * p, b1 + (b2 - b1) * p);
+    }
+    function lighten(hex, pct) { return mixHex(hex, '#ffffff', pct); }
+    function darken(hex, pct) { return mixHex(hex, '#000000', pct); }
+    function withAlpha(hex, alpha) {
+      const [r, g, b] = hexToRgb(hex);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function deriveCustomThemeVars({ bg, surface, sidebar, accent, text, dark }) {
+      const vars = {};
+      vars['--bg'] = bg;
+      vars['--surface'] = surface;
+      vars['--sidebar'] = sidebar;
+      vars['--accent'] = accent;
+      vars['--text'] = text;
+
+      vars['--accent-hover'] = dark ? lighten(accent, 12) : darken(accent, 12);
+      vars['--accent-light'] = dark ? mixHex(accent, bg, 75) : mixHex(accent, '#ffffff', 80);
+      vars['--text-muted'] = mixHex(text, bg, 45);
+      vars['--border'] = dark ? lighten(bg, 14) : darken(bg, 12);
+      vars['--done'] = mixHex(text, bg, 55);
+      vars['--panel-bg'] = dark ? lighten(bg, 5) : darken(bg, 4);
+      vars['--input-bg'] = surface;
+      vars['--radius'] = '10px';
+
+      vars['--note-bg'] = dark ? mixHex('#d4a017', bg, 85) : mixHex('#fef9ec', bg, 30);
+      vars['--note-border'] = dark ? mixHex('#d4a017', bg, 70) : mixHex('#f5e6b8', bg, 30);
+      vars['--danger'] = dark ? '#f07171' : '#ef4444';
+      vars['--danger-surface'] = dark ? mixHex('#ef4444', bg, 85) : mixHex('#ef4444', '#ffffff', 92);
+      vars['--danger-surface-hover'] = dark ? mixHex('#ef4444', bg, 80) : mixHex('#ef4444', '#ffffff', 86);
+      vars['--danger-border'] = dark ? mixHex('#ef4444', bg, 65) : mixHex('#ef4444', '#ffffff', 75);
+
+      vars['--shadow'] = dark ? '0 1px 4px rgba(0,0,0,0.35)' : '0 1px 4px rgba(0,0,0,0.06)';
+      vars['--modal-overlay'] = dark ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0.45)';
+      vars['--modal-shadow'] = dark ? '0 8px 32px rgba(0,0,0,0.45)' : '0 8px 32px rgba(0,0,0,0.15)';
+
+      vars['--tooltip-bg'] = dark ? lighten(surface, 12) : '#1e2433';
+      vars['--tooltip-text'] = '#ffffff';
+
+      vars['--sidebar-text'] = dark ? mixHex('#ffffff', sidebar, 35) : '#c8cdd8';
+      vars['--sidebar-active'] = dark ? lighten(accent, 45) : '#ffffff';
+      vars['--sidebar-muted'] = dark ? mixHex('#ffffff', sidebar, 55) : '#6b7590';
+      vars['--sidebar-border'] = 'rgba(255,255,255,0.08)';
+      vars['--sidebar-hover'] = 'rgba(255,255,255,0.06)';
+      vars['--sidebar-btn-border'] = 'rgba(255,255,255,0.1)';
+      vars['--sidebar-tab-active-bg'] = withAlpha(accent, 0.35);
+      vars['--sidebar-cal-selected-bg'] = withAlpha(accent, 0.25);
+      vars['--sidebar-cal-today-ring'] = withAlpha(accent, 0.65);
+
+      vars['--shelved-border'] = dark ? mixHex('#9b8aa8', bg, 70) : '#d8d0e0';
+      vars['--shelved-label'] = '#9b8aa8';
+      vars['--move-hover-bg'] = dark ? mixHex('#d4a017', bg, 88) : '#fef9ec';
+      vars['--delete-hover-bg'] = dark ? mixHex('#ef4444', bg, 88) : '#fef2f2';
+      vars['--shelf-hover-bg'] = dark ? mixHex('#9b8aa8', bg, 88) : '#f3f0f7';
+
+      return vars;
+    }
+
+    function loadCustomThemes() {
+      try { return JSON.parse(localStorage.getItem(CUSTOM_THEMES_KEY)) || []; }
+      catch (_) { return []; }
+    }
+
+    function saveCustomThemes(themes) {
+      localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(themes.slice(0, MAX_CUSTOM_THEMES)));
+    }
+
+    function generateCustomThemeId() {
+      return 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    }
+
+    function createCustomTheme(obj) {
+      const themes = loadCustomThemes();
+      if (themes.length >= MAX_CUSTOM_THEMES) return null;
+      const t = { id: generateCustomThemeId(), ...obj };
+      themes.push(t);
+      saveCustomThemes(themes);
+      return t;
+    }
+
+    function updateCustomTheme(id, obj) {
+      const themes = loadCustomThemes();
+      const idx = themes.findIndex(t => t.id === id);
+      if (idx === -1) return null;
+      themes[idx] = { ...themes[idx], ...obj };
+      saveCustomThemes(themes);
+      return themes[idx];
+    }
+
+    function deleteCustomTheme(id) {
+      const themes = loadCustomThemes();
+      saveCustomThemes(themes.filter(t => t.id !== id));
+      if (getCurrentThemeId() === id) applyTheme('');
+    }
+
+    function isCustomThemeId(id) {
+      return typeof id === 'string' && id.startsWith('custom-');
+    }
+
     const PREFS_UPDATED_AT_KEY = 'work-desk-prefs-updated-at';
 
     function touchPrefsUpdatedAt() {
@@ -7150,6 +7413,7 @@
         confirmDelete: localStorage.getItem(CONFIRM_DELETE_KEY) === 'true',
         useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
         customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
+        customThemes: loadCustomThemes(),
         updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
       };
     }
@@ -7186,7 +7450,15 @@
 
       let changed = false;
 
-      if (typeof prefs.theme === 'string' && THEMES.some(t => t.id === prefs.theme)) {
+      if (Array.isArray(prefs.customThemes)) {
+        const cur = JSON.stringify(loadCustomThemes());
+        if (JSON.stringify(prefs.customThemes) !== cur) {
+          saveCustomThemes(prefs.customThemes);
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.theme === 'string' && (THEMES.some(t => t.id === prefs.theme) || (isCustomThemeId(prefs.theme) && loadCustomThemes().some(t => t.id === prefs.theme)))) {
         if ((localStorage.getItem(THEME_KEY) ?? '') !== prefs.theme) {
           applyTheme(prefs.theme, { fromSync: true });
           changed = true;
@@ -7379,14 +7651,31 @@
       return changed;
     }
 
+    function clearCustomThemeInlineVars() {
+      const el = document.documentElement;
+      const toRemove = [];
+      for (let i = 0; i < el.style.length; i++) {
+        const prop = el.style[i];
+        if (prop.startsWith('--')) toRemove.push(prop);
+      }
+      toRemove.forEach(p => el.style.removeProperty(p));
+    }
+
     function applyTheme(id, options = {}) {
       const { fromSync = false } = options;
-      // First rAF: let the browser register the transition rules on all elements.
-      // Second rAF: swap the theme so the already-armed transitions fire together.
       document.body.classList.add('theme-transitioning');
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (id) {
+          clearCustomThemeInlineVars();
+          if (isCustomThemeId(id)) {
+            const ct = loadCustomThemes().find(t => t.id === id);
+            if (ct) {
+              delete document.documentElement.dataset.theme;
+              const vars = deriveCustomThemeVars(ct);
+              Object.entries(vars).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
+              document.documentElement.style.setProperty('color-scheme', ct.dark ? 'dark' : 'light');
+            }
+          } else if (id) {
             document.documentElement.dataset.theme = id;
           } else {
             delete document.documentElement.dataset.theme;
@@ -7402,32 +7691,46 @@
 
     function initTheme() {
       const stored = localStorage.getItem(THEME_KEY);
-      const valid = THEMES.some(t => t.id === stored);
+      const valid = THEMES.some(t => t.id === stored) || (isCustomThemeId(stored) && loadCustomThemes().some(t => t.id === stored));
       if (stored !== null && valid) applyTheme(stored, { fromSync: true });
       renderThemeSwatches();
     }
 
     // ── Theme picker ───────────────────────────────────────────────────────────
     const elThemeGrid   = document.getElementById('customize-theme-grid');
+    const elCustomPanel = document.getElementById('custom-theme-panel');
     let currentThemeFilter = 'light';
+    let customEditorState = null; // null = browse, { id, name, dark, bg, surface, sidebar, accent, text } = editing
 
     function renderThemeSwatches(filter) {
       if (!elThemeGrid) return;
       const current = getCurrentThemeId();
       if (!filter) {
-        const currentThemeObj = THEMES.find(t => t.id === current);
-        if (currentThemeObj && currentThemeObj.dark) {
-          currentThemeFilter = 'dark';
+        if (isCustomThemeId(current)) {
+          currentThemeFilter = 'custom';
+        } else {
+          const currentThemeObj = THEMES.find(t => t.id === current);
+          if (currentThemeObj && currentThemeObj.dark) {
+            currentThemeFilter = 'dark';
+          }
         }
       } else {
         currentThemeFilter = filter;
+        if (filter !== 'custom') customEditorState = null;
       }
 
       document.querySelectorAll('.theme-filter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.themeFilter === currentThemeFilter);
       });
 
+      const isCustom = currentThemeFilter === 'custom';
       elThemeGrid.innerHTML = '';
+      elThemeGrid.style.display = isCustom ? 'none' : '';
+      if (elCustomPanel) {
+        elCustomPanel.classList.toggle('hidden', !isCustom);
+        if (isCustom) renderCustomThemePanel();
+      }
+      if (isCustom) return;
 
       const light = THEMES.filter(t => !t.dark);
       const dark  = THEMES.filter(t =>  t.dark);
@@ -7440,7 +7743,6 @@
           sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
           sw.type = 'button';
           sw.title = t.name;
-          // Mini app wireframe: Left sidebar + Canvas BG with mini surface cards + accent indicator
           sw.innerHTML = `
             <div class="theme-swatch-preview" style="background:${t.bg}">
               <div class="theme-swatch-sidebar" style="background:${t.sidebar}">
@@ -7483,6 +7785,372 @@
         elThemeGrid.appendChild(divider);
         elThemeGrid.appendChild(makeSection('Dark', dark));
       }
+    }
+
+    // ── Custom theme panel (browse + editor) ──────────────────────────────────
+    function renderCustomThemePanel() {
+      if (!elCustomPanel) return;
+      elCustomPanel.innerHTML = '';
+      if (customEditorState) {
+        renderCustomEditor();
+      } else {
+        renderCustomBrowse();
+      }
+    }
+
+    function renderCustomBrowse() {
+      const current = getCurrentThemeId();
+      const customs = loadCustomThemes();
+
+      const header = document.createElement('div');
+      header.className = 'custom-themes-header';
+      header.innerHTML = `<span class="density-popout-label" style="font-size:0.65rem;">Your themes</span>
+        <span class="custom-count">${customs.length} / ${MAX_CUSTOM_THEMES}</span>`;
+      elCustomPanel.appendChild(header);
+
+      const row = document.createElement('div');
+      row.className = 'custom-swatches-row';
+
+      customs.forEach(t => {
+        const wrap = document.createElement('div');
+        wrap.className = 'custom-swatch-wrap';
+
+        const del = document.createElement('button');
+        del.className = 'custom-swatch-delete';
+        del.type = 'button';
+        del.textContent = '\u00d7';
+        del.title = 'Delete theme';
+        del.addEventListener('click', e => {
+          e.stopPropagation();
+          deleteCustomTheme(t.id);
+          schedulePrefsPush();
+          renderCustomThemePanel();
+        });
+        wrap.appendChild(del);
+
+        const sw = document.createElement('button');
+        sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
+        sw.type = 'button';
+        sw.title = `${t.name} — click to apply, right-click to edit`;
+        sw.innerHTML = `
+          <div class="theme-swatch-preview" style="background:${t.bg}">
+            <div class="theme-swatch-sidebar" style="background:${t.sidebar}">
+              <div class="theme-swatch-sidebar-pill" style="background:${t.accent}"></div>
+            </div>
+            <div class="theme-swatch-content">
+              <div class="theme-swatch-card" style="background:${t.surface}">
+                <div class="theme-swatch-card-line" style="background:${t.accent}"></div>
+              </div>
+              <div class="theme-swatch-card secondary" style="background:${t.surface}"></div>
+            </div>
+          </div>
+          <span class="theme-swatch-name">${t.name}</span>`;
+        sw.addEventListener('click', () => { applyTheme(t.id); });
+        sw.addEventListener('contextmenu', e => {
+          e.preventDefault();
+          customEditorState = { ...t };
+          renderCustomThemePanel();
+        });
+        wrap.appendChild(sw);
+        row.appendChild(wrap);
+      });
+
+      if (customs.length < MAX_CUSTOM_THEMES) {
+        const addWrap = document.createElement('div');
+        addWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;';
+        const addBtn = document.createElement('button');
+        addBtn.className = 'custom-add-tile';
+        addBtn.type = 'button';
+        addBtn.title = 'Create new theme';
+        addBtn.textContent = '+';
+        addBtn.addEventListener('click', () => {
+          customEditorState = { id: null, name: '', dark: false, bg: '#f4f2ee', surface: '#ffffff', sidebar: '#1e2433', accent: '#3b6fd9', text: '#1a1f2e' };
+          renderCustomThemePanel();
+        });
+        const addLabel = document.createElement('span');
+        addLabel.style.cssText = 'font-size:0.55rem;color:var(--text-muted);';
+        addLabel.textContent = 'New';
+        addWrap.appendChild(addBtn);
+        addWrap.appendChild(addLabel);
+        row.appendChild(addWrap);
+      }
+
+      elCustomPanel.appendChild(row);
+    }
+
+    function renderCustomEditor() {
+      const s = customEditorState;
+      const isNew = !s.id;
+
+      const editor = document.createElement('div');
+      editor.className = 'custom-editor';
+
+      const title = document.createElement('div');
+      title.className = 'custom-editor-title';
+      title.textContent = isNew ? 'New custom theme' : 'Edit theme';
+      editor.appendChild(title);
+
+      // Name row
+      const nameRow = document.createElement('div');
+      nameRow.className = 'custom-editor-row';
+      nameRow.innerHTML = `<span class="custom-editor-label">Name</span>`;
+      const nameInput = document.createElement('input');
+      nameInput.className = 'custom-editor-name';
+      nameInput.type = 'text';
+      nameInput.value = s.name;
+      nameInput.placeholder = 'My Theme';
+      nameInput.maxLength = 20;
+      nameInput.addEventListener('input', () => { s.name = nameInput.value; updateEditorPreview(); });
+      nameRow.appendChild(nameInput);
+      editor.appendChild(nameRow);
+
+      // Mode row
+      const modeRow = document.createElement('div');
+      modeRow.className = 'custom-editor-row';
+      modeRow.innerHTML = `<span class="custom-editor-label">Mode</span>`;
+      const modeToggle = document.createElement('div');
+      modeToggle.className = 'custom-mode-toggle';
+      const lightBtn = document.createElement('button');
+      lightBtn.className = 'custom-mode-btn' + (!s.dark ? ' active' : '');
+      lightBtn.type = 'button';
+      lightBtn.textContent = 'Light';
+      const darkBtn = document.createElement('button');
+      darkBtn.className = 'custom-mode-btn' + (s.dark ? ' active' : '');
+      darkBtn.type = 'button';
+      darkBtn.textContent = 'Dark';
+      lightBtn.addEventListener('click', () => {
+        s.dark = false;
+        lightBtn.classList.add('active');
+        darkBtn.classList.remove('active');
+        updateEditorPreview();
+      });
+      darkBtn.addEventListener('click', () => {
+        s.dark = true;
+        darkBtn.classList.add('active');
+        lightBtn.classList.remove('active');
+        updateEditorPreview();
+      });
+      modeToggle.appendChild(lightBtn);
+      modeToggle.appendChild(darkBtn);
+      modeRow.appendChild(modeToggle);
+      editor.appendChild(modeRow);
+
+      const divider1 = document.createElement('hr');
+      divider1.className = 'custom-editor-divider';
+      editor.appendChild(divider1);
+
+      // Color pickers
+      const colorFields = [
+        { key: 'bg',      label: 'Background' },
+        { key: 'surface', label: 'Surface' },
+        { key: 'sidebar', label: 'Sidebar' },
+        { key: 'accent',  label: 'Accent' },
+        { key: 'text',    label: 'Text' },
+      ];
+
+      colorFields.forEach(({ key, label }) => {
+        const row = document.createElement('div');
+        row.className = 'custom-color-row';
+
+        const lbl = document.createElement('span');
+        lbl.className = 'custom-color-label';
+        lbl.textContent = label;
+        row.appendChild(lbl);
+
+        const swatch = document.createElement('div');
+        swatch.className = 'custom-color-swatch';
+        swatch.style.background = s[key];
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = s[key];
+        colorInput.addEventListener('input', () => {
+          s[key] = colorInput.value;
+          swatch.style.background = colorInput.value;
+          hexInput.value = colorInput.value;
+          updateEditorPreview();
+        });
+        swatch.appendChild(colorInput);
+        row.appendChild(swatch);
+
+        const hexInput = document.createElement('input');
+        hexInput.className = 'custom-color-hex';
+        hexInput.type = 'text';
+        hexInput.value = s[key];
+        hexInput.addEventListener('change', () => {
+          const v = hexInput.value.trim();
+          if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+            s[key] = v;
+            swatch.style.background = v;
+            colorInput.value = v;
+            updateEditorPreview();
+          } else {
+            hexInput.value = s[key];
+          }
+        });
+        row.appendChild(hexInput);
+        editor.appendChild(row);
+      });
+
+      const divider2 = document.createElement('hr');
+      divider2.className = 'custom-editor-divider';
+      editor.appendChild(divider2);
+
+      // Live preview
+      const previewLabel = document.createElement('div');
+      previewLabel.className = 'custom-preview-label';
+      previewLabel.textContent = 'Live preview';
+      editor.appendChild(previewLabel);
+
+      const previewRow = document.createElement('div');
+      previewRow.className = 'custom-preview-row';
+
+      // Mini swatch preview
+      const miniWrap = document.createElement('div');
+      miniWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;';
+      miniWrap.innerHTML = `
+        <div class="theme-swatch-preview" data-mini-preview style="background:${s.bg}">
+          <div class="theme-swatch-sidebar" data-mini-sidebar style="background:${s.sidebar}">
+            <div class="theme-swatch-sidebar-pill" data-mini-accent style="background:${s.accent}"></div>
+          </div>
+          <div class="theme-swatch-content">
+            <div class="theme-swatch-card" data-mini-card1 style="background:${s.surface}">
+              <div class="theme-swatch-card-line" data-mini-line style="background:${s.accent}"></div>
+            </div>
+            <div class="theme-swatch-card secondary" data-mini-card2 style="background:${s.surface}"></div>
+          </div>
+        </div>
+        <span class="theme-swatch-name" data-mini-name>${s.name || 'Untitled'}</span>`;
+      previewRow.appendChild(miniWrap);
+
+      // Larger app wireframe
+      const appPreview = document.createElement('div');
+      appPreview.className = 'custom-preview-app';
+      appPreview.dataset.previewApp = '';
+      appPreview.style.background = s.bg;
+      appPreview.innerHTML = `
+        <div class="custom-preview-sidebar" data-preview-sidebar style="background:${s.sidebar}">
+          <div style="width:18px;height:3px;border-radius:1.5px;background:${s.accent}" data-preview-pill></div>
+          <div style="width:12px;height:2px;border-radius:1px;background:${s.accent};opacity:0.4"></div>
+          <div style="width:15px;height:2px;border-radius:1px;background:${s.accent};opacity:0.4"></div>
+        </div>
+        <div class="custom-preview-content">
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
+            <div style="width:40px;height:4px;border-radius:2px;opacity:0.8;background:${s.text}" data-preview-title></div>
+            <div style="margin-left:auto;width:22px;height:8px;border-radius:3px;background:${s.accent}" data-preview-btn></div>
+          </div>
+          <div style="display:flex;gap:3px;flex:1;">
+            <div style="flex:1;border-radius:3px;padding:3px;display:flex;flex-direction:column;gap:2px;background:${s.surface}" data-preview-col1>
+              <div style="height:2px;border-radius:1px;width:60%;opacity:0.6;background:${s.accent}"></div>
+              <div style="height:2px;border-radius:1px;width:80%;opacity:0.25;background:${s.text}"></div>
+            </div>
+            <div style="flex:1;border-radius:3px;padding:3px;display:flex;flex-direction:column;gap:2px;background:${s.surface}" data-preview-col2>
+              <div style="height:2px;border-radius:1px;width:50%;opacity:0.6;background:${s.accent}"></div>
+              <div style="height:2px;border-radius:1px;width:70%;opacity:0.25;background:${s.text}"></div>
+            </div>
+          </div>
+        </div>`;
+      previewRow.appendChild(appPreview);
+      editor.appendChild(previewRow);
+
+      const divider3 = document.createElement('hr');
+      divider3.className = 'custom-editor-divider';
+      editor.appendChild(divider3);
+
+      // Action buttons
+      const actions = document.createElement('div');
+      actions.className = 'custom-editor-actions';
+
+      if (!isNew) {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'custom-btn custom-btn-danger';
+        delBtn.type = 'button';
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', () => {
+          deleteCustomTheme(s.id);
+          schedulePrefsPush();
+          customEditorState = null;
+          renderCustomThemePanel();
+        });
+        actions.appendChild(delBtn);
+      }
+
+      const spacer = document.createElement('div');
+      spacer.style.flex = '1';
+      actions.appendChild(spacer);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'custom-btn custom-btn-secondary';
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', () => {
+        customEditorState = null;
+        renderCustomThemePanel();
+      });
+      actions.appendChild(cancelBtn);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'custom-btn custom-btn-primary';
+      saveBtn.type = 'button';
+      saveBtn.textContent = isNew ? 'Create' : 'Save';
+      saveBtn.addEventListener('click', () => {
+        const trimmed = s.name.trim();
+        if (!trimmed) { nameInput.focus(); return; }
+        const payload = { name: trimmed, dark: s.dark, bg: s.bg, surface: s.surface, sidebar: s.sidebar, accent: s.accent, text: s.text };
+        let saved;
+        if (isNew) {
+          saved = createCustomTheme(payload);
+        } else {
+          saved = updateCustomTheme(s.id, payload);
+        }
+        if (saved) {
+          applyTheme(saved.id);
+          schedulePrefsPush();
+        }
+        customEditorState = null;
+        renderCustomThemePanel();
+      });
+      actions.appendChild(saveBtn);
+
+      editor.appendChild(actions);
+      elCustomPanel.appendChild(editor);
+
+      nameInput.focus();
+    }
+
+    function updateEditorPreview() {
+      if (!customEditorState || !elCustomPanel) return;
+      const s = customEditorState;
+      const q = sel => elCustomPanel.querySelector(sel);
+
+      const mini = q('[data-mini-preview]');
+      if (mini) mini.style.background = s.bg;
+      const miniSb = q('[data-mini-sidebar]');
+      if (miniSb) miniSb.style.background = s.sidebar;
+      const miniAcc = q('[data-mini-accent]');
+      if (miniAcc) miniAcc.style.background = s.accent;
+      const miniC1 = q('[data-mini-card1]');
+      if (miniC1) miniC1.style.background = s.surface;
+      const miniLine = q('[data-mini-line]');
+      if (miniLine) miniLine.style.background = s.accent;
+      const miniC2 = q('[data-mini-card2]');
+      if (miniC2) miniC2.style.background = s.surface;
+      const miniName = q('[data-mini-name]');
+      if (miniName) miniName.textContent = s.name || 'Untitled';
+
+      const app = q('[data-preview-app]');
+      if (app) app.style.background = s.bg;
+      const pSb = q('[data-preview-sidebar]');
+      if (pSb) pSb.style.background = s.sidebar;
+      const pPill = q('[data-preview-pill]');
+      if (pPill) pPill.style.background = s.accent;
+      const pTitle = q('[data-preview-title]');
+      if (pTitle) pTitle.style.background = s.text;
+      const pBtn = q('[data-preview-btn]');
+      if (pBtn) pBtn.style.background = s.accent;
+      const pCol1 = q('[data-preview-col1]');
+      if (pCol1) pCol1.style.background = s.surface;
+      const pCol2 = q('[data-preview-col2]');
+      if (pCol2) pCol2.style.background = s.surface;
     }
 
     function closeThemePicker() { closeDensityPopout(); }
