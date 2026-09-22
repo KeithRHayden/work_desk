@@ -6695,6 +6695,16 @@
                     </label>
 
                     <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                    <p class="density-popout-label">Insights</p>
+                    <label class="customize-toggle" title="Weekends don't break your streak — active weekend days still count">
+                      <input id="streak-skip-weekends-toggle" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>Weekends don't break streaks</span>
+                        <span class="customize-toggle-sub">Fri → Mon stays consecutive; active weekend days still count</span>
+                      </span>
+                    </label>
+
+                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
                     <p class="density-popout-label">Holidays</p>
                     <label class="customize-toggle" title="Skip recurring tasks on US federal holidays">
                       <input id="us-federal-holidays-toggle" type="checkbox" />
@@ -6888,7 +6898,8 @@
           <li><strong>Indent</strong> — comments sit slightly indented under the card so they read as replies, not another task</li>
           <li><strong>Keep comments open</strong> — in Options → Behavior, turn this on so opening comments on one task doesn't collapse another; it also survives day navigation and page refresh once enabled</li>
           <li><strong>Multi-line</strong> — press Enter for new lines; numbered lists like <code>1)</code> and bullets stay formatted when you save</li>
-          <li><strong>Split to task / note</strong> — hover any comment and click <em>→ task</em> or <em>→ note</em> to turn it into its own item on the same day; the parent's tags carry over, a breadcrumb comment links back, and the original comment gets a "→ moved to…" annotation; an Undo toast lets you reverse it</li>
+          <li><strong>Hover actions</strong> — edit, delete, <em>→ task</em>, and <em>→ note</em> appear as plain text links on hover</li>
+          <li><strong>Split to task / note</strong> — click <em>→ task</em> or <em>→ note</em> to turn a comment into its own item on the same day; the parent's tags carry over, a breadcrumb comment links back, and the original comment gets a "→ moved to…" annotation; an Undo toast lets you reverse it</li>
         </ul>
 
         <h3>Projects</h3>
@@ -6954,17 +6965,18 @@
           <li><strong>Productivity summary</strong> — completion rate, average daily completions, carry-over rate, and your most productive day</li>
           <li><strong>Week-over-week</strong> (week view) — compares this week's completions against the previous one</li>
           <li><strong>Carry-over analysis</strong> — which days of the week tasks most often carry over from</li>
-          <li><strong>Streak tracking</strong> — current and longest completion streaks, plus a heatmap matched to the period you're viewing</li>
+          <li><strong>Streak tracking</strong> — current and longest streaks based on days with desk activity, plus a heatmap matched to the period you're viewing</li>
+          <li><strong>Weekends don't break streaks</strong> (Options → Behavior → Insights, on by default) — Fri → Mon stays consecutive for streak counting; if you work a Saturday or Sunday it still counts, but an idle weekend does not reset the streak</li>
           <li><strong>Charts</strong> — switch between bar, line, stacked, and pie; hover any segment or point for exact counts</li>
           <li><strong>Activity heatmap</strong> (year view) — GitHub-style grid showing completion intensity by day; color adapts to your active theme</li>
-          <li>Day-by-day detail table shows full breakdown including carried-over and newly created counts</li>
+          <li>Day-by-day detail table shows full breakdown including carried-over and newly created counts; dates use the real day label (e.g. <em>Mon, Sep 21</em>), with today marked as <em>Tue, Sep 22 (Today)</em></li>
         </ul>
 
         <h3>Cloud sync &amp; data</h3>
         <ul>
           <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
           <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in</strong> at the bottom of the sidebar when you’re ready to create an account or sync</li>
-          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, confetti, confirm before delete, font size, font family, sidebar position, card glow, gradient header, and holiday settings all follow your account across devices</li>
+          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, confetti, confirm before delete, weekends don't break streaks, font size, font family, sidebar position, card glow, gradient header, and holiday settings all follow your account across devices</li>
           <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
           <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
@@ -7085,6 +7097,7 @@
     const CARD_GLOW_KEY = 'work-desk-card-glow';
     const GRADIENT_HEADER_KEY = 'work-desk-gradient-header';
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
+    const STREAK_SKIP_WEEKENDS_KEY = 'work-desk-streak-skip-weekends';
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
     const APP_VERSION = '1.7.0';
@@ -7097,6 +7110,11 @@
           { label: 'Added', items: [
             'Comment → Task / Note — click "→ task" or "→ note" on any comment to split it into its own item on the same day; tags carry over, a breadcrumb comment links back to the original task, and the source comment is annotated with a "→ moved to…" note',
             'Undo support — a confirmation toast with Undo lets you reverse the split instantly',
+            'Weekends don\'t break streaks — Options → Behavior → Insights toggle (on by default); Fri → Mon stays consecutive, and active weekend days still count toward the streak',
+          ]},
+          { label: 'Improved', items: [
+            'Insights day-by-day labels show the real date (e.g. Mon, Sep 21); today appears as Tue, Sep 22 (Today)',
+            'Comment hover actions are all plain text — edit / delete / → task / → note',
           ]},
           { label: 'Fixed', items: [
             'Projects tab now fully hides the daily desk — switching to Projects no longer shows the date header, progress bar, and kanban board above the project view (CSS specificity fix)',
@@ -7532,6 +7550,7 @@
       truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
       confirmDelete: localStorage.getItem(CONFIRM_DELETE_KEY) === 'true',
       useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
+      streakSkipWeekends: localStorage.getItem(STREAK_SKIP_WEEKENDS_KEY) !== 'false',
       customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
       highlightItemId: null,
       activeTab: (() => {
@@ -7985,6 +8004,7 @@
         truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
         confirmDelete: localStorage.getItem(CONFIRM_DELETE_KEY) === 'true',
         useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
+        streakSkipWeekends: localStorage.getItem(STREAK_SKIP_WEEKENDS_KEY) !== 'false',
         customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
         customThemes: loadCustomThemes(),
         updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
@@ -8202,6 +8222,17 @@
           state.useFederalHolidays = next;
           localStorage.setItem(US_FEDERAL_HOLIDAYS_KEY, next ? 'true' : 'false');
           const el = document.getElementById('us-federal-holidays-toggle');
+          if (el) el.checked = next;
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.streakSkipWeekends === 'boolean') {
+        const next = prefs.streakSkipWeekends;
+        if (state.streakSkipWeekends !== next) {
+          state.streakSkipWeekends = next;
+          localStorage.setItem(STREAK_SKIP_WEEKENDS_KEY, next ? 'true' : 'false');
+          const el = document.getElementById('streak-skip-weekends-toggle');
           if (el) el.checked = next;
           changed = true;
         }
@@ -9808,6 +9839,18 @@
           state.confirmDelete = confirmDeleteToggle.checked;
           localStorage.setItem(CONFIRM_DELETE_KEY, state.confirmDelete ? 'true' : 'false');
           schedulePrefsPush();
+        });
+      }
+
+      // Streak skip weekends
+      const streakSkipWeekendsToggle = document.getElementById('streak-skip-weekends-toggle');
+      if (streakSkipWeekendsToggle) {
+        streakSkipWeekendsToggle.checked = state.streakSkipWeekends;
+        streakSkipWeekendsToggle.addEventListener('change', () => {
+          state.streakSkipWeekends = streakSkipWeekendsToggle.checked;
+          localStorage.setItem(STREAK_SKIP_WEEKENDS_KEY, state.streakSkipWeekends ? 'true' : 'false');
+          schedulePrefsPush();
+          if (state.activeTab === 'insights') renderInsights();
         });
       }
 
@@ -13536,6 +13579,16 @@
       return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
 
+    function formatInsightsDayLabel(dateKey) {
+      const date = new Date(dateKey + 'T12:00:00');
+      const today = new Date();
+      const same = (a, b) =>
+        a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+      const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      if (same(date, today)) return label + ' (Today)';
+      return label;
+    }
+
     function formatFullDate(dateKey) {
       const date = new Date(dateKey + 'T12:00:00');
       return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -15175,11 +15228,10 @@
       let longestStreak = 0;
       let streak = 0;
       const today = todayKey();
-      const yesterday = yesterdayKey();
       
-      // Calculate streaks
+      // Calculate streaks (weekend-aware when setting is on)
       for (let i = 0; i < activeDays.length; i++) {
-        if (i === 0 || isConsecutiveDay(activeDays[i - 1], activeDays[i])) {
+        if (i === 0 || isStreakConsecutive(activeDays[i - 1], activeDays[i])) {
           streak++;
         } else {
           longestStreak = Math.max(longestStreak, streak);
@@ -15188,10 +15240,14 @@
       }
       longestStreak = Math.max(longestStreak, streak);
 
-      // Check if current streak is active (last active day is today or yesterday)
+      // Check if current streak is still active
       const lastActiveDay = activeDays[activeDays.length - 1];
-      if (lastActiveDay === today || lastActiveDay === yesterday) {
+      if (lastActiveDay === today) {
         currentStreak = streak;
+      } else {
+        // Last active day isn't today — check if the gap is only inactive weekends
+        const gapOk = isStreakConsecutive(lastActiveDay, today);
+        if (gapOk) currentStreak = streak;
       }
 
       return { current: currentStreak, longest: longestStreak };
@@ -15202,6 +15258,20 @@
       const d2 = dateFromKey(day2);
       d1.setDate(d1.getDate() + 1);
       return formatDateKey(d1) === day2;
+    }
+
+    function isStreakConsecutive(day1, day2) {
+      if (isConsecutiveDay(day1, day2)) return true;
+      if (!state.streakSkipWeekends) return false;
+      const d1 = dateFromKey(day1);
+      const check = new Date(d1);
+      check.setDate(check.getDate() + 1);
+      while (formatDateKey(check) < day2) {
+        const dow = check.getDay();
+        if (dow !== 0 && dow !== 6) return false;
+        check.setDate(check.getDate() + 1);
+      }
+      return true;
     }
 
     function renderInsightBars(segments) {
@@ -15718,7 +15788,7 @@
       for (const row of active) {
         const tr = document.createElement('tr');
         tr.innerHTML =
-          `<td>${escapeHtml(formatSidebarLabel(row.dayKey))}</td>` +
+          `<td>${escapeHtml(formatInsightsDayLabel(row.dayKey))}</td>` +
           `<td class="num">${row.tasks}</td>` +
           `<td class="num">${row.completed}</td>` +
           `<td class="num">${row.shelved}</td>` +
