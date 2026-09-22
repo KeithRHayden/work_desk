@@ -11,6 +11,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 ### Added
 - **Comment → Task / Note** — hover any comment and click **→ task** or **→ note** to split it into its own item on the same day; parent tags carry over, a breadcrumb comment links back to the source task, and the original comment is annotated with "→ moved to…"
 - **Undo support** — confirmation toast with Undo reverses the split instantly, removing the new item and restoring the original comment
+- **Weekends don't break streaks** — new Options → Behavior → Insights toggle (on by default); Fri → Mon stays consecutive for streak counting, and active weekend days still count toward the streak
+
+### Improved
+- **Insights day-by-day labels** — rows show the real date (e.g. `Mon, Sep 21`); today is labeled `Tue, Sep 22 (Today)` instead of bare "Today" / "Yesterday"
+- **Comment hover actions** — edit / delete / → task / → note are all plain text links in one consistent row
 
 ### Fixed
 - **Projects tab now fully hides the daily desk** — switching to Projects no longer shows the date header, progress bar, and kanban board above the project view (CSS specificity fix where `#desk-view`'s ID-level `display:flex` overrode the `.hidden` class)
