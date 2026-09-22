@@ -2,6 +2,10 @@
 
 A personal daily desk for tasks, notes, and light project tracking — with optional cloud sync and a PWA install.
 
+![PWA Ready](https://img.shields.io/badge/PWA-Ready-blue)
+![Self Hosted](https://img.shields.io/badge/Self--Hosted-GitHub%20Pages-green)
+![Vanilla JS](https://img.shields.io/badge/Stack-Vanilla%20JS-yellow)
+
 ## Features
 
 ### Task management
@@ -11,7 +15,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Shelving** — park a task without deleting it
 - **Carry forward** — a one-click button that only appears when there's something to carry; enable auto-carry (Options → Behavior) to pull it in every time you open the desk
 - **Recurring templates** — daily / weekdays / weekly / custom; injects once per due day (completed instances count)
-- **Comments / updates** — timestamped follow-ups on tasks
+- **Comments / updates** — timestamped follow-ups on tasks; split any comment into its own task or note with one click (→ task / → note)
 - **Move to another day** — keeps a single ID (no dual-day clones)
 
 ### Notes and projects
