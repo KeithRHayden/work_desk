@@ -3546,6 +3546,7 @@
       flex-direction: column;
       overflow: hidden;
     }
+    #desk-view.hidden { display: none; }
 
     .desk-sticky {
       /* Pinned via flex layout so the header stays put while only the board scrolls */
@@ -5732,6 +5733,17 @@
       transition: opacity 0.12s;
     }
     .comment:hover .comment-actions { opacity: 1; }
+    .comment-actions-sep {
+      width: 1px; height: 12px; background: var(--border); opacity: 0.5;
+      margin: 0 1px; align-self: center;
+    }
+    .comment-split-btn {
+      background: none; border: none; cursor: pointer; padding: 0 2px;
+      font-size: 0.7rem; font-weight: 500; color: var(--text-muted);
+      opacity: 0.8; transition: opacity 0.12s, color 0.12s;
+    }
+    .comment-split-btn:hover { opacity: 1; color: var(--accent); }
+    .comment-split-btn.split-task { color: var(--accent); font-weight: 600; }
 
     .comment-body { min-width: 0; }
     .comment-text {
@@ -6876,6 +6888,7 @@
           <li><strong>Indent</strong> — comments sit slightly indented under the card so they read as replies, not another task</li>
           <li><strong>Keep comments open</strong> — in Options → Behavior, turn this on so opening comments on one task doesn't collapse another; it also survives day navigation and page refresh once enabled</li>
           <li><strong>Multi-line</strong> — press Enter for new lines; numbered lists like <code>1)</code> and bullets stay formatted when you save</li>
+          <li><strong>Split to task / note</strong> — hover any comment and click <em>→ task</em> or <em>→ note</em> to turn it into its own item on the same day; the parent's tags carry over, a breadcrumb comment links back, and the original comment gets a "→ moved to…" annotation; an Undo toast lets you reverse it</li>
         </ul>
 
         <h3>Projects</h3>
@@ -7074,12 +7087,25 @@
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.6.0';
+    const APP_VERSION = '1.7.0';
     const CHANGELOG = [
+      {
+        version: '1.7.0',
+        date: 'Sep 22, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Comment → Task / Note — click "→ task" or "→ note" on any comment to split it into its own item on the same day; tags carry over, a breadcrumb comment links back to the original task, and the source comment is annotated with a "→ moved to…" note',
+            'Undo support — a confirmation toast with Undo lets you reverse the split instantly',
+          ]},
+          { label: 'Fixed', items: [
+            'Projects tab now fully hides the daily desk — switching to Projects no longer shows the date header, progress bar, and kanban board above the project view (CSS specificity fix)',
+          ]},
+        ],
+      },
       {
         version: '1.6.0',
         date: 'Sep 16, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             '24 medium themes — a new brightness tier between Light and Dark: Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Lichen, Fern, Tundra, Moss, Basalt, Driftwood, Clay, Sandstone, Umber, Flint, Twilight, Haze, Plum Mid, Mulberry, Ash, Graphite, Concrete',
@@ -14153,6 +14179,85 @@
       showToast('Comment deleted', { undo: restoreDeleted });
     }
 
+    function splitCommentToItem(parentId, commentId, targetType) {
+      clearPendingUndo();
+
+      const found = findItem(parentId);
+      if (!found) return;
+
+      const comments = found.item.comments || [];
+      const cIdx = comments.findIndex(c => c.id === commentId);
+      if (cIdx === -1) return;
+
+      const comment = comments[cIdx];
+      const parentTitle = stripHtmlTags(found.item.content).slice(0, 80);
+
+      const newItemId = newId();
+      const day = state.data.days[found.date] || { items: [] };
+
+      const newItem = {
+        id: newItemId,
+        type: targetType,
+        content: sanitizeHtml(comment.content),
+        completed: false,
+        createdAt: new Date().toISOString(),
+        ...(targetType === 'task' ? { comments: [], shelved: false, boardColumn: 'new' } : {}),
+        ...(found.item.tags && found.item.tags.length > 0 ? { tags: [...found.item.tags] } : {}),
+      };
+
+      const breadcrumb = {
+        id: newId(),
+        content: `Split from: ${escapeHtml(parentTitle)}`,
+        createdAt: new Date().toISOString(),
+      };
+      if (targetType === 'task') {
+        newItem.comments = [breadcrumb];
+      }
+
+      const annotatedComment = {
+        ...cloneData(comment),
+        content: comment.content + ' <em style="opacity:0.6">→ moved to ' + targetType + '</em>',
+      };
+
+      const items = [...day.items];
+      const updatedComments = [...comments];
+      updatedComments[cIdx] = annotatedComment;
+      items[found.idx] = { ...items[found.idx], comments: updatedComments };
+      items.push(newItem);
+
+      clearItemDeleted(newItemId);
+      state.data.days[found.date] = { ...day, items };
+
+      const undoData = { date: found.date, parentId, commentId, originalComment: cloneData(comment), newItemId };
+      pendingUndo = {
+        type: 'split-comment',
+        ...undoData,
+      };
+
+      saveData();
+      render();
+      const label = targetType === 'task' ? 'Task' : 'Note';
+      showToast(`${label} created from comment`, {
+        undo: () => {
+          const d = state.data.days[undoData.date];
+          if (!d) return;
+          const itms = [...d.items];
+          const removeIdx = itms.findIndex(i => i.id === undoData.newItemId);
+          if (removeIdx !== -1) itms.splice(removeIdx, 1);
+          const parentIdx = itms.findIndex(i => i.id === undoData.parentId);
+          if (parentIdx !== -1) {
+            const pComments = [...(itms[parentIdx].comments || [])];
+            const ci = pComments.findIndex(c => c.id === undoData.commentId);
+            if (ci !== -1) pComments[ci] = undoData.originalComment;
+            itms[parentIdx] = { ...itms[parentIdx], comments: pComments };
+          }
+          state.data.days[undoData.date] = { ...d, items: itms };
+          saveData();
+          render();
+        },
+      });
+    }
+
     function formatCommentTime(iso) {
       const date = new Date(iso);
       return date.toLocaleString('en-US', {
@@ -14216,6 +14321,27 @@
             commentActions.className = 'comment-actions';
             commentActions.appendChild(createEditButton(() => startEditComment(item.id, comment.id)));
             commentActions.appendChild(createCommentDeleteButton(() => deleteComment(item.id, comment.id)));
+
+            const sep = document.createElement('span');
+            sep.className = 'comment-actions-sep';
+            commentActions.appendChild(sep);
+
+            const splitTask = document.createElement('button');
+            splitTask.type = 'button';
+            splitTask.className = 'comment-split-btn split-task';
+            splitTask.textContent = '→ task';
+            splitTask.title = 'Create a new task from this comment';
+            splitTask.addEventListener('click', () => splitCommentToItem(item.id, comment.id, 'task'));
+            commentActions.appendChild(splitTask);
+
+            const splitNote = document.createElement('button');
+            splitNote.type = 'button';
+            splitNote.className = 'comment-split-btn split-note';
+            splitNote.textContent = '→ note';
+            splitNote.title = 'Create a new note from this comment';
+            splitNote.addEventListener('click', () => splitCommentToItem(item.id, comment.id, 'note'));
+            commentActions.appendChild(splitNote);
+
             meta.appendChild(commentActions);
             li.appendChild(meta);
 
