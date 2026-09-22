@@ -2,10 +2,6 @@
 
 A personal daily desk for tasks, notes, and light project tracking — with optional cloud sync and a PWA install.
 
-![PWA Ready](https://img.shields.io/badge/PWA-Ready-blue)
-![Self Hosted](https://img.shields.io/badge/Self--Hosted-GitHub%20Pages-green)
-![Vanilla JS](https://img.shields.io/badge/Stack-Vanilla%20JS-yellow)
-
 ## Features
 
 ### Task management
@@ -47,11 +43,12 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 ### Customization
 
-- **48 preset themes** — 24 light + 24 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Glacier, Ember, etc.), browsed as mini wireframe previews, filterable by Light/Dark/All
+- **72 preset themes** — 24 light + 24 medium + 24 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Fog, Twilight, Driftwood, etc.), browsed as mini wireframe previews, filterable by Light/Med/Dark
 - **Custom Theme Builder** — create up to 5 of your own themes from 5 picked colors (Background, Surface, Sidebar, Accent, Text); ~30 CSS variables auto-derived, live preview, synced across devices
-- **Options menu** — tabbed **Appearance** / **Behavior** panels (customize button ⊟ near the date)
-  - Appearance: theme, Comfortable/Compact density, strike-through completed tasks
-  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view (remember last viewed vs. always open Today), celebration confetti, truncate long project notes
+- **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date)
+  - Themes: 72 presets with Light/Med/Dark filters, plus Custom tab for user-created themes
+  - Appearance: Comfortable/Compact density, text size, font family, sidebar position, card glow, gradient header
+  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view, celebration confetti, confirm before delete, strike-through completed tasks, truncate long project notes, holiday settings
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
 - Collapsible sidebar on desktop, with a "Today's Progress" mini card that always reflects today regardless of which day you're viewing
 
@@ -178,7 +175,7 @@ npm run test:all         # unit + e2e
 Layout/CSS coverage: unit invariants assert critical selectors (e.g. `#desk-view` flex pin, mobile logo-sub / backup grid). Playwright `e2e/layout.spec.ts` checks desktop board scroll with a pinned sticky header, and mobile help/version + Export/Import button width.
 
 
-E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), search overlay (result count, `#tagname` filtering, close/outside-click), project tasks (mid-edit preservation, empty-save deletion, cancel revert, tombstone tracking, double-click editing), dynamic add-form placeholder, and project note list padding. The auth modal is dismissed via **Continue offline**.
+E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), search overlay (result count, `#tagname` filtering, close/outside-click), project tasks (mid-edit preservation, empty-save deletion, cancel revert, tombstone tracking, double-click editing), dynamic add-form placeholder, project note list padding, settings popout 3-tab split (Themes/Appearance/Behavior), theme filter buttons (Light/Med/Dark/Custom switching), custom theme builder (add/edit/delete/apply/persist/max-5 cap), comments (add/edit/delete/badge/collapse), recurring templates (add/edit/delete/persist), and Insights tab (period selector, navigation, charts, summary stats). The auth modal is dismissed via **Continue offline**.
 
 ## Browser support
 
@@ -191,9 +188,11 @@ E2E covers add → New, complete/uncomplete, reload persistence, export tombston
 
 72 presets — 24 light + 24 medium + 24 dark — browsable as mini wireframe previews in Options → Themes, filterable by Light/Med/Dark.
 
-**Light (20):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Solarized, Sepia, Tokyo Day, Nord Light, Vaporwave, Synthwave, Cyberpunk, Outrun
+**Light (24):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Solarized, Sepia, Tokyo Day, Nord Light, Honey, Cloud, Peach, Olive, Vaporwave, Synthwave, Cyberpunk, Outrun
 
-**Dark (20):** Default, OLED, Nord, Dracula, Catppuccin, Tokyo Storm, Solarized, Gruvbox, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Synthwave, Cyberpunk, Outrun, Vaporwave
+**Medium (24):** Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Lichen, Fern, Tundra, Moss, Basalt, Driftwood, Clay, Sandstone, Umber, Flint, Twilight, Haze, Plum Mid, Mulberry, Ash, Graphite, Concrete
+
+**Dark (24):** Default, OLED, Nord, Dracula, Catppuccin, Tokyo Storm, Solarized, Gruvbox, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Ember, Glacier, Plum, Storm, Synthwave, Cyberpunk, Outrun, Vaporwave
 
 ## License
 
