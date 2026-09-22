@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.7.0] — 2026-09-22
+
+### Added
+- **Comment → Task / Note** — hover any comment and click **→ task** or **→ note** to split it into its own item on the same day; parent tags carry over, a breadcrumb comment links back to the source task, and the original comment is annotated with "→ moved to…"
+- **Undo support** — confirmation toast with Undo reverses the split instantly, removing the new item and restoring the original comment
+
+### Fixed
+- **Projects tab now fully hides the daily desk** — switching to Projects no longer shows the date header, progress bar, and kanban board above the project view (CSS specificity fix where `#desk-view`'s ID-level `display:flex` overrode the `.hidden` class)
+
+---
+
 ## [1.6.0] — 2026-09-16
 
 ### Added
