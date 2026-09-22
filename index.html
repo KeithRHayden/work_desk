@@ -5743,7 +5743,7 @@
       opacity: 0.8; transition: opacity 0.12s, color 0.12s;
     }
     .comment-split-btn:hover { opacity: 1; color: var(--accent); }
-    .comment-split-btn.split-task { color: var(--accent); font-weight: 600; }
+    .comment-action-delete:hover { color: var(--danger); }
 
     .comment-body { min-width: 0; }
     .comment-text {
@@ -14319,8 +14319,22 @@
 
             const commentActions = document.createElement('div');
             commentActions.className = 'comment-actions';
-            commentActions.appendChild(createEditButton(() => startEditComment(item.id, comment.id)));
-            commentActions.appendChild(createCommentDeleteButton(() => deleteComment(item.id, comment.id)));
+
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'comment-split-btn comment-action-edit';
+            editBtn.textContent = 'edit';
+            editBtn.title = 'Edit comment';
+            editBtn.addEventListener('click', () => startEditComment(item.id, comment.id));
+            commentActions.appendChild(editBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'comment-split-btn comment-action-delete';
+            delBtn.textContent = 'delete';
+            delBtn.title = 'Delete comment';
+            delBtn.addEventListener('click', () => deleteComment(item.id, comment.id));
+            commentActions.appendChild(delBtn);
 
             const sep = document.createElement('span');
             sep.className = 'comment-actions-sep';
