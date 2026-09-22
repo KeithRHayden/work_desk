@@ -41,9 +41,10 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day
 - **Week-over-week** comparison (week view)
 - **Carry-over analysis** — which weekdays tasks most often carry over from
-- **Streak tracking** — current/longest completion streaks with a heatmap matched to the selected period
+- **Streak tracking** — current/longest streaks based on days with desk activity, with a heatmap matched to the selected period
+- **Weekends don't break streaks** — Options → Behavior toggle (on by default); Fri → Mon stays consecutive; active weekend days still count, idle weekends do not reset the streak
 - **Charts** — bar, line, stacked, and pie, each with hover tooltips
-- Activity heatmap (year view) and a day-by-day progress breakdown table
+- Activity heatmap (year view) and a day-by-day progress breakdown table (real date labels; today marked e.g. `Tue, Sep 22 (Today)`)
 
 ### Customization
 
@@ -52,7 +53,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date)
   - Themes: 72 presets with Light/Med/Dark filters, plus Custom tab for user-created themes
   - Appearance: Comfortable/Compact density, text size, font family, sidebar position, card glow, gradient header
-  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view, celebration confetti, confirm before delete, strike-through completed tasks, truncate long project notes, holiday settings
+  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view, celebration confetti, confirm before delete, strike-through completed tasks, truncate long project notes, weekends don't break streaks, holiday settings
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
 - Collapsible sidebar on desktop, with a "Today's Progress" mini card that always reflects today regardless of which day you're viewing
 
