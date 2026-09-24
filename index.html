@@ -7118,6 +7118,8 @@
           ]},
           { label: 'Fixed', items: [
             'Projects tab now fully hides the daily desk — switching to Projects no longer shows the date header, progress bar, and kanban board above the project view (CSS specificity fix)',
+            'Auto carry off is now respected when signed in — cloud sync was carrying unfinished tasks forward even with the toggle off',
+            'Project sidebar counts update live — adding, saving, or deleting a note/task refreshes the sidebar instead of showing "Empty" until you switch projects',
           ]},
         ],
       },
@@ -11597,10 +11599,12 @@
 
         // Carry/inject after merge so stale local opens aren't promoted before cloud state wins
         if (state.listContext === 'work' || state.listContext === 'personal') {
-          console.log('[sync] running carry forward and inject');
-          carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
+          if (state.autoCarryForward) {
+            console.log('[sync] running auto carry forward');
+            carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
+            localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
+          }
           injectDueTemplates();
-          localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
         }
         render();
         console.log('[sync] rendered, state.data.days:', Object.keys(state.data.days || {}).length);
@@ -11614,9 +11618,11 @@
         console.log('[sync] no remote data, pushing local');
         // No remote data, just push local
         if (state.listContext === 'work' || state.listContext === 'personal') {
-          carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
+          if (state.autoCarryForward) {
+            carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
+            localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
+          }
           injectDueTemplates();
-          localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
         }
         await sbPush();
         if (!silent) showToast('Data backed up to cloud ☁️');
@@ -16420,12 +16426,12 @@
     function selectProject(projectId) {
       state.selectedProjectId = projectId;
       localStorage.setItem(SELECTED_PROJECT_KEY, projectId);
-      renderProjectsList();
       renderProjectDetail();
     }
 
     function renderProjectDetail() {
       const project = getProject(state.selectedProjectId);
+      if (state.listContext === 'projects') renderProjectsList();
 
       if (!project) {
         els.projectEmpty.classList.remove('hidden');
