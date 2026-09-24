@@ -19,6 +19,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ### Fixed
 - **Projects tab now fully hides the daily desk** — switching to Projects no longer shows the date header, progress bar, and kanban board above the project view (CSS specificity fix where `#desk-view`'s ID-level `display:flex` overrode the `.hidden` class)
+- **Auto carry off is now respected when signed in** — cloud sync (on sign-in, window focus, and every 5 minutes) was carrying unfinished tasks forward even with Auto carry turned off; it now only carries when the toggle is on, and still adds due recurring tasks either way
+- **Project sidebar counts update live** — adding, saving, or deleting a project note/task now refreshes the "1 note · 2 tasks" line in the sidebar instead of showing "Empty" until you switch projects
 
 ---
 
