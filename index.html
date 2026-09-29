@@ -11,54 +11,69 @@
   <script>
     (function () {
       const FAVICONS = {
-        // Light — Neutral/minimal
-        '': '📋',
-        slate: '🪨',
-        arctic: '❄️',
-        paper: '📄',
-        // Light — Warm/earthy
-        latte: '☕',
-        sand: '🏖️',
-        coral: '🪸',
-        rose: '🌹',
-        sakura: '🌸',
-        // Light — Nature/elegant
-        mint: '🌿',
-        sage: '🍃',
-        lavender: '💜',
-        'solarized-light': '☀️',
-        sepia: '📜',
-        'tokyo-day': '🗼',
-        'nord-light': '🏔️',
-        // Light — Neon/vibrant
-        vaporwave: '🌴',
-        'synthwave-light': '🎹',
-        'cyberpunk-light': '🦾',
-        'outrun-light': '🌅',
-        // Dark — Base/neutral
-        dark: '🌙',
-        oled: '🖤',
-        nord: '🧊',
-        dracula: '🧛',
-        catppuccin: '🐱',
-        'tokyo-storm': '⛈️',
-        'solarized-dark': '🔆',
-        'gruvbox-dark': '📻',
-        // Dark — Atmospheric
-        ocean: '🌊',
-        forest: '🌲',
-        dusk: '🌇',
-        warm: '🔥',
-        // Dark — Moody/rich
-        midnight: '🌌',
-        noir: '🎬',
-        mocha: '☕',
-        'rose-dark': '🥀',
-        // Dark — Neon/vibrant
-        synthwave: '🌃',
-        cyberpunk: '⚡',
-        outrun: '🏎️',
-        'vaporwave-dark': '💿',
+        // Light â€” Neutral/minimal
+        '': 'ðŸ“‹',
+        slate: 'ðŸª¨',
+        arctic: 'â„ï¸',
+        paper: 'ðŸ“„',
+        // Light â€” Warm/earthy
+        latte: 'â˜•',
+        sand: 'ðŸ–ï¸',
+        coral: 'ðŸª¸',
+        rose: 'ðŸŒ¹',
+        sakura: 'ðŸŒ¸',
+        // Light â€” Nature/elegant
+        mint: 'ðŸŒ¿',
+        sage: 'ðŸƒ',
+        lavender: 'ðŸ’œ',
+        'solarized-light': 'â˜€ï¸',
+        sepia: 'ðŸ“œ',
+        'tokyo-day': 'ðŸ—¼',
+        'nord-light': 'ðŸ”ï¸',
+        // Light â€” Neon/vibrant
+        vaporwave: 'ðŸŒ´',
+        'synthwave-light': 'ðŸŽ¹',
+        'cyberpunk-light': 'ðŸ¦¾',
+        'outrun-light': 'ðŸŒ…',
+        // Light â€” Retro/fresh
+        retro: 'ðŸŽ®',
+        seafoam: 'ðŸš',
+        mediterranean: 'ðŸ›ï¸',
+        citrus: 'ðŸ‹',
+        // Medium â€” Retro/rich
+        gameboy: 'ðŸ‘¾',
+        denim: 'ðŸ‘–',
+        terracotta: 'ðŸº',
+        merlot: 'ðŸ·',
+        // Dark â€” Editor/retro
+        monokai: 'ðŸ–¥ï¸',
+        'one-dark': 'âš›ï¸',
+        phosphor: 'ðŸ“Ÿ',
+        'rose-pine': 'ðŸŒ·',
+        // Dark â€” Base/neutral
+        dark: 'ðŸŒ™',
+        oled: 'ðŸ–¤',
+        nord: 'ðŸ§Š',
+        dracula: 'ðŸ§›',
+        catppuccin: 'ðŸ±',
+        'tokyo-storm': 'â›ˆï¸',
+        'solarized-dark': 'ðŸ”†',
+        'gruvbox-dark': 'ðŸ“»',
+        // Dark â€” Atmospheric
+        ocean: 'ðŸŒŠ',
+        forest: 'ðŸŒ²',
+        dusk: 'ðŸŒ‡',
+        warm: 'ðŸ”¥',
+        // Dark â€” Moody/rich
+        midnight: 'ðŸŒŒ',
+        noir: 'ðŸŽ¬',
+        mocha: 'â˜•',
+        'rose-dark': 'ðŸ¥€',
+        // Dark â€” Neon/vibrant
+        synthwave: 'ðŸŒƒ',
+        cyberpunk: 'âš¡',
+        outrun: 'ðŸŽï¸',
+        'vaporwave-dark': 'ðŸ’¿',
       };
       function setFavicon(themeId) {
         const emoji = FAVICONS[themeId] ?? FAVICONS[''];
@@ -133,7 +148,7 @@
       color-scheme: light;
     }
 
-    /* ── Medium themes ──────────────────────────────────────────────── */
+    /* â”€â”€ Medium themes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     /* Blue / Cool */
     [data-theme="fog"] {
       --bg: #6b7280; --surface: #7d8594; --panel-bg: #626a78; --input-bg: #8890a0;
@@ -620,6 +635,90 @@
       --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
       color-scheme: dark;
     }
+    /* Game Boy â€” classic DMG four-shade green */
+    [data-theme="gameboy"] {
+      --bg: #4f6b24; --surface: #5e7b2e; --panel-bg: #46601f; --input-bg: #6a8836;
+      --sidebar: #0f380f; --sidebar-text: #9bbc0f; --sidebar-active: #e0f0b0;
+      --sidebar-muted: #5a7a2a; --sidebar-border: rgba(155,188,15,.14);
+      --sidebar-hover: rgba(155,188,15,.08); --sidebar-btn-border: rgba(155,188,15,.18);
+      --accent: #9bbc0f; --accent-hover: #8bac0f; --accent-light: #306230;
+      --text: #eef6d8; --text-muted: #c4d89a;
+      --border: #3e5a1a; --done: #8aa860;
+      --note-bg: #577428; --note-border: #3e5a1a;
+      --danger: #f87171; --danger-surface: #4a2828; --danger-surface-hover: #5a3232; --danger-border: #7a4040;
+      --shelved-border: #5a6a3a; --shelved-label: #b0c080;
+      --shadow: 0 1px 4px rgba(0,0,0,.28);
+      --tooltip-bg: #0f380f; --tooltip-text: #e0f0b0;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #4a6a28; --delete-hover-bg: #5a3838; --shelf-hover-bg: #4e5e38;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Denim â€” washed indigo with orange stitching */
+    [data-theme="denim"] {
+      --bg: #4a5a7a; --surface: #586a8c; --panel-bg: #425270; --input-bg: #647698;
+      --sidebar: #1a2238; --sidebar-text: #a8b8d8; --sidebar-active: #eef2fa;
+      --sidebar-muted: #6a7aa0; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.10);
+      --accent: #f59e0b; --accent-hover: #d97706; --accent-light: #4a4030;
+      --text: #f0f4fa; --text-muted: #c4cee0;
+      --border: #3e4c68; --done: #8a9ab8;
+      --note-bg: #52628a; --note-border: #3e4c68;
+      --danger: #f87171; --danger-surface: #4a2828; --danger-surface-hover: #5a3232; --danger-border: #7a4040;
+      --shelved-border: #5a6480; --shelved-label: #a8b0c8;
+      --shadow: 0 1px 4px rgba(0,0,0,.24);
+      --tooltip-bg: #1a2238; --tooltip-text: #eef2fa;
+      --modal-overlay: rgba(0,0,0,.48); --modal-shadow: 0 8px 32px rgba(0,0,0,.28);
+      --move-hover-bg: #5a5a60; --delete-hover-bg: #5e4050; --shelf-hover-bg: #505a78;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Terracotta â€” fired clay, apricot */
+    [data-theme="terracotta"] {
+      --bg: #7a5244; --surface: #8a6254; --panel-bg: #6e483c; --input-bg: #966e60;
+      --sidebar: #2e1a14; --sidebar-text: #e0b8a0; --sidebar-active: #fbeee6;
+      --sidebar-muted: #9a6a58; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.10);
+      --accent: #fdba74; --accent-hover: #fb923c; --accent-light: #5a3a28;
+      --text: #fbf1ea; --text-muted: #e2c6b6;
+      --border: #684438; --done: #b89080;
+      --note-bg: #82594b; --note-border: #684438;
+      --danger: #fca5a5; --danger-surface: #4a2424; --danger-surface-hover: #5a2e2e; --danger-border: #7a3c3c;
+      --shelved-border: #7a5a50; --shelved-label: #d0a898;
+      --shadow: 0 1px 4px rgba(0,0,0,.26);
+      --tooltip-bg: #2e1a14; --tooltip-text: #fbeee6;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #6e5a40; --delete-hover-bg: #6a3a36; --shelf-hover-bg: #6a5050;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Merlot â€” deep wine, blush */
+    [data-theme="merlot"] {
+      --bg: #6a3a4a; --surface: #7a4a5a; --panel-bg: #5e3242; --input-bg: #865666;
+      --sidebar: #2a1018; --sidebar-text: #e0a8b8; --sidebar-active: #fbeef2;
+      --sidebar-muted: #9a5a6c; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.10);
+      --accent: #fda4af; --accent-hover: #fb7185; --accent-light: #4e2432;
+      --text: #fbf0f3; --text-muted: #e4c0ca;
+      --border: #58303e; --done: #b08090;
+      --note-bg: #724252; --note-border: #58303e;
+      --danger: #fca5a5; --danger-surface: #4a2020; --danger-surface-hover: #5a2a2a; --danger-border: #7a3838;
+      --shelved-border: #6a4a58; --shelved-label: #d0a0b0;
+      --shadow: 0 1px 4px rgba(0,0,0,.28);
+      --tooltip-bg: #2a1018; --tooltip-text: #fbeef2;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #6a4a4a; --delete-hover-bg: #6a2e36; --shelf-hover-bg: #604656;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
 
     [data-theme="dark"] {
       --bg: #12151c;
@@ -662,7 +761,7 @@
       color-scheme: dark;
     }
 
-    /* ── Shared semantics for all non-default dark themes ─────────────────── */
+    /* â”€â”€ Shared semantics for all non-default dark themes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     [data-theme="ocean"],
     [data-theme="forest"],
     [data-theme="dusk"],
@@ -685,7 +784,11 @@
     [data-theme="ember"],
     [data-theme="glacier"],
     [data-theme="plum"],
-    [data-theme="storm"] {
+    [data-theme="storm"],
+    [data-theme="monokai"],
+    [data-theme="one-dark"],
+    [data-theme="phosphor"],
+    [data-theme="rose-pine"] {
       --text: #e8ecf3; --text-muted: #919aad; --done: #6b7588;
       --note-bg: #252218; --note-border: #3d3628; --danger: #f07171;
       --shadow: 0 1px 4px rgba(0,0,0,.35); --tooltip-text: #ffffff;
@@ -696,7 +799,7 @@
       color-scheme: dark;
     }
 
-    /* Ocean — deep navy, cyan */
+    /* Ocean â€” deep navy, cyan */
     [data-theme="ocean"] {
       --bg: #051320; --surface: #07192b; --panel-bg: #040f19; --input-bg: #07192b;
       --sidebar: #030e18; --sidebar-text: #6bafc6; --sidebar-active: #a8d8ec;
@@ -707,7 +810,7 @@
       --done: #2e8fa8; --shelved-label: #4a8898;
     }
 
-    /* Forest — pine woodland: layered greens, emerald + moss, amber accents */
+    /* Forest â€” pine woodland: layered greens, emerald + moss, amber accents */
     [data-theme="forest"] {
       --bg: #071b12;
       --surface: #143323;
@@ -750,7 +853,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #b89b4a 60%, transparent);
     }
 
-    /* Dusk — deep violet, lavender */
+    /* Dusk â€” deep violet, lavender */
     [data-theme="dusk"] {
       --bg: #0e0620; --surface: #160a30; --panel-bg: #0a0418; --input-bg: #160a30;
       --sidebar: #090318; --sidebar-text: #9b80c4; --sidebar-active: #d4b8f0;
@@ -761,7 +864,7 @@
       --done: #7060aa; --shelved-label: #8878b8;
     }
 
-    /* Warm — dark amber/brown, golden */
+    /* Warm â€” dark amber/brown, golden */
     [data-theme="warm"] {
       --bg: #140a02; --surface: #1e1006; --panel-bg: #0e0602; --input-bg: #1e1006;
       --sidebar: #0e0601; --sidebar-text: #c49b65; --sidebar-active: #f0d4a0;
@@ -805,7 +908,7 @@
       --done: #7860a8; --shelved-label: #7870a8;
     }
 
-    /* Synthwave — deep purple night, hot pink + cyan neon */
+    /* Synthwave â€” deep purple night, hot pink + cyan neon */
     [data-theme="synthwave"] {
       --bg: #0c0020; --surface: #16082e; --panel-bg: #080018; --input-bg: #16082e;
       --sidebar: #060014; --sidebar-text: #01cdfe; --sidebar-active: #ff71ce;
@@ -820,7 +923,7 @@
       --sidebar-cal-selected-bg: color-mix(in srgb, #01cdfe 25%, transparent);
     }
 
-    /* Cyberpunk — near-black, electric yellow + teal */
+    /* Cyberpunk â€” near-black, electric yellow + teal */
     [data-theme="cyberpunk"] {
       --bg: #0a0a0c; --surface: #121218; --panel-bg: #060608; --input-bg: #121218;
       --sidebar: #050508; --sidebar-text: #6a6a78; --sidebar-active: #fcee09;
@@ -833,7 +936,7 @@
       --done: #3a8860; --shelved-label: #888040;
     }
 
-    /* Outrun — sunset purple, orange + magenta horizon */
+    /* Outrun â€” sunset purple, orange + magenta horizon */
     [data-theme="outrun"] {
       --bg: #1a0828; --surface: #280a3a; --panel-bg: #120620; --input-bg: #280a3a;
       --sidebar: #10041c; --sidebar-text: #c77dff; --sidebar-active: #ffb347;
@@ -845,7 +948,7 @@
       --done: #a03878; --shelved-label: #c77dff;
     }
 
-    /* Vaporwave Dark — dreamy mall night: plum indigo, lilac, aqua, cotton-candy pink */
+    /* Vaporwave Dark â€” dreamy mall night: plum indigo, lilac, aqua, cotton-candy pink */
     [data-theme="vaporwave-dark"] {
       --bg: #120a24;
       --surface: #24163d;
@@ -884,7 +987,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #b79cff 55%, transparent);
     }
 
-    /* Midnight — ultra-deep blue-black, pure midnight sidebar, cool periwinkle accent */
+    /* Midnight â€” ultra-deep blue-black, pure midnight sidebar, cool periwinkle accent */
     [data-theme="midnight"] {
       --bg: #070a14; --surface: #0d1224; --panel-bg: #060914; --input-bg: #0d1224;
       --sidebar: #050810; --sidebar-text: #5870a8; --sidebar-active: #a8c0f0;
@@ -902,7 +1005,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #6080e8 60%, transparent);
     }
 
-    /* Noir — near-black charcoal, dark slate sidebar, muted gold accent */
+    /* Noir â€” near-black charcoal, dark slate sidebar, muted gold accent */
     [data-theme="noir"] {
       --bg: #121212; --surface: #1c1c1c; --panel-bg: #0e0e0e; --input-bg: #1c1c1c;
       --sidebar: #0a0a0a; --sidebar-text: #888888; --sidebar-active: #e8e0c8;
@@ -920,7 +1023,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #c8a84a 60%, transparent);
     }
 
-    /* Mocha — dark espresso-brown, warm amber accent */
+    /* Mocha â€” dark espresso-brown, warm amber accent */
     [data-theme="mocha"] {
       --bg: #180e08; --surface: #261610; --panel-bg: #140c08; --input-bg: #261610;
       --sidebar: #0e0804; --sidebar-text: #8a6848; --sidebar-active: #e8c898;
@@ -938,7 +1041,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #d4883c 60%, transparent);
     }
 
-    /* Rose Dark — deep wine/burgundy, soft rose-pink accent */
+    /* Rose Dark â€” deep wine/burgundy, soft rose-pink accent */
     [data-theme="rose-dark"] {
       --bg: #1a0810; --surface: #2a1018; --panel-bg: #140610; --input-bg: #2a1018;
       --sidebar: #120608; --sidebar-text: #a85870; --sidebar-active: #f0a0c0;
@@ -956,7 +1059,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #e8608a 60%, transparent);
     }
 
-    /* OLED — pure black, maximum contrast */
+    /* OLED â€” pure black, maximum contrast */
     [data-theme="oled"] {
       --bg: #000000; --surface: #0c0c0c; --panel-bg: #000000; --input-bg: #0c0c0c;
       --sidebar: #000000; --sidebar-text: #888888; --sidebar-active: #ffffff;
@@ -974,7 +1077,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #3b82f6 60%, transparent);
     }
 
-    /* Catppuccin Mocha — cozy pastel dark, mauve + lavender */
+    /* Catppuccin Mocha â€” cozy pastel dark, mauve + lavender */
     [data-theme="catppuccin"] {
       --bg: #1e1e2e; --surface: #313244; --panel-bg: #181825; --input-bg: #313244;
       --sidebar: #181825; --sidebar-text: #a6adc8; --sidebar-active: #cdd6f4;
@@ -992,7 +1095,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #cba6f7 60%, transparent);
     }
 
-    /* Tokyo Storm — dark storm navy, neon cyan + electric blue */
+    /* Tokyo Storm â€” dark storm navy, neon cyan + electric blue */
     [data-theme="tokyo-storm"] {
       --bg: #24283b; --surface: #292e42; --panel-bg: #1f2335; --input-bg: #292e42;
       --sidebar: #1f2335; --sidebar-text: #7aa2f7; --sidebar-active: #c0caf5;
@@ -1010,7 +1113,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #7aa2f7 60%, transparent);
     }
 
-    /* Gruvbox Dark — retro warm dark, bright orange + warm yellow */
+    /* Gruvbox Dark â€” retro warm dark, bright orange + warm yellow */
     [data-theme="gruvbox-dark"] {
       --bg: #282828; --surface: #3c3836; --panel-bg: #1d2021; --input-bg: #3c3836;
       --sidebar: #1d2021; --sidebar-text: #ebdbb2; --sidebar-active: #fe8019;
@@ -1028,7 +1131,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #fe8019 60%, transparent);
     }
 
-    /* Ember — smoldering charcoal, warm red-orange glow */
+    /* Ember â€” smoldering charcoal, warm red-orange glow */
     [data-theme="ember"] {
       --bg: #1a0e08; --surface: #281810; --panel-bg: #140a06; --input-bg: #281810;
       --sidebar: #100604; --sidebar-text: #c07848; --sidebar-active: #f0b888;
@@ -1046,7 +1149,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #f09040 60%, transparent);
     }
 
-    /* Glacier — deep frozen blue, icy cyan accent */
+    /* Glacier â€” deep frozen blue, icy cyan accent */
     [data-theme="glacier"] {
       --bg: #08141e; --surface: #0e1e2c; --panel-bg: #060f18; --input-bg: #0e1e2c;
       --sidebar: #04101a; --sidebar-text: #60a0c0; --sidebar-active: #a0d8f0;
@@ -1064,7 +1167,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #60d0f0 60%, transparent);
     }
 
-    /* Plum — rich dark wine-purple, amethyst accent */
+    /* Plum â€” rich dark wine-purple, amethyst accent */
     [data-theme="plum"] {
       --bg: #140818; --surface: #221028; --panel-bg: #100614; --input-bg: #221028;
       --sidebar: #0c0410; --sidebar-text: #a870b8; --sidebar-active: #d8a8e8;
@@ -1082,7 +1185,7 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #d088f0 60%, transparent);
     }
 
-    /* Storm — dark steel-gray, electric white-blue accent */
+    /* Storm â€” dark steel-gray, electric white-blue accent */
     [data-theme="storm"] {
       --bg: #101418; --surface: #181e24; --panel-bg: #0c1014; --input-bg: #181e24;
       --sidebar: #0a0e12; --sidebar-text: #7888a0; --sidebar-active: #c0d0e8;
@@ -1100,6 +1203,78 @@
       --sidebar-cal-today-ring: color-mix(in srgb, #88b0e0 60%, transparent);
     }
 
+    /* Monokai â€” classic editor olive-charcoal, hot pink accent */
+    [data-theme="monokai"] {
+      --bg: #272822; --surface: #3e3d32; --panel-bg: #1e1f1c; --input-bg: #3e3d32;
+      --sidebar: #1e1f1c; --sidebar-text: #a6a28c; --sidebar-active: #f8f8f2;
+      --sidebar-muted: #75715e; --sidebar-border: rgba(249,38,114,.12);
+      --sidebar-hover: rgba(249,38,114,.08); --sidebar-btn-border: rgba(249,38,114,.16);
+      --accent: #f92672; --accent-hover: #ff4f8b; --accent-light: #4a1f30;
+      --text: #f8f8f2; --text-muted: #a6a28c;
+      --border: #49483e; --tooltip-bg: #3e3d32;
+      --done: #75715e; --shelved-label: #ae81ff;
+      --note-bg: #33332a; --note-border: #49483e;
+      --shelved-border: #49483e;
+      --move-hover-bg: #34342a; --delete-hover-bg: #3a2026; --shelf-hover-bg: #34303a;
+      --sidebar-tab-active-bg: color-mix(in srgb, #f92672 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #f92672 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #a6e22e 60%, transparent);
+    }
+
+    /* One Dark â€” Atom editor slate, soft blue accent */
+    [data-theme="one-dark"] {
+      --bg: #282c34; --surface: #2f343f; --panel-bg: #21252b; --input-bg: #2f343f;
+      --sidebar: #21252b; --sidebar-text: #abb2bf; --sidebar-active: #e6e9ef;
+      --sidebar-muted: #5c6370; --sidebar-border: rgba(97,175,239,.1);
+      --sidebar-hover: rgba(97,175,239,.07); --sidebar-btn-border: rgba(97,175,239,.14);
+      --accent: #61afef; --accent-hover: #7dbef2; --accent-light: #1f3448;
+      --text: #dcdfe4; --text-muted: #9aa1ad;
+      --border: #3e4451; --tooltip-bg: #2f343f;
+      --done: #5c6370; --shelved-label: #c678dd;
+      --note-bg: #2c3038; --note-border: #3e4451;
+      --shelved-border: #3e4451;
+      --move-hover-bg: #333842; --delete-hover-bg: #3a2528; --shelf-hover-bg: #33303e;
+      --sidebar-tab-active-bg: color-mix(in srgb, #61afef 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #61afef 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #61afef 60%, transparent);
+    }
+
+    /* Phosphor â€” green-screen CRT terminal glow */
+    [data-theme="phosphor"] {
+      --bg: #050d07; --surface: #0b1a0f; --panel-bg: #030904; --input-bg: #0b1a0f;
+      --sidebar: #020703; --sidebar-text: #4ade80; --sidebar-active: #b6f5c8;
+      --sidebar-muted: #2f6b40; --sidebar-border: rgba(51,255,102,.12);
+      --sidebar-hover: rgba(51,255,102,.07); --sidebar-btn-border: rgba(51,255,102,.16);
+      --accent: #33ff66; --accent-hover: #6cff91; --accent-light: #0e3018;
+      --text: #b6f5c8; --text-muted: #5fae78;
+      --border: #143a20; --tooltip-bg: #0b1a0f; --tooltip-text: #b6f5c8;
+      --done: #3a7a4c; --shelved-label: #7fbf8f;
+      --note-bg: #0e1e12; --note-border: #1a3a22;
+      --shelved-border: #1a3a22;
+      --move-hover-bg: #0f2414; --delete-hover-bg: #2a1414; --shelf-hover-bg: #121e18;
+      --sidebar-tab-active-bg: color-mix(in srgb, #33ff66 22%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #33ff66 18%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #33ff66 60%, transparent);
+    }
+
+    /* RosÃ© Pine â€” muted violet night, rose accent */
+    [data-theme="rose-pine"] {
+      --bg: #191724; --surface: #1f1d2e; --panel-bg: #13111e; --input-bg: #26233a;
+      --sidebar: #13111e; --sidebar-text: #908caa; --sidebar-active: #e0def4;
+      --sidebar-muted: #6e6a86; --sidebar-border: rgba(235,188,186,.1);
+      --sidebar-hover: rgba(235,188,186,.07); --sidebar-btn-border: rgba(235,188,186,.14);
+      --accent: #ebbcba; --accent-hover: #f3d0ce; --accent-light: #3a2a36;
+      --text: #e0def4; --text-muted: #908caa;
+      --border: #2a2740; --tooltip-bg: #26233a;
+      --done: #6e6a86; --shelved-label: #c4a7e7;
+      --note-bg: #221f33; --note-border: #2a2740;
+      --shelved-border: #2a2740;
+      --move-hover-bg: #26233a; --delete-hover-bg: #3a1f2a; --shelf-hover-bg: #2a2438;
+      --sidebar-tab-active-bg: color-mix(in srgb, #ebbcba 26%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #ebbcba 20%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #9ccfd8 60%, transparent);
+    }
+
     /* Solarized Light */
     [data-theme="solarized-light"] {
       --bg: #fdf6e3; --surface: #eee8d5; --panel-bg: #f5f0e0; --input-bg: #eee8d5;
@@ -1110,7 +1285,7 @@
       --border: #ddd6c1; --tooltip-bg: #073642; --tooltip-text: #eee8d5;
     }
 
-    /* Slate — light, blue-gray sidebar */
+    /* Slate â€” light, blue-gray sidebar */
     [data-theme="slate"] {
       --bg: #f1f5f9; --surface: #ffffff; --panel-bg: #f8fafc; --input-bg: #ffffff;
       --sidebar: #334155; --sidebar-text: #94a3b8; --sidebar-active: #f1f5f9;
@@ -1120,7 +1295,7 @@
       --border: #e2e8f0; --tooltip-bg: #1e293b; --tooltip-text: #ffffff;
     }
 
-    /* Rose — light, deep rose sidebar */
+    /* Rose â€” light, deep rose sidebar */
     [data-theme="rose"] {
       --bg: #fff1f2; --surface: #ffffff; --panel-bg: #fff5f6; --input-bg: #ffffff;
       --sidebar: #4c0519; --sidebar-text: #fda4af; --sidebar-active: #fff1f2;
@@ -1130,7 +1305,7 @@
       --border: #fecdd3; --tooltip-bg: #4c0519; --tooltip-text: #ffffff;
     }
 
-    /* Vaporwave — electric cyan sky, hot magenta + aqua chrome */
+    /* Vaporwave â€” electric cyan sky, hot magenta + aqua chrome */
     [data-theme="vaporwave"] {
       --bg: #a8e8ff; --surface: #ccf4ff; --panel-bg: #90dff8; --input-bg: #e0f8ff;
       --sidebar: #24085a; --sidebar-text: #01cdfe; --sidebar-active: #ff71ce;
@@ -1153,7 +1328,7 @@
       color-scheme: light;
     }
 
-    /* Synthwave Light — purple haze sunset (distinct from vaporwave cyan sky) */
+    /* Synthwave Light â€” purple haze sunset (distinct from vaporwave cyan sky) */
     [data-theme="synthwave-light"] {
       --bg: #d8c0f0; --surface: #ece0f8; --panel-bg: #c8a8e8; --input-bg: #ece0f8;
       --sidebar: #140428; --sidebar-text: #b967ff; --sidebar-active: #ff71ce;
@@ -1176,7 +1351,7 @@
       color-scheme: light;
     }
 
-    /* Cyberpunk Light — cool gray day, charcoal sidebar + neon green / teal / lime */
+    /* Cyberpunk Light â€” cool gray day, charcoal sidebar + neon green / teal / lime */
     [data-theme="cyberpunk-light"] {
       --bg: #d9dce3;
       --surface: #f3f5f8;
@@ -1218,7 +1393,7 @@
       color-scheme: light;
     }
 
-    /* Outrun Light — sunset peach horizon, magenta + orange */
+    /* Outrun Light â€” sunset peach horizon, magenta + orange */
     [data-theme="outrun-light"] {
       --bg: #ffe0c8; --surface: #fff0e4; --panel-bg: #ffd0a8; --input-bg: #fff0e4;
       --sidebar: #200838; --sidebar-text: #c77dff; --sidebar-active: #ffb347;
@@ -1245,7 +1420,7 @@
       color-scheme: light;
     }
 
-    /* Latte — warm cream, coffee-brown sidebar, caramel accent */
+    /* Latte â€” warm cream, coffee-brown sidebar, caramel accent */
     [data-theme="latte"] {
       --bg: #fdf6ee; --surface: #ffffff; --panel-bg: #f5ede0; --input-bg: #ffffff;
       --sidebar: #3b2314; --sidebar-text: #c4987a; --sidebar-active: #fdf6ee;
@@ -1266,7 +1441,7 @@
       color-scheme: light;
     }
 
-    /* Arctic — bright white, deep navy sidebar, icy sky-blue accent */
+    /* Arctic â€” bright white, deep navy sidebar, icy sky-blue accent */
     [data-theme="arctic"] {
       --bg: #f0f6ff; --surface: #ffffff; --panel-bg: #e6f1ff; --input-bg: #ffffff;
       --sidebar: #0f2044; --sidebar-text: #7fa8cc; --sidebar-active: #e8f4ff;
@@ -1287,7 +1462,7 @@
       color-scheme: light;
     }
 
-    /* Sand — warm sandy/beige, terracotta sidebar, burnt-orange accent */
+    /* Sand â€” warm sandy/beige, terracotta sidebar, burnt-orange accent */
     [data-theme="sand"] {
       --bg: #f7f0e6; --surface: #fffcf8; --panel-bg: #f0e8d8; --input-bg: #fffcf8;
       --sidebar: #7a3520; --sidebar-text: #e8b898; --sidebar-active: #fff8f0;
@@ -1308,7 +1483,7 @@
       color-scheme: light;
     }
 
-    /* Mint — clean white, deep forest-green sidebar, fresh mint accent */
+    /* Mint â€” clean white, deep forest-green sidebar, fresh mint accent */
     [data-theme="mint"] {
       --bg: #f0faf4; --surface: #ffffff; --panel-bg: #e6f6ec; --input-bg: #ffffff;
       --sidebar: #1a3d2a; --sidebar-text: #7ab898; --sidebar-active: #e8f8ee;
@@ -1329,7 +1504,7 @@
       color-scheme: light;
     }
 
-    /* Lavender — soft lilac, deep indigo sidebar, violet accent */
+    /* Lavender â€” soft lilac, deep indigo sidebar, violet accent */
     [data-theme="lavender"] {
       --bg: #f3f0fa; --surface: #ffffff; --panel-bg: #ede8f8; --input-bg: #ffffff;
       --sidebar: #2d1f5e; --sidebar-text: #a890d8; --sidebar-active: #f0ecfc;
@@ -1350,7 +1525,7 @@
       color-scheme: light;
     }
 
-    /* Coral — warm off-white, deep rose-coral sidebar, salmon accent */
+    /* Coral â€” warm off-white, deep rose-coral sidebar, salmon accent */
     [data-theme="coral"] {
       --bg: #fff5f0; --surface: #ffffff; --panel-bg: #ffede8; --input-bg: #ffffff;
       --sidebar: #8b2635; --sidebar-text: #f0a090; --sidebar-active: #fff5f0;
@@ -1371,7 +1546,7 @@
       color-scheme: light;
     }
 
-    /* Tokyo Day — light take on Tokyo Night; pale cool-gray, slate-blue sidebar, periwinkle accent */
+    /* Tokyo Day â€” light take on Tokyo Night; pale cool-gray, slate-blue sidebar, periwinkle accent */
     [data-theme="tokyo-day"] {
       --bg: #d5d6db; --surface: #e9e9ec; --panel-bg: #c8c9ce; --input-bg: #e9e9ec;
       --sidebar: #1a1b26; --sidebar-text: #787c99; --sidebar-active: #c0caf5;
@@ -1392,7 +1567,7 @@
       color-scheme: light;
     }
 
-    /* Paper — ultra-minimal parchment, charcoal sidebar, ink-gray accent */
+    /* Paper â€” ultra-minimal parchment, charcoal sidebar, ink-gray accent */
     [data-theme="paper"] {
       --bg: #f8f4ed; --surface: #ffffff; --panel-bg: #f2ede4; --input-bg: #ffffff;
       --sidebar: #2c2c2c; --sidebar-text: #a0a0a0; --sidebar-active: #f8f4ed;
@@ -1413,7 +1588,7 @@
       color-scheme: light;
     }
 
-    /* Sakura — soft cherry blossom, wine-pink sidebar, crimson rose accent */
+    /* Sakura â€” soft cherry blossom, wine-pink sidebar, crimson rose accent */
     [data-theme="sakura"] {
       --bg: #fdf2f4; --surface: #ffffff; --panel-bg: #fae8eb; --input-bg: #ffffff;
       --sidebar: #4a1525; --sidebar-text: #fbcfe8; --sidebar-active: #fff1f2;
@@ -1434,7 +1609,7 @@
       color-scheme: light;
     }
 
-    /* Sage — calming herbal green, dark olive sidebar, forest sage accent */
+    /* Sage â€” calming herbal green, dark olive sidebar, forest sage accent */
     [data-theme="sage"] {
       --bg: #f1f5f2; --surface: #ffffff; --panel-bg: #e6ede8; --input-bg: #ffffff;
       --sidebar: #1f3024; --sidebar-text: #a3c2ab; --sidebar-active: #f1f5f2;
@@ -1455,7 +1630,7 @@
       color-scheme: light;
     }
 
-    /* Sepia — warm vintage book, rich mahogany sidebar, amber leather accent */
+    /* Sepia â€” warm vintage book, rich mahogany sidebar, amber leather accent */
     [data-theme="sepia"] {
       --bg: #f4ecd8; --surface: #faf6eb; --panel-bg: #eae0c6; --input-bg: #faf6eb;
       --sidebar: #382a1d; --sidebar-text: #c8b090; --sidebar-active: #faf6eb;
@@ -1476,7 +1651,7 @@
       color-scheme: light;
     }
 
-    /* Honey — golden warmth, deep amber sidebar, marigold accent */
+    /* Honey â€” golden warmth, deep amber sidebar, marigold accent */
     [data-theme="honey"] {
       --bg: #fef9ec; --surface: #fffef8; --panel-bg: #f8f0d8; --input-bg: #fffef8;
       --sidebar: #4a3010; --sidebar-text: #d4a860; --sidebar-active: #fef9ec;
@@ -1497,7 +1672,7 @@
       color-scheme: light;
     }
 
-    /* Cloud — airy sky-white, soft blue-gray sidebar, gentle sky-blue accent */
+    /* Cloud â€” airy sky-white, soft blue-gray sidebar, gentle sky-blue accent */
     [data-theme="cloud"] {
       --bg: #f4f8fc; --surface: #ffffff; --panel-bg: #eaf0f8; --input-bg: #ffffff;
       --sidebar: #283848; --sidebar-text: #90aac0; --sidebar-active: #f4f8fc;
@@ -1518,7 +1693,7 @@
       color-scheme: light;
     }
 
-    /* Peach — warm apricot glow, deep mauve sidebar, salmon-pink accent */
+    /* Peach â€” warm apricot glow, deep mauve sidebar, salmon-pink accent */
     [data-theme="peach"] {
       --bg: #fff5ee; --surface: #ffffff; --panel-bg: #ffeee0; --input-bg: #ffffff;
       --sidebar: #5a2838; --sidebar-text: #e8a0a8; --sidebar-active: #fff5ee;
@@ -1539,7 +1714,7 @@
       color-scheme: light;
     }
 
-    /* Olive — muted khaki earth, deep olive sidebar, warm olive-green accent */
+    /* Olive â€” muted khaki earth, deep olive sidebar, warm olive-green accent */
     [data-theme="olive"] {
       --bg: #f2f0e6; --surface: #fafaf4; --panel-bg: #e8e6d8; --input-bg: #fafaf4;
       --sidebar: #2a3020; --sidebar-text: #a0b088; --sidebar-active: #f2f0e6;
@@ -1560,7 +1735,7 @@
       color-scheme: light;
     }
 
-    /* Nord Light — polar snow storm, nord polar night sidebar, frost accent */
+    /* Nord Light â€” polar snow storm, nord polar night sidebar, frost accent */
     [data-theme="nord-light"] {
       --bg: #eceff4; --surface: #ffffff; --panel-bg: #e5e9f0; --input-bg: #ffffff;
       --sidebar: #2e3440; --sidebar-text: #d8dee9; --sidebar-active: #eceff4;
@@ -1581,7 +1756,109 @@
       color-scheme: light;
     }
 
-    /* Vaporwave — neon chrome on cards and active controls */
+    /* Retro â€” SNES console gray, purple buttons, red/yellow/green/blue controller accents */
+    [data-theme="retro"] {
+      --bg: #dcdce4; --surface: #f0f0f4; --panel-bg: #cfcfd9; --input-bg: #f7f7fa;
+      --sidebar: #2e2a3c; --sidebar-text: #b8b4d0; --sidebar-active: #f0f0f4;
+      --sidebar-muted: #6e6890; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #5b4cbf; --accent-hover: #4a3ca8; --accent-light: #e2def6;
+      --text: #1e1c2a; --text-muted: #5c5a70;
+      --border: #b8b8c6; --done: #9a98ac;
+      --note-bg: #fbf6dc; --note-border: #e8d890;
+      --danger: #d02b2b; --danger-surface: #fbe6e6; --danger-surface-hover: #f6d0d0; --danger-border: #eeb0b0;
+      --shelved-border: #b0acc4; --shelved-label: #6e66a0;
+      --move-hover-bg: #fbf6dc; --delete-hover-bg: #fbe6e6; --shelf-hover-bg: #e6e4f0;
+      --shadow: 0 1px 4px rgba(30,28,42,.10); --modal-overlay: rgba(30,28,42,.45); --modal-shadow: 0 8px 32px rgba(30,28,42,.16);
+      --tooltip-bg: #2e2a3c; --tooltip-text: #f0f0f4;
+      --sidebar-tab-active-bg: color-mix(in srgb, #5b4cbf 32%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #5b4cbf 24%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #8b86c9 70%, transparent);
+      color-scheme: light;
+    }
+    [data-theme="retro"] .desk-sticky {
+      background-image: linear-gradient(90deg, #d02b2b 0 25%, #f5c518 25% 50%, #2e9e44 50% 75%, #2459c8 75% 100%);
+      background-size: 100% 4px;
+      background-repeat: no-repeat;
+      background-position: top;
+    }
+
+    /* Seafoam â€” pale aqua, deep teal sidebar */
+    [data-theme="seafoam"] {
+      --bg: #eef8f6; --surface: #ffffff; --panel-bg: #e2f1ee; --input-bg: #ffffff;
+      --sidebar: #0f3b3a; --sidebar-text: #9fd4cc; --sidebar-active: #eef8f6;
+      --sidebar-muted: #4f8580; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #0d9488; --accent-hover: #0f766e; --accent-light: #d2f0eb;
+      --text: #0f2a28; --text-muted: #4a6a66;
+      --border: #cfe6e1; --done: #8fb8b2;
+      --note-bg: #f6fcfa; --note-border: #cfe6e1;
+      --danger: #c0392b; --danger-surface: #fdeceb; --danger-surface-hover: #f9d6d3; --danger-border: #f1b4ae;
+      --shelved-border: #bcd6d1; --shelved-label: #4f8580;
+      --move-hover-bg: #f0faf8; --delete-hover-bg: #fdeceb; --shelf-hover-bg: #e4f0ee;
+      --shadow: 0 1px 4px rgba(15,59,58,.08); --modal-overlay: rgba(15,42,40,.45); --modal-shadow: 0 8px 32px rgba(15,59,58,.14);
+      --tooltip-bg: #0f3b3a; --tooltip-text: #eef8f6;
+      --sidebar-tab-active-bg: color-mix(in srgb, #0d9488 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #0d9488 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #2dd4bf 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Mediterranean â€” sun-bleached stone, Aegean navy, terracotta */
+    [data-theme="mediterranean"] {
+      --bg: #f6f1e7; --surface: #fffdf8; --panel-bg: #ece5d6; --input-bg: #fffdf8;
+      --sidebar: #13315c; --sidebar-text: #a9bfe0; --sidebar-active: #f6f1e7;
+      --sidebar-muted: #5a76a0; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #c8553d; --accent-hover: #a8432e; --accent-light: #f6dfd8;
+      --text: #1b2433; --text-muted: #5e6472;
+      --border: #ddd4c2; --done: #a8a090;
+      --note-bg: #fbf7ee; --note-border: #e6dcc6;
+      --danger: #b3261e; --danger-surface: #fbe9e7; --danger-surface-hover: #f6d4d0; --danger-border: #eeb4ac;
+      --shelved-border: #cfc6b4; --shelved-label: #5a76a0;
+      --move-hover-bg: #fbf7ee; --delete-hover-bg: #fbe9e7; --shelf-hover-bg: #ece8e0;
+      --shadow: 0 1px 4px rgba(19,49,92,.08); --modal-overlay: rgba(19,36,60,.45); --modal-shadow: 0 8px 32px rgba(19,49,92,.14);
+      --tooltip-bg: #13315c; --tooltip-text: #f6f1e7;
+      --sidebar-tab-active-bg: color-mix(in srgb, #c8553d 32%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #c8553d 24%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #e07a5f 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Citrus â€” lemon-cream background, lime accent */
+    [data-theme="citrus"] {
+      --bg: #fafbe9; --surface: #ffffff; --panel-bg: #f0f3d6; --input-bg: #ffffff;
+      --sidebar: #283214; --sidebar-text: #c8d890; --sidebar-active: #fafbe9;
+      --sidebar-muted: #74864a; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #4d7c0f; --accent-hover: #3f6212; --accent-light: #e6f2c8;
+      --text: #1c2410; --text-muted: #5c6644;
+      --border: #e0e6bc; --done: #a8b080;
+      --note-bg: #fff7e0; --note-border: #f5d78e;
+      --danger: #b91c1c; --danger-surface: #fdecea; --danger-surface-hover: #f9d4d0; --danger-border: #f0b0a8;
+      --shelved-border: #d0d6aa; --shelved-label: #74864a;
+      --move-hover-bg: #fff7e0; --delete-hover-bg: #fdecea; --shelf-hover-bg: #eef0dc;
+      --shadow: 0 1px 4px rgba(40,50,20,.08); --modal-overlay: rgba(28,36,16,.45); --modal-shadow: 0 8px 32px rgba(40,50,20,.14);
+      --tooltip-bg: #283214; --tooltip-text: #fafbe9;
+      --sidebar-tab-active-bg: color-mix(in srgb, #84cc16 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #84cc16 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #facc15 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Bright-accent themes need dark text on accent-filled buttons */
+    [data-theme="gameboy"] .add-btn, [data-theme="gameboy"] .modal-btn.primary { color: #0f380f; }
+    [data-theme="phosphor"] .add-btn, [data-theme="phosphor"] .modal-btn.primary { color: #03140a; }
+    [data-theme="denim"] .add-btn, [data-theme="denim"] .modal-btn.primary,
+    [data-theme="terracotta"] .add-btn, [data-theme="terracotta"] .modal-btn.primary { color: #2e1a14; }
+    [data-theme="merlot"] .add-btn, [data-theme="merlot"] .modal-btn.primary,
+    [data-theme="rose-pine"] .add-btn, [data-theme="rose-pine"] .modal-btn.primary { color: #1f1320; }
+    [data-theme="phosphor"] .date-title,
+    [data-theme="phosphor"] .app-tab.active {
+      text-shadow: 0 0 8px rgba(51,255,102,.35);
+    }
+
+    /* Vaporwave â€” neon chrome on cards and active controls */
     [data-theme="vaporwave"] .app-tab.active,
     [data-theme="vaporwave-dark"] .app-tab.active {
       text-shadow: 0 0 10px color-mix(in srgb, var(--sidebar-active) 55%, transparent);
@@ -1614,7 +1891,7 @@
       min-height: 100vh;
     }
 
-    /* Applied only during a theme switch — removed after 250ms so hover transitions stay instant */
+    /* Applied only during a theme switch â€” removed after 250ms so hover transitions stay instant */
     body.theme-transitioning,
     body.theme-transitioning *,
     body.theme-transitioning *::before,
@@ -1679,7 +1956,7 @@
       border-bottom-color: color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
-    /* Boundary toggle button — sits on the sidebar/main edge */
+    /* Boundary toggle button â€” sits on the sidebar/main edge */
     .app { position: relative; }
 
     .sidebar-collapse-btn {
@@ -1745,7 +2022,7 @@
     .sidebar-daily::-webkit-scrollbar { display: none; }
     .sidebar-daily.hidden { display: none; }
 
-    /* ── Theme picker panel ────────────────────────────────────────────────── */
+    /* â”€â”€ Theme picker panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .theme-picker-label {
       font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
       letter-spacing: 0.09em; color: var(--text-muted); margin-bottom: 10px;
@@ -1830,7 +2107,7 @@
       color: var(--text); font-weight: 600;
     }
 
-    /* ── Custom theme builder ─────────────────────────── */
+    /* â”€â”€ Custom theme builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .custom-theme-panel.hidden { display: none; }
     .custom-theme-panel { margin-top: 2px; }
 
@@ -2144,8 +2421,8 @@
       transition: color 0.15s;
     }
     .changelog-older-toggle::-webkit-details-marker { display: none; }
-    .changelog-older-toggle::before { content: '▸ '; font-size: 0.7rem; }
-    .changelog-older[open] > .changelog-older-toggle::before { content: '▾ '; }
+    .changelog-older-toggle::before { content: 'â–¸ '; font-size: 0.7rem; }
+    .changelog-older[open] > .changelog-older-toggle::before { content: 'â–¾ '; }
     .changelog-older-toggle:hover { color: var(--text); }
 
     .changelog-github-link {
@@ -2321,7 +2598,7 @@
     .date-item:hover { background: var(--sidebar-hover); color: var(--sidebar-active); }
     .date-item.active { background: var(--sidebar-cal-selected-bg); color: var(--sidebar-active); font-weight: 500; }
 
-    /* ── Sidebar Today at a Glance Card ─────────────────────────────────────── */
+    /* â”€â”€ Sidebar Today at a Glance Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .sidebar-glance-card {
       margin-top: 4px;
       padding: 10px 12px;
@@ -2635,7 +2912,7 @@
       gap: 0;
     }
 
-    /* ── Project tab bar ─────────────────────────────── */
+    /* â”€â”€ Project tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .project-tab-bar {
       display: flex;
       gap: 0;
@@ -2686,7 +2963,7 @@
       color: var(--text-muted);
     }
 
-    /* ── Note truncation / preview ───────────────────── */
+    /* â”€â”€ Note truncation / preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .project-item-content.truncated {
       max-height: 4.4em;
       overflow: hidden;
@@ -2711,7 +2988,7 @@
     }
     .note-show-more:hover { text-decoration: underline; }
 
-    /* ── Archive accordion ───────────────────────────── */
+    /* â”€â”€ Archive accordion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .project-archive-toggle {
       display: flex;
       align-items: center;
@@ -2859,7 +3136,7 @@
       border-color: var(--accent);
     }
     .project-task-check.checked::after {
-      content: '✓';
+      content: 'âœ“';
       color: white;
       font-size: 11px;
       font-weight: bold;
@@ -3092,7 +3369,7 @@
       margin-bottom: 8px;
     }
 
-    /* Move-to-date calendar — reuses the sidebar calendar's structural classes
+    /* Move-to-date calendar â€” reuses the sidebar calendar's structural classes
        (.cal-header/.cal-weekdays/.cal-grid/.cal-day) so week-start-day logic
        stays in one place, but repaints colors with the main content palette
        instead of --sidebar-* vars, since this sits on the modal surface, not
@@ -3149,7 +3426,7 @@
     .modal-btn.ghost { color: var(--text-muted); }
     .modal-btn.ghost:hover { background: var(--bg); }
 
-    /* ── Auth modal ──────────────────────────────────────────────── */
+    /* â”€â”€ Auth modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .auth-modal {
       position: fixed; inset: 0;
       background: var(--modal-overlay, rgba(0,0,0,0.6));
@@ -3310,7 +3587,7 @@
       border-color: var(--accent-light);
     }
 
-    /* Floating results panel — positioned via JS (position: fixed) so it can
+    /* Floating results panel â€” positioned via JS (position: fixed) so it can
        extend past the sidebar's clipped width instead of being squeezed into it. */
     .search-overlay {
       position: fixed;
@@ -3464,7 +3741,7 @@
       cursor: not-allowed;
     }
     .carry-forward-wrap.auto-on .carry-forward-btn::after {
-      content: ' · Auto';
+      content: ' Â· Auto';
       font-size: 0.72rem;
       font-weight: 600;
       opacity: 0.9;
@@ -3537,7 +3814,7 @@
       flex-direction: column;
     }
 
-    /* Use #desk-view — the element is id-only (no class) in the markup */
+    /* Use #desk-view â€” the element is id-only (no class) in the markup */
     #desk-view {
       width: 100%;
       flex: 1;
@@ -3825,7 +4102,7 @@
 
     .insight-table-wrap { overflow-x: auto; }
 
-    /* ── Activity heatmap ─────────────────────────────────────── */
+    /* â”€â”€ Activity heatmap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .heatmap-wrap {
       padding-bottom: 4px;
       width: 100%;
@@ -3903,7 +4180,7 @@
       height: 12px;
     }
 
-    /* ── Productivity Metrics Card ─────────────────────────────── */
+    /* â”€â”€ Productivity Metrics Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .productivity-metrics-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -3948,7 +4225,7 @@
       letter-spacing: 0.05em;
     }
 
-    /* ── Week-over-Week Comparison ─────────────────────────────── */
+    /* â”€â”€ Week-over-Week Comparison â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .comparison-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -4017,7 +4294,7 @@
       font-size: 0.85rem;
     }
 
-    /* ── Carry-Over Analysis ─────────────────────────────────── */
+    /* â”€â”€ Carry-Over Analysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .carryover-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -4087,7 +4364,7 @@
       text-align: right;
     }
 
-    /* ── Streak Tracking ─────────────────────────────────── */
+    /* â”€â”€ Streak Tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .streak-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -4156,7 +4433,7 @@
       border-radius: 1px;
     }
 
-    /* ── Chart Type Selector ─────────────────────────────────── */
+    /* â”€â”€ Chart Type Selector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .chart-section-header {
       display: flex;
       justify-content: space-between;
@@ -4195,7 +4472,7 @@
       color: white;
     }
 
-    /* ── Chart Canvases ─────────────────────────────────── */
+    /* â”€â”€ Chart Canvases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .line-chart-wrap,
     .stacked-chart-wrap,
     .pie-chart-wrap {
@@ -4261,7 +4538,7 @@
       margin-bottom: 6px;
     }
 
-    /* ── Recurring panel ─────────────────────────────── */
+    /* â”€â”€ Recurring panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .recurring-modal .modal-box {
       max-width: 560px;
       width: 100%;
@@ -4621,7 +4898,7 @@
       cursor: not-allowed;
     }
 
-    /* ── Custom holidays ─────────────────────────────── */
+    /* â”€â”€ Custom holidays â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .custom-holidays-section { margin-top: 2px; }
     .custom-holidays-list {
       display: flex;
@@ -4709,7 +4986,7 @@
     }
     .col-subsection.collapsed .col-collapse-hint { display: block; }
 
-    /* ── Compact board density ─────────────────────────────────────────── */
+    /* â”€â”€ Compact board density â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     #desk-view[data-density="compact"] .board-column .items { gap: 3px; }
 
     #desk-view[data-density="compact"] .board-column .item:not(:has(.edit-wrap)) {
@@ -5408,7 +5685,7 @@
       width: 100%;
     }
 
-    /* Trigger area — absolutely anchored bottom-right, holds comments indicator + hamburger */
+    /* Trigger area â€” absolutely anchored bottom-right, holds comments indicator + hamburger */
     .item-trigger-area {
       position: absolute;
       bottom: 7px;
@@ -5440,7 +5717,7 @@
       background: var(--accent-light);
     }
 
-    /* Comments indicator — pulled out of menu when task has comments */
+    /* Comments indicator â€” pulled out of menu when task has comments */
     .comments-indicator {
       width: 22px; height: 22px;
       border-radius: 5px;
@@ -5505,7 +5782,7 @@
     /* All buttons fully visible when menu is open */
     .item-card.menu-open .item-actions button { opacity: 1 !important; }
 
-    /* Edit mode — existing 3-column layout; trigger hidden; outer actions (delete) shown */
+    /* Edit mode â€” existing 3-column layout; trigger hidden; outer actions (delete) shown */
     .board-column .item:has(.edit-wrap) {
       grid-template-columns: auto 1fr auto;
       grid-template-areas:
@@ -5576,7 +5853,7 @@
     .item-card:hover { box-shadow: var(--shadow); }
     .item-card.note-card { background: var(--note-bg); border-color: var(--note-border); }
 
-    /* Left accent bar — column identity at a glance */
+    /* Left accent bar â€” column identity at a glance */
     .board-column.new .item-card { border-left-width: 3px; border-left-color: var(--accent); }
     .board-column.active .item-card { border-left-width: 3px; border-left-color: var(--accent-hover); }
     .board-column.done .item-card.task-card { border-left-width: 3px; border-left-color: var(--done); }
@@ -5696,7 +5973,7 @@
       pointer-events: none;
     }
 
-    /* ── Comments panel — inline thread style ─────────────────────────── */
+    /* â”€â”€ Comments panel â€” inline thread style â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .comments-panel {
       border-top: 1px solid var(--border);
       padding: 0 14px 12px 28px;
@@ -5789,7 +6066,7 @@
     .note-quick-add:hover { opacity: 1; color: var(--accent); }
     .note-quick-add svg { width: 10px; height: 10px; flex-shrink: 0; }
 
-    /* ── Inline card action bar ─────────────────────────────────────────── */
+    /* â”€â”€ Inline card action bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .card-action-bar {
       display: flex;
       align-items: center;
@@ -5813,10 +6090,10 @@
     .card-action.has-comments { color: var(--accent); opacity: 0.8; }
     .card-action.has-comments:hover { opacity: 1; }
 
-    /* Tag chips — floated at the top-right corner of the card, same pattern as
+    /* Tag chips â€” floated at the top-right corner of the card, same pattern as
        .item-trigger-area (bottom-right). Board-column cards use CSS Grid for
        check/content (checkbox stacked above wrapped text), so a chip row can't
-       be a normal grid/flex sibling without landing in its own unstyled row —
+       be a normal grid/flex sibling without landing in its own unstyled row â€”
        absolute positioning sidesteps that regardless of which layout mode the
        card is in (grid, flex, mobile, edit, menu-open, etc). */
     .item.has-tags .item-content { padding-right: 96px; }
@@ -5924,7 +6201,7 @@
     .card-overflow-menu button.danger { color: var(--danger); }
     .card-overflow-menu button.danger:hover { background: var(--delete-hover-bg); }
 
-    /* Add form — hidden until trigger clicked */
+    /* Add form â€” hidden until trigger clicked */
     .add-comment-form {
       display: flex;
       flex-direction: column;
@@ -5978,7 +6255,7 @@
     .send-btn { color: var(--text-muted); }
     .send-btn:hover { background: var(--accent-light); color: var(--accent); }
 
-    /* Touch / coarse pointer — actions on own row, larger tap targets */
+    /* Touch / coarse pointer â€” actions on own row, larger tap targets */
     .touch-column-btn { display: none; }
 
     @media (hover: none), (pointer: coarse) {
@@ -6160,13 +6437,13 @@
 
       .sidebar-header { align-items: center; }
       .logo { font-size: 1.1rem; }
-      /* Keep help (?) and version visible — hide only the subtitle text to save space */
+      /* Keep help (?) and version visible â€” hide only the subtitle text to save space */
       .logo-sub { display: flex; margin-top: 4px; }
       #logo-sub-text { display: none; }
       .sidebar-account { margin-top: 0; padding-top: 10px; }
       .sidebar-backup { margin-top: 0; }
       .sidebar-backup .nav-label { display: none; }
-      /* Keep equal-width Export / Import — flex was applied to buttons inside
+      /* Keep equal-width Export / Import â€” flex was applied to buttons inside
          wraps that don't expand, which left them squished on the left */
       .sidebar-backup-btns {
         display: grid;
@@ -6287,7 +6564,7 @@
 
       .type-toggle { margin-bottom: 6px; }
 
-      /* Bottom sticky capture dock — always reachable while scrolling the board */
+      /* Bottom sticky capture dock â€” always reachable while scrolling the board */
       #desk-view .add-form {
         position: fixed;
         left: 0;
@@ -6341,11 +6618,11 @@
 </head>
 <body>
 
-  <!-- Auth gate — shown when not signed in -->
+  <!-- Auth gate â€” shown when not signed in -->
   <div id="auth-modal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-label="Sign in">
     <div class="auth-card">
       <div class="auth-logo">
-        <span class="auth-logo-icon">📋</span>
+        <span class="auth-logo-icon">ðŸ“‹</span>
         <h1 class="auth-logo-title">Work Desk</h1>
         <p class="auth-logo-sub">Daily tasks &amp; notes</p>
       </div>
@@ -6398,8 +6675,8 @@
         <div class="sidebar-daily">
           <div class="search-section desk-only">
             <div id="search-wrap" class="search-wrap">
-              <input id="search-input" class="search-input" type="search" placeholder="Search tasks & notes…" />
-              <button id="search-scope-chip" type="button" class="search-scope-chip" title="Search current list only — click to search both">Work</button>
+              <input id="search-input" class="search-input" type="search" placeholder="Search tasks & notesâ€¦" />
+              <button id="search-scope-chip" type="button" class="search-scope-chip" title="Search current list only â€” click to search both">Work</button>
             </div>
             <div id="search-overlay" class="search-overlay hidden">
               <div class="search-overlay-header">
@@ -6416,7 +6693,7 @@
 
           <div id="sidebar-today-glance" class="sidebar-glance-card desk-only" role="button" tabindex="0" title="Click to view Today's desk">
             <div class="glance-header">
-              <span class="glance-title">⚡ Today's Progress</span>
+              <span class="glance-title">âš¡ Today's Progress</span>
               <span id="glance-pct" class="glance-pct">0%</span>
             </div>
             <div id="glance-progress-bar" class="glance-progress-bar">
@@ -6441,21 +6718,21 @@
           <p class="nav-label" style="margin-bottom:0;">Backup</p>
           <div class="sidebar-backup-btns">
             <div class="backup-btn-wrap">
-              <button id="export-btn" class="backup-btn" type="button" title="Export data as JSON backup">⬇ Export</button>
+              <button id="export-btn" class="backup-btn" type="button" title="Export data as JSON backup">â¬‡ Export</button>
               <div id="export-menu" class="backup-dropdown hidden">
                 <button id="export-desk-opt" class="backup-dropdown-item" type="button">Work Desk</button>
                 <button id="export-all-opt" class="backup-dropdown-item" type="button">All Desks</button>
               </div>
             </div>
             <div class="backup-btn-wrap">
-              <button id="import-btn" class="backup-btn" type="button" title="Import from a JSON backup">⬆ Import…</button>
+              <button id="import-btn" class="backup-btn" type="button" title="Import from a JSON backup">â¬† Importâ€¦</button>
               <div id="import-menu" class="backup-dropdown hidden">
-                <button id="import-desk-opt" class="backup-dropdown-item" type="button">Work Desk…</button>
-                <button id="import-all-opt" class="backup-dropdown-item" type="button">All Desks…</button>
+                <button id="import-desk-opt" class="backup-dropdown-item" type="button">Work Deskâ€¦</button>
+                <button id="import-all-opt" class="backup-dropdown-item" type="button">All Desksâ€¦</button>
               </div>
             </div>
           </div>
-          <button id="repair-btn" class="sidebar-repair-link" type="button" title="Scan for and remove duplicate tasks (same ID or recurring template)">🔧 Repair duplicates</button>
+          <button id="repair-btn" class="sidebar-repair-link" type="button" title="Scan for and remove duplicate tasks (same ID or recurring template)">ðŸ”§ Repair duplicates</button>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
           <input id="import-all-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
@@ -6467,7 +6744,7 @@
             <span class="sidebar-account-icon" id="account-avatar">?</span>
             <span class="sidebar-account-email" id="account-email" title="Not signed in">Not signed in</span>
           </div>
-          <span id="sb-sync-status" class="sb-sync-status" title="Cloud sync status" data-status="idle">☁️</span>
+          <span id="sb-sync-status" class="sb-sync-status" title="Cloud sync status" data-status="idle">â˜ï¸</span>
         </div>
         <div class="sidebar-account-actions">
           <button id="sb-signin-btn" class="sb-account-btn hidden" type="button" title="Sign in to sync your desk">Sign in to sync</button>
@@ -6488,17 +6765,17 @@
         <div class="desk-sticky">
           <header>
             <div class="date-nav-row">
-              <button id="prev-day" class="nav-arrow" aria-label="Previous day">←</button>
+              <button id="prev-day" class="nav-arrow" aria-label="Previous day">â†</button>
               <div class="date-title-block">
                 <h2 id="date-title" class="date-title"></h2>
                 <span id="context-badge" class="context-badge">Work</span>
                 <button id="header-today-btn" class="header-today-btn hidden" type="button" title="Return to today's desk">
-                  <span class="header-today-icon" aria-hidden="true">↩</span>
+                  <span class="header-today-icon" aria-hidden="true">â†©</span>
                   Back to today
                 </button>
                 <span id="today-badge" class="today-badge hidden">Today</span>
               </div>
-              <button id="next-day" class="nav-arrow" aria-label="Next day">→</button>
+              <button id="next-day" class="nav-arrow" aria-label="Next day">â†’</button>
               <div class="density-wrap">
                 <button id="density-toggle" class="density-toggle" type="button" aria-label="Settings" aria-haspopup="true" aria-expanded="false" title="Settings">
                   <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -6696,11 +6973,11 @@
 
                     <hr class="theme-section-divider" style="margin: 10px 0 8px;">
                     <p class="density-popout-label">Insights</p>
-                    <label class="customize-toggle" title="Weekends don't break your streak — active weekend days still count">
+                    <label class="customize-toggle" title="Weekends don't break your streak â€” active weekend days still count">
                       <input id="streak-skip-weekends-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
                         <span>Weekends don't break streaks</span>
-                        <span class="customize-toggle-sub">Fri → Mon stays consecutive; active weekend days still count</span>
+                        <span class="customize-toggle-sub">Fri â†’ Mon stays consecutive; active weekend days still count</span>
                       </span>
                     </label>
 
@@ -6755,7 +7032,7 @@
               <button type="button" class="type-btn active" data-type="task">Task</button>
               <button type="button" class="type-btn" data-type="note">Note</button>
               <span class="type-toggle-divider" aria-hidden="true"></span>
-              <button type="button" id="recurring-btn" class="type-btn type-btn-recurring" title="Manage recurring task templates">🔁 Recurring</button>
+              <button type="button" id="recurring-btn" class="type-btn type-btn-recurring" title="Manage recurring task templates">ðŸ” Recurring</button>
             </div>
             <div class="add-row">
               <div id="add-editor-host"></div>
@@ -6767,9 +7044,9 @@
 
         <div class="desk-board-area">
           <div id="week-strip-row" class="week-strip-row desk-only">
-            <button id="week-prev-btn" class="week-strip-nav" type="button" aria-label="Previous week">‹</button>
+            <button id="week-prev-btn" class="week-strip-nav" type="button" aria-label="Previous week">â€¹</button>
             <nav id="week-strip" class="week-strip" aria-label="Week"></nav>
-            <button id="week-next-btn" class="week-strip-nav" type="button" aria-label="Next week">›</button>
+            <button id="week-next-btn" class="week-strip-nav" type="button" aria-label="Next week">â€º</button>
           </div>
           <div id="item-lists"></div>
         </div>
@@ -6785,8 +7062,8 @@
           <header class="project-header">
             <h2 id="project-title" class="project-title" contenteditable="false"></h2>
             <div class="project-actions">
-              <button id="project-rename-btn" class="project-action-btn" type="button" title="Rename project">✏️</button>
-              <button id="project-delete-btn" class="project-action-btn project-delete-btn" type="button" title="Delete project">🗑️</button>
+              <button id="project-rename-btn" class="project-action-btn" type="button" title="Rename project">âœï¸</button>
+              <button id="project-delete-btn" class="project-action-btn project-delete-btn" type="button" title="Delete project">ðŸ—‘ï¸</button>
               <div class="density-wrap">
                 <button id="project-customize-btn" class="project-action-btn" type="button" title="Settings" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
                   <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:14px;height:14px;">
@@ -6848,150 +7125,150 @@
         <ol>
           <li>Sign in with your email to enable cloud sync across devices, or click <strong>Continue offline</strong> to use the desk locally.</li>
           <li>Pick a day on the calendar, or use the arrows at the top of the desk.</li>
-          <li>Choose <strong>Task</strong> or <strong>Note</strong>, type your entry — add <code>#tagname</code> anywhere in the text to tag it — and click <strong>Add</strong>.</li>
+          <li>Choose <strong>Task</strong> or <strong>Note</strong>, type your entry â€” add <code>#tagname</code> anywhere in the text to tag it â€” and click <strong>Add</strong>.</li>
           <li>Everything saves automatically and syncs to the cloud within a few seconds.</li>
         </ol>
 
         <h3>What it does</h3>
         <ul>
-          <li><strong>Daily desk</strong> — tasks and notes organized by day in New / Active / Done / Shelved columns</li>
-          <li><strong>Work, Personal &amp; Projects</strong> — three separate contexts, toggled in the sidebar</li>
-          <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
-          <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card; tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
-          <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
-          <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag</li>
-          <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
-          <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define; optionally skip holidays</li>
-          <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
-          <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
-          <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
-          <li><strong>Themes</strong> — 72 presets (24 light, 24 medium, 24 dark) with mini wireframe previews in Options → Themes, filterable by Light/Med/Dark; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
-          <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically</li>
-          <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
-          <li><strong>What's New</strong> — click the version number at the bottom of the sidebar to see the latest changes; a pulsing dot appears when there's an unread update</li>
+          <li><strong>Daily desk</strong> â€” tasks and notes organized by day in New / Active / Done / Shelved columns</li>
+          <li><strong>Work, Personal &amp; Projects</strong> â€” three separate contexts, toggled in the sidebar</li>
+          <li><strong>Projects</strong> â€” a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
+          <li><strong>Tags</strong> â€” type <code>#word</code> in any task or note, or click <em>tag</em> on a card; tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
+          <li><strong>Comments &amp; updates</strong> â€” add threaded notes under tasks; notes get timestamped updates the same way</li>
+          <li><strong>Search</strong> â€” click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag</li>
+          <li><strong>Carry forward</strong> â€” a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options â†’ Behavior to pull it in automatically every time you open the desk</li>
+          <li><strong>Recurring tasks</strong> â€” templates that auto-add on a schedule you define; optionally skip holidays</li>
+          <li><strong>Holiday-aware scheduling</strong> â€” US federal holidays built in; add custom dates in Options â†’ Behavior â†’ Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
+          <li><strong>Insights</strong> â€” weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
+          <li><strong>Auto-pruning</strong> â€” days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
+          <li><strong>Themes</strong> â€” 84 presets (28 light, 28 medium, 28 dark, including Retro, Game Boy, and Phosphor) with mini wireframe previews in Options â†’ Themes, filterable by Light/Med/Dark; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
+          <li><strong>Cloud sync</strong> â€” your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically</li>
+          <li><strong>Installable</strong> â€” install as a home screen app on mobile or desktop for a native app experience</li>
+          <li><strong>What's New</strong> â€” click the version number at the bottom of the sidebar to see the latest changes; a pulsing dot appears when there's an unread update</li>
         </ul>
 
         <h3>Task &amp; note cards</h3>
         <ul>
-          <li><strong>Action bar</strong> — common actions sit along the bottom of each card: <em>edit</em>, <em>move</em>, <em>comment</em> / <em>add update</em>, and <em>tag</em></li>
-          <li><strong>Overflow menu (⋮)</strong> — less common actions live here: delete, convert, send to Work/Personal, shelve/unshelve, and start (move to Active)</li>
-          <li><strong>Convert</strong> — switch a task into a note or vice versa from the overflow menu</li>
-          <li><strong>Shelving</strong> — move a task to Shelved when it isn't done but isn't today's focus; unshelf it later from the Done/Shelved column</li>
-          <li><strong>Move to another day</strong> — reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
-          <li><strong>Send to Work / Personal</strong> — moves a task or note to the other context list</li>
-          <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough (toggle this off in Options → Behavior → Tasks); hover to see them clearly</li>
+          <li><strong>Action bar</strong> â€” common actions sit along the bottom of each card: <em>edit</em>, <em>move</em>, <em>comment</em> / <em>add update</em>, and <em>tag</em></li>
+          <li><strong>Overflow menu (â‹®)</strong> â€” less common actions live here: delete, convert, send to Work/Personal, shelve/unshelve, and start (move to Active)</li>
+          <li><strong>Convert</strong> â€” switch a task into a note or vice versa from the overflow menu</li>
+          <li><strong>Shelving</strong> â€” move a task to Shelved when it isn't done but isn't today's focus; unshelf it later from the Done/Shelved column</li>
+          <li><strong>Move to another day</strong> â€” reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
+          <li><strong>Send to Work / Personal</strong> â€” moves a task or note to the other context list</li>
+          <li><strong>Completed tasks</strong> â€” fade to 62% opacity and show strikethrough (toggle this off in Options â†’ Behavior â†’ Tasks); hover to see them clearly</li>
         </ul>
 
         <h3>Tags</h3>
         <ul>
-          <li><strong>Type it inline</strong> — write <code>#ace</code> (or any <code>#word</code>) anywhere in a task or note and it's pulled out into a tag automatically when you save; a lone hashtag with no other text is left as visible text instead</li>
-          <li><strong>Or use the button</strong> — click <em>tag</em> in the action bar to add one without touching the card's text</li>
-          <li><strong>Case-insensitive</strong> — <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
-          <li><strong>Chips</strong> — shown in the top-right corner of the card; click the <strong>×</strong> on a chip to remove that tag</li>
-          <li><strong>Find by tag</strong> — search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
+          <li><strong>Type it inline</strong> â€” write <code>#ace</code> (or any <code>#word</code>) anywhere in a task or note and it's pulled out into a tag automatically when you save; a lone hashtag with no other text is left as visible text instead</li>
+          <li><strong>Or use the button</strong> â€” click <em>tag</em> in the action bar to add one without touching the card's text</li>
+          <li><strong>Case-insensitive</strong> â€” <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
+          <li><strong>Chips</strong> â€” shown in the top-right corner of the card; click the <strong>Ã—</strong> on a chip to remove that tag</li>
+          <li><strong>Find by tag</strong> â€” search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
         </ul>
 
         <h3>Comments &amp; updates</h3>
         <ul>
-          <li><strong>Tasks</strong> — click <em>comment</em> on a card to open the thread; add timestamped comments with bold, italic, underline, and bullet formatting</li>
-          <li><strong>Notes</strong> — use <em>add update</em> for the same threaded follow-ups (handy for living documents)</li>
-          <li><strong>Indent</strong> — comments sit slightly indented under the card so they read as replies, not another task</li>
-          <li><strong>Keep comments open</strong> — in Options → Behavior, turn this on so opening comments on one task doesn't collapse another; it also survives day navigation and page refresh once enabled</li>
-          <li><strong>Multi-line</strong> — press Enter for new lines; numbered lists like <code>1)</code> and bullets stay formatted when you save</li>
-          <li><strong>Hover actions</strong> — edit, delete, <em>→ task</em>, and <em>→ note</em> appear as plain text links on hover</li>
-          <li><strong>Split to task / note</strong> — click <em>→ task</em> or <em>→ note</em> to turn a comment into its own item on the same day; the parent's tags carry over, a breadcrumb comment links back, and the original comment gets a "→ moved to…" annotation; an Undo toast lets you reverse it</li>
+          <li><strong>Tasks</strong> â€” click <em>comment</em> on a card to open the thread; add timestamped comments with bold, italic, underline, and bullet formatting</li>
+          <li><strong>Notes</strong> â€” use <em>add update</em> for the same threaded follow-ups (handy for living documents)</li>
+          <li><strong>Indent</strong> â€” comments sit slightly indented under the card so they read as replies, not another task</li>
+          <li><strong>Keep comments open</strong> â€” in Options â†’ Behavior, turn this on so opening comments on one task doesn't collapse another; it also survives day navigation and page refresh once enabled</li>
+          <li><strong>Multi-line</strong> â€” press Enter for new lines; numbered lists like <code>1)</code> and bullets stay formatted when you save</li>
+          <li><strong>Hover actions</strong> â€” edit, delete, <em>â†’ task</em>, and <em>â†’ note</em> appear as plain text links on hover</li>
+          <li><strong>Split to task / note</strong> â€” click <em>â†’ task</em> or <em>â†’ note</em> to turn a comment into its own item on the same day; the parent's tags carry over, a breadcrumb comment links back, and the original comment gets a "â†’ moved toâ€¦" annotation; an Undo toast lets you reverse it</li>
         </ul>
 
         <h3>Projects</h3>
         <ul>
-          <li><strong>What it's for</strong> — capture notes and tasks for long-running projects, side ideas, or collaborations that don't fit the daily workflow</li>
-          <li><strong>Create a project</strong> — click the <strong>Projects</strong> tab in the sidebar, then click <strong>+</strong> to add a new project</li>
-          <li><strong>Notes | Tasks tabs</strong> — each project organizes content into two tabs so you're never scrolling through both at once</li>
-          <li><strong>Note preview</strong> — long notes are truncated to a few lines with a <em>show more</em> toggle; turn this off in Options → Behavior → <strong>Truncate long notes</strong></li>
-          <li><strong>Archive</strong> — click <em>archive</em> on any note or task to move it into a collapsed <strong>Archived (n)</strong> section at the bottom of its tab; completing a task automatically archives it</li>
-          <li><strong>Double-click to edit</strong> — double-click a note's content or a task's text to jump straight into the editor</li>
-          <li><strong>Customize button</strong> — the gear icon in the project header opens the same Themes / Appearance / Behavior options available on the desk</li>
-          <li><strong>Cloud sync</strong> — projects sync to the cloud alongside your Work and Personal data</li>
+          <li><strong>What it's for</strong> â€” capture notes and tasks for long-running projects, side ideas, or collaborations that don't fit the daily workflow</li>
+          <li><strong>Create a project</strong> â€” click the <strong>Projects</strong> tab in the sidebar, then click <strong>+</strong> to add a new project</li>
+          <li><strong>Notes | Tasks tabs</strong> â€” each project organizes content into two tabs so you're never scrolling through both at once</li>
+          <li><strong>Note preview</strong> â€” long notes are truncated to a few lines with a <em>show more</em> toggle; turn this off in Options â†’ Behavior â†’ <strong>Truncate long notes</strong></li>
+          <li><strong>Archive</strong> â€” click <em>archive</em> on any note or task to move it into a collapsed <strong>Archived (n)</strong> section at the bottom of its tab; completing a task automatically archives it</li>
+          <li><strong>Double-click to edit</strong> â€” double-click a note's content or a task's text to jump straight into the editor</li>
+          <li><strong>Customize button</strong> â€” the gear icon in the project header opens the same Themes / Appearance / Behavior options available on the desk</li>
+          <li><strong>Cloud sync</strong> â€” projects sync to the cloud alongside your Work and Personal data</li>
         </ul>
 
         <h3>Board layout</h3>
         <ul>
-          <li><strong>Today's Progress</strong> — the sidebar mini card always shows today's completion percentage, even while you're viewing a different day; click it to jump straight back to today</li>
-          <li><strong>Left accent bar</strong> — each card has a colored left border matching its column (New = accent, Active = hover accent, Done = done color, Notes = muted)</li>
-          <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
-          <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
+          <li><strong>Today's Progress</strong> â€” the sidebar mini card always shows today's completion percentage, even while you're viewing a different day; click it to jump straight back to today</li>
+          <li><strong>Left accent bar</strong> â€” each card has a colored left border matching its column (New = accent, Active = hover accent, Done = done color, Notes = muted)</li>
+          <li><strong>Progress bar</strong> â€” the segmented bar above the board shows today's task mix; hover segments for counts</li>
+          <li><strong>Column counts</strong> â€” the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
           <li>Drag tasks between columns or reorder within a column (desktop)</li>
         </ul>
 
         <h3>Options menu</h3>
         <ul>
-          <li>Open with the customize button (⊟) near the date; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
-          <li><strong>Themes</strong> — 72 presets (24 light, 24 medium, 24 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes</li>
-          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
-          <li><strong>Behavior</strong> — organized into General, Tasks, Projects, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
+          <li>Open with the customize button (âŠŸ) near the date; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
+          <li><strong>Themes</strong> â€” 84 presets (28 light, 28 medium, 28 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes</li>
+          <li><strong>Appearance</strong> â€” Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
+          <li><strong>Behavior</strong> â€” organized into General, Tasks, Projects, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3â€“20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
         </ul>
 
         <h3>Navigation</h3>
         <ul>
-          <li><strong>Calendar</strong> — pick any day; dots mean data exists; red badges on past days show open tasks left behind</li>
-          <li><strong>Arrow buttons</strong> — step day by day at the top of the desk</li>
-          <li><strong>Today</strong> — click <strong>Back to today</strong> beside the date to return instantly</li>
-          <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board; use <strong>&lt;</strong> / <strong>&gt;</strong> to jump week by week (start day follows your Options → Behavior setting)</li>
-          <li><strong>On refresh</strong> — the app reopens to whatever tab and date you last had open; set Startup view to <em>Always open Today</em> in Options → Behavior if you'd rather it always land on today's Work desk</li>
+          <li><strong>Calendar</strong> â€” pick any day; dots mean data exists; red badges on past days show open tasks left behind</li>
+          <li><strong>Arrow buttons</strong> â€” step day by day at the top of the desk</li>
+          <li><strong>Today</strong> â€” click <strong>Back to today</strong> beside the date to return instantly</li>
+          <li><strong>Week strip</strong> â€” on narrower screens a compact week picker appears above the board; use <strong>&lt;</strong> / <strong>&gt;</strong> to jump week by week (start day follows your Options â†’ Behavior setting)</li>
+          <li><strong>On refresh</strong> â€” the app reopens to whatever tab and date you last had open; set Startup view to <em>Always open Today</em> in Options â†’ Behavior if you'd rather it always land on today's Work desk</li>
         </ul>
 
         <h3>Search</h3>
         <ul>
           <li>Click into the sidebar search box to open a floating results overlay that stays clear of the input so you can keep typing</li>
-          <li>Matches task/note text, comments, and — with <code>#tagname</code> — tags, across every day</li>
+          <li>Matches task/note text, comments, and â€” with <code>#tagname</code> â€” tags, across every day</li>
           <li>Use the <strong>Work / Personal / Both</strong> chip next to the box to search one context or both together</li>
-          <li>Click a result to jump straight to that day and item; press <strong>Escape</strong> or the <strong>×</strong> to close, or click outside the overlay</li>
+          <li>Click a result to jump straight to that day and item; press <strong>Escape</strong> or the <strong>Ã—</strong> to close, or click outside the overlay</li>
         </ul>
 
         <h3>Recurring tasks</h3>
         <ul>
           <li>Open via the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
           <li>Templates auto-add on the schedule you set (daily, weekly, specific days, etc.)</li>
-          <li>Injected tasks show a <strong>🔁</strong> badge on the card</li>
-          <li><strong>Edit or delete</strong> — click <em>edit</em> or <em>delete</em> on any template in the recurring panel, or use the overflow menu (⋮) on an injected task card and choose <em>Edit recurring</em></li>
-          <li><strong>Tags on templates</strong> — add tags via the <em>tag</em> link or type <code>#tagname</code> in the content; every injected task inherits them</li>
-          <li><strong>Skip holidays</strong> — tick the checkbox to skip US federal and custom holidays; requires holidays to be enabled in Options → Behavior</li>
-          <li>Duplicate detection — the panel highlights templates with identical content so you can clean up extras</li>
+          <li>Injected tasks show a <strong>ðŸ”</strong> badge on the card</li>
+          <li><strong>Edit or delete</strong> â€” click <em>edit</em> or <em>delete</em> on any template in the recurring panel, or use the overflow menu (â‹®) on an injected task card and choose <em>Edit recurring</em></li>
+          <li><strong>Tags on templates</strong> â€” add tags via the <em>tag</em> link or type <code>#tagname</code> in the content; every injected task inherits them</li>
+          <li><strong>Skip holidays</strong> â€” tick the checkbox to skip US federal and custom holidays; requires holidays to be enabled in Options â†’ Behavior</li>
+          <li>Duplicate detection â€” the panel highlights templates with identical content so you can clean up extras</li>
         </ul>
 
         <h3>Insights</h3>
         <ul>
           <li>Switch between <strong>Week</strong>, <strong>Month</strong>, and <strong>Year</strong> views, and step back/forward with the arrows</li>
-          <li><strong>Productivity summary</strong> — completion rate, average daily completions, carry-over rate, and your most productive day</li>
-          <li><strong>Week-over-week</strong> (week view) — compares this week's completions against the previous one</li>
-          <li><strong>Carry-over analysis</strong> — which days of the week tasks most often carry over from</li>
-          <li><strong>Streak tracking</strong> — current and longest streaks based on days with desk activity, plus a heatmap matched to the period you're viewing</li>
-          <li><strong>Weekends don't break streaks</strong> (Options → Behavior → Insights, on by default) — Fri → Mon stays consecutive for streak counting; if you work a Saturday or Sunday it still counts, but an idle weekend does not reset the streak</li>
-          <li><strong>Charts</strong> — switch between bar, line, stacked, and pie; hover any segment or point for exact counts</li>
-          <li><strong>Activity heatmap</strong> (year view) — GitHub-style grid showing completion intensity by day; color adapts to your active theme</li>
+          <li><strong>Productivity summary</strong> â€” completion rate, average daily completions, carry-over rate, and your most productive day</li>
+          <li><strong>Week-over-week</strong> (week view) â€” compares this week's completions against the previous one</li>
+          <li><strong>Carry-over analysis</strong> â€” which days of the week tasks most often carry over from</li>
+          <li><strong>Streak tracking</strong> â€” current and longest streaks based on days with desk activity, plus a heatmap matched to the period you're viewing</li>
+          <li><strong>Weekends don't break streaks</strong> (Options â†’ Behavior â†’ Insights, on by default) â€” Fri â†’ Mon stays consecutive for streak counting; if you work a Saturday or Sunday it still counts, but an idle weekend does not reset the streak</li>
+          <li><strong>Charts</strong> â€” switch between bar, line, stacked, and pie; hover any segment or point for exact counts</li>
+          <li><strong>Activity heatmap</strong> (year view) â€” GitHub-style grid showing completion intensity by day; color adapts to your active theme</li>
           <li>Day-by-day detail table shows full breakdown including carried-over and newly created counts; dates use the real day label (e.g. <em>Mon, Sep 21</em>), with today marked as <em>Tue, Sep 22 (Today)</em></li>
         </ul>
 
         <h3>Cloud sync &amp; data</h3>
         <ul>
           <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
-          <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in</strong> at the bottom of the sidebar when you’re ready to create an account or sync</li>
-          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, confetti, confirm before delete, weekends don't break streaks, font size, font family, sidebar position, card glow, gradient header, and holiday settings all follow your account across devices</li>
-          <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
+          <li><strong>Continue offline</strong> â€” you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in</strong> at the bottom of the sidebar when youâ€™re ready to create an account or sync</li>
+          <li><strong>Synced preferences</strong> â€” theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, confetti, confirm before delete, weekends don't break streaks, font size, font family, sidebar position, card glow, gradient header, and holiday settings all follow your account across devices</li>
+          <li>The sync status icon (â˜ï¸ / ðŸ”„ / âœ“ / !) appears at the bottom of the sidebar next to your account email</li>
           <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
           <li>Opening on a new device: sign in and your history loads automatically (devices merge rather than overwrite)</li>
-          <li><strong>Backup / restore</strong> — <em>Export/Import Desk</em> saves or restores the current tab (Work, Personal, or Projects) individually; <em>Export/Import All</em> bundles every desk into a single file for a complete backup; importing a file from a different desk shows a confirmation warning before proceeding</li>
-          <li><strong>Repair duplicates</strong> — cleans duplicate task IDs within a day and across days, and collapses same-day copies of the same recurring task if sync ever left extras behind</li>
-          <li><strong>Auto-pruning</strong> — on each app startup, days older than 1 year are silently removed from the local cache; full history remains in the cloud</li>
+          <li><strong>Backup / restore</strong> â€” <em>Export/Import Desk</em> saves or restores the current tab (Work, Personal, or Projects) individually; <em>Export/Import All</em> bundles every desk into a single file for a complete backup; importing a file from a different desk shows a confirmation warning before proceeding</li>
+          <li><strong>Repair duplicates</strong> â€” cleans duplicate task IDs within a day and across days, and collapses same-day copies of the same recurring task if sync ever left extras behind</li>
+          <li><strong>Auto-pruning</strong> â€” on each app startup, days older than 1 year are silently removed from the local cache; full history remains in the cloud</li>
         </ul>
 
         <h3>Mobile &amp; PWA</h3>
         <ul>
           <li>Install as a home screen app: on Chrome/Edge tap <strong>Install and create shortcut</strong> (or address bar install icon on desktop)</li>
-          <li>On iPhone/Safari: tap <strong>Share → Add to Home Screen</strong></li>
+          <li>On iPhone/Safari: tap <strong>Share â†’ Add to Home Screen</strong></li>
           <li>Once installed, opens in its own window without browser chrome and works offline</li>
-          <li>Use the action links under each card (edit / move / comment) and the <strong>⋮</strong> overflow menu for the rest</li>
+          <li>Use the action links under each card (edit / move / comment) and the <strong>â‹®</strong> overflow menu for the rest</li>
           <li>Tap the <strong>checkbox</strong> to complete a task</li>
           <li>The add bar sticks to the bottom of the screen so you can capture a task without scrolling up</li>
           <li>The week strip above the board replaces the sidebar calendar on smaller screens</li>
@@ -7000,29 +7277,29 @@
 
         <h3>Tips</h3>
         <ul>
-          <li>Type <code>#tagname</code> while writing a task or note to tag it on the spot — no extra clicks needed</li>
+          <li>Type <code>#tagname</code> while writing a task or note to tag it on the spot â€” no extra clicks needed</li>
           <li>Double-click a task, note, or comment to edit it on desktop</li>
           <li>Click <strong>Aa</strong> next to the input box to show bold, italic, underline, and bullet formatting buttons</li>
           <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
           <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box to submit without clicking Add</li>
-          <li>Use the sidebar collapse button (‹) to give the board more room</li>
-          <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
+          <li>Use the sidebar collapse button (â€¹) to give the board more room</li>
+          <li>Completing a task triggers a small confetti burst (turn it off in Options â†’ Behavior)</li>
           <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors; use the <strong>Custom</strong> tab to create your own theme from 5 picked colors</li>
           <li>Click the version number (<strong>v1.x.x</strong>) at the bottom of the sidebar to see the full changelog; a pulsing dot means there's something new</li>
 
         <h3>Keyboard shortcuts</h3>
         <ul>
-          <li><strong>Add task/note</strong> — Ctrl/Cmd + Enter</li>
-          <li><strong>Bold</strong> — Ctrl/Cmd + B</li>
-          <li><strong>Italic</strong> — Ctrl/Cmd + I</li>
-          <li><strong>Underline</strong> — Ctrl/Cmd + U</li>
-          <li><strong>Cancel edit / close menu</strong> — Escape</li>
+          <li><strong>Add task/note</strong> â€” Ctrl/Cmd + Enter</li>
+          <li><strong>Bold</strong> â€” Ctrl/Cmd + B</li>
+          <li><strong>Italic</strong> â€” Ctrl/Cmd + I</li>
+          <li><strong>Underline</strong> â€” Ctrl/Cmd + U</li>
+          <li><strong>Cancel edit / close menu</strong> â€” Escape</li>
         </ul>
 
         <h3>Possible future improvements</h3>
         <ul>
-          <li><strong>Google Assistant integration</strong> — "Hey Google, what are my tasks for today?" / "Hey Google, add a task to do xyz" via a Google Actions webhook connected to the Supabase backend</li>
-          <li><strong>Data encryption</strong> — opt-in PIN or passphrase-based AES-256 encryption of stored data so the Supabase DB owner cannot read tasks in plain text; PIN (4–6 digits) blocks casual viewing, a full passphrase blocks determined attacks</li>
+          <li><strong>Google Assistant integration</strong> â€” "Hey Google, what are my tasks for today?" / "Hey Google, add a task to do xyz" via a Google Actions webhook connected to the Supabase backend</li>
+          <li><strong>Data encryption</strong> â€” opt-in PIN or passphrase-based AES-256 encryption of stored data so the Supabase DB owner cannot read tasks in plain text; PIN (4â€“6 digits) blocks casual viewing, a full passphrase blocks determined attacks</li>
         </ul>
       </div>
       <div class="help-modal-footer">
@@ -7059,7 +7336,7 @@
   <div id="recurring-modal" class="modal hidden recurring-modal">
     <div class="modal-box">
       <div class="recurring-modal-header">
-        <p class="modal-title">🔁 Recurring Tasks</p>
+        <p class="modal-title">ðŸ” Recurring Tasks</p>
         <p class="modal-text">Templates are automatically added to your New column each time they're due.</p>
       </div>
       <div id="recurring-modal-body" class="recurring-modal-body"></div>
@@ -7100,26 +7377,36 @@
     const STREAK_SKIP_WEEKENDS_KEY = 'work-desk-streak-skip-weekends';
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.7.0';
+    const APP_VERSION = '1.8.0';
     const CHANGELOG = [
       {
-        version: '1.7.0',
-        date: 'Sep 22, 2026',
+        version: '1.8.0',
+        date: 'Sep 29, 2026',
         tag: 'latest',
         sections: [
           { label: 'Added', items: [
-            'Comment → Task / Note — click "→ task" or "→ note" on any comment to split it into its own item on the same day; tags carry over, a breadcrumb comment links back to the original task, and the source comment is annotated with a "→ moved to…" note',
-            'Undo support — a confirmation toast with Undo lets you reverse the split instantly',
-            'Weekends don\'t break streaks — Options → Behavior → Insights toggle (on by default); Fri → Mon stays consecutive, and active weekend days still count toward the streak',
+            '12 new themes â€” Retro (SNES console gray with purple buttons and a red/yellow/green/blue controller stripe), Seafoam, Mediterranean, Citrus (light); Game Boy, Denim, Terracotta, Merlot (medium); Monokai, One Dark, Phosphor, RosÃ© Pine (dark)',
+            'Theme count raised to 84 (28 light + 28 medium + 28 dark) plus custom themes',
+          ]},
+        ],
+      },
+      {
+        version: '1.7.0',
+        date: 'Sep 22, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Comment â†’ Task / Note â€” click "â†’ task" or "â†’ note" on any comment to split it into its own item on the same day; tags carry over, a breadcrumb comment links back to the original task, and the source comment is annotated with a "â†’ moved toâ€¦" note',
+            'Undo support â€” a confirmation toast with Undo lets you reverse the split instantly',
+            'Weekends don\'t break streaks â€” Options â†’ Behavior â†’ Insights toggle (on by default); Fri â†’ Mon stays consecutive, and active weekend days still count toward the streak',
           ]},
           { label: 'Improved', items: [
             'Insights day-by-day labels show the real date (e.g. Mon, Sep 21); today appears as Tue, Sep 22 (Today)',
-            'Comment hover actions are all plain text — edit / delete / → task / → note',
+            'Comment hover actions are all plain text â€” edit / delete / â†’ task / â†’ note',
           ]},
           { label: 'Fixed', items: [
-            'Projects tab now fully hides the daily desk — switching to Projects no longer shows the date header, progress bar, and kanban board above the project view (CSS specificity fix)',
-            'Auto carry off is now respected when signed in — cloud sync was carrying unfinished tasks forward even with the toggle off',
-            'Project sidebar counts update live — adding, saving, or deleting a note/task refreshes the sidebar instead of showing "Empty" until you switch projects',
+            'Projects tab now fully hides the daily desk â€” switching to Projects no longer shows the date header, progress bar, and kanban board above the project view (CSS specificity fix)',
+            'Auto carry off is now respected when signed in â€” cloud sync was carrying unfinished tasks forward even with the toggle off',
+            'Project sidebar counts update live â€” adding, saving, or deleting a note/task refreshes the sidebar instead of showing "Empty" until you switch projects',
           ]},
         ],
       },
@@ -7128,8 +7415,8 @@
         date: 'Sep 16, 2026',
         sections: [
           { label: 'Added', items: [
-            '24 medium themes — a new brightness tier between Light and Dark: Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Lichen, Fern, Tundra, Moss, Basalt, Driftwood, Clay, Sandstone, Umber, Flint, Twilight, Haze, Plum Mid, Mulberry, Ash, Graphite, Concrete',
-            'New "Med" filter in the theme picker — browse medium-tone themes grouped by color family (Blue/Cool, Green/Earth, Warm/Earthy, Purple/Pink, Neutral/Gray)',
+            '24 medium themes â€” a new brightness tier between Light and Dark: Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Lichen, Fern, Tundra, Moss, Basalt, Driftwood, Clay, Sandstone, Umber, Flint, Twilight, Haze, Plum Mid, Mulberry, Ash, Graphite, Concrete',
+            'New "Med" filter in the theme picker â€” browse medium-tone themes grouped by color family (Blue/Cool, Green/Earth, Warm/Earthy, Purple/Pink, Neutral/Gray)',
           ]},
           { label: 'Improved', items: [
             'Theme count raised to 72 (24 light + 24 medium + 24 dark) plus unlimited custom themes',
@@ -7142,7 +7429,7 @@
         date: 'Sep 16, 2026',
         sections: [
           { label: 'Fixed', items: [
-            'Strikethrough text was silently stripped on every render — adding a tag, comment, or any re-render would alter the visible text and break word-wrap',
+            'Strikethrough text was silently stripped on every render â€” adding a tag, comment, or any re-render would alter the visible text and break word-wrap',
           ]},
         ],
       },
@@ -7151,14 +7438,14 @@
         date: 'Sep 16, 2026',
         sections: [
           { label: 'Added', items: [
-            '8 new themes — Honey, Cloud, Peach, Olive (light) and Ember, Glacier, Plum, Storm (dark); total now 48 (24 light + 24 dark)',
-            'Custom Theme Builder — create up to 5 fully custom themes by choosing 5 colors (Background, Surface, Sidebar, Accent, Text) plus light/dark mode; all remaining CSS variables are auto-derived',
-            'New "Custom" filter tab in the theme picker — browse, apply, edit, and delete your custom themes alongside the 48 presets',
+            '8 new themes â€” Honey, Cloud, Peach, Olive (light) and Ember, Glacier, Plum, Storm (dark); total now 48 (24 light + 24 dark)',
+            'Custom Theme Builder â€” create up to 5 fully custom themes by choosing 5 colors (Background, Surface, Sidebar, Accent, Text) plus light/dark mode; all remaining CSS variables are auto-derived',
+            'New "Custom" filter tab in the theme picker â€” browse, apply, edit, and delete your custom themes alongside the 48 presets',
             'Native OS color picker + hex text input for each color, with a real-time live preview of the full app layout',
             'Custom themes sync across devices via the existing cloud preferences system',
           ]},
           { label: 'Improved', items: [
-            'Settings popout split into three tabs — Themes, Appearance, Behavior — so themes get dedicated space and layout/effects are easier to find',
+            'Settings popout split into three tabs â€” Themes, Appearance, Behavior â€” so themes get dedicated space and layout/effects are easier to find',
           ]},
         ],
       },
@@ -7171,7 +7458,7 @@
             'Login form: password field has proper aria-label and name for password manager autofill',
           ]},
           { label: 'Fixed', items: [
-            'Board width regression — stale max-width: 1240px was limiting the desk panel on wide screens',
+            'Board width regression â€” stale max-width: 1240px was limiting the desk panel on wide screens',
           ]},
         ],
       },
@@ -7180,13 +7467,13 @@
         date: 'Sep 10, 2026',
         sections: [
           { label: 'Fixed', items: [
-            'Mobile: Help (?) and version button were hidden — subtitle row is visible again with compact controls',
-            'Mobile: Export / Import buttons were squished to the left — now equal-width and full card width',
+            'Mobile: Help (?) and version button were hidden â€” subtitle row is visible again with compact controls',
+            'Mobile: Export / Import buttons were squished to the left â€” now equal-width and full card width',
             'Saving a comment no longer re-opens a duplicate Add form with the same text',
             'Holidays like Independence Day highlight on the actual date (Jul 4); observed weekday off is marked separately',
             'Desktop: date/add-form header stays pinned while only the task board scrolls',
-            'Desktop scroll regression — flex pin targeted a missing .desk-view class; now uses #desk-view',
-            'Layout/CSS regression tests — desktop scroll+pin and mobile help/backup button checks',
+            'Desktop scroll regression â€” flex pin targeted a missing .desk-view class; now uses #desk-view',
+            'Layout/CSS regression tests â€” desktop scroll+pin and mobile help/backup button checks',
           ]},
         ],
       },
@@ -7195,8 +7482,8 @@
         date: 'Sep 9, 2026',
         sections: [
           { label: 'Added', items: [
-            'What\'s New changelog — version button next to the ? opens a modal with full history',
-            'CHANGELOG.md — permanent version history file for the GitHub repo',
+            'What\'s New changelog â€” version button next to the ? opens a modal with full history',
+            'CHANGELOG.md â€” permanent version history file for the GitHub repo',
           ]},
           { label: 'Improved', items: [
             'Add-task text field stretches to fill available space on desktop',
@@ -7214,23 +7501,23 @@
         date: 'Sep 9, 2026',
         sections: [
           { label: 'Added', items: [
-            'Holiday-aware recurring tasks — skip US federal holidays or custom dates you define',
-            'Custom holidays — add your own dates in Options → Behavior → Holidays',
-            'Recurring task editing — edit templates from the card overflow menu or the recurring panel',
-            'Tags on recurring templates — tag a template and every injected task inherits the tags',
-            'Confirm before delete — optional prompt in Options → Behavior → General',
-            'Font picker — choose from 8 font families in Options → Appearance',
-            'Text size selector — Small / Default / Large',
-            'Sidebar position — move the sidebar to the left or right',
-            'Card glow effect — accent-colored hover glow (Options → Appearance → Effects)',
-            'Gradient header — subtle accent tint on the sticky header bar',
+            'Holiday-aware recurring tasks â€” skip US federal holidays or custom dates you define',
+            'Custom holidays â€” add your own dates in Options â†’ Behavior â†’ Holidays',
+            'Recurring task editing â€” edit templates from the card overflow menu or the recurring panel',
+            'Tags on recurring templates â€” tag a template and every injected task inherits the tags',
+            'Confirm before delete â€” optional prompt in Options â†’ Behavior â†’ General',
+            'Font picker â€” choose from 8 font families in Options â†’ Appearance',
+            'Text size selector â€” Small / Default / Large',
+            'Sidebar position â€” move the sidebar to the left or right',
+            'Card glow effect â€” accent-colored hover glow (Options â†’ Appearance â†’ Effects)',
+            'Gradient header â€” subtle accent tint on the sticky header bar',
           ]},
           { label: 'Improved', items: [
             'Behavior tab reorganized into General, Tasks, Projects, and Holidays sections',
-            'Recurring panel restructured — add form at top, existing templates listed below',
+            'Recurring panel restructured â€” add form at top, existing templates listed below',
             'Checkbox contrast improved on dark themes',
-            'Recurring template tombstoning — deleted templates stay deleted across syncs',
-            'Context-aware recurring modal — closes after editing from a task card, returns to panel from sidebar',
+            'Recurring template tombstoning â€” deleted templates stay deleted across syncs',
+            'Context-aware recurring modal â€” closes after editing from a task card, returns to panel from sidebar',
           ]},
           { label: 'Fixed', items: [
             'Sync icon stuck spinning when a merge error occurred',
@@ -7244,19 +7531,19 @@
         date: 'Sep 3, 2026',
         sections: [
           { label: 'Added', items: [
-            'Export All / Import All — single-file backup across Work, Personal, and Projects',
-            'Import context safeguard — warns when importing a file from a different desk',
-            'Project tabbed layout — Notes and Tasks in separate tabs per project',
-            'Project archiving — completed tasks auto-archive; manual archive for notes',
+            'Export All / Import All â€” single-file backup across Work, Personal, and Projects',
+            'Import context safeguard â€” warns when importing a file from a different desk',
+            'Project tabbed layout â€” Notes and Tasks in separate tabs per project',
+            'Project archiving â€” completed tasks auto-archive; manual archive for notes',
             'Note truncation with show more / show less toggle',
             'Customize (gear) button added to project tab header',
             'Double-click to edit project notes and tasks',
-            'Date-aware add placeholder — shows "Add a task for tomorrow…" when viewing future days',
+            'Date-aware add placeholder â€” shows "Add a task for tomorrowâ€¦" when viewing future days',
           ]},
           { label: 'Improved', items: [
             'Export / Import buttons renamed to "Export [current] Desk" and "Import [current] Desk"',
-            'Sidebar backup section streamlined — side-by-side Export and Import buttons',
-            'Project item tombstoning — deleted items stay deleted across syncs',
+            'Sidebar backup section streamlined â€” side-by-side Export and Import buttons',
+            'Project item tombstoning â€” deleted items stay deleted across syncs',
             'Bullet-point styling fixed in project note content',
           ]},
           { label: 'Fixed', items: [
@@ -7270,14 +7557,14 @@
         date: 'Aug 21, 2026',
         sections: [
           { label: 'Added', items: [
-            'Tags — type #word inline or use the tag button; chips appear top-right of cards',
-            'Tag search — search #tagname to filter; combine with text for narrower results',
-            'Search overlay — floating results dropdown that doesn\'t cover the search input',
-            'In-column quick add — add tasks directly inside New and Active columns',
+            'Tags â€” type #word inline or use the tag button; chips appear top-right of cards',
+            'Tag search â€” search #tagname to filter; combine with text for narrower results',
+            'Search overlay â€” floating results dropdown that doesn\'t cover the search input',
+            'In-column quick add â€” add tasks directly inside New and Active columns',
           ]},
           { label: 'Improved', items: [
-            'Sticky header restyled — background tint, shadow, rounded top corners, carded add form',
-            'Progress bar layout — legend moved right, done count moved left',
+            'Sticky header restyled â€” background tint, shadow, rounded top corners, carded add form',
+            'Progress bar layout â€” legend moved right, done count moved left',
             'Carry button only visible when there\'s something to carry',
             'Help modal fully updated with tag, search, and layout documentation',
           ]},
@@ -7293,18 +7580,18 @@
         date: 'Aug 19, 2026',
         sections: [
           { label: 'Added', items: [
-            'Insights tab — weekly, monthly, and yearly views with productivity metrics',
+            'Insights tab â€” weekly, monthly, and yearly views with productivity metrics',
             'Week-over-week comparison, carry-over analysis, and streak tracking',
-            'Hoverable charts — bar, line, stacked, pie with tooltips',
-            'Activity heatmap — GitHub-style grid in the year view',
+            'Hoverable charts â€” bar, line, stacked, pie with tooltips',
+            'Activity heatmap â€” GitHub-style grid in the year view',
             'Carry-over tracking with carriedFrom field',
             'Remember last tab and date on refresh',
-            '48 themes — 24 light, 24 dark with mini wireframe swatches',
+            '48 themes â€” 24 light, 24 dark with mini wireframe swatches',
             'Confetti toggle, week start day, and startup view options',
           ]},
           { label: 'Improved', items: [
             'Shelved tasks excluded from completion percentage',
-            'Auto-collapse threshold now user-selectable (3–20)',
+            'Auto-collapse threshold now user-selectable (3â€“20)',
             'Persistent expanded comment IDs across navigation and refresh',
             'Options menu tabbed into Appearance and Behavior',
           ]},
@@ -7320,9 +7607,9 @@
         date: 'Aug 14, 2026',
         sections: [
           { label: 'Added', items: [
-            'Auto-collapse Completed column — configurable threshold, toggle in Customize',
-            'Sign-in from offline mode — "Sign in to sync" button in sidebar footer',
-            'Sticky mobile add bar — docks to bottom on ≤768px screens',
+            'Auto-collapse Completed column â€” configurable threshold, toggle in Customize',
+            'Sign-in from offline mode â€” "Sign in to sync" button in sidebar footer',
+            'Sticky mobile add bar â€” docks to bottom on â‰¤768px screens',
           ]},
           { label: 'Improved', items: [
             'Theme + density + preferences now sync to the cloud',
@@ -7347,8 +7634,8 @@
         date: 'Aug 12, 2026',
         sections: [
           { label: 'Added', items: [
-            'Keep Comments Open toggle — multiple comment panels stay open at once',
-            '"How to use Work Desk" help modal — comprehensive in-app documentation',
+            'Keep Comments Open toggle â€” multiple comment panels stay open at once',
+            '"How to use Work Desk" help modal â€” comprehensive in-app documentation',
           ]},
           { label: 'Fixed', items: [
             'Merge no longer resurrects tasks on old days if they live on another day locally',
@@ -7364,7 +7651,7 @@
         date: 'Aug 10, 2026',
         sections: [
           { label: 'Added', items: [
-            'Comment indentation — comments sit indented under the card',
+            'Comment indentation â€” comments sit indented under the card',
             'Bullet points in tasks, comments, and notes',
           ]},
         ],
@@ -7374,8 +7661,8 @@
         date: 'Aug 6, 2026',
         sections: [
           { label: 'Added', items: [
-            'Smart merge sync — unions items from both devices, keeps version with more comments or completed status',
-            'Auto sync triggers — window focus and periodic 5-minute silent sync',
+            'Smart merge sync â€” unions items from both devices, keeps version with more comments or completed status',
+            'Auto sync triggers â€” window focus and periodic 5-minute silent sync',
           ]},
         ],
       },
@@ -7384,11 +7671,11 @@
         date: 'Aug 3, 2026',
         sections: [
           { label: 'Added', items: [
-            'Projects tab — long-term notes and tasks not tied to daily workflow',
-            'Text-based action buttons — cleaner labels, destructive actions behind ⋮ overflow',
+            'Projects tab â€” long-term notes and tasks not tied to daily workflow',
+            'Text-based action buttons â€” cleaner labels, destructive actions behind â‹® overflow',
           ]},
           { label: 'Fixed', items: [
-            'Race condition with Supabase sync — local timestamp updates immediately',
+            'Race condition with Supabase sync â€” local timestamp updates immediately',
             'Note comments not saving (normalizeItem was stripping comments from notes)',
             'Email signup redirect URLs corrected',
           ]},
@@ -7399,7 +7686,7 @@
         date: 'Jul 21, 2026',
         sections: [
           { label: 'Added', items: [
-            'Comments on notes — timestamped updates and threaded follow-ups',
+            'Comments on notes â€” timestamped updates and threaded follow-ups',
             'Paragraph spacing in notes',
           ]},
         ],
@@ -7409,7 +7696,7 @@
         date: 'Jul 20, 2026',
         sections: [
           { label: 'Added', items: [
-            'Theme favicons — each theme gets a matching favicon',
+            'Theme favicons â€” each theme gets a matching favicon',
             'Task deduplication logic and Repair duplicates button',
             'Improved sign-out button visibility on mobile',
           ]},
@@ -7420,11 +7707,11 @@
         date: 'Jul 18, 2026',
         sections: [
           { label: 'Added', items: [
-            'Multiple themes — light and dark presets',
-            'Mobile calendar navigation — week strip with smooth scrolling',
+            'Multiple themes â€” light and dark presets',
+            'Mobile calendar navigation â€” week strip with smooth scrolling',
           ]},
           { label: 'Fixed', items: [
-            'Timezone issues — switched from UTC to device local timezone',
+            'Timezone issues â€” switched from UTC to device local timezone',
           ]},
         ],
       },
@@ -7433,9 +7720,9 @@
         date: 'Jul 16, 2026',
         sections: [
           { label: 'Added', items: [
-            'Initial release — daily task and note desk with kanban columns',
+            'Initial release â€” daily task and note desk with kanban columns',
             'Supabase cloud sync with email sign-in / sign-out',
-            'PWA support — installable on desktop and mobile',
+            'PWA support â€” installable on desktop and mobile',
             'In-app documentation',
           ]},
         ],
@@ -7531,7 +7818,7 @@
       taggingId: null,
       expandedTaskIds: loadExpandedComments(getListContext()),
       keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
-      // Default on — toggle off in Customize if you want Completed always expanded
+      // Default on â€” toggle off in Customize if you want Completed always expanded
       autoCollapseCompleted: localStorage.getItem('work-desk-auto-collapse-completed') !== 'false',
       autoCollapseCompletedAt: (() => {
         const n = parseInt(localStorage.getItem('work-desk-auto-collapse-completed-at') || '5', 10);
@@ -7763,9 +8050,9 @@
       burstConfetti(x, y);
     }
 
-    // ── Theme system ───────────────────────────────────────────────────────────
+    // â”€â”€ Theme system â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const THEMES = [
-      // Light — Blue/cool
+      // Light â€” Blue/cool
       { id: '',                name: 'Default',   sidebar: '#1e2433', bg: '#f4f2ee', surface: '#ffffff', accent: '#3b6fd9', dark: false },
       { id: 'slate',           name: 'Slate',     sidebar: '#334155', bg: '#f1f5f9', surface: '#ffffff', accent: '#3b82f6', dark: false },
       { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', bg: '#f0f6ff', surface: '#ffffff', accent: '#0ea5e9', dark: false },
@@ -7773,29 +8060,34 @@
       { id: 'nord-light',      name: 'Nord Light',sidebar: '#2e3440', bg: '#eceff4', surface: '#ffffff', accent: '#5e81ac', dark: false },
       { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', surface: '#e9e9ec', accent: '#7aa2f7', dark: false },
       { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', bg: '#fdf6e3', surface: '#eee8d5', accent: '#268bd2', dark: false },
-      // Light — Green/earth
+      // Light â€” Green/earth
       { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', bg: '#f0faf4', surface: '#ffffff', accent: '#16a34a', dark: false },
       { id: 'sage',            name: 'Sage',      sidebar: '#1f3024', bg: '#f1f5f2', surface: '#ffffff', accent: '#3b7a57', dark: false },
       { id: 'olive',           name: 'Olive',     sidebar: '#2a3020', bg: '#f2f0e6', surface: '#fafaf4', accent: '#6a8040', dark: false },
-      // Light — Warm/earthy
+      { id: 'seafoam',         name: 'Seafoam',   sidebar: '#0f3b3a', bg: '#eef8f6', surface: '#ffffff', accent: '#0d9488', dark: false },
+      { id: 'citrus',          name: 'Citrus',    sidebar: '#283214', bg: '#fafbe9', surface: '#ffffff', accent: '#4d7c0f', dark: false },
+      // Light â€” Warm/earthy
       { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', bg: '#fdf6ee', surface: '#ffffff', accent: '#b5611a', dark: false },
       { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', bg: '#f7f0e6', surface: '#fffcf8', accent: '#d2691e', dark: false },
       { id: 'honey',           name: 'Honey',     sidebar: '#4a3010', bg: '#fef9ec', surface: '#fffef8', accent: '#d4940a', dark: false },
       { id: 'sepia',           name: 'Sepia',     sidebar: '#382a1d', bg: '#f4ecd8', surface: '#faf6eb', accent: '#8c5828', dark: false },
-      // Light — Red/pink
+      { id: 'mediterranean',   name: 'Mediterranean', sidebar: '#13315c', bg: '#f6f1e7', surface: '#fffdf8', accent: '#c8553d', dark: false },
+      // Light â€” Red/pink
       { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', bg: '#fff5f0', surface: '#ffffff', accent: '#f05040', dark: false },
       { id: 'peach',           name: 'Peach',     sidebar: '#5a2838', bg: '#fff5ee', surface: '#ffffff', accent: '#e87050', dark: false },
       { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', bg: '#fff1f2', surface: '#ffffff', accent: '#f43f5e', dark: false },
       { id: 'sakura',          name: 'Sakura',    sidebar: '#4a1525', bg: '#fdf2f4', surface: '#ffffff', accent: '#e11d48', dark: false },
-      // Light — Purple/neutral
+      // Light â€” Purple/neutral
       { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', bg: '#f3f0fa', surface: '#ffffff', accent: '#7c3aed', dark: false },
       { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', surface: '#ffffff', accent: '#555555', dark: false },
-      // Light — Neon/vibrant
+      // Light â€” Neon/vibrant
       { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#a8e8ff', surface: '#ccf4ff', accent: '#ff1493', dark: false },
       { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', bg: '#d8c0f0', surface: '#ece0f8', accent: '#ff2d95', dark: false },
       { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', bg: '#d9dce3', surface: '#f3f5f8', accent: '#00d084', dark: false },
       { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', bg: '#ffe0c8', surface: '#fff0e4', accent: '#ff2d95', dark: false },
-      // Medium — Blue/cool
+      // Light â€” Retro
+      { id: 'retro',           name: 'Retro',     sidebar: '#2e2a3c', bg: '#dcdce4', surface: '#f0f0f4', accent: '#5b4cbf', dark: false },
+      // Medium â€” Blue/cool
       { id: 'fog',             name: 'Fog',        sidebar: '#2a3040', bg: '#6b7280', surface: '#7d8594', accent: '#60a5fa', dark: false, medium: true },
       { id: 'overcast',        name: 'Overcast',   sidebar: '#1e2838', bg: '#5c6878', surface: '#6a7688', accent: '#38bdf8', dark: false, medium: true },
       { id: 'steel',           name: 'Steel',      sidebar: '#1a2430', bg: '#546070', surface: '#627080', accent: '#3b82f6', dark: false, medium: true },
@@ -7803,28 +8095,32 @@
       { id: 'nimbus',          name: 'Nimbus',     sidebar: '#202838', bg: '#606c7c', surface: '#6e7a8a', accent: '#818cf8', dark: false, medium: true },
       { id: 'pewter',          name: 'Pewter',     sidebar: '#1c2430', bg: '#586878', surface: '#667686', accent: '#94a3b8', dark: false, medium: true },
       { id: 'horizon',         name: 'Horizon',    sidebar: '#182838', bg: '#4e6478', surface: '#5c728a', accent: '#0ea5e9', dark: false, medium: true },
-      // Medium — Green/earth
+      { id: 'denim',           name: 'Denim',      sidebar: '#1a2238', bg: '#4a5a7a', surface: '#586a8c', accent: '#f59e0b', dark: false, medium: true },
+      // Medium â€” Green/earth
       { id: 'lichen',          name: 'Lichen',     sidebar: '#1a2820', bg: '#5a6e5c', surface: '#6a7e6c', accent: '#4ade80', dark: false, medium: true },
       { id: 'fern',            name: 'Fern',       sidebar: '#162418', bg: '#4e6450', surface: '#5e7460', accent: '#22c55e', dark: false, medium: true },
       { id: 'tundra',          name: 'Tundra',     sidebar: '#1c2c24', bg: '#566e60', surface: '#647e70', accent: '#2dd4bf', dark: false, medium: true },
       { id: 'moss',            name: 'Moss',       sidebar: '#1a2818', bg: '#4c5e44', surface: '#5c6e54', accent: '#84cc16', dark: false, medium: true },
       { id: 'basalt',          name: 'Basalt',     sidebar: '#18201c', bg: '#505c54', surface: '#606c64', accent: '#34d399', dark: false, medium: true },
-      // Medium — Warm/earthy
+      { id: 'gameboy',         name: 'Game Boy',   sidebar: '#0f380f', bg: '#4f6b24', surface: '#5e7b2e', accent: '#9bbc0f', dark: false, medium: true },
+      // Medium â€” Warm/earthy
       { id: 'driftwood',       name: 'Driftwood',  sidebar: '#2e2418', bg: '#7a6e5e', surface: '#8a7e6e', accent: '#e8a040', dark: false, medium: true },
       { id: 'clay',            name: 'Clay',       sidebar: '#2a1c14', bg: '#6e5848', surface: '#7e6858', accent: '#f59e0b', dark: false, medium: true },
       { id: 'sandstone',       name: 'Sandstone',  sidebar: '#282018', bg: '#72685c', surface: '#82786c', accent: '#d4940a', dark: false, medium: true },
       { id: 'umber',           name: 'Umber',      sidebar: '#201410', bg: '#5e4838', surface: '#6e5848', accent: '#fb923c', dark: false, medium: true },
       { id: 'flint',           name: 'Flint',      sidebar: '#1e1810', bg: '#585048', surface: '#686058', accent: '#fbbf24', dark: false, medium: true },
-      // Medium — Purple/pink
+      { id: 'terracotta',      name: 'Terracotta', sidebar: '#2e1a14', bg: '#7a5244', surface: '#8a6254', accent: '#fdba74', dark: false, medium: true },
+      // Medium â€” Purple/pink
       { id: 'twilight',        name: 'Twilight',   sidebar: '#14102a', bg: '#4a4466', surface: '#5a5478', accent: '#c084fc', dark: false, medium: true },
       { id: 'haze',            name: 'Haze',       sidebar: '#22202a', bg: '#706878', surface: '#807888', accent: '#f472b6', dark: false, medium: true },
       { id: 'plum-mid',        name: 'Plum Mid',   sidebar: '#1a1028', bg: '#544868', surface: '#645878', accent: '#a78bfa', dark: false, medium: true },
       { id: 'mulberry',        name: 'Mulberry',   sidebar: '#201428', bg: '#5e4a64', surface: '#6e5a74', accent: '#e879f9', dark: false, medium: true },
-      // Medium — Neutral/gray
+      { id: 'merlot',          name: 'Merlot',     sidebar: '#2a1018', bg: '#6a3a4a', surface: '#7a4a5a', accent: '#fda4af', dark: false, medium: true },
+      // Medium â€” Neutral/gray
       { id: 'ash',             name: 'Ash',        sidebar: '#1a1a1a', bg: '#585858', surface: '#686868', accent: '#a78bfa', dark: false, medium: true },
       { id: 'graphite',        name: 'Graphite',   sidebar: '#101418', bg: '#484e58', surface: '#565c66', accent: '#fb923c', dark: false, medium: true },
       { id: 'concrete',        name: 'Concrete',   sidebar: '#1c1c1c', bg: '#6a6a6a', surface: '#7a7a7a', accent: '#3b82f6', dark: false, medium: true },
-      // Dark — Blue/cool
+      // Dark â€” Blue/cool
       { id: 'dark',            name: 'Default',   sidebar: '#0d1017', bg: '#12151c', surface: '#1a1f2b', accent: '#5b8def', dark: true  },
       { id: 'oled',            name: 'OLED',      sidebar: '#000000', bg: '#000000', surface: '#0c0c0c', accent: '#3b82f6', dark: true  },
       { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', bg: '#242933', surface: '#2e3440', accent: '#88c0d0', dark: true  },
@@ -7834,22 +8130,26 @@
       { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', bg: '#051320', surface: '#07192b', accent: '#22d3ee', dark: true  },
       { id: 'glacier',         name: 'Glacier',   sidebar: '#04101a', bg: '#08141e', surface: '#0e1e2c', accent: '#40b8e0', dark: true  },
       { id: 'storm',           name: 'Storm',     sidebar: '#0a0e12', bg: '#101418', surface: '#181e24', accent: '#6898d0', dark: true  },
-      // Dark — Green/earth
+      { id: 'one-dark',        name: 'One Dark',  sidebar: '#21252b', bg: '#282c34', surface: '#2f343f', accent: '#61afef', dark: true  },
+      // Dark â€” Green/earth
       { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', surface: '#143323', accent: '#46d17c', dark: true  },
-      // Dark — Warm/amber
+      { id: 'phosphor',        name: 'Phosphor',  sidebar: '#020703', bg: '#050d07', surface: '#0b1a0f', accent: '#33ff66', dark: true  },
+      // Dark â€” Warm/amber
       { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', surface: '#1e1006', accent: '#f59e0b', dark: true  },
       { id: 'gruvbox-dark',    name: 'Gruvbox',   sidebar: '#1d2021', bg: '#282828', surface: '#3c3836', accent: '#fe8019', dark: true  },
       { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', surface: '#261610', accent: '#d4883c', dark: true  },
       { id: 'ember',           name: 'Ember',     sidebar: '#100604', bg: '#1a0e08', surface: '#281810', accent: '#e06830', dark: true  },
       { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', surface: '#1c1c1c', accent: '#c8a84a', dark: true  },
-      // Dark — Red/pink
+      // Dark â€” Red/pink
       { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', surface: '#2a1018', accent: '#e8608a', dark: true  },
-      // Dark — Purple
+      { id: 'monokai',         name: 'Monokai',   sidebar: '#1e1f1c', bg: '#272822', surface: '#3e3d32', accent: '#f92672', dark: true  },
+      // Dark â€” Purple
       { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', surface: '#383a4a', accent: '#bd93f9', dark: true  },
       { id: 'catppuccin',      name: 'Catppuccin',sidebar: '#181825', bg: '#1e1e2e', surface: '#313244', accent: '#cba6f7', dark: true  },
       { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0e0620', surface: '#160a30', accent: '#a78bfa', dark: true  },
       { id: 'plum',            name: 'Plum',      sidebar: '#0c0410', bg: '#140818', surface: '#221028', accent: '#b868d8', dark: true  },
-      // Dark — Neon/vibrant
+      { id: 'rose-pine',       name: 'RosÃ© Pine', sidebar: '#13111e', bg: '#191724', surface: '#1f1d2e', accent: '#ebbcba', dark: true  },
+      // Dark â€” Neon/vibrant
       { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', surface: '#16082e', accent: '#ff71ce', dark: true  },
       { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', surface: '#121218', accent: '#00ff9f', dark: true  },
       { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', bg: '#1a0828', surface: '#280a3a', accent: '#ff2d95', dark: true  },
@@ -7860,7 +8160,7 @@
       return document.documentElement.dataset.theme || '';
     }
 
-    // ── Custom theme builder ──────────────────────────────────────────────────
+    // â”€â”€ Custom theme builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const CUSTOM_THEMES_KEY = 'work-desk-custom-themes';
     const MAX_CUSTOM_THEMES = 5;
 
@@ -8302,7 +8602,7 @@
       renderThemeSwatches();
     }
 
-    // ── Theme picker ───────────────────────────────────────────────────────────
+    // â”€â”€ Theme picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const elThemeGrid   = document.getElementById('customize-theme-grid');
     const elCustomPanel = document.getElementById('custom-theme-panel');
     let currentThemeFilter = 'light';
@@ -8352,6 +8652,7 @@
           sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
           sw.type = 'button';
           sw.title = t.name;
+          sw.dataset.themeId = t.id;
           sw.innerHTML = `
             <div class="theme-swatch-preview" style="background:${t.bg}">
               <div class="theme-swatch-sidebar" style="background:${t.sidebar}">
@@ -8392,7 +8693,7 @@
       }
     }
 
-    // ── Custom theme panel (browse + editor) ──────────────────────────────────
+    // â”€â”€ Custom theme panel (browse + editor) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function renderCustomThemePanel() {
       if (!elCustomPanel) return;
       elCustomPanel.innerHTML = '';
@@ -8436,7 +8737,7 @@
         const sw = document.createElement('button');
         sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
         sw.type = 'button';
-        sw.title = `${t.name} — click to apply, right-click to edit`;
+        sw.title = `${t.name} â€” click to apply, right-click to edit`;
         sw.innerHTML = `
           <div class="theme-swatch-preview" style="background:${t.bg}">
             <div class="theme-swatch-sidebar" style="background:${t.sidebar}">
@@ -8769,7 +9070,7 @@
       { cmd: 'bold', label: 'B', title: 'Bold (Ctrl+B)' },
       { cmd: 'italic', label: 'I', title: 'Italic (Ctrl+I)' },
       { cmd: 'underline', label: 'U', title: 'Underline (Ctrl+U)' },
-      { cmd: 'insertUnorderedList', label: '•', title: 'Bullet list' },
+      { cmd: 'insertUnorderedList', label: 'â€¢', title: 'Bullet list' },
     ];
 
     const ICON_PENCIL = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -8988,10 +9289,10 @@
       return !div.textContent.trim();
     }
 
-    const BULLET_LINE_RE = /^[•\-\*○◦▪▸\u2022\u2023\u25E6\u2043\u2219]\s*(.*)$/;
+    const BULLET_LINE_RE = /^[â€¢\-\*â—‹â—¦â–ªâ–¸\u2022\u2023\u25E6\u2043\u2219]\s*(.*)$/;
     const NUMBERED_LINE_RE = /^\d+[.)]\s+\S/;
     const INLINE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'DEL']);
-    const SENTENCE_END_RE = /[.!?:]["'""»)\]]*$/;
+    const SENTENCE_END_RE = /[.!?:]["'""Â»)\]]*$/;
 
     function plainTextToRichHtml(text) {
       if (!text) return '';
@@ -9048,8 +9349,8 @@
       return chunks.join('<br>');
     }
 
-    const ORPHAN_PUNCT_TAIL_RE = /^[)\]},.;:!?'""»]+$/;
-    const BULLET_START_RE = /^[•\-\*○◦▪▸\u2022\u2023\u25E6\u2043\u2219]\s/;
+    const ORPHAN_PUNCT_TAIL_RE = /^[)\]},.;:!?'""Â»]+$/;
+    const BULLET_START_RE = /^[â€¢\-\*â—‹â—¦â–ªâ–¸\u2022\u2023\u25E6\u2043\u2219]\s/;
     const BLOCK_END_RE = /<\/(ul|ol|li|p|div|h[1-6])>\s*$/i;
 
     function stripHtmlTags(html) {
@@ -9096,8 +9397,8 @@
     function repairOrphanPunctuation(html) {
       if (!html) return '';
       return html
-        .replace(/<br\s*\/?>\s*([)\]},.;:!?'""»]+)/gi, '$1')
-        .replace(/(<\/[^>]+>)\s*<br\s*\/?>\s*([)\]},.;:!?'""»]+)/gi, '$1$2')
+        .replace(/<br\s*\/?>\s*([)\]},.;:!?'""Â»]+)/gi, '$1')
+        .replace(/(<\/[^>]+>)\s*<br\s*\/?>\s*([)\]},.;:!?'""Â»]+)/gi, '$1$2')
         .replace(/\s+([)\]},.;:!?])(?=<|$)/g, '$1');
     }
 
@@ -9219,13 +9520,13 @@
       if (div.querySelector('ul, ol')) return normalizeRichHtml(html);
 
       const text = div.textContent || '';
-      if (!/[•\u2022\u2023\u25E6\u2043\u2219]/.test(text)) {
+      if (!/[â€¢\u2022\u2023\u25E6\u2043\u2219]/.test(text)) {
         return normalizeRichHtml(html);
       }
 
       const normalized = text
         .replace(/\r\n/g, '\n')
-        .replace(/([^\n])([•\u2022\u2023\u25E6\u2043\u2219])/g, '$1\n$2');
+        .replace(/([^\n])([â€¢\u2022\u2023\u25E6\u2043\u2219])/g, '$1\n$2');
       return plainTextToRichHtml(normalized);
     }
 
@@ -9439,7 +9740,7 @@
     function initAddEditor() {
       const { wrap, editor } = createRichEditor({
         className: 'add-input',
-        placeholder: 'Add a task for today…',
+        placeholder: 'Add a task for todayâ€¦',
         onInput: (html) => {
           els.addBtn.disabled = isEmptyHtml(html);
         },
@@ -9463,13 +9764,13 @@
 
     function syncSearchUi() {
       els.searchInput.placeholder = state.searchAllContexts
-        ? 'Search Work & Personal…'
-        : `Search ${getContextLabel()}…`;
+        ? 'Search Work & Personalâ€¦'
+        : `Search ${getContextLabel()}â€¦`;
       els.searchScopeChip.textContent = state.searchAllContexts ? 'Both' : getContextLabel();
       els.searchScopeChip.classList.toggle('active', state.searchAllContexts);
       els.searchScopeChip.title = state.searchAllContexts
-        ? 'Searching both lists — click for current list only'
-        : `Searching ${getContextLabel()} only — click to search both`;
+        ? 'Searching both lists â€” click for current list only'
+        : `Searching ${getContextLabel()} only â€” click to search both`;
       els.searchWrap.classList.toggle('scope-both', state.searchAllContexts);
       els.searchWrap.classList.toggle('has-query', !!state.searchQuery.trim());
     }
@@ -10002,7 +10303,7 @@
       const today = todayKey();
 
       if (host.children.length === 0) {
-        // ── First render: build the full 26-week scrollable strip ─────────
+        // â”€â”€ First render: build the full 26-week scrollable strip â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const base = new Date();
         const startD = new Date(base); startD.setDate(startD.getDate() - 91); // 13 weeks back
         const endD   = new Date(base); endD.setDate(endD.getDate()   + 91); // 13 weeks forward
@@ -10045,7 +10346,7 @@
         const sel = host.querySelector(`[data-date-key="${state.selectedDate}"]`);
         if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
       } else {
-        // ── Subsequent renders: just refresh classes, preserve scroll pos ──
+        // â”€â”€ Subsequent renders: just refresh classes, preserve scroll pos â”€â”€
         host.querySelectorAll('.week-day').forEach(btn => {
           const key = btn.dataset.dateKey;
           const day = state.data.days[key];
@@ -10084,8 +10385,8 @@
     function setAddPlaceholder() {
       if (!addEditor) return;
       addEditor.dataset.placeholder = state.itemType === 'task'
-        ? `Add a task for ${relativeDayPhrase(state.selectedDate)}…`
-        : 'Write a quick note…';
+        ? `Add a task for ${relativeDayPhrase(state.selectedDate)}â€¦`
+        : 'Write a quick noteâ€¦';
     }
 
     function clearAddEditor() {
@@ -10139,7 +10440,7 @@
       prevBtn.type = 'button';
       prevBtn.className = 'cal-nav-btn';
       prevBtn.setAttribute('aria-label', 'Previous month');
-      prevBtn.textContent = '‹';
+      prevBtn.textContent = 'â€¹';
       prevBtn.addEventListener('click', () => shiftMoveCalendarMonth(-1));
 
       const title = document.createElement('div');
@@ -10150,7 +10451,7 @@
       nextBtn.type = 'button';
       nextBtn.className = 'cal-nav-btn';
       nextBtn.setAttribute('aria-label', 'Next month');
-      nextBtn.textContent = '›';
+      nextBtn.textContent = 'â€º';
       nextBtn.addEventListener('click', () => shiftMoveCalendarMonth(1));
 
       header.append(prevBtn, title, nextBtn);
@@ -10232,7 +10533,7 @@
       const div = document.createElement('div');
       div.innerHTML = html || '';
       const text = div.textContent.trim();
-      return text.length > maxLen ? `${text.slice(0, maxLen)}…` : text;
+      return text.length > maxLen ? `${text.slice(0, maxLen)}â€¦` : text;
     }
 
     function startMoveItem(id) {
@@ -10420,7 +10721,7 @@
     }
 
     // Pull #hashtag shorthand out of typed content into a clean tags list.
-    // Only strips the tokens when doing so leaves real content behind — a task
+    // Only strips the tokens when doing so leaves real content behind â€” a task
     // that's *just* "#ace" keeps its text untouched rather than going empty.
     function extractHashtags(html) {
       const raw = String(html || '');
@@ -10451,7 +10752,7 @@
       if (item.type === 'task') {
         normalized.shelved = !!item.shelved;
         normalized.boardColumn = item.boardColumn === 'new' ? 'new' : 'active';
-        // Keep template link through sync/repair — without this, injectDueTemplates
+        // Keep template link through sync/repair â€” without this, injectDueTemplates
         // cannot see today's instance and recreates the recurring task.
         if (item.recurringTemplateId) {
           normalized.recurringTemplateId = item.recurringTemplateId;
@@ -10616,7 +10917,7 @@
       return { items: ordered, removed };
     }
 
-    // Deduplicate items in a day — if multiple items share the same ID, merge
+    // Deduplicate items in a day â€” if multiple items share the same ID, merge
     // them into one, preserving the most advanced state AND the most comments.
     function deduplicateDayItems(items) {
       const seen = new Map();
@@ -10797,7 +11098,7 @@
     }
 
     // Tombstone for a deleted project task/note, mirroring markItemDeleted() for
-    // desk items — without this, a cloud sync pull can resurrect an item that
+    // desk items â€” without this, a cloud sync pull can resurrect an item that
     // was deleted locally but still exists in a stale remote copy.
     function markProjectItemDeleted(id) {
       if (!id) return;
@@ -11057,11 +11358,11 @@
       saveData();
       render();
       showToast(totalFixed > 0
-        ? `Repaired ${totalFixed} duplicate item${totalFixed === 1 ? '' : 's'} ✓`
-        : 'No duplicates found — data looks clean ✓');
+        ? `Repaired ${totalFixed} duplicate item${totalFixed === 1 ? '' : 's'} âœ“`
+        : 'No duplicates found â€” data looks clean âœ“');
     }
 
-    // ── Supabase cloud sync ───────────────────────────────────────
+    // â”€â”€ Supabase cloud sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const SB_URL    = 'https://vfpoxsvosltaupoxvzac.supabase.co';
     const SB_KEY    = 'sb_publishable_CBXoXz67hk8IWGfwXRNIDQ_Pvk50PjT';
     const SB_TS_KEY = 'work-desk-sb-updated-at';
@@ -11121,9 +11422,9 @@
     function sbSetStatus(status) {
       const el = document.getElementById('sb-sync-status');
       if (!el) return;
-      const icons = { idle: '☁️', syncing: '🔄', ok: '✓', error: '!' };
-      const tips  = { idle: 'Cloud sync ready', syncing: 'Syncing…', ok: 'Saved to cloud', error: 'Sync error — check console' };
-      el.textContent = icons[status] ?? '☁️';
+      const icons = { idle: 'â˜ï¸', syncing: 'ðŸ”„', ok: 'âœ“', error: '!' };
+      const tips  = { idle: 'Cloud sync ready', syncing: 'Syncingâ€¦', ok: 'Saved to cloud', error: 'Sync error â€” check console' };
+      el.textContent = icons[status] ?? 'â˜ï¸';
       el.title = tips[status] ?? '';
       el.dataset.status = status;
     }
@@ -11173,7 +11474,7 @@
       if (mode === 'offline') {
         emailEl.textContent = 'Offline Mode';
         emailEl.title = 'Offline mode (this browser only)';
-        avatar.textContent = '∅';
+        avatar.textContent = 'âˆ…';
       } else {
         emailEl.textContent = 'Not signed in';
         emailEl.title = 'Not signed in';
@@ -11202,7 +11503,7 @@
       localStorage.setItem('work-desk-continue-offline', 'true');
       document.getElementById('auth-modal').classList.add('hidden');
       updateAccountChrome('offline');
-      showToast('Working offline — create an account to back up your desk');
+      showToast('Working offline â€” create an account to back up your desk');
     }
     function setAuthError(msg) {
       const el = document.getElementById('auth-error');
@@ -11248,7 +11549,7 @@
         });
         if (error) throw error;
         if (data.session) {
-          // Email confirmation is off — signed in immediately
+          // Email confirmation is off â€” signed in immediately
           hideAuthModal(email);
           await sbPostAuthSync();
         } else {
@@ -11591,7 +11892,7 @@
         if (changed) {
           console.log('[sync] changes detected, reloading state.data');
           state.data = loadData();
-          if (!silent) showToast('Synced from cloud ☁️');
+          if (!silent) showToast('Synced from cloud â˜ï¸');
         } else {
           console.log('[sync] no changes detected, reloading state.data anyway');
           state.data = loadData();
@@ -11625,7 +11926,7 @@
           injectDueTemplates();
         }
         await sbPush();
-        if (!silent) showToast('Data backed up to cloud ☁️');
+        if (!silent) showToast('Data backed up to cloud â˜ï¸');
         sbSetStatus('ok');
         console.log('[sync] push complete');
       }
@@ -11798,7 +12099,7 @@
     }
 
     function collectSearchMatches(data, listContext, q, results) {
-      // A "#tag" token can appear anywhere in the query — start, middle, or end —
+      // A "#tag" token can appear anywhere in the query â€” start, middle, or end â€”
       // not just at position 0. Whichever #word comes first is the tag filter;
       // every other word (in any order, doesn't need to be contiguous with the
       // tag or with each other) must also appear somewhere in the item's text
@@ -11928,7 +12229,7 @@
           btn.type = 'button';
           btn.className = 'search-result';
           const typeLabel = r.matchType === 'tag'
-            ? (r.itemType === 'note' ? 'Note · tagged' : 'Task · tagged')
+            ? (r.itemType === 'note' ? 'Note Â· tagged' : 'Task Â· tagged')
             : r.itemType === 'note'
               ? (r.matchType === 'comment' ? 'Note comment' : 'Note')
               : r.matchType === 'comment' ? 'Task comment' : 'Task';
@@ -12080,7 +12381,7 @@
       if (toAdd.length === 0) {
         saveData();
         if (!auto) {
-          showToast('Unfinished tasks already on today — cleared from this day');
+          showToast('Unfinished tasks already on today â€” cleared from this day');
           render();
         } else {
           render();
@@ -12227,7 +12528,7 @@
       saveData();
     }
 
-    // ── Recurring templates ──────────────────────────────────────────
+    // â”€â”€ Recurring templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     function getRecurringKey(context = state.listContext) {
       return `work-desk-recurring-${context}`;
@@ -12268,7 +12569,7 @@
     function recurringRuleLabel(template) {
       switch (template.rule) {
         case 'daily': return 'Every day';
-        case 'weekdays': return 'Mon–Fri';
+        case 'weekdays': return 'Monâ€“Fri';
         case 'weekly': {
           const d = template.days && template.days[0];
           return d !== undefined ? `Every ${DAY_LABELS[d]}` : 'Weekly';
@@ -12281,7 +12582,7 @@
       }
     }
 
-    // ── Holiday computation ───────────────────────────────────────────
+    // â”€â”€ Holiday computation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function nthWeekdayOfMonth(year, month, weekday, n) {
       const first = new Date(year, month, 1);
       let diff = (weekday - first.getDay() + 7) % 7;
@@ -12307,7 +12608,7 @@
       const add = (d, label) => holidays.set(formatDateKey(d), label);
 
       // Fixed-date: mark the actual calendar date, and also the federal
-      // observed day when it shifts (Sat→Fri / Sun→Mon) so the calendar
+      // observed day when it shifts (Satâ†’Fri / Sunâ†’Mon) so the calendar
       // shows e.g. Independence Day on Jul 4 while skip-holidays still
       // covers the Friday/Monday people actually have off.
       const addFixed = (actual, label) => {
@@ -12369,7 +12670,7 @@
       const updated = templates.map(t => {
         if (t.id !== templateId) return t;
         const prev = t.lastInjectedDate || '';
-        // Only advance — completing/deleting a past-day instance must not stamp "today"
+        // Only advance â€” completing/deleting a past-day instance must not stamp "today"
         // or today's fresh inject gets blocked.
         if (dateKey <= prev) return t;
         changed = true;
@@ -12491,7 +12792,7 @@
       listWrap.className = 'recurring-template-list';
 
       if (templates.length === 0) {
-        // no empty message needed — add form is above
+        // no empty message needed â€” add form is above
       } else {
         templates.forEach(t => {
           const item = document.createElement('div');
@@ -12594,7 +12895,7 @@
           if (contentCounts.get(ck) > 1) {
             const dupHint = document.createElement('div');
             dupHint.style.cssText = 'font-size:0.7rem; color:var(--danger,#ef4444); margin-top:4px; width:100%;';
-            dupHint.textContent = 'Duplicate — consider deleting one of these';
+            dupHint.textContent = 'Duplicate â€” consider deleting one of these';
             item.appendChild(dupHint);
           }
 
@@ -12612,7 +12913,7 @@
 
       const { wrap: editorWrap, editor } = createRichEditor({
         className: 'recurring-editor',
-        placeholder: 'Task description…',
+        placeholder: 'Task descriptionâ€¦',
       });
       form.appendChild(editorWrap);
 
@@ -12766,7 +13067,7 @@
 
       const { wrap: editorWrap, editor } = createRichEditor({
         className: 'recurring-editor',
-        placeholder: 'Task description…',
+        placeholder: 'Task descriptionâ€¦',
       });
       setEditorHtml(editor, template.content);
       hostEl.appendChild(editorWrap);
@@ -12952,7 +13253,7 @@
       updateDayPicker();
     }
 
-    // ── End recurring ──────────────────────────────────────────────────
+    // â”€â”€ End recurring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     function exportBackup() {
       let payload, filename, toastMsg;
@@ -12980,7 +13281,7 @@
         };
         filename = `work-desk-backup-${state.listContext}-${todayKey()}.json`;
         const { days, items } = countItems(state.data);
-        toastMsg = `Exported ${getContextLabel().toLowerCase()} list — ${items} items from ${days} days`;
+        toastMsg = `Exported ${getContextLabel().toLowerCase()} list â€” ${items} items from ${days} days`;
       }
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -13027,7 +13328,7 @@
       const wStats = countItems(workData);
       const pStats = countItems(personalData);
       const projCount = projectsData.projects.length;
-      showToast(`Exported all — Work: ${wStats.items} items, Personal: ${pStats.items} items, ${projCount} project${projCount !== 1 ? 's' : ''}`);
+      showToast(`Exported all â€” Work: ${wStats.items} items, Personal: ${pStats.items} items, ${projCount} project${projCount !== 1 ? 's' : ''}`);
     }
 
     function handleImportAllFile(file) {
@@ -13036,7 +13337,7 @@
         try {
           const parsed = JSON.parse(reader.result);
           if (parsed.type !== 'all' || !parsed.work || !parsed.personal) {
-            showToast('This is not an Export All backup — use Import Desk for single-desk files');
+            showToast('This is not an Export All backup â€” use Import Desk for single-desk files');
             return;
           }
 
@@ -13285,7 +13586,7 @@
         const count = state.projectsData.projects.length;
         showToast(mode === 'replace'
           ? `Replaced with backup (${count} project${count !== 1 ? 's' : ''})`
-          : `Merged backup — now ${count} project${count !== 1 ? 's' : ''}`);
+          : `Merged backup â€” now ${count} project${count !== 1 ? 's' : ''}`);
         render();
         return;
       }
@@ -13320,7 +13621,7 @@
       const { days, items } = countItems(state.data);
       showToast(mode === 'replace'
         ? `Replaced with backup (${items} items, ${days} days)`
-        : `Merged backup — now ${items} items across ${days} days`);
+        : `Merged backup â€” now ${items} items across ${days} days`);
       render();
     }
 
@@ -13330,9 +13631,9 @@
         try {
           const parsed = JSON.parse(reader.result);
 
-          // Reject Import All files — user should use the Import All button
+          // Reject Import All files â€” user should use the Import All button
           if (parsed.type === 'all') {
-            showToast('This is an Export All backup — use Import All instead');
+            showToast('This is an Export All backup â€” use Import All instead');
             return;
           }
 
@@ -13434,7 +13735,7 @@
         row.innerHTML = `<span class="holiday-date">${h.date}</span><span class="holiday-label">${h.label || '(no label)'}</span>`;
         const btn = document.createElement('button');
         btn.className = 'holiday-remove';
-        btn.textContent = '✕';
+        btn.textContent = 'âœ•';
         btn.title = 'Remove';
         btn.addEventListener('click', () => {
           state.customHolidays = state.customHolidays.filter(x => x.date !== h.date);
@@ -13465,7 +13766,7 @@
       prevBtn.type = 'button';
       prevBtn.className = 'cal-nav-btn';
       prevBtn.setAttribute('aria-label', 'Previous month');
-      prevBtn.textContent = '‹';
+      prevBtn.textContent = 'â€¹';
       prevBtn.addEventListener('click', () => shiftCalendarMonth(-1));
 
       const title = document.createElement('div');
@@ -13476,7 +13777,7 @@
       nextBtn.type = 'button';
       nextBtn.className = 'cal-nav-btn';
       nextBtn.setAttribute('aria-label', 'Next month');
-      nextBtn.textContent = '›';
+      nextBtn.textContent = 'â€º';
       nextBtn.addEventListener('click', () => shiftCalendarMonth(1));
 
       header.append(prevBtn, title, nextBtn);
@@ -13563,7 +13864,7 @@
         const monthLabel = new Date(cellYear, cellMonth, dayNum).toLocaleDateString('en-US', {
           month: 'long', day: 'numeric', year: 'numeric',
         });
-        btn.title = monthLabel + (hol.isHoliday ? ` — ${hol.label}` : '');
+        btn.title = monthLabel + (hol.isHoliday ? ` â€” ${hol.label}` : '');
         btn.setAttribute('aria-label', monthLabel + (dateKey === state.selectedDate ? ' (selected)' : ''));
 
         btn.addEventListener('click', () => selectCalendarDate(dateKey));
@@ -13683,7 +13984,7 @@
       if (activeCount > 0) parts.push(`<strong>${activeCount}</strong> active`);
       if (newCount > 0) parts.push(`<strong>${newCount}</strong> new`);
       if (shelvedCount > 0) parts.push(`<strong>${shelvedCount}</strong> shelved`);
-      statsTextEl.innerHTML = parts.join(' · ');
+      statsTextEl.innerHTML = parts.join(' Â· ');
     }
 
     function addItem(content, options = {}) {
@@ -13886,7 +14187,7 @@
         const droppedFound = findItem(droppedId);
         const targetFound  = findItem(taskId);
 
-        // Same date + same column bucket → reorder
+        // Same date + same column bucket â†’ reorder
         if (
           droppedFound && targetFound &&
           droppedFound.date === targetFound.date &&
@@ -13896,7 +14197,7 @@
           return;
         }
 
-        // Different column → column move
+        // Different column â†’ column move
         const zone = card.closest('[data-drop-target]');
         const target = zone?.dataset.dropTarget;
         if (droppedId && target) moveTaskToColumn(droppedId, target);
@@ -14275,7 +14576,7 @@
 
       const annotatedComment = {
         ...cloneData(comment),
-        content: comment.content + ' <em style="opacity:0.6">→ moved to ' + targetType + '</em>',
+        content: comment.content + ' <em style="opacity:0.6">â†’ moved to ' + targetType + '</em>',
       };
 
       const items = [...day.items];
@@ -14328,7 +14629,7 @@
     function renderCommentsPanel(item) {
       const isNote = item.type === 'note';
       const addLabel  = isNote ? 'Add update' : 'Add comment';
-      const addPlaceholder = isNote ? 'Add an update…' : 'Add a comment…';
+      const addPlaceholder = isNote ? 'Add an updateâ€¦' : 'Add a commentâ€¦';
 
       const panel = document.createElement('div');
       panel.className = 'comments-panel';
@@ -14336,7 +14637,7 @@
 
       const comments = item.comments || [];
 
-      // ── Thread entries ──────────────────────────────────────────────────
+      // â”€â”€ Thread entries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (comments.length > 0) {
         const list = document.createElement('ul');
         list.className = 'comments-list';
@@ -14355,7 +14656,7 @@
             editWrap.draggable = false;
             const { wrap, editor } = createRichEditor({
               className: 'comment-input',
-              placeholder: 'Edit…',
+              placeholder: 'Editâ€¦',
               initialHtml: comment.content,
             });
             appendEditActions(
@@ -14402,7 +14703,7 @@
             const splitTask = document.createElement('button');
             splitTask.type = 'button';
             splitTask.className = 'comment-split-btn split-task';
-            splitTask.textContent = '→ task';
+            splitTask.textContent = 'â†’ task';
             splitTask.title = 'Create a new task from this comment';
             splitTask.addEventListener('click', () => splitCommentToItem(item.id, comment.id, 'task'));
             commentActions.appendChild(splitTask);
@@ -14410,7 +14711,7 @@
             const splitNote = document.createElement('button');
             splitNote.type = 'button';
             splitNote.className = 'comment-split-btn split-note';
-            splitNote.textContent = '→ note';
+            splitNote.textContent = 'â†’ note';
             splitNote.title = 'Create a new note from this comment';
             splitNote.addEventListener('click', () => splitCommentToItem(item.id, comment.id, 'note'));
             commentActions.appendChild(splitNote);
@@ -14544,7 +14845,7 @@
         if (item.completed) {
           const mark = document.createElement('span');
           mark.className = 'check-mark';
-          mark.textContent = '✓';
+          mark.textContent = 'âœ“';
           check.appendChild(mark);
         }
         check.addEventListener('click', () => toggleItem(item.id));
@@ -14552,7 +14853,7 @@
       } else {
         const icon = document.createElement('span');
         icon.className = 'note-icon';
-        icon.textContent = '📝';
+        icon.textContent = 'ðŸ“';
         row.appendChild(icon);
       }
 
@@ -14562,7 +14863,7 @@
 
         const { wrap, editor } = createRichEditor({
           className: 'edit-input',
-          placeholder: 'Edit text…',
+          placeholder: 'Edit textâ€¦',
           initialHtml: item.content,
         });
 
@@ -14594,7 +14895,7 @@
           const badge = document.createElement('span');
           badge.className = 'recur-icon';
           badge.title = 'Recurring task';
-          badge.textContent = '🔁';
+          badge.textContent = 'ðŸ”';
           content.appendChild(badge);
         }
         row.appendChild(content);
@@ -14603,7 +14904,7 @@
       card.appendChild(row);
       if (!isEditing && tags.length) card.appendChild(buildTagChipRow(item, tags));
 
-      // ── Inline action bar at bottom of card ───────────────────────────────
+      // â”€â”€ Inline action bar at bottom of card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (!isEditing) {
         const actionBar = document.createElement('div');
         actionBar.className = 'card-action-bar';
@@ -14621,7 +14922,7 @@
         const addSep = () => {
           const sep = document.createElement('span');
           sep.className = 'card-action-sep';
-          sep.textContent = '·';
+          sep.textContent = 'Â·';
           actionBar.appendChild(sep);
         };
 
@@ -14683,14 +14984,14 @@
           });
         }
 
-        // Overflow menu (⋮) for less common actions
+        // Overflow menu (â‹®) for less common actions
         const overflowWrap = document.createElement('div');
         overflowWrap.style.cssText = 'position: relative; margin-left: auto;';
 
         const overflowBtn = document.createElement('button');
         overflowBtn.type = 'button';
         overflowBtn.className = 'card-overflow-btn';
-        overflowBtn.textContent = '⋮';
+        overflowBtn.textContent = 'â‹®';
         overflowBtn.setAttribute('aria-label', 'More options');
 
         const overflowMenu = document.createElement('div');
@@ -14905,7 +15206,7 @@
         const chevron = document.createElement('span');
         chevron.className = 'col-collapse-chevron';
         chevron.setAttribute('aria-hidden', 'true');
-        chevron.textContent = '▾';
+        chevron.textContent = 'â–¾';
         completedLabel.appendChild(chevron);
         completedLabel.appendChild(document.createTextNode(`Completed (${completed.length})`));
         completedLabel.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
@@ -15006,7 +15307,7 @@
           day: 'numeric',
           year: start.getFullYear() !== end.getFullYear() ? 'numeric' : undefined,
         });
-        label = `${startFmt} – ${endFmt}`;
+        label = `${startFmt} â€“ ${endFmt}`;
       } else if (period === 'month') {
         label = start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       } else {
@@ -15150,7 +15451,7 @@
         });
       } else if (period === 'month') {
         segments = daily.map((s) => ({
-          label: (() => { const d = dateFromKey(s.dayKey); return `<strong>${d.getDate()}</strong> – ${d.toLocaleDateString('en-US', { weekday: 'short' })}`; })(),
+          label: (() => { const d = dateFromKey(s.dayKey); return `<strong>${d.getDate()}</strong> â€“ ${d.toLocaleDateString('en-US', { weekday: 'short' })}`; })(),
           labelIsHtml: true,
           completed: s.completed,
           shelved: s.shelved,
@@ -15251,7 +15552,7 @@
       if (lastActiveDay === today) {
         currentStreak = streak;
       } else {
-        // Last active day isn't today — check if the gap is only inactive weekends
+        // Last active day isn't today â€” check if the gap is only inactive weekends
         const gapOk = isStreakConsecutive(lastActiveDay, today);
         if (gapOk) currentStreak = streak;
       }
@@ -15298,9 +15599,9 @@
         const openNew = seg.openNew ?? 0;
         const openCarried = seg.openCarried ?? 0;
         track.title =
-          `${seg.completed} completed · ${seg.shelved} shelved` +
-          (openNew ? ` · ${openNew} open (new today)` : '') +
-          (openCarried ? ` · ${openCarried} open (carried over)` : '');
+          `${seg.completed} completed Â· ${seg.shelved} shelved` +
+          (openNew ? ` Â· ${openNew} open (new today)` : '') +
+          (openCarried ? ` Â· ${openCarried} open (carried over)` : '');
 
         const parts = [
           { key: 'completed', val: seg.completed },
@@ -15820,10 +16121,10 @@
 
       // Rewind to the Monday on or before start
       const gridStart = new Date(start);
-      const dow = (gridStart.getDay() + 6) % 7; // Mon=0 … Sun=6
+      const dow = (gridStart.getDay() + 6) % 7; // Mon=0 â€¦ Sun=6
       gridStart.setDate(gridStart.getDate() - dow);
 
-      // Collect weeks: array of 7-element arrays (Mon→Sun)
+      // Collect weeks: array of 7-element arrays (Monâ†’Sun)
       const weeks = [];
       const cursor = new Date(gridStart);
       while (cursor <= end) {
@@ -15871,7 +16172,7 @@
       }
       wrap.appendChild(monthRow);
 
-      // Grid: 7 rows (Mon–Sun), one cell per week
+      // Grid: 7 rows (Monâ€“Sun), one cell per week
       const DOW_LABELS = ['M', 'T', 'W', 'Th', 'F', 'S', 'Su'];
       for (let d = 0; d < 7; d++) {
         const row = document.createElement('div');
@@ -15969,7 +16270,7 @@
       prevBtn.type = 'button';
       prevBtn.className = 'nav-arrow';
       prevBtn.setAttribute('aria-label', 'Previous period');
-      prevBtn.textContent = '←';
+      prevBtn.textContent = 'â†';
       prevBtn.addEventListener('click', () => { shiftInsightsAnchor(-1); render(); });
 
       const navLabel = document.createElement('span');
@@ -15980,7 +16281,7 @@
       nextBtn.type = 'button';
       nextBtn.className = 'nav-arrow';
       nextBtn.setAttribute('aria-label', 'Next period');
-      nextBtn.textContent = '→';
+      nextBtn.textContent = 'â†’';
       nextBtn.addEventListener('click', () => { shiftInsightsAnchor(1); render(); });
 
       nav.appendChild(prevBtn);
@@ -16063,9 +16364,9 @@
         compCard.className = 'comparison-card';
         
         const formatChange = (val) => {
-          if (val > 0) return `<span class="change-up">+${val} ↑</span>`;
-          if (val < 0) return `<span class="change-down">${val} ↓</span>`;
-          return `<span class="change-neutral">—</span>`;
+          if (val > 0) return `<span class="change-up">+${val} â†‘</span>`;
+          if (val < 0) return `<span class="change-down">${val} â†“</span>`;
+          return `<span class="change-neutral">â€”</span>`;
         };
 
         compCard.innerHTML = `
@@ -16260,7 +16561,7 @@
       
       panel.appendChild(chartSection);
 
-      // Activity heatmap — year view only
+      // Activity heatmap â€” year view only
       if (state.insightsPeriod === 'year') {
         panel.appendChild(renderHeatmap(range.startKey, range.endKey, daily));
       }
@@ -16367,7 +16668,7 @@
       const exportDeskOpt = document.getElementById('export-desk-opt');
       const importDeskOpt = document.getElementById('import-desk-opt');
       if (exportDeskOpt) exportDeskOpt.textContent = `${deskLabel} Desk`;
-      if (importDeskOpt) importDeskOpt.textContent = `${deskLabel} Desk…`;
+      if (importDeskOpt) importDeskOpt.textContent = `${deskLabel} Deskâ€¦`;
 
       document.querySelectorAll('.desk-only').forEach((el) => {
         el.classList.toggle('hidden', !isDesk || isProjects);
@@ -16413,7 +16714,7 @@
         const parts = [];
         if (notesCount > 0) parts.push(`${notesCount} note${notesCount !== 1 ? 's' : ''}`);
         if (tasksCount > 0) parts.push(`${tasksCount} task${tasksCount !== 1 ? 's' : ''}`);
-        metaSpan.textContent = parts.length > 0 ? parts.join(' · ') : 'Empty';
+        metaSpan.textContent = parts.length > 0 ? parts.join(' Â· ') : 'Empty';
 
         li.appendChild(nameSpan);
         li.appendChild(metaSpan);
@@ -16439,7 +16740,7 @@
         return;
       }
 
-      // A task/note mid-edit exists only inside a live contenteditable — its
+      // A task/note mid-edit exists only inside a live contenteditable â€” its
       // typed text is never written to state until Save. Background sync
       // (window focus / periodic pull) calls render() at arbitrary moments,
       // which used to wipe that DOM node and rebuild it from the stale (often
@@ -16487,7 +16788,7 @@
       if (active.length === 0 && archived.length === 0) {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'project-items-empty';
-        emptyDiv.textContent = 'No notes yet — add one to start capturing ideas';
+        emptyDiv.textContent = 'No notes yet â€” add one to start capturing ideas';
         els.projectNotesList.appendChild(emptyDiv);
       } else {
         active.forEach(note => {
@@ -16512,7 +16813,7 @@
       if (active.length === 0 && archived.length === 0) {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'project-items-empty';
-        emptyDiv.textContent = 'No tasks yet — add one to track action items';
+        emptyDiv.textContent = 'No tasks yet â€” add one to track action items';
         els.projectTasksList.appendChild(emptyDiv);
       } else {
         active.forEach(task => {
@@ -16530,7 +16831,7 @@
       const toggle = document.createElement('button');
       toggle.type = 'button';
       toggle.className = 'project-archive-toggle' + (state.projectArchiveOpen[type] ? ' open' : '');
-      toggle.innerHTML = `<span class="archive-arrow">▸</span> Archived (${items.length})`;
+      toggle.innerHTML = `<span class="archive-arrow">â–¸</span> Archived (${items.length})`;
 
       const list = document.createElement('div');
       list.className = 'project-archive-list' + (state.projectArchiveOpen[type] ? ' open' : '');
@@ -16573,7 +16874,7 @@
         saveBtn.addEventListener('click', () => {
           const newContent = serializeEditorHtml(editor);
           if (isEmptyHtml(newContent)) {
-            // Nothing was ever typed (or it was cleared back to nothing) —
+            // Nothing was ever typed (or it was cleared back to nothing) â€”
             // drop the shell instead of persisting a blank note card.
             deleteProjectItem(projectId, note.id);
           } else {
@@ -16592,8 +16893,8 @@
         cancelBtn.style.marginLeft = '8px';
         cancelBtn.style.color = 'var(--text-muted)';
         cancelBtn.addEventListener('click', () => {
-          // Revert to whatever the note held before this edit session — not
-          // whatever renderProjectDetail's live-draft capture last wrote in —
+          // Revert to whatever the note held before this edit session â€” not
+          // whatever renderProjectDetail's live-draft capture last wrote in â€”
           // and drop it entirely if it was a freshly-added, never-saved note.
           const original = state.editingProjectItemOriginalContent || '';
           if (isEmptyHtml(original)) {
@@ -16658,7 +16959,7 @@
 
         const commentCount = note.comments?.length || 0;
         if (commentCount > 0) {
-          dateSpan.textContent += ` · ${commentCount} update${commentCount !== 1 ? 's' : ''}`;
+          dateSpan.textContent += ` Â· ${commentCount} update${commentCount !== 1 ? 's' : ''}`;
         }
 
         const actions = document.createElement('div');
@@ -16783,7 +17084,7 @@
               timeEl.style.color = 'var(--text-muted)';
               timeEl.style.opacity = '0.7';
               const commentDate = new Date(comment.createdAt);
-              timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ';
+              timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' â€” ';
 
               textDiv.appendChild(timeEl);
               textDiv.appendChild(document.createTextNode(comment.text));
@@ -16880,7 +17181,7 @@
         saveBtn.addEventListener('click', () => {
           const newContent = serializeEditorHtml(editor);
           if (isEmptyHtml(newContent)) {
-            // Nothing was ever typed (or it was cleared back to nothing) —
+            // Nothing was ever typed (or it was cleared back to nothing) â€”
             // drop the shell instead of persisting a blank task card.
             deleteProjectItem(projectId, task.id);
           } else {
@@ -16899,8 +17200,8 @@
         cancelBtn.style.marginLeft = '8px';
         cancelBtn.style.color = 'var(--text-muted)';
         cancelBtn.addEventListener('click', () => {
-          // Revert to whatever the task held before this edit session — not
-          // whatever renderProjectDetail's live-draft capture last wrote in —
+          // Revert to whatever the task held before this edit session â€” not
+          // whatever renderProjectDetail's live-draft capture last wrote in â€”
           // and drop it entirely if it was a freshly-added, never-saved task.
           const original = state.editingProjectItemOriginalContent || '';
           if (isEmptyHtml(original)) {
@@ -17059,7 +17360,7 @@
               timeEl.style.fontSize = '0.72rem';
               timeEl.style.opacity = '0.7';
               const commentDate = new Date(comment.createdAt);
-              timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ';
+              timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' â€” ';
 
               textDiv.appendChild(timeEl);
               textDiv.appendChild(document.createTextNode(comment.text));
@@ -17206,7 +17507,7 @@
       if (stats.notes > 0) {
         summaryParts.push(`<strong>${stats.notes}</strong> ${stats.notes === 1 ? 'note' : 'notes'}`);
       }
-      els.statsSummary.innerHTML = summaryParts.join(' · ');
+      els.statsSummary.innerHTML = summaryParts.join(' Â· ');
 
       renderWeekStrip();
 
@@ -17298,7 +17599,7 @@
         const item = findItem(draft.add.taskId)?.item;
         if (!item) return;
         const isNote = item.type === 'note';
-        const addPlaceholder = isNote ? 'Add an update…' : 'Add a comment…';
+        const addPlaceholder = isNote ? 'Add an updateâ€¦' : 'Add a commentâ€¦';
         const form = document.createElement('form');
         form.className = 'add-comment-form';
         form.draggable = false;
@@ -17445,7 +17746,7 @@
       if (e.target === els.helpModal) closeHelpModal();
     });
 
-    /* ── Changelog / What's New ── */
+    /* â”€â”€ Changelog / What's New â”€â”€ */
     const changelogModal = document.getElementById('changelog-modal');
     const changelogBody = document.getElementById('changelog-body');
     const changelogClose = document.getElementById('changelog-modal-close');
@@ -17500,7 +17801,7 @@
 
       const linkRow = document.createElement('p');
       linkRow.className = 'changelog-github-link';
-      linkRow.innerHTML = `<a href="${CHANGELOG_GITHUB_URL}" target="_blank" rel="noopener">View full changelog on GitHub →</a>`;
+      linkRow.innerHTML = `<a href="${CHANGELOG_GITHUB_URL}" target="_blank" rel="noopener">View full changelog on GitHub â†’</a>`;
       changelogBody.appendChild(linkRow);
     }
 
@@ -17572,7 +17873,7 @@
     });
 
 
-    // ── Sidebar collapse ─────────────────────────────────────────────────────
+    // â”€â”€ Sidebar collapse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function setSidebarCollapsed(collapsed) {
       els.sidebar.classList.toggle('collapsed', collapsed);
       els.app.classList.toggle('sidebar-collapsed', collapsed);
@@ -17687,7 +17988,7 @@
       });
     });
 
-    // Project customize button — reuse the same popout
+    // Project customize button â€” reuse the same popout
     els.projectCustomizeBtn.addEventListener('click', () => {
       const popout = document.getElementById('density-popout');
       if (!popout.classList.contains('hidden')) {
@@ -17816,7 +18117,7 @@
       }
     };
 
-    sbStartSync(); // cloud sync — carry/inject after merge when signed in
+    sbStartSync(); // cloud sync â€” carry/inject after merge when signed in
 
     // Register service worker for PWA / offline support
     if ('serviceWorker' in navigator) {
