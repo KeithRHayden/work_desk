@@ -6,6 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.8.0] — 2026-09-29
+
+### Added
+- **12 new themes** — 4 per tier, bringing the total to 84 (28 light + 28 medium + 28 dark)
+  - **Light:** Retro (SNES console gray, purple buttons, red/yellow/green/blue controller stripe across the desk header), Seafoam, Mediterranean, Citrus
+  - **Medium:** Game Boy (classic DMG four-shade green), Denim, Terracotta, Merlot
+  - **Dark:** Monokai, One Dark, Phosphor (green-screen CRT glow), Rosé Pine
+- Bright-accent themes (Game Boy, Phosphor, Denim, Terracotta, Merlot, Rosé Pine) use dark text on primary buttons for readability
+
 ## [1.7.0] — 2026-09-22
 
 ### Added
