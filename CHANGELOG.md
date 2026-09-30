@@ -6,6 +6,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.11.0] — 2026-09-30
+
+### Added
+- **Quick-pick tags** — clicking `tag` on a task or note shows your two most-used tags as one-click chips (in their tag colors) beside the text box. Picks skip tags already on the card (the next most-used fills in), narrow to matching tags as you type, and are hidden when you have no tags yet. Typing a new tag and pressing Enter works as before
+
+### Fixed
+- Reopening the tag box right after adding a tag no longer closes it immediately (a leftover close timer from the previous box is now ignored)
+
+## [1.10.1] — 2026-09-30
+
+### Improved
+- **Carry-over by day of week** is more compact: each weekday's dates now sit on the same line as its bar instead of on a line underneath (the full list is in the row's tooltip when it's too long to fit), and the bars are slimmer
+
+### Fixed
+- **Tag pill text centering** — tag labels are trimmed to cap height and baseline, so uppercase text is centered vertically regardless of the selected font (previously 1–1.5px high in Nunito, JetBrains Mono, and Merriweather). Chips without a × now have even left/right padding (text was ~3px right of center)
+
+## [1.10.0] — 2026-09-30
+
+### Added
+- **Analogous tag colors** — new *Tag colors* mode that gives each tag a lighter, darker, or neighboring shade of the theme accent (e.g. rose, dark rose, light rose); lightness is clamped so chips stay readable, and colors follow the theme when you switch
+
+### Improved
+- Tag color modes renamed: **Single color (accent)** (was Theme color), **Analogous (shades of accent)** (new), **Multi-color (from theme)** (was Palette). Saved settings carry over unchanged
+
+### Fixed
+- Color boxes in the Options → Appearance tag list now show the color each tag is actually displaying (resolved from the live chip), and refresh when you change mode or theme
+
 ## [1.9.1] — 2026-09-30
 
 ### Fixed
