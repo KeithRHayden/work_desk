@@ -7348,15 +7348,16 @@
           <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
           <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card — your two most-used tags appear next to the box as one-click picks (they narrow as you type, and skip tags the card already has); tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
           <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
-          <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag</li>
+          <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag. Words on separate lines of a task still match (e.g. "vendor about" finds "Call vendor ↵ about the renewal")</li>
           <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define; optionally skip holidays</li>
           <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
           <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
           <li><strong>Themes</strong> — 84 presets (28 light, 28 medium, 28 dark, including Retro, Game Boy, and Phosphor) with mini wireframe previews in Options → Themes, filterable by Light/Med/Dark; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
-          <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically</li>
+          <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically. Deleting a task or note removes it from every device; <strong>Undo</strong> brings it back everywhere</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
+          <li><strong>Staying up to date</strong> — the app loads the latest version whenever you're online (the saved copy is only used offline). If the app has been open in the background when a new version ships, a <em>Work Desk x.y.z is available</em> message with a <strong>Reload</strong> button appears when you come back to it</li>
           <li><strong>What's New</strong> — click the version number at the bottom of the sidebar to see the latest changes; a pulsing dot appears when there's an unread update</li>
         </ul>
 
@@ -7599,12 +7600,27 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.11.1';
+    const APP_VERSION = '1.12.0';
     const CHANGELOG = [
+      {
+        version: '1.12.0',
+        date: 'Sep 30, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Update prompt — if the app has been open in the background when a new version ships, a "Work Desk x.y.z is available" message with a Reload button appears when you return',
+          ]},
+          { label: 'Fixed', items: [
+            'New versions now show on the first load instead of after several refreshes — the app loads the latest version whenever you are online and only uses the saved copy offline',
+            'An out-of-date copy of the app (e.g. an old version saved on a phone) can no longer carry tasks or reset your theme when it syncs — it reloads into the current version first',
+            'Search now finds words that sit on separate lines of a task, and text typed with a phone keyboard\'s non-breaking spaces',
+            'A task you delete now stays deleted on every device — another device\'s old copy can no longer bring it back or carry it forward. Undo still restores it everywhere',
+          ]},
+        ],
+      },
       {
         version: '1.11.1',
         date: 'Sep 30, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'Carry-over by day of week bars now stretch the full width of the card and line up with the by-week bars; the dates sit inside each bar',
@@ -8032,6 +8048,46 @@
         ],
       },
     ];
+
+    let swRegistration = null;
+    let lastUpdateCheck = 0;
+    const UPDATE_CHECK_INTERVAL = 15 * 60 * 1000;
+
+    // Numeric MAJOR.MINOR.PATCH comparison: >0 if a is newer, <0 if older, 0 if equal/unparseable
+    function compareVersions(a, b) {
+      const pa = String(a || '').split('.').map(Number);
+      const pb = String(b || '').split('.').map(Number);
+      if (pa.length !== 3 || pb.length !== 3 || [...pa, ...pb].some(Number.isNaN)) return 0;
+      for (let i = 0; i < 3; i++) {
+        if (pa[i] !== pb[i]) return pa[i] > pb[i] ? 1 : -1;
+      }
+      return 0;
+    }
+
+    function extractAppVersion(html) {
+      const m = /const APP_VERSION = '([\d.]+)'/.exec(html || '');
+      return m ? m[1] : null;
+    }
+
+    // An installed PWA can stay open for days without reloading; when it comes back to the
+    // foreground, look for a newer deploy and offer to reload into it.
+    async function checkForAppUpdate({ force = false } = {}) {
+      if (!force && Date.now() - lastUpdateCheck < UPDATE_CHECK_INTERVAL) return;
+      lastUpdateCheck = Date.now();
+      try {
+        if (swRegistration) swRegistration.update().catch(() => {});
+        const res = await fetch('/work_desk/index.html', { cache: 'no-store' });
+        if (!res.ok) return;
+        const latest = extractAppVersion(await res.text());
+        if (latest && compareVersions(latest, APP_VERSION) > 0) {
+          showToast(`Work Desk ${latest} is available`, {
+            undo: () => location.reload(),
+            undoLabel: 'Reload',
+            duration: 30000,
+          });
+        }
+      } catch (_) { /* offline */ }
+    }
 
     const FONT_MAP = {
       system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
@@ -11669,6 +11725,7 @@
           const result = {
             days: cleaned,
             deletedIds: parsed.deletedIds && typeof parsed.deletedIds === 'object' ? parsed.deletedIds : {},
+            ...syncRecords(parsed),
           };
           // Persist healed recurring collapse so sync doesn't keep re-pushing dupes
           if (recurRemoved > 0) {
@@ -11680,15 +11737,35 @@
       return { days: {}, deletedIds: {} };
     }
 
+    // purgedIds: deletions that beat another device's stale local copy on sync.
+    // restoredIds: explicit Undo-restores, which beat any earlier deletion.
+    // Legacy deletedIds-only tombstones keep the older "local copy wins" rule, because
+    // pre-1.12 Undo never recorded a restore and those items would otherwise vanish.
+    function syncRecords(data) {
+      const pick = key => data && data[key] && typeof data[key] === 'object' ? pruneDeletedIds(data[key]) : {};
+      return { purgedIds: pick('purgedIds'), restoredIds: pick('restoredIds') };
+    }
+
     function markItemDeleted(id) {
       if (!id) return;
+      const ts = new Date().toISOString();
       if (!state.data.deletedIds) state.data.deletedIds = {};
-      state.data.deletedIds[id] = new Date().toISOString();
+      if (!state.data.purgedIds) state.data.purgedIds = {};
+      state.data.deletedIds[id] = ts;
+      state.data.purgedIds[id] = ts;
     }
 
     function clearItemDeleted(id) {
       if (!id || !state.data.deletedIds) return;
       delete state.data.deletedIds[id];
+    }
+
+    function markItemRestored(id) {
+      if (!id) return;
+      clearItemDeleted(id);
+      if (state.data.purgedIds) delete state.data.purgedIds[id];
+      if (!state.data.restoredIds) state.data.restoredIds = {};
+      state.data.restoredIds[id] = new Date().toISOString();
     }
 
     function pruneDeletedIds(deletedIds) {
@@ -11998,7 +12075,19 @@
           work:     get('work-desk-recurring-work')     || { templates: [] },
         },
         prefs: readLocalPrefs(),
+        appVersion: APP_VERSION,
       };
+    }
+
+    // Reload at most once per session per cloud version, so an intentional rollback can't loop
+    function shouldReloadForNewerCloud(cloudVersion) {
+      if (compareVersions(cloudVersion, APP_VERSION) <= 0) return false;
+      const key = `work-desk-reloaded-for-${cloudVersion}`;
+      try {
+        if (sessionStorage.getItem(key)) return false;
+        sessionStorage.setItem(key, '1');
+      } catch (_) { return false; }
+      return true;
     }
 
     function mergeDeletedIds(localIds, remoteIds) {
@@ -12213,6 +12302,12 @@
           deletedIds[id] = ts;
         }
       }
+      const restoredIds = pruneDeletedIds(mergeDeletedIds(local?.restoredIds, remote?.restoredIds));
+      const purgedIds = pruneDeletedIds(mergeDeletedIds(local?.purgedIds, remote?.purgedIds));
+      for (const [id, ts] of Object.entries(restoredIds)) {
+        if (deletedIds[id] && ts >= deletedIds[id]) delete deletedIds[id];
+        if (purgedIds[id] && ts >= purgedIds[id]) delete purgedIds[id];
+      }
       console.log('[merge] deletedIds count:', Object.keys(deletedIds).length);
 
       const localIds = new Set();
@@ -12274,7 +12369,7 @@
           filteredByNoId++;
           return;
         }
-        if (deletedIds[item.id] && !localIds.has(item.id)) {
+        if (purgedIds[item.id] || (deletedIds[item.id] && !localIds.has(item.id))) {
           filteredByDeletedIds++;
           console.log('[merge] filtered out deleted item:', item.id, 'content:', item.content?.substring(0, 50));
           return;
@@ -12329,7 +12424,7 @@
         itemsAfterDedup += (day.items || []).length;
       }
       console.log('[merge] items after dedup:', itemsAfterDedup);
-      return { days, deletedIds };
+      return { days, deletedIds, purgedIds, restoredIds };
     }
 
     // Merge two projects data structures
@@ -12428,6 +12523,16 @@
       try {
       const remote = await sbPull();
       console.log('[sync] remote data:', remote ? 'exists' : 'null');
+
+      // A stale cached copy of the app must not carry tasks or overwrite newer prefs/data;
+      // stop syncing and reload into the current version instead.
+      if (remote && remote.data && shouldReloadForNewerCloud(remote.data.appVersion)) {
+        sbSynced = false;
+        sbSetStatus('ok');
+        showToast(`Updating to Work Desk ${remote.data.appVersion}…`);
+        setTimeout(() => location.reload(), 1200);
+        return;
+      }
 
       if (remote && remote.data) {
         console.log('[sync] remote.data keys:', Object.keys(remote.data));
@@ -12663,7 +12768,7 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'toast-undo-btn';
-        btn.textContent = 'Undo';
+        btn.textContent = options.undoLabel || 'Undo';
         btn.addEventListener('click', () => {
           options.undo();
           clearPendingUndo();
@@ -12673,7 +12778,7 @@
         undoTimer = setTimeout(() => {
           pendingUndo = null;
           els.toast.classList.add('hidden');
-        }, 8000);
+        }, options.duration || 8000);
       } else {
         pendingUndo = null;
         toastTimer = setTimeout(() => els.toast.classList.add('hidden'), 3000);
@@ -12691,7 +12796,7 @@
         const items = [...day.items];
         items.splice(Math.min(undo.index, items.length), 0, undo.item);
         state.data.days[undo.date] = { date: undo.date, items };
-        clearItemDeleted(undo.item.id);
+        markItemRestored(undo.item.id);
         saveData();
         render();
         showToast('Item restored');
@@ -12714,6 +12819,14 @@
       }
     }
 
+    // Lowercased plain text for matching: line/block breaks become spaces (so words on separate
+    // lines don't fuse) and non-breaking spaces, which mobile editors insert, count as spaces.
+    function searchableText(html) {
+      const div = document.createElement('div');
+      div.innerHTML = String(html || '').replace(/<br\s*\/?>|<\/?(div|p|li|ul|ol|h[1-6]|blockquote|pre)\b[^>]*>/gi, ' $& ');
+      return div.textContent.replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
     function collectSearchMatches(data, listContext, q, results) {
       // A "#tag" token can appear anywhere in the query — start, middle, or end —
       // not just at position 0. Whichever #word comes first is the tag filter;
@@ -12734,9 +12847,9 @@
             if (!tagQuery || !tags.some(t => t.includes(tagQuery))) continue;
             if (textWords.length) {
               const haystack = [
-                plainTextPreview(item.content, 20000),
-                ...(item.comments || []).map(c => plainTextPreview(c.content, 20000)),
-              ].join(' ').toLowerCase();
+                searchableText(item.content),
+                ...(item.comments || []).map(c => searchableText(c.content)),
+              ].join(' ');
               if (!textWords.every(w => haystack.includes(w))) continue;
             }
             results.push({
@@ -12749,7 +12862,7 @@
             });
             continue;
           }
-          if (plainTextPreview(item.content, 20000).toLowerCase().includes(q)) {
+          if (searchableText(item.content).includes(q)) {
             results.push({
               date,
               itemId: item.id,
@@ -12761,7 +12874,7 @@
           }
           if (item.comments) {
             for (const c of item.comments) {
-              if (plainTextPreview(c.content, 20000).toLowerCase().includes(q)) {
+              if (searchableText(c.content).includes(q)) {
                 results.push({
                   date,
                   itemId: item.id,
@@ -12778,7 +12891,7 @@
     }
 
     function searchAllDays(query) {
-      const q = query.trim().toLowerCase();
+      const q = query.replace(/\s+/g, ' ').trim().toLowerCase();
       if (!q) return [];
 
       const results = [];
@@ -14002,7 +14115,7 @@
             else days[date] = { date, items };
           }
           const deduped = deduplicateAcrossDays(days);
-          localStorage.setItem(getStorageKey('work'), JSON.stringify({ days: deduped.days, deletedIds }));
+          localStorage.setItem(getStorageKey('work'), JSON.stringify({ days: deduped.days, deletedIds, ...syncRecords(workData) }));
         } else {
           const merged = mergeImportInto(workData, work);
           localStorage.setItem(getStorageKey('work'), JSON.stringify(merged));
@@ -14024,7 +14137,7 @@
             else days[date] = { date, items };
           }
           const deduped = deduplicateAcrossDays(days);
-          localStorage.setItem(getStorageKey('personal'), JSON.stringify({ days: deduped.days, deletedIds }));
+          localStorage.setItem(getStorageKey('personal'), JSON.stringify({ days: deduped.days, deletedIds, ...syncRecords(personalData) }));
         } else {
           const merged = mergeImportInto(personalData, personal);
           localStorage.setItem(getStorageKey('personal'), JSON.stringify(merged));
@@ -14163,7 +14276,7 @@
       }
 
       const { days } = deduplicateAcrossDays(mergedDays);
-      return { days, deletedIds: pruneDeletedIds(deletedIds) };
+      return { days, deletedIds: pruneDeletedIds(deletedIds), ...syncRecords(state.data) };
     }
 
     function applyImport(mode) {
@@ -14220,7 +14333,7 @@
           else days[date] = { date, items };
         }
         const deduped = deduplicateAcrossDays(days);
-        state.data = { days: deduped.days, deletedIds };
+        state.data = { days: deduped.days, deletedIds, ...syncRecords(state.data) };
       } else {
         state.data = mergeImportData(state.pendingImport);
       }
@@ -18836,9 +18949,13 @@
 
     // Register service worker for PWA / offline support
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/work_desk/sw.js', { scope: '/work_desk/' })
+      navigator.serviceWorker.register('/work_desk/sw.js', { scope: '/work_desk/', updateViaCache: 'none' })
+        .then(reg => { swRegistration = reg; })
         .catch(e => console.warn('[sw] registration failed:', e));
     }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkForAppUpdate();
+    });
   </script>
 </body>
 </html>
