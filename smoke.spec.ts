@@ -95,6 +95,188 @@ test.describe('Search matching', () => {
   });
 });
 
+test.describe('UI audit fixes (1.12.1)', () => {
+  // Wed Sep 30, 2026. One task carried from Tuesday (this week), none last week.
+  async function seedAudit(page: Page) {
+    await page.clock.setFixedTime(new Date('2026-09-30T10:00:00'));
+    await page.addInitScript(() => {
+      if (localStorage.getItem('audit-seeded')) return;
+      localStorage.setItem('audit-seeded', '1');
+      const t = (id: string, content: string, extra = {}) => ({
+        id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], tags: ['ace'], createdAt: '2026-09-28T09:00:00Z', ...extra,
+      });
+      const days = {
+        '2026-09-28': { date: '2026-09-28', items: [t('done1', 'Renew vendor contract', { completed: true })] },
+        '2026-09-30': { date: '2026-09-30', items: [
+          t('open1', 'Review PR for IDS batching'),
+          t('open2', 'Call vendor about the renewal', { boardColumn: 'active' }),
+          t('carry1', 'Carried from Tuesday', { completed: true, carriedFrom: '2026-09-29' }),
+        ] },
+      };
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('#add-form')).toBeVisible();
+  }
+
+  const columnWidths = (page: Page) =>
+    page.locator('.sprint-board > .board-column').evaluateAll(cols => cols.map(c => Math.round(c.getBoundingClientRect().width)));
+
+  test('opening the tag box does not change desktop column widths', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedAudit(page);
+    const before = await columnWidths(page);
+    const card = page.locator('.item-card', { hasText: 'Call vendor about the renewal' });
+    await card.getByRole('button', { name: 'tag', exact: true }).click();
+    await expect(card.locator('.tag-input-inline')).toBeVisible();
+    expect(await columnWidths(page)).toEqual(before);
+  });
+
+  test('opening the tag box on a phone keeps cards inside the screen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedAudit(page);
+    const card = page.locator('.item-card', { hasText: 'Call vendor about the renewal' });
+    await card.getByRole('button', { name: 'tag', exact: true }).click();
+    await expect(card.locator('.tag-input-inline')).toBeVisible();
+    const overflow = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth;
+      return [...document.querySelectorAll('.item-card, .item-card .tag-chip')]
+        .filter(el => el.getBoundingClientRect().right > vw + 1).length;
+    });
+    expect(overflow).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  });
+
+  test('week-over-week shows a carry-over increase in red and completions in green', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#tab-insights').click();
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    const carried = page.locator('.comparison-row', { hasText: 'Carried Over' });
+    await expect(carried.locator('.change-bad')).toHaveText('+1 ↑');
+    await expect(carried.locator('.change-good')).toHaveCount(0);
+    const red = await carried.locator('.change-bad').evaluate(el => getComputedStyle(el).color);
+    expect(red).toBe('rgb(239, 68, 68)');
+  });
+
+  test('stat tiles: 8 tiles in complete rows at desktop, tablet, and phone widths', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#tab-insights').click();
+    for (const [width, perRow] of [[1440, 8], [1024, 4], [390, 2]] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      const tops = await page.locator('.stat-grid .stat-card').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
+      expect(tops).toHaveLength(8);
+      const rows = new Map<number, number>();
+      for (const t of tops) rows.set(t, (rows.get(t) || 0) + 1);
+      expect([...rows.values()].every(n => n === perRow), `width ${width}: ${[...rows.values()]}`).toBe(true);
+    }
+    await expect(page.locator('.stat-grid .stat-card-label', { hasText: 'Completion rate' })).toHaveCount(0);
+  });
+
+  test('year carry-over stops at the current month; streak bar has labels', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#tab-insights').click();
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    const months = page.locator('.carryover-trend[data-carry-trend="month"] .carryover-day-label');
+    await expect(months).toHaveText(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
+    await expect(page.locator('.streak-heatmap-labels span', { hasText: 'Sep' })).toHaveCount(1);
+    await expect(page.locator('.streak-hint')).toHaveText('Each block is a day — darker means more tasks');
+
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    await expect(page.locator('.streak-heatmap-labels span')).toHaveText(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    await page.locator('.period-tab', { hasText: 'Month' }).click();
+    await expect(page.locator('.streak-heatmap-labels span').filter({ hasText: /\d/ })).toHaveText(['1', '8', '15', '22', '29']);
+  });
+
+  test('search results mark finished tasks as done', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#search-input').click();
+    await page.locator('#search-input').fill('vendor');
+    const done = page.locator('.search-result', { hasText: 'Renew vendor contract' });
+    await expect(done.locator('.search-result-status')).toHaveText('✓ Done');
+    await expect(done).toHaveClass(/is-done/);
+    const open = page.locator('.search-result', { hasText: 'Call vendor about the renewal' });
+    await expect(open.locator('.search-result-status')).toHaveCount(0);
+    await done.click();
+    await expect(page.locator('#search-overlay')).toBeHidden();
+  });
+
+  test('no theme name is cut off in any filter', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    for (const filter of ['light', 'medium', 'dark']) {
+      await page.locator(`[data-theme-filter="${filter}"]`).click();
+      await expect(page.locator('#density-popout')).toBeVisible();
+      const clipped = await page.locator('.theme-swatch-name').evaluateAll(els =>
+        els.filter(e => (e as HTMLElement).offsetParent && e.scrollWidth > e.clientWidth + 1).map(e => e.textContent));
+      expect(clipped, filter).toEqual([]);
+    }
+    await page.locator('[data-theme-filter="light"]').click();
+    await expect(page.locator('.theme-swatch-name', { hasText: 'Mediterranean' })).toHaveClass(/long/);
+  });
+
+  test('progress bar: Done is the accent and all three segments differ', async ({ page }) => {
+    await seedAudit(page);
+    const colors = await page.evaluate(() => {
+      const bg = (id: string) => getComputedStyle(document.getElementById(id)!).backgroundColor;
+      const probe = document.createElement('div');
+      probe.style.color = 'var(--accent)';
+      document.body.appendChild(probe);
+      const accent = getComputedStyle(probe).color;
+      probe.remove();
+      return { accent, done: bg('progress-done'), active: bg('progress-active'), fresh: bg('progress-new') };
+    });
+    expect(colors.done).toBe(colors.accent);
+    expect(new Set([colors.done, colors.active, colors.fresh]).size).toBe(3);
+  });
+
+  test('recurring button shows a theme-colored icon and opens the recurring dialog', async ({ page }) => {
+    await seedAudit(page);
+    const btn = page.locator('#recurring-btn');
+    const [iconColor, textColor] = await btn.evaluate(b => [getComputedStyle(b.querySelector('svg')!).stroke, getComputedStyle(b).color]);
+    expect(iconColor).toBe(textColor);
+    await btn.click();
+    await expect(page.locator('#recurring-modal')).toBeVisible();
+    await expect(page.locator('#recurring-modal .modal-title svg.icon-repeat')).toBeVisible();
+  });
+
+  test('calendar badges for unfinished past days are amber', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-30T10:00:00'));
+    await page.addInitScript(() => {
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {
+        '2026-09-22': { date: '2026-09-22', items: [{ id: 'old', type: 'task', content: 'Left open', completed: false, shelved: false, boardColumn: 'new', comments: [] }] },
+      }, deletedIds: {} }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    const badge = page.locator('.cal-day-badge').first();
+    await expect(badge).toBeVisible();
+    expect(await badge.evaluate(el => getComputedStyle(el).color)).toBe('rgb(251, 191, 36)');
+  });
+
+  test('touch screens: bigger controls and a tap halo around small icons', async ({ page, context }) => {
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'pointer', value: 'coarse' }, { name: 'hover', value: 'none' }] });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedAudit(page);
+    const card = page.locator('.item-card', { hasText: 'Review PR for IDS batching' });
+    await card.scrollIntoViewIfNeeded();
+    expect((await card.locator('.checkbox').boundingBox())!.height).toBeGreaterThanOrEqual(28);
+    expect((await card.locator('.card-action').first().boundingBox())!.height).toBeGreaterThanOrEqual(32);
+    const remove = card.locator('.tag-chip-remove').first();
+    const box = (await remove.boundingBox())!;
+    // Tap 7px to the left of the tiny ×; the halo should still remove the tag
+    await page.mouse.click(box.x - 7, box.y + box.height / 2);
+    await expect(card.locator('.tag-chip')).toHaveCount(0);
+  });
+});
+
 test.describe('Delete and undo sync records', () => {
   const stored = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work') || '{}'));
 
@@ -2195,13 +2377,15 @@ test.describe('Rendered text has no mojibake', () => {
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await expect(page.locator('#changelog-body')).toContainText('—');
-    await expect(page.locator('#changelog-body')).toContainText('Sep 9 (2) · Sep 23 (1)');
+    await expect(page.locator('#changelog-body')).toContainText('"✓ Done"');
+    await expect(page.locator('#changelog-body')).toContainText('the ⋮ menu, tag ×');
     await expectClean(page, '#changelog-body');
     await page.locator('#changelog-modal-dismiss').click();
 
     await page.locator('#help-btn').click();
     await expect(page.locator('#help-modal')).toBeVisible();
     await expect(page.locator('#help-modal')).toContainText('→');
+    await expect(page.locator('#help-modal')).toContainText('Sep 9 (2) · Sep 23 (1)');
     await expectClean(page, '#help-modal');
     await page.locator('#help-modal-close').click();
 
