@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.9.1] — 2026-09-30
+
+### Fixed
+- **Font resetting on refresh** — applying a theme cleared every inline CSS variable on the page, including the chosen font; the font selector still showed your choice while the page fell back to the default. Theme changes now leave the font alone, so it survives refreshes and theme switches
+- Switching from a custom theme to a preset now clears the custom theme's inline light/dark color scheme
+
 ## [1.9.0] — 2026-09-30
 
 ### Added
