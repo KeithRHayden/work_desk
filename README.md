@@ -61,6 +61,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Cloud sync and offline
 
 - **Optional Supabase sync** — email sign-in; devices merge rather than overwrite
+- **Deletes stick everywhere** — a deleted task or note is removed from every device, even one that still has an old copy; **Undo** restores it on every device
 - **Synced preferences** — theme, density, strike-through, comment/completed/auto-carry toggles, week start day, startup view, and confetti follow your account (last change wins)
 - **Continue offline** — use the desk without an account; data stays in this browser only (clearing site data can wipe it). Use **Sign in** in the sidebar account footer when you’re ready to sync.
 - **Export / Import Desk** — save or restore a single tab (Work, Personal, or Projects) as a JSON file; the export stamps which desk it came from, and importing into the wrong tab shows a confirmation warning
@@ -72,6 +73,8 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - Responsive layout for phone, tablet, and desktop
 - **Sticky bottom add bar** on mobile so capture stays reachable while scrolling
 - Installable home-screen app and service worker offline shell
+- **Always the latest version online** — the service worker (`sw.js`) loads the page network-first and only falls back to the saved copy offline, so a new deploy shows on the first load; an app left open in the background offers a **Reload** when a newer version ships
+- **Stale-copy protection** — each sync records the app version; if an out-of-date copy opens and sees cloud data from a newer version, it reloads instead of carrying tasks or overwriting settings
 - Touch-friendly week strip and tap-to-complete
 
 ## Tech stack
