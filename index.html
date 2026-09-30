@@ -7539,12 +7539,22 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.9.0';
+    const APP_VERSION = '1.9.1';
     const CHANGELOG = [
+      {
+        version: '1.9.1',
+        date: 'Sep 30, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Your chosen font no longer resets to the default after a page refresh or when switching themes',
+            'Switching from a custom theme to a preset no longer leaves the previous light/dark color scheme behind',
+          ]},
+        ],
+      },
       {
         version: '1.9.0',
         date: 'Sep 30, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Tag colors — Options → Appearance → Tags: "Theme color" keeps every tag in the accent (default); "Palette" gives each tag its own color generated from your theme, the same on every device',
@@ -8765,14 +8775,18 @@
       return changed;
     }
 
+    // Inline vars on <html> that belong to other settings and must survive theme changes
+    const NON_THEME_INLINE_VARS = new Set(['--font-family']);
+
     function clearCustomThemeInlineVars() {
       const el = document.documentElement;
       const toRemove = [];
       for (let i = 0; i < el.style.length; i++) {
         const prop = el.style[i];
-        if (prop.startsWith('--')) toRemove.push(prop);
+        if (prop.startsWith('--') && !NON_THEME_INLINE_VARS.has(prop)) toRemove.push(prop);
       }
       toRemove.forEach(p => el.style.removeProperty(p));
+      el.style.removeProperty('color-scheme');
     }
 
     function applyTheme(id, options = {}) {
