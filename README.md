@@ -33,7 +33,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens)
 - **Tags** — tag a task or note by typing `#word` inline or clicking the `tag` action (which offers your two most-used tags as one-click picks, narrowing as you type); chips render top-right on the card, always uppercase and case-insensitive (`#ACE` == `#ace`)
 - **Tag colors** — Options → Appearance → Tags: *Single color (accent)* (default, every tag uses the accent), *Analogous (shades of accent)* (lighter/darker/neighboring shades of the accent), or *Multi-color (from theme)* (distinct hues at the theme's brightness); both multi-shade modes follow the theme when you switch and are stable across devices. Click any chip on a card, or use the tag list in Options, to pin a custom color that overrides any mode; synced with your other preferences
-- **Search** — floating overlay with a result count; search current list or both Work and Personal, and use `#tagname` to filter by tag
+- **Search** — floating overlay with a result count; search current list or both Work and Personal, and use `#tagname` to filter by tag; finished tasks are marked `✓ Done` or `Shelved`
 - **Repair duplicates** — cleans same-ID and same-day recurring copies left by sync races
 
 ### Insights
@@ -41,8 +41,8 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - Week / month / year views with a period selector and prev/next navigation
 - **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day
 - **Week-over-week** comparison (week view)
-- **Carry-over analysis** — counted on the day each task was left unfinished; Month/Year views add a by-week / by-month trend chart and show the specific dates behind each weekday bar inline (hover a row for the full list)
-- **Streak tracking** — current/longest streaks based on days with desk activity, with a heatmap matched to the selected period
+- **Carry-over analysis** — counted on the day each task was left unfinished; Month/Year views add a by-week / by-month trend chart (Year stops at the current month) and show the specific dates behind each weekday bar inline (hover a row for the full list)
+- **Streak tracking** — current/longest streaks based on days with desk activity, with a heatmap matched to the selected period, labeled by weekday, date, or month
 - **Weekends don't break streaks** — Options → Behavior toggle (on by default); Fri → Mon stays consecutive; active weekend days still count, idle weekends do not reset the streak
 - **Charts** — bar, line, stacked, and pie, each with hover tooltips
 - Activity heatmap (year view) and a day-by-day progress breakdown table (real date labels; today marked e.g. `Tue, Sep 22 (Today)`)
