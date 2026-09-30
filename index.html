@@ -4343,7 +4343,8 @@
     }
 
     .carryover-day-bar {
-      height: 14px;
+      height: 16px;
+      box-sizing: border-box;
       background: var(--panel-bg);
       border: 1px solid var(--border);
       border-radius: 4px;
@@ -4352,6 +4353,7 @@
     }
 
     .carryover-day-fill {
+      width: var(--fill, 0%);
       height: 100%;
       background: #f59e0b;
       transition: width 0.3s ease;
@@ -4378,17 +4380,31 @@
       margin: -4px 0 10px;
     }
 
-    .carryover-by-day.has-dates .carryover-day-row {
-      grid-template-columns: 40px minmax(80px, 1fr) 24px minmax(0, 42%);
+    /* With a trend chart above, match its label column so both charts' bars line up edge to edge */
+    .carryover-card:has(.carryover-trend) .carryover-by-day .carryover-day-row {
+      grid-template-columns: 72px 1fr 40px;
     }
 
     .carryover-day-dates {
-      font-size: 0.75rem;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc(var(--fill) + 8px);
+      right: 8px;
+      font-size: 0.68rem;
+      line-height: 14px;
       color: var(--text-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      min-width: 0;
+      pointer-events: none;
+    }
+    .carryover-day-dates.inside {
+      left: 8px;
+      right: calc(100% - var(--fill) + 8px);
+      text-align: right;
+      color: #1c1917;
+      font-weight: 600;
     }
 
     /* ── Streak Tracking ─────────────────────────────────── */
@@ -7583,12 +7599,21 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.11.0';
+    const APP_VERSION = '1.11.1';
     const CHANGELOG = [
+      {
+        version: '1.11.1',
+        date: 'Sep 30, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Carry-over by day of week bars now stretch the full width of the card and line up with the by-week bars; the dates sit inside each bar',
+          ]},
+        ],
+      },
       {
         version: '1.11.0',
         date: 'Sep 30, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Quick-pick tags — clicking tag on a task or note now shows your two most-used tags as one-click chips next to the text box; they narrow as you type and skip tags the card already has',
@@ -17066,13 +17091,13 @@
         const showDates = state.insightsPeriod !== 'week';
         const MAX_DATES = 6;
         const shortDate = (k) => dateFromKey(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const barRow = (label, count, extraClass = '', title = '', trailing = '') => `
+        const barRow = (label, count, extraClass = '', title = '', inBar = '') => `
               <div class="carryover-day-row${extraClass}"${title ? ` title="${escapeHtml(title)}"` : ''}>
                 <span class="carryover-day-label">${escapeHtml(label)}</span>
-                <div class="carryover-day-bar">
-                  <div class="carryover-day-fill" style="width: ${(count / carryTotal) * 100}%"></div>
+                <div class="carryover-day-bar" style="--fill: ${(count / carryTotal) * 100}%">
+                  <div class="carryover-day-fill"></div>${inBar}
                 </div>
-                <span class="carryover-day-count">${count}</span>${trailing}
+                <span class="carryover-day-count">${count}</span>
               </div>`;
 
         let trendHtml = '';
@@ -17095,9 +17120,11 @@
             const all = dates.map((d) => `${shortDate(d.dayKey)} (${d.count})`);
             const shown = all.slice(0, MAX_DATES).join(' · ');
             const more = dates.length > MAX_DATES ? ` · +${dates.length - MAX_DATES} more` : '';
+            // Dates sit on the empty track just past the fill; a long fill holds them inside instead
+            const inside = count / carryTotal > 0.6;
             const datesHtml = dates.length
-              ? `<span class="carryover-day-dates" data-weekday="${day}">${shown}${more}</span>`
-              : '<span class="carryover-day-dates-empty"></span>';
+              ? `<span class="carryover-day-dates${inside ? ' inside' : ''}" data-weekday="${day}">${shown}${more}</span>`
+              : '';
             return barRow(day, count, '', all.join(', '), datesHtml);
           }).join('');
 
@@ -17105,7 +17132,7 @@
           <h3 class="carryover-title">Carry-Over Analysis</h3>
           <p class="carryover-summary">${carryTotal} task${carryTotal === 1 ? '' : 's'} left unfinished and carried forward this period</p>
           ${trendHtml}
-          <div class="carryover-by-day${showDates ? ' has-dates' : ''}">
+          <div class="carryover-by-day">
             <h4 class="carryover-subtitle">Carry-Over by Day of Week</h4>
             <p class="carryover-hint">Counted on the day each task was left unfinished</p>
             ${dayBars}
