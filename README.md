@@ -32,6 +32,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Work / Personal / Projects** — separate contexts
 - **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens)
 - **Tags** — tag a task or note by typing `#word` inline or clicking the `tag` action; chips render top-right on the card, always uppercase and case-insensitive (`#ACE` == `#ace`)
+- **Tag colors** — Options → Appearance → Tags: *Theme color* (default, every tag uses the accent) or *Palette* (each tag gets its own theme-derived color, stable across devices); click any chip on a card, or use the tag list in Options, to pin a custom color that overrides either mode; synced with your other preferences
 - **Search** — floating overlay with a result count; search current list or both Work and Personal, and use `#tagname` to filter by tag
 - **Repair duplicates** — cleans same-ID and same-day recurring copies left by sync races
 
@@ -40,7 +41,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - Week / month / year views with a period selector and prev/next navigation
 - **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day
 - **Week-over-week** comparison (week view)
-- **Carry-over analysis** — which weekdays tasks most often carry over from
+- **Carry-over analysis** — counted on the day each task was left unfinished; Month/Year views add a by-week / by-month trend chart and list the specific dates behind each weekday bar
 - **Streak tracking** — current/longest streaks based on days with desk activity, with a heatmap matched to the selected period
 - **Weekends don't break streaks** — Options → Behavior toggle (on by default); Fri → Mon stays consecutive; active weekend days still count, idle weekends do not reset the streak
 - **Charts** — bar, line, stacked, and pie, each with hover tooltips
