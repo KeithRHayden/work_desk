@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.12.0] — 2026-09-30
+
+### Added
+- **Update prompt** — when the app returns to the foreground (at most every 15 minutes) it checks the deployed version; if it's newer, a *Work Desk x.y.z is available* toast with a **Reload** button appears. Installed phone apps can otherwise stay on an old version for days
+
+### Fixed
+- **Several refreshes needed to see a deploy** — the service worker served the saved copy first and updated it in the background, and GitHub Pages' 10-minute browser cache could make that background update stale too. `sw.js` now loads pages network-first (revalidating past the HTTP cache) and uses the saved copy only offline; it's registered with `updateViaCache: 'none'` and uses a new cache name so the old saved copy is cleared. **Requires deploying the new `sw.js` alongside `index.html`**
+- **Stale copy of the app changing data on sync** — a phone still running a months-old saved copy (e.g. 1.6.0, before Auto carry off was respected during sync) could auto-carry tasks and reset the theme. Synced data now records `appVersion`; a client that sees cloud data from a newer version stops syncing and reloads (once per session, so an intentional rollback can't loop)
+- **Search missing matches** — words on separate lines were fused together (`vendor` + `about` → `vendorabout`) and non-breaking spaces from mobile keyboards didn't match a typed space; both now match
+- **Deleted tasks coming back from another device** — a device that still had a local copy of a task deleted elsewhere kept it (and could auto-carry and re-push it), because sync let any local copy beat a deletion. Deletes now also write a `purgedIds` record that beats stale copies on every device, and Undo writes a `restoredIds` record that beats any earlier delete (so an undone delete also syncs correctly to devices without a copy). Tombstones from before 1.12.0 keep the old local-copy-wins rule, because older Undo never recorded a restore
+
 ## [1.11.1] — 2026-09-30
 
 ### Fixed
