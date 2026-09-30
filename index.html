@@ -4364,6 +4364,27 @@
       text-align: right;
     }
 
+    .carryover-trend {
+      margin: 12px 0 18px;
+    }
+
+    .carryover-trend-row {
+      grid-template-columns: 72px 1fr 40px;
+    }
+
+    .carryover-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin: -4px 0 10px;
+    }
+
+    .carryover-day-dates {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin: -2px 0 8px 50px;
+      line-height: 1.4;
+    }
+
     /* ── Streak Tracking ─────────────────────────────────── */
     .streak-card {
       background: var(--surface);
@@ -6109,11 +6130,13 @@
       z-index: 3;
     }
     .tag-chip {
+      --tag-fg: var(--accent);
+      --tag-bg: var(--accent-light);
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      background: var(--accent-light);
-      color: var(--accent);
+      background: var(--tag-bg);
+      color: var(--tag-fg);
       font-size: 0.62rem;
       font-weight: 700;
       text-transform: uppercase;
@@ -6122,10 +6145,128 @@
       border-radius: 20px;
       white-space: nowrap;
     }
+    /* Palette: hue-rotate the accent in OKLCH so every tag keeps the theme's lightness */
+    @supports (color: oklch(from red l c h)) {
+      html[data-tag-colors="palette"] .tag-chip {
+        --tag-hue: 0;
+        --tag-fg: oklch(from var(--accent) l max(c, 0.1) calc(h + var(--tag-hue)));
+        --tag-bg: color-mix(in srgb, var(--tag-fg) 18%, var(--surface));
+      }
+      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="1"] { --tag-hue: 45; }
+      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="2"] { --tag-hue: 90; }
+      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="3"] { --tag-hue: 135; }
+      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="4"] { --tag-hue: 180; }
+      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="5"] { --tag-hue: 225; }
+      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="6"] { --tag-hue: 270; }
+      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="7"] { --tag-hue: 315; }
+    }
+    /* Custom color wins in both modes; text leans toward --text so it stays readable on any theme */
+    .tag-chip.tag-custom[data-tag] {
+      --tag-fg: color-mix(in oklch, var(--tag-custom) 72%, var(--text));
+      --tag-bg: color-mix(in srgb, var(--tag-custom) 20%, var(--surface));
+    }
+    .tag-chip.tag-clickable { cursor: pointer; }
+    .tag-chip.tag-clickable:hover { box-shadow: 0 0 0 1px var(--tag-fg); }
+
+    .tag-color-popover {
+      position: fixed;
+      z-index: 1000;
+      width: 212px;
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--modal-shadow);
+      color: var(--text);
+    }
+    .tag-color-popover-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .tag-color-swatches {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .tag-color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      padding: 0;
+    }
+    .tag-color-swatch:hover { transform: scale(1.1); }
+    .tag-color-swatch[aria-pressed="true"] { border-color: var(--text); }
+    .tag-color-popover-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.75rem;
+    }
+    .tag-color-custom {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .tag-color-custom-input,
+    .tag-color-input {
+      width: 26px;
+      height: 22px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: none;
+      cursor: pointer;
+    }
+    .tag-color-reset,
+    .tag-color-row-reset {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-family: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .tag-color-reset:disabled,
+    .tag-color-row-reset:disabled { color: var(--text-muted); opacity: 0.5; cursor: default; }
+
+    .tag-color-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin: 2px 0 8px;
+    }
+    .tag-color-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .tag-color-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      align-items: center;
+      gap: 8px;
+    }
+    .tag-color-row .tag-chip { justify-self: start; }
+    .tag-color-count { font-size: 0.72rem; color: var(--text-muted); }
+    .tag-color-empty { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
+
     .tag-chip-remove {
       border: none;
       background: none;
-      color: var(--accent);
+      color: inherit;
       font-family: inherit;
       font-size: 0.7rem;
       line-height: 1;
@@ -6884,6 +7025,18 @@
                       </span>
                     </label>
 
+                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                    <p class="density-popout-label">Tags</p>
+                    <div class="customize-select-row">
+                      <label for="tag-color-mode-select">Tag colors</label>
+                      <select id="tag-color-mode-select" aria-label="Tag colors">
+                        <option value="theme">Theme color</option>
+                        <option value="palette">Palette</option>
+                      </select>
+                    </div>
+                    <p class="tag-color-hint">Theme: every tag uses the accent. Palette: each tag gets its own color from the theme. Pick a color below (or click a tag on a card) to pin a custom color.</p>
+                    <div id="tag-color-list" class="tag-color-list"></div>
+
                   </div>
 
                   <!-- Behavior Tab Pane -->
@@ -7165,6 +7318,8 @@
           <li><strong>Or use the button</strong> — click <em>tag</em> in the action bar to add one without touching the card's text</li>
           <li><strong>Case-insensitive</strong> — <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
           <li><strong>Chips</strong> — shown in the top-right corner of the card; click the <strong>×</strong> on a chip to remove that tag</li>
+          <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Theme color</strong> (default) keeps every tag in the accent color; <strong>Palette</strong> gives each tag its own color generated from the current theme, so it changes with the theme and stays the same on every device</li>
+          <li><strong>Custom tag color</strong> — click any tag chip on a card to pick a preset swatch or a custom color, or set colors from the tag list in Options → Appearance; a custom color overrides either mode, and <em>Reset to auto</em> / <em>auto</em> removes it</li>
           <li><strong>Find by tag</strong> — search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
         </ul>
 
@@ -7241,7 +7396,7 @@
           <li>Switch between <strong>Week</strong>, <strong>Month</strong>, and <strong>Year</strong> views, and step back/forward with the arrows</li>
           <li><strong>Productivity summary</strong> — completion rate, average daily completions, carry-over rate, and your most productive day</li>
           <li><strong>Week-over-week</strong> (week view) — compares this week's completions against the previous one</li>
-          <li><strong>Carry-over analysis</strong> — which days of the week tasks most often carry over from</li>
+          <li><strong>Carry-over analysis</strong> — each carry-over is counted on the day the task was left unfinished. Month and Year add a trend chart (by week or by month), and each weekday bar lists the specific dates behind it (e.g. Wed: Sep 9 (2) · Sep 23 (1))</li>
           <li><strong>Streak tracking</strong> — current and longest streaks based on days with desk activity, plus a heatmap matched to the period you're viewing</li>
           <li><strong>Weekends don't break streaks</strong> (Options → Behavior → Insights, on by default) — Fri → Mon stays consecutive for streak counting; if you work a Saturday or Sunday it still counts, but an idle weekend does not reset the streak</li>
           <li><strong>Charts</strong> — switch between bar, line, stacked, and pie; hover any segment or point for exact counts</li>
@@ -7253,7 +7408,7 @@
         <ul>
           <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
           <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in</strong> at the bottom of the sidebar when you’re ready to create an account or sync</li>
-          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, confetti, confirm before delete, weekends don't break streaks, font size, font family, sidebar position, card glow, gradient header, and holiday settings all follow your account across devices</li>
+          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, confetti, confirm before delete, weekends don't break streaks, font size, font family, sidebar position, card glow, gradient header, tag colors, and holiday settings all follow your account across devices</li>
           <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
           <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
@@ -7375,14 +7530,45 @@
     const GRADIENT_HEADER_KEY = 'work-desk-gradient-header';
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const STREAK_SKIP_WEEKENDS_KEY = 'work-desk-streak-skip-weekends';
+    const TAG_COLOR_MODE_KEY = 'work-desk-tag-color-mode';
+    const TAG_COLORS_KEY = 'work-desk-tag-colors';
+    const TAG_PALETTE_SIZE = 8;
+    const TAG_PRESET_COLORS = [
+      '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+      '#14b8a6', '#0ea5e9', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b',
+    ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.8.0';
+    const APP_VERSION = '1.9.0';
     const CHANGELOG = [
+      {
+        version: '1.9.0',
+        date: 'Sep 30, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Tag colors — Options → Appearance → Tags: "Theme color" keeps every tag in the accent (default); "Palette" gives each tag its own color generated from your theme, the same on every device',
+            'Custom tag colors — click any tag chip on a card to pick a swatch or a custom color; a custom color overrides either mode and follows you across themes',
+            'Tag list in Options → Appearance shows every tag with its use count, a color picker, and an "auto" reset',
+          ]},
+        ],
+      },
+      {
+        version: '1.8.1',
+        date: 'Sep 30, 2026',
+        sections: [
+          { label: 'Improved', items: [
+            'Carry-Over Analysis on Month and Year views adds a trend chart — carry-overs by week (Month) or by month (Year)',
+            'Each weekday bar now lists the specific dates behind it (e.g. Wed: Sep 9 (2) · Sep 23 (1)) so you can see whether it was one bad day or a pattern',
+          ]},
+          { label: 'Fixed', items: [
+            'Carry-overs are now counted on the day a task was left unfinished (previously the day it landed), matching how the chart is described',
+          ]},
+        ],
+      },
       {
         version: '1.8.0',
         date: 'Sep 29, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             '12 new themes — Retro (SNES console gray with purple buttons and a red/yellow/green/blue controller stripe), Seafoam, Mediterranean, Citrus (light); Game Boy, Denim, Terracotta, Merlot (medium); Monokai, One Dark, Phosphor, Rosé Pine (dark)',
@@ -7840,6 +8026,8 @@
       confirmDelete: localStorage.getItem(CONFIRM_DELETE_KEY) === 'true',
       useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
       streakSkipWeekends: localStorage.getItem(STREAK_SKIP_WEEKENDS_KEY) !== 'false',
+      tagColorMode: normalizeTagColorMode(localStorage.getItem(TAG_COLOR_MODE_KEY)),
+      tagColors: loadTagColors(),
       customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
       highlightItemId: null,
       activeTab: (() => {
@@ -8307,6 +8495,8 @@
         confirmDelete: localStorage.getItem(CONFIRM_DELETE_KEY) === 'true',
         useFederalHolidays: localStorage.getItem(US_FEDERAL_HOLIDAYS_KEY) !== 'false',
         streakSkipWeekends: localStorage.getItem(STREAK_SKIP_WEEKENDS_KEY) !== 'false',
+        tagColorMode: normalizeTagColorMode(localStorage.getItem(TAG_COLOR_MODE_KEY)),
+        tagColors: loadTagColors(),
         customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
         customThemes: loadCustomThemes(),
         updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
@@ -8536,6 +8726,24 @@
           localStorage.setItem(STREAK_SKIP_WEEKENDS_KEY, next ? 'true' : 'false');
           const el = document.getElementById('streak-skip-weekends-toggle');
           if (el) el.checked = next;
+          changed = true;
+        }
+      }
+
+      if (typeof prefs.tagColorMode === 'string') {
+        const next = normalizeTagColorMode(prefs.tagColorMode);
+        if (state.tagColorMode !== next) {
+          applyTagColorMode(next, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      if (prefs.tagColors && typeof prefs.tagColors === 'object') {
+        const next = normalizeTagColors(prefs.tagColors);
+        if (JSON.stringify(next) !== JSON.stringify(state.tagColors)) {
+          state.tagColors = next;
+          saveTagColors(next);
+          refreshTagChipColors();
           changed = true;
         }
       }
@@ -9898,6 +10106,7 @@
 
     function openDensityPopout() {
       renderThemeSwatches();
+      renderTagColorList();
       const btn    = document.getElementById('density-toggle');
       const popout = document.getElementById('density-popout');
       popout.classList.remove('hidden');
@@ -9985,6 +10194,14 @@
         gradientHeaderToggle.addEventListener('change', () => applyGradientHeader(gradientHeaderToggle.checked));
       }
 
+      // Tag colors
+      applyTagColorMode(state.tagColorMode, { fromSync: true });
+      const tagColorModeSelect = document.getElementById('tag-color-mode-select');
+      if (tagColorModeSelect) {
+        tagColorModeSelect.value = state.tagColorMode;
+        tagColorModeSelect.addEventListener('change', () => applyTagColorMode(tagColorModeSelect.value));
+      }
+
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         popout.classList.contains('hidden') ? openDensityPopout() : closeDensityPopout();
@@ -10000,6 +10217,7 @@
             if (el) el.classList.toggle('hidden', p !== targetTab);
           });
           if (targetTab === 'themes') renderThemeSwatches();
+          if (targetTab === 'appearance') renderTagColorList();
         });
       });
 
@@ -10708,6 +10926,233 @@
       }
       return [...seen];
     }
+
+    // ── Tag colors ────────────────────────────────────────────────────────────
+    // Palette slot is derived from the tag name so a tag keeps its color on every device.
+    function tagPaletteSlot(tag) {
+      let h = 0;
+      for (const ch of String(tag)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+      return h % TAG_PALETTE_SIZE;
+    }
+
+    function normalizeTagColorMode(mode) {
+      return mode === 'palette' ? 'palette' : 'theme';
+    }
+
+    function normalizeTagColors(obj) {
+      const out = {};
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
+      for (const [rawTag, rawColor] of Object.entries(obj)) {
+        const tag = normalizeTag(rawTag);
+        if (tag && typeof rawColor === 'string' && /^#[0-9a-f]{6}$/i.test(rawColor)) {
+          out[tag] = rawColor.toLowerCase();
+        }
+      }
+      return out;
+    }
+
+    function loadTagColors() {
+      try { return normalizeTagColors(JSON.parse(localStorage.getItem(TAG_COLORS_KEY))); }
+      catch (_) { return {}; }
+    }
+
+    function saveTagColors(colors) {
+      localStorage.setItem(TAG_COLORS_KEY, JSON.stringify(colors));
+    }
+
+    function decorateTagChip(chip, tag) {
+      chip.dataset.tag = tag;
+      chip.dataset.tagSlot = String(tagPaletteSlot(tag));
+      const custom = state.tagColors[tag];
+      chip.classList.toggle('tag-custom', !!custom);
+      if (custom) chip.style.setProperty('--tag-custom', custom);
+      else chip.style.removeProperty('--tag-custom');
+    }
+
+    function refreshTagChipColors() {
+      document.querySelectorAll('.tag-chip[data-tag]').forEach(chip => decorateTagChip(chip, chip.dataset.tag));
+      syncTagColorListRows();
+    }
+
+    function applyTagColorMode(mode, options = {}) {
+      const { fromSync = false } = options;
+      const next = normalizeTagColorMode(mode);
+      state.tagColorMode = next;
+      document.documentElement.dataset.tagColors = next;
+      const el = document.getElementById('tag-color-mode-select');
+      if (el) el.value = next;
+      localStorage.setItem(TAG_COLOR_MODE_KEY, next);
+      if (!fromSync) schedulePrefsPush();
+    }
+
+    function setTagColor(tag, color) {
+      const clean = normalizeTag(tag);
+      if (!clean) return;
+      const next = { ...state.tagColors };
+      if (color && /^#[0-9a-f]{6}$/i.test(color)) next[clean] = color.toLowerCase();
+      else delete next[clean];
+      state.tagColors = next;
+      saveTagColors(next);
+      refreshTagChipColors();
+      schedulePrefsPush();
+    }
+
+    // Tags in use in the current list (items + recurring templates), plus any with a saved color
+    function collectTagUsage() {
+      const counts = new Map();
+      for (const day of Object.values(state.data.days || {})) {
+        for (const item of day.items || []) {
+          for (const tag of normalizeTagList(item.tags)) counts.set(tag, (counts.get(tag) || 0) + 1);
+        }
+      }
+      for (const t of loadRecurringTemplates()) {
+        for (const tag of normalizeTagList(t.tags)) if (!counts.has(tag)) counts.set(tag, 0);
+      }
+      for (const tag of Object.keys(state.tagColors)) if (!counts.has(tag)) counts.set(tag, 0);
+      return [...counts.entries()]
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+    }
+
+    function renderTagColorList() {
+      const host = document.getElementById('tag-color-list');
+      if (!host) return;
+      host.innerHTML = '';
+      const tags = collectTagUsage();
+      if (!tags.length) {
+        const empty = document.createElement('p');
+        empty.className = 'tag-color-empty';
+        empty.textContent = 'No tags yet. Add one with "tag" on any task.';
+        host.appendChild(empty);
+        return;
+      }
+      for (const { tag, count } of tags) {
+        const row = document.createElement('div');
+        row.className = 'tag-color-row';
+        row.dataset.tagRow = tag;
+
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.textContent = tag;
+        decorateTagChip(chip, tag);
+
+        const uses = document.createElement('span');
+        uses.className = 'tag-color-count';
+        uses.textContent = count === 1 ? '1 use' : `${count} uses`;
+
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.className = 'tag-color-input';
+        input.setAttribute('aria-label', `Color for tag ${tag}`);
+        input.addEventListener('input', () => setTagColor(tag, input.value));
+
+        const reset = document.createElement('button');
+        reset.type = 'button';
+        reset.className = 'tag-color-row-reset';
+        reset.textContent = 'auto';
+        reset.title = 'Use the automatic color';
+        reset.addEventListener('click', () => setTagColor(tag, null));
+
+        row.append(chip, uses, input, reset);
+        host.appendChild(row);
+      }
+      syncTagColorListRows();
+    }
+
+    // Update picker values and reset buttons in place (never re-render mid-interaction)
+    function syncTagColorListRows() {
+      document.querySelectorAll('#tag-color-list .tag-color-row').forEach(row => {
+        const tag = row.dataset.tagRow;
+        const custom = state.tagColors[tag];
+        const input = row.querySelector('.tag-color-input');
+        const reset = row.querySelector('.tag-color-row-reset');
+        if (input && document.activeElement !== input) input.value = custom || TAG_PRESET_COLORS[tagPaletteSlot(tag) % TAG_PRESET_COLORS.length];
+        if (reset) reset.disabled = !custom;
+        row.classList.toggle('has-custom', !!custom);
+      });
+    }
+
+    let tagColorPopoverTag = null;
+
+    function closeTagColorPopover() {
+      const pop = document.getElementById('tag-color-popover');
+      if (pop) pop.remove();
+      tagColorPopoverTag = null;
+    }
+
+    function openTagColorPopover(tag, anchorEl) {
+      closeTagColorPopover();
+      tagColorPopoverTag = tag;
+      const pop = document.createElement('div');
+      pop.id = 'tag-color-popover';
+      pop.className = 'tag-color-popover';
+      pop.setAttribute('role', 'dialog');
+      pop.setAttribute('aria-label', `Color for tag ${tag}`);
+
+      const title = document.createElement('div');
+      title.className = 'tag-color-popover-title';
+      const preview = document.createElement('span');
+      preview.className = 'tag-chip';
+      preview.textContent = tag;
+      decorateTagChip(preview, tag);
+      title.append('Color for ', preview);
+      pop.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'tag-color-swatches';
+      for (const color of TAG_PRESET_COLORS) {
+        const sw = document.createElement('button');
+        sw.type = 'button';
+        sw.className = 'tag-color-swatch';
+        sw.dataset.color = color;
+        sw.style.background = color;
+        sw.setAttribute('aria-label', `Use ${color}`);
+        sw.setAttribute('aria-pressed', state.tagColors[tag] === color ? 'true' : 'false');
+        sw.addEventListener('click', () => { setTagColor(tag, color); closeTagColorPopover(); });
+        grid.appendChild(sw);
+      }
+      pop.appendChild(grid);
+
+      const actions = document.createElement('div');
+      actions.className = 'tag-color-popover-actions';
+      const customLabel = document.createElement('label');
+      customLabel.className = 'tag-color-custom';
+      const customInput = document.createElement('input');
+      customInput.type = 'color';
+      customInput.className = 'tag-color-custom-input';
+      customInput.value = state.tagColors[tag] || TAG_PRESET_COLORS[tagPaletteSlot(tag) % TAG_PRESET_COLORS.length];
+      customInput.addEventListener('input', () => setTagColor(tag, customInput.value));
+      customLabel.append(customInput, 'Custom');
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.className = 'tag-color-reset';
+      reset.textContent = 'Reset to auto';
+      reset.disabled = !state.tagColors[tag];
+      reset.addEventListener('click', () => { setTagColor(tag, null); closeTagColorPopover(); });
+      actions.append(customLabel, reset);
+      pop.appendChild(actions);
+
+      document.body.appendChild(pop);
+      const r = anchorEl.getBoundingClientRect();
+      const w = pop.offsetWidth;
+      const h = pop.offsetHeight;
+      const left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+      const below = r.bottom + 6;
+      const top = below + h > window.innerHeight - 8 ? Math.max(8, r.top - h - 6) : below;
+      pop.style.left = `${left}px`;
+      pop.style.top = `${top}px`;
+    }
+
+    document.addEventListener('mousedown', (e) => {
+      const pop = document.getElementById('tag-color-popover');
+      if (!pop) return;
+      if (e.target.isConnected && pop.contains(e.target)) return;
+      if (e.target.closest && e.target.closest('.tag-chip.tag-clickable')) return;
+      closeTagColorPopover();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('tag-color-popover')) closeTagColorPopover();
+    });
 
     // Union two items' tag arrays; returns undefined when there's nothing to add
     // (keeps normalizeItem/merge call sites from stamping an empty tags: [] everywhere).
@@ -12859,6 +13304,7 @@
               const chip = document.createElement('span');
               chip.className = 'tag-chip';
               chip.style.fontSize = '0.68rem';
+              decorateTagChip(chip, tag);
               const label = document.createElement('span');
               label.textContent = tag.toUpperCase();
               chip.appendChild(label);
@@ -13159,6 +13605,7 @@
           const chip = document.createElement('span');
           chip.className = 'tag-chip';
           chip.style.fontSize = '0.72rem';
+          decorateTagChip(chip, tag);
           const label = document.createElement('span');
           label.textContent = tag.toUpperCase();
           chip.appendChild(label);
@@ -14797,7 +15244,14 @@
       wrap.className = 'tag-chip-row';
       tags.forEach(tag => {
         const chip = document.createElement('span');
-        chip.className = 'tag-chip';
+        chip.className = 'tag-chip tag-clickable';
+        chip.title = 'Change tag color';
+        decorateTagChip(chip, tag);
+        chip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (tagColorPopoverTag === tag && document.getElementById('tag-color-popover')) closeTagColorPopover();
+          else openTagColorPopover(tag, chip);
+        });
         const label = document.createElement('span');
         label.textContent = tag;
         chip.appendChild(label);
@@ -15496,32 +15950,73 @@
     }
 
     // Analyze carry-over patterns
-    function analyzeCarryOverPatterns(daily) {
-      const patterns = {
-        avgDaysCarried: 0,
-        carryOverByDay: { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 },
-        tasksWithCarryOver: new Map(), // taskId -> count
-      };
+    // Carry-overs are attributed to the day the task was left unfinished (carriedFrom),
+    // so "Wed: 3" means three tasks were left open on Wednesdays and moved forward.
+    function analyzeCarryOverPatterns(period, range) {
+      const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const carryOverByDay = {};
+      const datesByWeekday = {};
+      for (const w of WEEKDAYS) { carryOverByDay[w] = 0; datesByWeekday[w] = []; }
 
-      let totalCarried = 0;
-      for (const day of daily) {
-        const dayName = dateFromKey(day.dayKey).toLocaleDateString('en-US', { weekday: 'short' });
-        patterns.carryOverByDay[dayName] += day.carriedOver;
-        totalCarried += day.carriedOver;
-      }
-
-      // Find most carried tasks
-      for (const dayKey of Object.keys(state.data.days)) {
-        const day = state.data.days[dayKey];
+      const perDate = {};
+      const seen = new Set();
+      for (const day of Object.values(state.data.days || {})) {
         for (const item of day.items || []) {
-          if (item.type === 'task' && item.carriedFrom) {
-            const count = patterns.tasksWithCarryOver.get(item.id) || 0;
-            patterns.tasksWithCarryOver.set(item.id, count + 1);
-          }
+          if (item.type !== 'task' || typeof item.carriedFrom !== 'string') continue;
+          const fromKey = item.carriedFrom;
+          if (fromKey < range.startKey || fromKey > range.endKey) continue;
+          const sig = `${item.id}|${fromKey}`;
+          if (seen.has(sig)) continue;
+          seen.add(sig);
+          perDate[fromKey] = (perDate[fromKey] || 0) + 1;
         }
       }
 
-      return patterns;
+      let total = 0;
+      for (const dayKey of Object.keys(perDate).sort()) {
+        const count = perDate[dayKey];
+        const w = WEEKDAYS[(dateFromKey(dayKey).getDay() + 6) % 7];
+        carryOverByDay[w] += count;
+        datesByWeekday[w].push({ dayKey, count });
+        total += count;
+      }
+
+      let trend = null;
+      if (period === 'month') {
+        trend = [];
+        const start = dateFromKey(range.startKey);
+        const end = dateFromKey(range.endKey);
+        const cur = new Date(start);
+        while (cur <= end) {
+          const bucketStart = new Date(cur);
+          const bucketEnd = new Date(cur);
+          bucketEnd.setDate(bucketEnd.getDate() + (6 - (bucketEnd.getDay() + 6) % 7));
+          if (bucketEnd > end) bucketEnd.setTime(end.getTime());
+          const startKey = formatDateKey(bucketStart);
+          const endKey = formatDateKey(bucketEnd);
+          let count = 0;
+          eachDateInRange(startKey, endKey, (k) => { count += perDate[k] || 0; });
+          const mon = bucketStart.toLocaleDateString('en-US', { month: 'short' });
+          const label = startKey === endKey
+            ? `${mon} ${bucketStart.getDate()}`
+            : `${mon} ${bucketStart.getDate()}–${bucketEnd.getDate()}`;
+          trend.push({ label, startKey, endKey, count });
+          cur.setTime(bucketEnd.getTime());
+          cur.setDate(cur.getDate() + 1);
+        }
+      } else if (period === 'year') {
+        const year = dateFromKey(range.startKey).getFullYear();
+        trend = [];
+        for (let m = 0; m < 12; m++) {
+          const prefix = `${year}-${String(m + 1).padStart(2, '0')}-`;
+          let count = 0;
+          for (const [k, c] of Object.entries(perDate)) if (k.startsWith(prefix)) count += c;
+          const label = new Date(year, m, 1).toLocaleDateString('en-US', { month: 'short' });
+          trend.push({ label, startKey: `${prefix}01`, endKey: formatDateKey(new Date(year, m + 1, 0)), count });
+        }
+      }
+
+      return { total, carryOverByDay, datesByWeekday, trend, perDate };
     }
 
     // Compute streak data
@@ -16396,30 +16891,57 @@
       }
 
       // Carry-Over Analysis
-      if (totals.carriedOver > 0) {
-        const carryPatterns = analyzeCarryOverPatterns(daily);
+      const carryPatterns = analyzeCarryOverPatterns(state.insightsPeriod, range);
+      if (carryPatterns.total > 0) {
+        const carryTotal = carryPatterns.total;
         const carryCard = document.createElement('div');
         carryCard.className = 'carryover-card';
-        
-        const dayBars = Object.entries(carryPatterns.carryOverByDay)
-          .map(([day, count]) => {
-            const pct = totals.carriedOver > 0 ? (count / totals.carriedOver) * 100 : 0;
-            return `
-              <div class="carryover-day-row">
-                <span class="carryover-day-label">${day}</span>
+        const showDates = state.insightsPeriod !== 'week';
+        const MAX_DATES = 6;
+        const shortDate = (k) => dateFromKey(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const barRow = (label, count, extraClass = '', title = '') => `
+              <div class="carryover-day-row${extraClass}"${title ? ` title="${escapeHtml(title)}"` : ''}>
+                <span class="carryover-day-label">${escapeHtml(label)}</span>
                 <div class="carryover-day-bar">
-                  <div class="carryover-day-fill" style="width: ${pct}%"></div>
+                  <div class="carryover-day-fill" style="width: ${(count / carryTotal) * 100}%"></div>
                 </div>
                 <span class="carryover-day-count">${count}</span>
-              </div>
-            `;
+              </div>`;
+
+        let trendHtml = '';
+        if (carryPatterns.trend) {
+          const unit = state.insightsPeriod === 'month' ? 'Week' : 'Month';
+          const rows = carryPatterns.trend
+            .map((b) => barRow(b.label, b.count, ' carryover-trend-row', `${shortDate(b.startKey)} – ${shortDate(b.endKey)}`))
+            .join('');
+          trendHtml = `
+          <div class="carryover-trend" data-carry-trend="${unit.toLowerCase()}">
+            <h4 class="carryover-subtitle">Carry-Over by ${unit}</h4>
+            ${rows}
+          </div>`;
+        }
+
+        const dayBars = Object.entries(carryPatterns.carryOverByDay)
+          .map(([day, count]) => {
+            let datesHtml = '';
+            const dates = carryPatterns.datesByWeekday[day];
+            if (showDates && dates.length) {
+              const shown = dates.slice(0, MAX_DATES)
+                .map((d) => `${shortDate(d.dayKey)} (${d.count})`)
+                .join(' · ');
+              const more = dates.length > MAX_DATES ? ` · +${dates.length - MAX_DATES} more` : '';
+              datesHtml = `<div class="carryover-day-dates" data-weekday="${day}">${shown}${more}</div>`;
+            }
+            return barRow(day, count) + datesHtml;
           }).join('');
 
         carryCard.innerHTML = `
           <h3 class="carryover-title">Carry-Over Analysis</h3>
-          <p class="carryover-summary">${totals.carriedOver} task${totals.carriedOver === 1 ? '' : 's'} carried forward this period</p>
+          <p class="carryover-summary">${carryTotal} task${carryTotal === 1 ? '' : 's'} left unfinished and carried forward this period</p>
+          ${trendHtml}
           <div class="carryover-by-day">
             <h4 class="carryover-subtitle">Carry-Over by Day of Week</h4>
+            <p class="carryover-hint">Counted on the day each task was left unfinished${showDates ? ' — dates show where each bar comes from' : ''}</p>
             ${dayBars}
           </div>
         `;
