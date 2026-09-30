@@ -11,6 +11,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 ### Added
 - **Update prompt** — when the app returns to the foreground (at most every 15 minutes) it checks the deployed version; if it's newer, a *Work Desk x.y.z is available* toast with a **Reload** button appears. Installed phone apps can otherwise stay on an old version for days
 
+### Improved
+- **New app icon** — `icon-192.png` and `icon-512.png` (home screen, installed app, Apple touch icon) replaced with the lilac marble bust artwork
+
 ### Fixed
 - **Several refreshes needed to see a deploy** — the service worker served the saved copy first and updated it in the background, and GitHub Pages' 10-minute browser cache could make that background update stale too. `sw.js` now loads pages network-first (revalidating past the HTTP cache) and uses the saved copy only offline; it's registered with `updateViaCache: 'none'` and uses a new cache name so the old saved copy is cleared. **Requires deploying the new `sw.js` alongside `index.html`**
 - **Stale copy of the app changing data on sync** — a phone still running a months-old saved copy (e.g. 1.6.0, before Auto carry off was respected during sync) could auto-carry tasks and reset the theme. Synced data now records `appVersion`; a client that sees cloud data from a newer version stops syncing and reloads (once per session, so an intentional rollback can't loop)
