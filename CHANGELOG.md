@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.9.0] — 2026-09-30
+
+### Added
+- **Tag colors** — new Options → Appearance → Tags section with a *Tag colors* setting:
+  - **Theme color** (default) — every tag uses the theme accent, same as before
+  - **Palette** — each tag gets its own color by rotating the theme accent's hue (same lightness and saturation), so tags stay on-theme and change with it; the color is derived from the tag name, so it's stable across devices
+- **Custom tag colors** — click any tag chip on a card to open a color popover (12 preset swatches, custom picker, Reset to auto); a custom color overrides either mode, and its text is blended toward the theme's text color so it stays readable on light, medium, and dark themes
+- **Tag list** — Options → Appearance lists every tag in the current list with its use count, a color picker, and an *auto* reset
+- Tag color mode and custom colors sync with your other preferences
+
 ## [1.8.1] — 2026-09-30
 
 ### Improved
