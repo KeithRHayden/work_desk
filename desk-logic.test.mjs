@@ -3162,16 +3162,25 @@ describe('Tag colors', () => {
     assert.match(entry, /stretch the full width/);
   });
 
-  it('1.12.0 is the latest version and documents updates, the stale-copy guard, and search', () => {
-    assert.match(html, /const APP_VERSION = '1\.12\.0'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.12\.0'/);
-    assert.match(latest, /tag: 'latest'/);
-    assert.match(latest, /Update prompt/);
-    assert.match(latest, /out-of-date copy/);
-    assert.match(latest, /separate lines/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+  it('1.12.0 documents updates, the stale-copy guard, and search', () => {
+    const entry = html.match(/version: '1\.12\.0'[\s\S]*?\n      \},/)[0];
+    assert.match(entry, /Update prompt/);
+    assert.match(entry, /out-of-date copy/);
+    assert.match(entry, /separate lines/);
+    assert.doesNotMatch(entry, /tag: 'latest'/);
     assert.match(html, /id="help-modal"[\s\S]*<strong>Staying up to date<\/strong>/);
+  });
+
+  it('1.12.1 is the latest version and documents the UI audit fixes', () => {
+    assert.match(html, /const APP_VERSION = '1\.12\.1'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.12\.1'/);
+    assert.match(latest, /tag: 'latest'/);
+    assert.match(latest, /more carry-over in red/);
+    assert.match(latest, /tag box no longer pushes cards/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /id="help-modal"[\s\S]*New, Active, and Completed \/ Shelved columns/);
+    assert.doesNotMatch(html, /New \/ Active \/ Done \/ Shelved/);
   });
 
   it('carry-over weekday dates live inside the bar so bars keep full width', () => {
@@ -3258,6 +3267,83 @@ describe('App updates and stale-client guard', () => {
     assert.match(mainScript, /register\('\/work_desk\/sw\.js', \{ scope: '\/work_desk\/', updateViaCache: 'none' \}\)/);
     assert.match(mainScript, /visibilitychange[\s\S]{0,120}checkForAppUpdate\(\)/);
     assert.match(fnSource('checkForAppUpdate'), /fetch\('\/work_desk\/index\.html', \{ cache: 'no-store' \}\)/);
+  });
+});
+
+describe('UI audit fixes (1.12.1)', () => {
+  const load = (name) => new Function(`${fnSource(name)}; return ${name};`)();
+
+  it('week-over-week colors changes by good/bad, and more carry-over is bad', () => {
+    const formatChange = load('formatChange');
+    assert.match(formatChange(2), /class="change-good">\+2 ↑/);
+    assert.match(formatChange(-1), /class="change-bad">-1 ↓/);
+    assert.match(formatChange(2, { lowerIsBetter: true }), /class="change-bad">\+2 ↑/);
+    assert.match(formatChange(-2, { lowerIsBetter: true }), /class="change-good">-2 ↓/);
+    assert.match(formatChange(0), /change-neutral/);
+    assert.match(mainScript, /formatChange\(comparison\.change\.carriedOver, \{ lowerIsBetter: true \}\)/);
+    assert.doesNotMatch(html, /change-up|change-down/);
+  });
+
+  it('search marks finished tasks as done or shelved, never notes', () => {
+    const status = load('searchItemStatus');
+    assert.equal(status({ type: 'task', completed: true }), 'done');
+    assert.equal(status({ type: 'task', shelved: true }), 'shelved');
+    assert.equal(status({ type: 'task' }), null);
+    assert.equal(status({ type: 'note', completed: true }), null);
+    assert.equal((fnSource('collectSearchMatches').match(/status: searchItemStatus\(item\)/g) || []).length, 3);
+  });
+
+  it('board columns cannot be widened by their content, and the card action row wraps', () => {
+    assert.match(html, /\.sprint-board \{[^}]*grid-template-columns: minmax\(0, 1\.1fr\) minmax\(0, 1\.1fr\) minmax\(0, 0\.9fr\);/);
+    assert.match(html, /\.sprint-board \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+    assert.match(html, /\.card-action-bar \{\s*display: flex;\s*flex-wrap: wrap;/);
+    assert.match(html, /\.tag-input-wrap \{\s*display: inline-flex;\s*flex-wrap: wrap;/);
+  });
+
+  it('insights has 8 stat tiles laid out 8, 4, or 2 per row', () => {
+    const render = mainScript.slice(mainScript.indexOf("statGrid.className = 'stat-grid'"));
+    const cards = render.slice(0, render.indexOf('];')).match(/label: '/g);
+    assert.equal(cards.length, 8);
+    assert.doesNotMatch(render.slice(0, 600), /Completion rate/);
+    assert.match(html, /\.stat-grid \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
+    assert.match(html, /@media \(min-width: 1360px\) \{\s*\.stat-grid \{ grid-template-columns: repeat\(8, minmax\(0, 1fr\)\); \}/);
+    assert.match(html, /@media \(max-width: 600px\) \{\s*\.stat-grid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
+  });
+
+  it('progress bar: Done is the solid accent, Active and New are lighter accent shades', () => {
+    assert.match(html, /\.progress-seg\.done \{ background: var\(--progress-done, var\(--accent\)\); \}/);
+    assert.match(html, /\.progress-seg\.active \{ background: var\(--progress-active, color-mix\(in srgb, var\(--accent\) 55%/);
+    assert.match(html, /\.progress-seg\.new \{ background: var\(--progress-new, color-mix\(in srgb, var\(--accent\) 22%/);
+  });
+
+  it('long theme names get the compact label instead of being cut off', () => {
+    assert.equal((mainScript.match(/theme-swatch-name\$\{t\.name\.length > 11 \? ' long' : ''\}/g) || []).length, 2);
+    assert.match(html, /\.theme-swatch-name \{[^}]*max-width: 100%;/);
+    assert.match(html, /\.theme-swatch-name\.long \{ font-size: 0\.56rem;/);
+  });
+
+  it('touch screens get finger-sized hit areas without shifting the layout', () => {
+    const touch = html.slice(html.indexOf('@media (hover: none), (pointer: coarse)'));
+    const block = touch.slice(0, touch.indexOf('.empty-state'));
+    assert.match(block, /\.tag-chip-remove::after, \.card-overflow-btn::after[^{]*\{\s*content: ''; position: absolute; inset: -10px;/);
+    assert.match(block, /\.card-action, \.comment-split-btn \{ padding: 8px 6px; \}/);
+    assert.match(block, /min-height: 36px;/);
+  });
+
+  it('calendar badges are amber, the recurring icon follows the theme, and the week strip snaps', () => {
+    assert.match(html, /\.cal-day-badge \{[^}]*background: rgba\(245, 158, 11, 0\.2\);[^}]*color: #fbbf24;/);
+    assert.doesNotMatch(html, /\u{1F501}/u, 'the always-blue emoji is gone');
+    assert.match(html, /id="recurring-btn"[^>]*><svg class="icon-repeat"/);
+    assert.match(mainScript, /badge\.innerHTML = REPEAT_ICON_SVG;/);
+    assert.match(html, /\.icon-repeat \{[^}]*stroke: currentColor;/);
+    assert.match(html, /\.week-strip \{[^}]*scroll-snap-type: x proximity;[^}]*mask-image:/);
+  });
+
+  it('year carry-over hides empty future months; streak bar gets labels and a legend', () => {
+    assert.match(mainScript, /\.filter\(\(b\) => unit === 'Week' \|\| b\.startKey <= today \|\| b\.count > 0\)/);
+    assert.match(mainScript, /labels\.className = 'streak-heatmap-labels';/);
+    assert.match(mainScript, /labels\.style\.gridTemplateColumns = heatmap\.style\.gridTemplateColumns;/);
+    assert.match(mainScript, /Each block is a day — darker means more tasks/);
   });
 });
 
