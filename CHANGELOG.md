@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.11.1] — 2026-09-30
+
+### Fixed
+- **Carry-over by day of week** bars now stretch the full width of the card and line up edge to edge with the by-week (or by-month) bars. The dates moved inside each bar: just past the fill, or inside the fill in dark text when the bar is more than 60% full
+
 ## [1.11.0] — 2026-09-30
 
 ### Added
