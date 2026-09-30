@@ -6,6 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.8.1] — 2026-09-30
+
+### Improved
+- **Carry-Over Analysis trend** — Month view adds a Carry-Over by Week chart; Year view adds a Carry-Over by Month chart
+- **Dates behind each weekday bar** — on Month and Year views, each weekday row lists the specific dates and counts (e.g. Wed: Sep 9 (2) · Sep 23 (1)), capped at 6 with "+N more"
+
+### Fixed
+- Carry-overs are counted on the day a task was **left unfinished** (its `carriedFrom` date) instead of the day it landed, so "Wed" now means tasks left open on Wednesdays
+
 ## [1.8.0] — 2026-09-29
 
 ### Added
