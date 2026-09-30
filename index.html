@@ -4333,7 +4333,7 @@
       grid-template-columns: 40px 1fr 40px;
       align-items: center;
       gap: 10px;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
 
     .carryover-day-label {
@@ -4343,7 +4343,7 @@
     }
 
     .carryover-day-bar {
-      height: 20px;
+      height: 14px;
       background: var(--panel-bg);
       border: 1px solid var(--border);
       border-radius: 4px;
@@ -4378,11 +4378,17 @@
       margin: -4px 0 10px;
     }
 
+    .carryover-by-day.has-dates .carryover-day-row {
+      grid-template-columns: 40px minmax(80px, 1fr) 24px minmax(0, 42%);
+    }
+
     .carryover-day-dates {
       font-size: 0.75rem;
       color: var(--text-muted);
-      margin: -2px 0 8px 50px;
-      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
 
     /* ── Streak Tracking ─────────────────────────────────── */
@@ -6141,9 +6147,18 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.03em;
-      padding: 2px 5px 2px 8px;
+      line-height: 1.2;
+      padding: 2px 8px;
       border-radius: 20px;
       white-space: nowrap;
+    }
+    .tag-chip:has(.tag-chip-remove) { padding-right: 5px; }
+    /* letter-spacing adds trailing space after the last letter; pull it back so the text box is symmetric */
+    .tag-chip-label { margin-right: -0.03em; }
+    /* Trim the label to cap height + baseline so uppercase text is optically centered in any font */
+    @supports (text-box: trim-both cap alphabetic) {
+      .tag-chip { padding-block: 0.4em; }
+      .tag-chip-label { text-box: trim-both cap alphabetic; }
     }
     /* Palette: hue-rotate the accent in OKLCH so every tag keeps the theme's lightness */
     @supports (color: oklch(from red l c h)) {
@@ -6159,6 +6174,21 @@
       html[data-tag-colors="palette"] .tag-chip[data-tag-slot="5"] { --tag-hue: 225; }
       html[data-tag-colors="palette"] .tag-chip[data-tag-slot="6"] { --tag-hue: 270; }
       html[data-tag-colors="palette"] .tag-chip[data-tag-slot="7"] { --tag-hue: 315; }
+
+      /* Analogous: shades and neighboring hues of the accent (e.g. rose, dark rose, light rose) */
+      html[data-tag-colors="analogous"] .tag-chip {
+        --tag-dh: 0;
+        --tag-dl: 0;
+        --tag-fg: oklch(from var(--accent) clamp(0.4, calc(l + var(--tag-dl)), 0.86) c calc(h + var(--tag-dh)));
+        --tag-bg: color-mix(in srgb, var(--tag-fg) 18%, var(--surface));
+      }
+      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="1"] { --tag-dh: 14;  --tag-dl: 0.08; }
+      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="2"] { --tag-dh: -14; --tag-dl: -0.08; }
+      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="3"] { --tag-dh: 28;  --tag-dl: 0; }
+      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="4"] { --tag-dh: -28; --tag-dl: 0; }
+      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="5"] { --tag-dh: 0;   --tag-dl: 0.14; }
+      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="6"] { --tag-dh: 0;   --tag-dl: -0.14; }
+      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="7"] { --tag-dh: 14;  --tag-dl: -0.1; }
     }
     /* Custom color wins in both modes; text leans toward --text so it stays readable on any theme */
     .tag-chip.tag-custom[data-tag] {
@@ -6281,6 +6311,18 @@
       align-items: center;
       gap: 4px;
     }
+    .tag-suggestions {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag-suggestions:empty { display: none; }
+    button.tag-suggestion {
+      border: none;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    button.tag-suggestion:hover { box-shadow: 0 0 0 1px var(--tag-fg); }
 
     /* Inline "tag" action-bar input */
     .tag-input-inline {
@@ -7030,11 +7072,12 @@
                     <div class="customize-select-row">
                       <label for="tag-color-mode-select">Tag colors</label>
                       <select id="tag-color-mode-select" aria-label="Tag colors">
-                        <option value="theme">Theme color</option>
-                        <option value="palette">Palette</option>
+                        <option value="theme">Single color (accent)</option>
+                        <option value="analogous">Analogous (shades of accent)</option>
+                        <option value="palette">Multi-color (from theme)</option>
                       </select>
                     </div>
-                    <p class="tag-color-hint">Theme: every tag uses the accent. Palette: each tag gets its own color from the theme. Pick a color below (or click a tag on a card) to pin a custom color.</p>
+                    <p class="tag-color-hint">Analogous and Multi-color give each tag its own color that follows the theme when you switch. Pick a color below (or click a tag on a card) to pin a custom color that overrides any mode.</p>
                     <div id="tag-color-list" class="tag-color-list"></div>
 
                   </div>
@@ -7287,7 +7330,7 @@
           <li><strong>Daily desk</strong> — tasks and notes organized by day in New / Active / Done / Shelved columns</li>
           <li><strong>Work, Personal &amp; Projects</strong> — three separate contexts, toggled in the sidebar</li>
           <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
-          <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card; tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
+          <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card — your two most-used tags appear next to the box as one-click picks (they narrow as you type, and skip tags the card already has); tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
           <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
           <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag</li>
           <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
@@ -7318,7 +7361,7 @@
           <li><strong>Or use the button</strong> — click <em>tag</em> in the action bar to add one without touching the card's text</li>
           <li><strong>Case-insensitive</strong> — <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
           <li><strong>Chips</strong> — shown in the top-right corner of the card; click the <strong>×</strong> on a chip to remove that tag</li>
-          <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Theme color</strong> (default) keeps every tag in the accent color; <strong>Palette</strong> gives each tag its own color generated from the current theme, so it changes with the theme and stays the same on every device</li>
+          <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Single color (accent)</strong> (default) keeps every tag in the accent color; <strong>Analogous (shades of accent)</strong> gives each tag a lighter, darker, or neighboring shade of the accent (e.g. rose, dark rose, light rose); <strong>Multi-color (from theme)</strong> gives each tag a distinct hue at the theme's brightness. Analogous and Multi-color follow the theme when you switch, and each tag keeps the same slot on every device</li>
           <li><strong>Custom tag color</strong> — click any tag chip on a card to pick a preset swatch or a custom color, or set colors from the tag list in Options → Appearance; a custom color overrides either mode, and <em>Reset to auto</em> / <em>auto</em> removes it</li>
           <li><strong>Find by tag</strong> — search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
         </ul>
@@ -7396,7 +7439,7 @@
           <li>Switch between <strong>Week</strong>, <strong>Month</strong>, and <strong>Year</strong> views, and step back/forward with the arrows</li>
           <li><strong>Productivity summary</strong> — completion rate, average daily completions, carry-over rate, and your most productive day</li>
           <li><strong>Week-over-week</strong> (week view) — compares this week's completions against the previous one</li>
-          <li><strong>Carry-over analysis</strong> — each carry-over is counted on the day the task was left unfinished. Month and Year add a trend chart (by week or by month), and each weekday bar lists the specific dates behind it (e.g. Wed: Sep 9 (2) · Sep 23 (1))</li>
+          <li><strong>Carry-over analysis</strong> — each carry-over is counted on the day the task was left unfinished. Month and Year add a trend chart (by week or by month), and each weekday bar shows the specific dates behind it on the same line (e.g. Wed: Sep 9 (2) · Sep 23 (1)); hover a row to see the full list when it's too long to fit</li>
           <li><strong>Streak tracking</strong> — current and longest streaks based on days with desk activity, plus a heatmap matched to the period you're viewing</li>
           <li><strong>Weekends don't break streaks</strong> (Options → Behavior → Insights, on by default) — Fri → Mon stays consecutive for streak counting; if you work a Saturday or Sunday it still counts, but an idle weekend does not reset the streak</li>
           <li><strong>Charts</strong> — switch between bar, line, stacked, and pie; hover any segment or point for exact counts</li>
@@ -7531,6 +7574,7 @@
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const STREAK_SKIP_WEEKENDS_KEY = 'work-desk-streak-skip-weekends';
     const TAG_COLOR_MODE_KEY = 'work-desk-tag-color-mode';
+    const TAG_COLOR_MODES = ['theme', 'analogous', 'palette'];
     const TAG_COLORS_KEY = 'work-desk-tag-colors';
     const TAG_PALETTE_SIZE = 8;
     const TAG_PRESET_COLORS = [
@@ -7539,12 +7583,51 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.9.1';
+    const APP_VERSION = '1.11.0';
     const CHANGELOG = [
+      {
+        version: '1.11.0',
+        date: 'Sep 30, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Quick-pick tags — clicking tag on a task or note now shows your two most-used tags as one-click chips next to the text box; they narrow as you type and skip tags the card already has',
+          ]},
+          { label: 'Fixed', items: [
+            'Reopening the tag box right after adding a tag no longer closes it immediately',
+          ]},
+        ],
+      },
+      {
+        version: '1.10.1',
+        date: 'Sep 30, 2026',
+        sections: [
+          { label: 'Improved', items: [
+            'Carry-over by day of week is more compact — each weekday\'s dates now sit on the same line as its bar (hover a row for the full list), with slimmer bars',
+          ]},
+          { label: 'Fixed', items: [
+            'Tag text is now centered in its pill in every font, both vertically and horizontally',
+          ]},
+        ],
+      },
+      {
+        version: '1.10.0',
+        date: 'Sep 30, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Analogous tag colors — a new Tag colors mode that gives each tag a lighter, darker, or neighboring shade of your theme accent (e.g. rose, dark rose, light rose) and follows the theme when you switch',
+          ]},
+          { label: 'Improved', items: [
+            'Tag color modes renamed for clarity: Single color (accent), Analogous (shades of accent), and Multi-color (from theme)',
+          ]},
+          { label: 'Fixed', items: [
+            'Color boxes in the Options tag list now show the color each tag is actually displaying, instead of a placeholder',
+          ]},
+        ],
+      },
       {
         version: '1.9.1',
         date: 'Sep 30, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'Your chosen font no longer resets to the default after a page refresh or when switching themes',
@@ -8810,7 +8893,10 @@
           }
           if (window.__setThemeFavicon) window.__setThemeFavicon(id);
           renderThemeSwatches();
-          setTimeout(() => document.body.classList.remove('theme-transitioning'), 500);
+          setTimeout(() => {
+            document.body.classList.remove('theme-transitioning');
+            syncTagColorListRows();
+          }, 500);
         });
       });
       localStorage.setItem(THEME_KEY, id);
@@ -10950,7 +11036,33 @@
     }
 
     function normalizeTagColorMode(mode) {
-      return mode === 'palette' ? 'palette' : 'theme';
+      return TAG_COLOR_MODES.includes(mode) ? mode : 'theme';
+    }
+
+    // Resolve any CSS color (oklch, color-mix, …) to #rrggbb for <input type="color">
+    let tagColorCanvasCtx = null;
+    function cssColorToHex(color) {
+      if (!tagColorCanvasCtx) {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 1;
+        tagColorCanvasCtx = canvas.getContext('2d', { willReadFrequently: true });
+      }
+      const ctx = tagColorCanvasCtx;
+      if (!ctx || !color) return null;
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = '#000';
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+      return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
+    }
+
+    // The color a tag chip is actually showing right now (mode, theme, or custom)
+    function displayedTagColorHex(chip, tag) {
+      const custom = state.tagColors[tag];
+      if (custom) return custom;
+      const hex = chip && chip.isConnected ? cssColorToHex(getComputedStyle(chip).color) : null;
+      return hex || TAG_PRESET_COLORS[tagPaletteSlot(tag) % TAG_PRESET_COLORS.length];
     }
 
     function normalizeTagColors(obj) {
@@ -10972,6 +11084,13 @@
 
     function saveTagColors(colors) {
       localStorage.setItem(TAG_COLORS_KEY, JSON.stringify(colors));
+    }
+
+    function tagChipLabel(text) {
+      const label = document.createElement('span');
+      label.className = 'tag-chip-label';
+      label.textContent = text;
+      return label;
     }
 
     function decorateTagChip(chip, tag) {
@@ -10996,6 +11115,7 @@
       const el = document.getElementById('tag-color-mode-select');
       if (el) el.value = next;
       localStorage.setItem(TAG_COLOR_MODE_KEY, next);
+      syncTagColorListRows();
       if (!fromSync) schedulePrefsPush();
     }
 
@@ -11028,6 +11148,18 @@
         .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
     }
 
+    const TAG_SUGGESTION_LIMIT = 2;
+
+    // Most-used tags (usage sorted desc) not already on the item, narrowed by what's typed so far
+    function topTagSuggestions(usage, exclude = [], typed = '', limit = TAG_SUGGESTION_LIMIT) {
+      const skip = new Set(exclude);
+      const prefix = normalizeTag(typed) || '';
+      return usage
+        .filter(({ tag, count }) => count > 0 && !skip.has(tag) && tag.startsWith(prefix))
+        .slice(0, limit)
+        .map(({ tag }) => tag);
+    }
+
     function renderTagColorList() {
       const host = document.getElementById('tag-color-list');
       if (!host) return;
@@ -11047,7 +11179,7 @@
 
         const chip = document.createElement('span');
         chip.className = 'tag-chip';
-        chip.textContent = tag;
+        chip.appendChild(tagChipLabel(tag));
         decorateTagChip(chip, tag);
 
         const uses = document.createElement('span');
@@ -11080,7 +11212,7 @@
         const custom = state.tagColors[tag];
         const input = row.querySelector('.tag-color-input');
         const reset = row.querySelector('.tag-color-row-reset');
-        if (input && document.activeElement !== input) input.value = custom || TAG_PRESET_COLORS[tagPaletteSlot(tag) % TAG_PRESET_COLORS.length];
+        if (input && document.activeElement !== input) input.value = displayedTagColorHex(row.querySelector('.tag-chip'), tag);
         if (reset) reset.disabled = !custom;
         row.classList.toggle('has-custom', !!custom);
       });
@@ -11107,7 +11239,7 @@
       title.className = 'tag-color-popover-title';
       const preview = document.createElement('span');
       preview.className = 'tag-chip';
-      preview.textContent = tag;
+      preview.appendChild(tagChipLabel(tag));
       decorateTagChip(preview, tag);
       title.append('Color for ', preview);
       pop.appendChild(title);
@@ -11134,7 +11266,7 @@
       const customInput = document.createElement('input');
       customInput.type = 'color';
       customInput.className = 'tag-color-custom-input';
-      customInput.value = state.tagColors[tag] || TAG_PRESET_COLORS[tagPaletteSlot(tag) % TAG_PRESET_COLORS.length];
+      customInput.value = displayedTagColorHex(anchorEl, tag);
       customInput.addEventListener('input', () => setTagColor(tag, customInput.value));
       customLabel.append(customInput, 'Custom');
       const reset = document.createElement('button');
@@ -13319,9 +13451,7 @@
               chip.className = 'tag-chip';
               chip.style.fontSize = '0.68rem';
               decorateTagChip(chip, tag);
-              const label = document.createElement('span');
-              label.textContent = tag.toUpperCase();
-              chip.appendChild(label);
+              chip.appendChild(tagChipLabel(tag.toUpperCase()));
               const removeBtn = document.createElement('button');
               removeBtn.type = 'button';
               removeBtn.className = 'tag-chip-remove';
@@ -13620,9 +13750,7 @@
           chip.className = 'tag-chip';
           chip.style.fontSize = '0.72rem';
           decorateTagChip(chip, tag);
-          const label = document.createElement('span');
-          label.textContent = tag.toUpperCase();
-          chip.appendChild(label);
+          chip.appendChild(tagChipLabel(tag.toUpperCase()));
           const removeBtn = document.createElement('button');
           removeBtn.type = 'button';
           removeBtn.className = 'tag-chip-remove';
@@ -15266,9 +15394,7 @@
           if (tagColorPopoverTag === tag && document.getElementById('tag-color-popover')) closeTagColorPopover();
           else openTagColorPopover(tag, chip);
         });
-        const label = document.createElement('span');
-        label.textContent = tag;
-        chip.appendChild(label);
+        chip.appendChild(tagChipLabel(tag));
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'tag-chip-remove';
@@ -15439,10 +15565,37 @@
           });
           tagInput.addEventListener('blur', () => {
             setTimeout(() => {
-              if (state.taggingId === item.id) { state.taggingId = null; render(); }
+              if (tagInput.isConnected && state.taggingId === item.id) { state.taggingId = null; render(); }
             }, 150);
           });
           tagInputWrap.appendChild(tagInput);
+
+          const usage = collectTagUsage();
+          const itemTags = normalizeTagList(item.tags);
+          const suggestWrap = document.createElement('span');
+          suggestWrap.className = 'tag-suggestions';
+          const renderSuggestions = () => {
+            suggestWrap.innerHTML = '';
+            for (const tag of topTagSuggestions(usage, itemTags, tagInput.value)) {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'tag-chip tag-suggestion';
+              btn.title = `Add #${tag}`;
+              decorateTagChip(btn, tag);
+              btn.appendChild(tagChipLabel(tag));
+              // Keep focus in the input so its blur handler doesn't close the picker first
+              btn.addEventListener('mousedown', (e) => e.preventDefault());
+              btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                state.taggingId = null;
+                if (!addTagToItem(item.id, tag)) render();
+              });
+              suggestWrap.appendChild(btn);
+            }
+          };
+          tagInput.addEventListener('input', renderSuggestions);
+          renderSuggestions();
+          tagInputWrap.appendChild(suggestWrap);
           actionBar.appendChild(tagInputWrap);
           setTimeout(() => tagInput.focus(), 0);
         } else {
@@ -16913,13 +17066,13 @@
         const showDates = state.insightsPeriod !== 'week';
         const MAX_DATES = 6;
         const shortDate = (k) => dateFromKey(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const barRow = (label, count, extraClass = '', title = '') => `
+        const barRow = (label, count, extraClass = '', title = '', trailing = '') => `
               <div class="carryover-day-row${extraClass}"${title ? ` title="${escapeHtml(title)}"` : ''}>
                 <span class="carryover-day-label">${escapeHtml(label)}</span>
                 <div class="carryover-day-bar">
                   <div class="carryover-day-fill" style="width: ${(count / carryTotal) * 100}%"></div>
                 </div>
-                <span class="carryover-day-count">${count}</span>
+                <span class="carryover-day-count">${count}</span>${trailing}
               </div>`;
 
         let trendHtml = '';
@@ -16937,25 +17090,24 @@
 
         const dayBars = Object.entries(carryPatterns.carryOverByDay)
           .map(([day, count]) => {
-            let datesHtml = '';
+            if (!showDates) return barRow(day, count);
             const dates = carryPatterns.datesByWeekday[day];
-            if (showDates && dates.length) {
-              const shown = dates.slice(0, MAX_DATES)
-                .map((d) => `${shortDate(d.dayKey)} (${d.count})`)
-                .join(' · ');
-              const more = dates.length > MAX_DATES ? ` · +${dates.length - MAX_DATES} more` : '';
-              datesHtml = `<div class="carryover-day-dates" data-weekday="${day}">${shown}${more}</div>`;
-            }
-            return barRow(day, count) + datesHtml;
+            const all = dates.map((d) => `${shortDate(d.dayKey)} (${d.count})`);
+            const shown = all.slice(0, MAX_DATES).join(' · ');
+            const more = dates.length > MAX_DATES ? ` · +${dates.length - MAX_DATES} more` : '';
+            const datesHtml = dates.length
+              ? `<span class="carryover-day-dates" data-weekday="${day}">${shown}${more}</span>`
+              : '<span class="carryover-day-dates-empty"></span>';
+            return barRow(day, count, '', all.join(', '), datesHtml);
           }).join('');
 
         carryCard.innerHTML = `
           <h3 class="carryover-title">Carry-Over Analysis</h3>
           <p class="carryover-summary">${carryTotal} task${carryTotal === 1 ? '' : 's'} left unfinished and carried forward this period</p>
           ${trendHtml}
-          <div class="carryover-by-day">
+          <div class="carryover-by-day${showDates ? ' has-dates' : ''}">
             <h4 class="carryover-subtitle">Carry-Over by Day of Week</h4>
-            <p class="carryover-hint">Counted on the day each task was left unfinished${showDates ? ' — dates show where each bar comes from' : ''}</p>
+            <p class="carryover-hint">Counted on the day each task was left unfinished</p>
             ${dayBars}
           </div>
         `;
