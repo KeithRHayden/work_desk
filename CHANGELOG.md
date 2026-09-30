@@ -6,6 +6,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.12.1] — 2026-09-30
+
+### Improved
+- **Streak bar labels** — weekday names (Week), day numbers every 7 days (Month), or month names (Year) under the blocks, plus a note that each block is a day and darker means more tasks
+- **Year carry-over chart** hides future months with no carry-overs
+- **Search results** show a `✓ Done` or `Shelved` label and dimmed text for finished tasks
+- **Touch targets** — on touch screens, checkboxes are 28px, card links and comment actions are ~33px tall, tabs/toggles/"+ Add task" are at least 36px, and small icon buttons (tag ×, ⋮, ?, version, week arrows, search scope, close ×) get an invisible 10px tap halo so the layout doesn't change
+- **Calendar badges** (open tasks left on past days) use the carry-over amber instead of red
+- **Phone week strip** fades at both edges and snaps to whole days
+- **Recurring icon** is now a drawn icon that follows the theme's text color (the 🔁 emoji was always blue)
+- **Top progress bar** — Done uses the solid accent; Active and New are 55% and 22% accent strength (themes with their own progress colors keep them)
+
+### Fixed
+- **Tag box layout** — board columns are capped at their share (`minmax(0, …fr)`) and the card action row wraps, so the tag box no longer widens a column on desktop or pushes cards off-screen on phones
+- **Week-over-week colors** — changes are colored by good/bad instead of up/down; carry-over is lower-is-better, so an increase is red
+- **Insights stat tiles** — 8 tiles laid out 8, 4, or 2 per row so no row is left partly empty; the duplicate Completion rate tile was removed (it's in Productivity Summary)
+- **Week-over-week on phones** — the "(N last week)" text no longer wraps
+- **Theme names** — names longer than 11 characters (e.g. Mediterranean) use a slightly smaller font and the label uses the full swatch width, so none are cut off
+- **Help** now describes the board as New, Active, and Completed / Shelved columns
+
 ## [1.12.0] — 2026-09-30
 
 ### Added
