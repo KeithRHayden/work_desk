@@ -3192,14 +3192,40 @@ describe('Tag colors', () => {
     assert.doesNotMatch(html, /stay available in the sidebar on mobile/);
   });
 
-  it('1.13.1 is the latest version and documents the tag box fix', () => {
-    assert.match(html, /const APP_VERSION = '1\.13\.1'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.13\.1'/);
-    assert.match(latest, /tag: 'latest'/);
-    assert.match(latest, /tag box on a card no longer closes/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+  it('1.13.1 documents the tag box fix', () => {
+    const entry = html.match(/version: '1\.13\.1'[\s\S]*?\n      \},/)[0];
+    assert.match(entry, /tag box on a card no longer closes/);
+    assert.doesNotMatch(entry, /tag: 'latest'/);
     assert.match(html, /id="help-modal"[\s\S]*box stays open until you add a tag, press Esc, or click outside it/);
+  });
+
+  it('1.13.2 is the latest version and documents the version move', () => {
+    assert.match(html, /const APP_VERSION = '1\.13\.2'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.13\.2'/);
+    assert.match(latest, /tag: 'latest'/);
+    assert.match(latest, /bottom of the sidebar/);
+    assert.match(latest, /What\\'s new link/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /id="help-modal"[\s\S]*highlighted <strong>What's new<\/strong> link/);
+    assert.doesNotMatch(html, /next to the app name to see the full changelog/);
+  });
+
+  it('version lives in the sidebar footer; the What\'s new link sits under the subtitle and hides on close', () => {
+    const sub = html.match(/<p id="logo-sub" class="logo-sub">[\s\S]*?<\/p>/)[0];
+    assert.doesNotMatch(sub, /version-btn|version-new-dot/);
+    assert.match(html, /<\/p>\s*<button id="whats-new-link" class="whats-new-link hidden" type="button">What's new<span id="version-new-dot" class="version-new-dot"><\/span><\/button>/);
+    assert.match(html, /<div class="sidebar-version">\s*<button id="version-btn" class="version-btn" type="button" title="What's new"><\/button>\s*<\/div>\s*<\/aside>/);
+    assert.equal((html.match(/id="version-btn"/g) || []).length, 1);
+    assert.equal((html.match(/id="whats-new-link"/g) || []).length, 1);
+    const close = html.match(/function closeChangelog\(\) \{[\s\S]*?\n    \}/)[0];
+    assert.match(close, /changelogModal\.classList\.add\('hidden'\);\s*whatsNewLink\.classList\.add\('hidden'\);/);
+    const open = html.match(/function openChangelog\(\) \{[\s\S]*?\n    \}/)[0];
+    assert.doesNotMatch(open, /whatsNewLink/, 'link stays visible while the changelog is open');
+    assert.match(html, /if \(localStorage\.getItem\(LAST_SEEN_VERSION_KEY\) !== APP_VERSION\) \{\s*whatsNewLink\.classList\.remove\('hidden'\);/);
+    assert.match(html, /whatsNewLink\.addEventListener\('click', openChangelog\);/);
+    assert.match(html, /mobile-menu-new-dot'\)\.classList\.toggle\('hidden', whatsNewLink\.classList\.contains\('hidden'\)\)/);
+    assert.doesNotMatch(html, /versionDot/);
   });
 
   it('card tag box closes on outside clicks, not on blur, and wins focus', () => {
@@ -3579,7 +3605,7 @@ describe('Phone menu (1.13.0)', () => {
 
   it('phone block hides the moved rows, Today card, version, and gear, and keeps a collapsed sidebar open', () => {
     const phone = phoneBlocks().map(([s, e]) => css.slice(s, e)).join('\n');
-    assert.match(phone, /\.sidebar \.sidebar-backup,\s*\.sidebar \.sidebar-account,\s*#sidebar-today-glance,\s*#version-btn,\s*#version-new-dot,\s*#density-toggle \{ display: none; \}/);
+    assert.match(phone, /\.sidebar \.sidebar-backup,\s*\.sidebar \.sidebar-account,\s*#sidebar-today-glance,\s*\.sidebar-version,\s*#whats-new-link,\s*#density-toggle \{ display: none; \}/);
     assert.match(phone, /\.sidebar\.collapsed \{ width: 100%;/);
     assert.match(phone, /\.mobile-menu-sheet:not\(\.hidden\) \{[^}]*position: fixed;[^}]*z-index: 91;/);
     assert.match(phone, /\.density-popout \{[^}]*position: fixed;[^}]*bottom: 0;/);
