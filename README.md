@@ -183,7 +183,7 @@ npm run test:e2e:ui      # Playwright UI mode
 npm run test:all         # unit + e2e
 ```
 
-Layout/CSS coverage: unit invariants assert critical selectors (e.g. `#desk-view` flex pin, mobile logo-sub / backup grid). Playwright `e2e/layout.spec.ts` checks desktop board scroll with a pinned sticky header, and mobile help/version + Export/Import button width.
+Layout/CSS coverage: unit invariants assert critical selectors (e.g. desktop page scroll on `.main` / `#desk-view`, mobile logo-sub / backup grid). Playwright `e2e/layout.spec.ts` checks that the desktop desk scrolls like a normal page (the top card scrolls away; the board has no scroll box of its own), and mobile help/version + Export/Import button width.
 
 Desktop screenshot baselines (`e2e/smoke.spec.ts-snapshots/`) cover the desk at 1440/1024/820px, Insights, the collapsed sidebar, the Options panel, and the Export menu; any pixel change fails the suite. Regenerate them only for an intended desktop change: `npx playwright test -g "Desktop layout baselines" --update-snapshots`. The phone menu suite checks every menu control, the 768/769px boundary, resizing with the menu open, and that no button is duplicated.
 
