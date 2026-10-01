@@ -72,6 +72,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - Responsive layout for phone, tablet, and desktop
 - **Phone menu** — at 768px and narrower, the header keeps tabs, search, and Help; a menu button opens a bottom sheet with account and sign-in, Export / Import, Repair duplicates, Options, and What's new (close with ×, a tap outside, Esc, or a swipe down). A sync dot beside it shows sync status at a glance
+- **What's New** — after an update, a highlighted "What's new" link with a pulsing dot appears under the sidebar subtitle; it opens the changelog and disappears once you close it. The version number at the bottom of the sidebar opens the changelog any time
 - **Sticky bottom add bar** on mobile so capture stays reachable while scrolling
 - Installable home-screen app and service worker offline shell
 - **Always the latest version online** — the service worker (`sw.js`) loads the page network-first and only falls back to the saved copy offline, so a new deploy shows on the first load; an app left open in the background offers a **Reload** when a newer version ships
