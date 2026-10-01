@@ -815,12 +815,21 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
     assert.match(html, /addItem\(content,\s*options\s*=\s*\{\}\)/);
   });
 
-  it('desktop desk pin targets #desk-view (id exists; class alone would break scroll)', () => {
+  it('desktop desk scrolls like a normal page: .main scrolls, the top card is not pinned, the board has no own scroll', () => {
     assert.match(html, /id="desk-view"/);
-    // Flex pin must use the id selector — the markup has no class="desk-view"
-    assert.match(html, /#desk-view\s*\{[^}]*flex:\s*1/s);
-    assert.match(html, /\.desk-board-area\s*\{[^}]*overflow-y:\s*auto/s);
     assert.doesNotMatch(html, /id="desk-view"[^>]*class="[^"]*desk-view/);
+    const main = html.match(/\n    \.main \{[^}]*\}/)[0];
+    assert.match(main, /overflow-y: auto;/);
+    assert.match(main, /scrollbar-gutter: stable;/);
+    assert.doesNotMatch(main, /overflow: hidden/);
+    assert.match(html, /\n    \.density-popout \{[^}]*max-height: calc\(100vh - 112px\);/);
+    const desk = html.match(/\n    #desk-view \{[^}]*\}/)[0];
+    assert.match(desk, /flex: none;/);
+    assert.doesNotMatch(desk, /overflow/);
+    const board = html.match(/\n    \.desk-board-area \{[^}]*\}/)[0];
+    assert.doesNotMatch(board, /overflow/);
+    const sticky = html.match(/\n    \.desk-sticky \{[^}]*\}/)[0];
+    assert.doesNotMatch(sticky, /position: (sticky|fixed)/);
   });
 
   it('mobile CSS keeps help/version and full-width backup buttons', () => {
@@ -3199,14 +3208,20 @@ describe('Tag colors', () => {
     assert.match(html, /id="help-modal"[\s\S]*box stays open until you add a tag, press Esc, or click outside it/);
   });
 
-  it('1.13.2 is the latest version and documents the version move', () => {
-    assert.match(html, /const APP_VERSION = '1\.13\.2'/);
+  it('1.13.3 is the latest version and documents normal desktop page scroll', () => {
+    assert.match(html, /const APP_VERSION = '1\.13\.3'/);
     const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.13\.2'/);
+    assert.match(latest, /version: '1\.13\.3'/);
     assert.match(latest, /tag: 'latest'/);
-    assert.match(latest, /bottom of the sidebar/);
-    assert.match(latest, /What\\'s new link/);
+    assert.match(latest, /scrolls like a normal page/);
     assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+  });
+
+  it('1.13.2 documents the version move', () => {
+    const entry = html.match(/version: '1\.13\.2'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(entry, /tag: 'latest'/);
+    assert.match(entry, /bottom of the sidebar/);
+    assert.match(entry, /What\\'s new link/);
     assert.match(html, /id="help-modal"[\s\S]*highlighted <strong>What's new<\/strong> link/);
     assert.doesNotMatch(html, /next to the app name to see the full changelog/);
   });
