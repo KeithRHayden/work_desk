@@ -124,7 +124,7 @@ async function seedLayout(page: Page, extra: Record<string, string> = {}) {
 }
 
 test.describe('Desktop layout baselines', () => {
-  // Captured from 1.12.1 before the phone menu. Version text is masked so bumps don't count as changes.
+  // Re-captured at 1.13.2 (version moved to the sidebar footer). Version text is masked so bumps don't count as changes.
   const shot = (page: Page, name: string) =>
     expect(page).toHaveScreenshot(name, {
       fullPage: true,
@@ -2835,6 +2835,126 @@ test.describe('Help and What\'s New modals', () => {
     await page.locator('#changelog-modal-dismiss').click();
     await expect(page.locator('#changelog-modal')).toBeHidden();
     expect(await page.evaluate(() => localStorage.getItem('work-desk-last-seen-version'))).toBe(label.slice(1));
+    await expect(page.locator('#whats-new-link')).toBeHidden();
     await expect(page.locator('#version-new-dot')).toBeHidden();
+  });
+});
+
+// ── What's new link + version footer (1.13.2) ──────────────────────────
+test.describe('What\'s new link and version footer (1.13.2)', () => {
+  const headerHeight = (page: Page) =>
+    page.evaluate(() => Math.round(document.querySelector('.sidebar-header')!.getBoundingClientRect().height));
+  const box = async (page: Page, sel: string) => (await page.locator(sel).boundingBox())!;
+
+  test('unseen update: link sits under the subtitle; opening keeps it, closing removes it and restores the header height', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    const link = page.locator('#whats-new-link');
+    await expect(link).toBeVisible();
+    await expect(link).toHaveText("What's new");
+    await expect(page.locator('#version-new-dot')).toBeVisible();
+    const sub = await box(page, '#logo-sub');
+    const linkBox = await box(page, '#whats-new-link');
+    expect(linkBox.y).toBeGreaterThanOrEqual(sub.y + sub.height - 1);
+    expect(Math.abs(linkBox.x - sub.x)).toBeLessThan(2);
+    await expect(page.locator('#logo-sub #version-btn')).toHaveCount(0);
+    const tallHeader = await headerHeight(page);
+
+    await link.click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expect(link).toBeVisible();
+
+    await page.locator('#changelog-modal-close').click();
+    await expect(page.locator('#changelog-modal')).toBeHidden();
+    await expect(link).toBeHidden();
+    const normalHeader = await headerHeight(page);
+    expect(normalHeader).toBeLessThan(tallHeader);
+    expect(normalHeader).toBe(50);
+    await expect(page.locator('#sidebar-today-glance')).toBeVisible();
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(link).toBeHidden();
+    expect(await headerHeight(page)).toBe(normalHeader);
+  });
+
+  for (const how of ['Got it', 'backdrop', 'Escape'] as const) {
+    test(`closing the changelog with ${how} also removes the link`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await seedLayout(page);
+      await page.locator('#whats-new-link').click();
+      await expect(page.locator('#changelog-modal')).toBeVisible();
+      if (how === 'Got it') await page.locator('#changelog-modal-dismiss').click();
+      else if (how === 'backdrop') await page.locator('#changelog-modal').click({ position: { x: 5, y: 5 } });
+      else await page.keyboard.press('Escape');
+      await expect(page.locator('#changelog-modal')).toBeHidden();
+      await expect(page.locator('#whats-new-link')).toBeHidden();
+    });
+  }
+
+  test('version button lives at the bottom of the sidebar and opens the changelog any time', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    const ver = page.locator('.sidebar > .sidebar-version > #version-btn');
+    await expect(ver).toBeVisible();
+    await expect(ver).toHaveText(/^v\d+\.\d+\.\d+$/);
+    const verBox = await box(page, '#version-btn');
+    const account = await box(page, '#sidebar-account');
+    expect(verBox.y).toBeGreaterThanOrEqual(account.y + account.height - 1);
+
+    // Footer click while the link is showing: closing still clears the link
+    await ver.click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await page.locator('#changelog-modal-dismiss').click();
+    await expect(page.locator('#whats-new-link')).toBeHidden();
+
+    // Already seen: footer still opens it, link never comes back
+    await ver.click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expect(page.locator('#changelog-body')).toContainText((await ver.textContent())!.slice(1));
+    await page.locator('#changelog-modal-close').click();
+    await expect(page.locator('#whats-new-link')).toBeHidden();
+  });
+
+  test('when the current version was already seen, no link shows and the header is normal height', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    const version = (await page.locator('#version-btn').textContent())!.slice(1);
+    await page.evaluate((v) => localStorage.setItem('work-desk-last-seen-version', v), version);
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('#whats-new-link')).toBeHidden();
+    expect(await headerHeight(page)).toBe(50);
+    await expect(page.locator('#version-btn')).toBeVisible();
+  });
+
+  test('collapsed sidebar hides both; expanding brings them back', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    await page.locator('#sidebar-toggle').click();
+    await expect.poll(() => page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(0);
+    await expect(page.locator('#whats-new-link')).not.toBeInViewport();
+    await expect(page.locator('#version-btn')).not.toBeInViewport();
+    await page.locator('#sidebar-toggle').click();
+    await expect(page.locator('#whats-new-link')).toBeInViewport();
+    await expect(page.locator('#version-btn')).toBeInViewport();
+    await page.locator('#whats-new-link').click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+  });
+
+  test('phone: link and footer stay hidden; the menu dot clears after closing What\'s new', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedLayout(page);
+    await expect(page.locator('#whats-new-link')).toBeHidden();
+    await expect(page.locator('.sidebar-version')).toBeHidden();
+    await page.locator('#mobile-menu-btn').click();
+    await expect(page.locator('#mobile-menu-new-dot')).toBeVisible();
+    await page.locator('#mobile-menu-whatsnew').click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await page.locator('#changelog-modal-dismiss').click();
+    await page.locator('#mobile-menu-btn').click();
+    await expect(page.locator('#mobile-menu-sheet')).toBeVisible();
+    await expect(page.locator('#mobile-menu-new-dot')).toBeHidden();
+    await expect(page.locator('#whats-new-link')).toBeHidden();
   });
 });
