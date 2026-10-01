@@ -51,19 +51,19 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **84 preset themes** — 28 light + 28 medium + 28 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Retro, Game Boy, Monokai, Phosphor, Fog, Twilight, etc.), browsed as mini wireframe previews, filterable by Light/Med/Dark
 - **Custom Theme Builder** — create up to 5 of your own themes from 5 picked colors (Background, Surface, Sidebar, Accent, Text); ~30 CSS variables auto-derived, live preview, synced across devices
-- **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date)
+- **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date; on phones, **Options** in the menu)
   - Themes: 84 presets with Light/Med/Dark filters, plus Custom tab for user-created themes
   - Appearance: Comfortable/Compact density, text size, font family, sidebar position, card glow, gradient header
   - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view, celebration confetti, confirm before delete, strike-through completed tasks, truncate long project notes, weekends don't break streaks, holiday settings
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
-- Collapsible sidebar on desktop, with a "Today's Progress" mini card that always reflects today regardless of which day you're viewing
+- Collapsible sidebar on desktop, with a "Today's Progress" mini card that always reflects today regardless of which day you're viewing (hidden on phones, where the desk header's progress bar and Back to today cover it)
 
 ### Cloud sync and offline
 
 - **Optional Supabase sync** — email sign-in; devices merge rather than overwrite
 - **Deletes stick everywhere** — a deleted task or note is removed from every device, even one that still has an old copy; **Undo** restores it on every device
 - **Synced preferences** — theme, density, strike-through, comment/completed/auto-carry toggles, week start day, startup view, and confetti follow your account (last change wins)
-- **Continue offline** — use the desk without an account; data stays in this browser only (clearing site data can wipe it). Use **Sign in** in the sidebar account footer when you’re ready to sync.
+- **Continue offline** — use the desk without an account; data stays in this browser only (clearing site data can wipe it). Use **Sign in** in the sidebar account footer (on phones, in the menu) when you’re ready to sync.
 - **Export / Import Desk** — save or restore a single tab (Work, Personal, or Projects) as a JSON file; the export stamps which desk it came from, and importing into the wrong tab shows a confirmation warning
 - **Export / Import All** — bundles Work + Personal + Projects into a single file for a complete one-click backup and restore
 - Auto-prune of days older than 1 year from the local cache (cloud keeps history)
@@ -71,6 +71,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Mobile and PWA
 
 - Responsive layout for phone, tablet, and desktop
+- **Phone menu** — at 768px and narrower, the header keeps tabs, search, and Help; a menu button opens a bottom sheet with account and sign-in, Export / Import, Repair duplicates, Options, and What's new (close with ×, a tap outside, Esc, or a swipe down). A sync dot beside it shows sync status at a glance
 - **Sticky bottom add bar** on mobile so capture stays reachable while scrolling
 - Installable home-screen app and service worker offline shell
 - **Always the latest version online** — the service worker (`sw.js`) loads the page network-first and only falls back to the saved copy offline, so a new deploy shows on the first load; an app left open in the background offers a **Reload** when a newer version ships
@@ -182,6 +183,8 @@ npm run test:all         # unit + e2e
 ```
 
 Layout/CSS coverage: unit invariants assert critical selectors (e.g. `#desk-view` flex pin, mobile logo-sub / backup grid). Playwright `e2e/layout.spec.ts` checks desktop board scroll with a pinned sticky header, and mobile help/version + Export/Import button width.
+
+Desktop screenshot baselines (`e2e/smoke.spec.ts-snapshots/`) cover the desk at 1440/1024/820px, Insights, the collapsed sidebar, the Options panel, and the Export menu; any pixel change fails the suite. Regenerate them only for an intended desktop change: `npx playwright test -g "Desktop layout baselines" --update-snapshots`. The phone menu suite checks every menu control, the 768/769px boundary, resizing with the menu open, and that no button is duplicated.
 
 
 E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), search overlay (result count, `#tagname` filtering, close/outside-click), project tasks (mid-edit preservation, empty-save deletion, cancel revert, tombstone tracking, double-click editing), dynamic add-form placeholder, project note list padding, settings popout 3-tab split (Themes/Appearance/Behavior), theme filter buttons (Light/Med/Dark/Custom switching), custom theme builder (add/edit/delete/apply/persist/max-5 cap), comments (add/edit/delete/badge/collapse/split to task or note/undo/text hover actions), recurring templates (add/edit/delete/persist), Insights tab (period selector, navigation, charts, summary stats, day-by-day date labels), streak weekend toggle (default, effect on streaks, persistence), Desk vs Projects view separation, project lifecycle (empty state, rename, delete confirm/cancel, notes, tabs, persistence, sidebar counts), Work/Personal context isolation, day navigation and Back to today, desk notes, carry forward, and the Help / What's New modals. The auth modal is dismissed via **Continue offline**.
