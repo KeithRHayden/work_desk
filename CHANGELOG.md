@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.13.1] — 2026-10-01
+
+### Fixed
+- **Tag box closing instantly** — clicking *tag* on a card opened the box and closed it right away whenever another card had an unsent comment draft or a column's inline add box was open, because those boxes take focus back on every redraw and the tag box closed when it lost focus. The tag box now closes only when you add a tag, press Esc, or click outside it, and its text field gets focus after the other boxes so you can type right away
+
 ## [1.13.0] — 2026-10-01
 
 ### Added
