@@ -895,6 +895,62 @@ test.describe('Tags', () => {
     await expect(card.locator('.tag-input-inline')).toHaveCount(0);
   });
 
+  async function expectTagBoxStaysOpen(page, card) {
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    const input = card.locator('.tag-input-inline');
+    await page.waitForTimeout(600);
+    await expect(input).toBeVisible();
+    await expect(input).toBeFocused();
+    await expect(card.locator('.tag-suggestion').first()).toBeVisible();
+    await page.keyboard.type('kept');
+    await expect(input).toHaveValue('kept');
+  }
+
+  test('tag box stays open and focused while another card has an unsent comment draft', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Draft holder #ace');
+    await addTask(page, 'Tag target');
+    const holder = page.locator('.item-card', { hasText: 'Draft holder' }).first();
+    await holder.locator('.card-action').filter({ hasText: /comment/ }).first().click();
+    const trigger = holder.locator('.add-comment-trigger');
+    if (await trigger.count()) await trigger.click();
+    await holder.locator('.add-comment-form .comment-input').click();
+    await page.keyboard.type('unsent draft');
+
+    await expectTagBoxStaysOpen(page, page.locator('.item-card', { hasText: 'Tag target' }).first());
+    await expect(holder.locator('.add-comment-form .comment-input')).toHaveText('unsent draft');
+  });
+
+  test('tag box stays open and focused while a column add box is open', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Seed #ace');
+    await addTask(page, 'Tag target');
+    await page.locator('.board-column button').filter({ hasText: /add/i }).first().click();
+    await expect(page.locator('.col-inline-input')).toBeVisible();
+
+    await expectTagBoxStaysOpen(page, page.locator('.item-card', { hasText: 'Tag target' }).first());
+  });
+
+  test('tag box closes on an outside click and moves when tagging another card', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Card one #ace');
+    await addTask(page, 'Card two');
+    const one = page.locator('.item-card', { hasText: 'Card one' }).first();
+    const two = page.locator('.item-card', { hasText: 'Card two' }).first();
+
+    await two.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await two.locator('.tag-input-inline').click();
+    await expect(two.locator('.tag-input-inline')).toBeVisible();
+
+    await one.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await expect(page.locator('.tag-input-inline')).toHaveCount(1);
+    await expect(one.locator('.tag-input-inline')).toBeFocused();
+
+    await page.locator('#date-title').click();
+    await expect(page.locator('.tag-input-inline')).toHaveCount(0);
+    await expect(two.locator('button.card-action', { hasText: /^tag$/i })).toBeVisible();
+  });
+
   test('tag picks work on notes too', async ({ page }) => {
     await openDesk(page);
     await addTask(page, 'Tagged #ace');
