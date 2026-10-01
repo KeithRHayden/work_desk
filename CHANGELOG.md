@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.13.0] — 2026-10-01
+
+### Added
+- **Phone menu** — at 768px and narrower, the sidebar's account, Export / Import, and Repair duplicates rows move into a bottom sheet opened from a menu button at the top right, along with Options and What's new. Tabs, search, and Help stay in the header. Close it with ×, a tap outside, Esc, or a swipe down on the handle. The existing sections are moved into the sheet while it's open and put back when it closes, so no buttons are duplicated
+- **Sync dot** beside the menu button — filled when synced, outlined while syncing, red on a sync error, hollow when not signed in; the menu button shows a small dot when you're not signed in
+
+### Improved
+- **Options on phones** opens as a bottom sheet over a dimmed backdrop and is reachable from Desk, Insights, and Projects (the header gear is hidden on phones)
+- **Today's Progress card** is hidden on phones; the desk header's progress bar and Back to today button already cover it
+- Desktop and tablet are unchanged — verified with pixel screenshot baselines captured before the change
+
+### Fixed
+- **Collapsed sidebar on phones** — a sidebar collapsed on a wider screen stayed at zero width on phones, where the collapse button is hidden, leaving no tabs; phones now always show it, and widening the window restores the collapsed state
+
 ## [1.12.1] — 2026-09-30
 
 ### Improved
