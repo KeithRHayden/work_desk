@@ -2398,6 +2398,16 @@
       animation: version-pulse 2s ease-in-out infinite;
       flex-shrink: 0;
     }
+    .whats-new-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 4px; padding: 0;
+      background: none; border: none; cursor: pointer;
+      font: inherit; font-size: 0.72rem; font-weight: 600;
+      color: var(--accent);
+    }
+    .whats-new-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+    .whats-new-link.hidden { display: none; }
+    .sidebar-version { display: flex; padding-top: 10px; }
     @keyframes version-pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.35; }
@@ -6681,7 +6691,7 @@
 
       .sidebar-header { align-items: center; }
       .logo { font-size: 1.1rem; }
-      /* Keep help (?) and version visible — hide only the subtitle text to save space */
+      /* Keep help (?) visible — hide only the subtitle text to save space */
       .logo-wrap { display: flex; align-items: center; gap: 8px; }
       .logo-sub { display: flex; margin-top: 0; }
       #logo-sub-text { display: none; }
@@ -6860,8 +6870,8 @@
       .sidebar .sidebar-backup,
       .sidebar .sidebar-account,
       #sidebar-today-glance,
-      #version-btn,
-      #version-new-dot,
+      .sidebar-version,
+      #whats-new-link,
       #density-toggle { display: none; }
 
       .mobile-menu-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
@@ -6976,9 +6986,8 @@
           <p id="logo-sub" class="logo-sub">
             <span id="logo-sub-text"></span>
             <button id="help-btn" class="logo-help-btn" type="button" aria-label="How to use this app" title="How to use this app">?</button>
-            <button id="version-btn" class="version-btn" type="button" title="What's new"></button>
-            <span id="version-new-dot" class="version-new-dot hidden"></span>
           </p>
+          <button id="whats-new-link" class="whats-new-link hidden" type="button">What's new<span id="version-new-dot" class="version-new-dot"></span></button>
         </div>
         <div class="mobile-menu-actions">
           <span id="mobile-sync-dot" class="mobile-sync-dot" data-status="idle" title="Cloud sync status"></span>
@@ -7080,6 +7089,10 @@
           <button id="sb-signin-btn" class="sb-account-btn hidden" type="button" title="Sign in to sync your desk">Sign in to sync</button>
           <button id="sb-signout-btn" class="sb-account-btn hidden" type="button" title="Sign out">Sign out</button>
         </div>
+      </div>
+
+      <div class="sidebar-version">
+        <button id="version-btn" class="version-btn" type="button" title="What's new"></button>
       </div>
     </aside>
 
@@ -7500,7 +7513,7 @@
           <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically. Deleting a task or note removes it from every device; <strong>Undo</strong> brings it back everywhere</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
           <li><strong>Staying up to date</strong> — the app loads the latest version whenever you're online (the saved copy is only used offline). If the app has been open in the background when a new version ships, a <em>Work Desk x.y.z is available</em> message with a <strong>Reload</strong> button appears when you come back to it</li>
-          <li><strong>What's New</strong> — click the version number at the bottom of the sidebar to see the latest changes; a pulsing dot appears when there's an unread update</li>
+          <li><strong>What's New</strong> — when there's an unread update, a highlighted <strong>What's new</strong> link with a pulsing dot appears under the subtitle; click it to see the changes, and it goes away when you close the window. The version number (<strong>v1.x.x</strong>) at the very bottom of the sidebar opens the same changelog any time</li>
         </ul>
 
         <h3>Task &amp; note cards</h3>
@@ -7644,7 +7657,7 @@
           <li>Use the sidebar collapse button (‹) to give the board more room</li>
           <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
           <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors; use the <strong>Custom</strong> tab to create your own theme from 5 picked colors</li>
-          <li>Click the version number (<strong>v1.x.x</strong>) next to the app name to see the full changelog (on phones: menu → What's new); a pulsing dot means there's something new</li>
+          <li>Click the version number (<strong>v1.x.x</strong>) at the bottom of the sidebar to see the full changelog (on phones: menu → What's new); a <strong>What's new</strong> link under the subtitle means there's something new</li>
         </ul>
 
         <h3>Keyboard shortcuts</h3>
@@ -7745,12 +7758,25 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.13.1';
+    const APP_VERSION = '1.13.2';
     const CHANGELOG = [
+      {
+        version: '1.13.2',
+        date: 'Oct 1, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'The version number moved to the bottom of the sidebar, so the subtitle row is just "Work tasks & notes ?"',
+            'After an update, a highlighted What\'s new link appears under the subtitle. Click it to see what changed; it disappears when you close the window and the sidebar spacing returns to normal',
+          ]},
+          { label: 'Fixed', items: [
+            'The unread-update dot no longer makes the subtitle wrap onto two lines and push the sidebar down',
+          ]},
+        ],
+      },
       {
         version: '1.13.1',
         date: 'Oct 1, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'The tag box on a card no longer closes the instant it opens when another card has an unsent comment or a column\'s add box is open. It now stays open until you add a tag, press Esc, or click outside it, and the text field is ready to type in',
@@ -18819,7 +18845,7 @@
     const changelogClose = document.getElementById('changelog-modal-close');
     const changelogDismiss = document.getElementById('changelog-modal-dismiss');
     const versionBtn = document.getElementById('version-btn');
-    const versionDot = document.getElementById('version-new-dot');
+    const whatsNewLink = document.getElementById('whats-new-link');
 
     const CHANGELOG_RECENT_COUNT = 5;
     const CHANGELOG_OLDER_LIMIT = 3;
@@ -18876,16 +18902,20 @@
       renderChangelog();
       changelogModal.classList.remove('hidden');
       localStorage.setItem(LAST_SEEN_VERSION_KEY, APP_VERSION);
-      versionDot.classList.add('hidden');
     }
-    function closeChangelog() { changelogModal.classList.add('hidden'); }
+    // The link stays put while the modal is open and goes away once it's closed
+    function closeChangelog() {
+      changelogModal.classList.add('hidden');
+      whatsNewLink.classList.add('hidden');
+    }
 
     versionBtn.textContent = `v${APP_VERSION}`;
     if (localStorage.getItem(LAST_SEEN_VERSION_KEY) !== APP_VERSION) {
-      versionDot.classList.remove('hidden');
+      whatsNewLink.classList.remove('hidden');
     }
 
     versionBtn.addEventListener('click', openChangelog);
+    whatsNewLink.addEventListener('click', openChangelog);
     changelogClose.addEventListener('click', closeChangelog);
     changelogDismiss.addEventListener('click', closeChangelog);
     changelogModal.addEventListener('click', (e) => { if (e.target === changelogModal) closeChangelog(); });
@@ -19003,7 +19033,7 @@
         closeDensityPopout();
         sections.forEach((el) => movedHost.appendChild(el));
         document.getElementById('mobile-menu-version').textContent = `v${APP_VERSION}`;
-        document.getElementById('mobile-menu-new-dot').classList.toggle('hidden', versionDot.classList.contains('hidden'));
+        document.getElementById('mobile-menu-new-dot').classList.toggle('hidden', whatsNewLink.classList.contains('hidden'));
         sheet.classList.remove('hidden');
         backdrop.classList.remove('hidden');
         document.body.classList.add('mobile-menu-open');
