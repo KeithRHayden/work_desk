@@ -6,6 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.13.2] — 2026-10-01
+
+### Improved
+- **Version number moved to the sidebar footer** — the `v1.x.x` button now sits at the very bottom of the sidebar, under the account section, so the subtitle row is just "Work tasks & notes ?"
+- **What's new link** — after an update, a highlighted *What's new* link with the pulsing dot appears under the subtitle. It opens the changelog and disappears when the changelog is closed (×, Got it, a click outside, or Esc), returning the header to its normal height. Phones are unchanged: What's new stays in the menu
+
+### Fixed
+- **Subtitle wrapping** — with wider fonts such as JetBrains Mono, the unread-update dot made the subtitle row too wide, so "Work tasks & notes" wrapped onto two lines and pushed the sidebar down until the changelog was opened
+
 ## [1.13.1] — 2026-10-01
 
 ### Fixed
