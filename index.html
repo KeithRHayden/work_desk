@@ -1981,6 +1981,10 @@
     .sidebar-collapse-btn svg { width: 12px; height: 12px; display: block; pointer-events: none; }
     .app.sidebar-collapsed .sidebar-collapse-btn { left: 12px; transform: translateX(0); }
 
+    /* Phone-only menu; every visible rule lives in the max-width: 768px block */
+    .mobile-menu-actions, .mobile-menu-sheet, .mobile-menu-backdrop { display: none; }
+    body.mobile-menu-open { overflow: hidden; }
+
     /* Tooltip */
     .sidebar-tooltip {
       position: absolute;
@@ -6678,7 +6682,8 @@
       .sidebar-header { align-items: center; }
       .logo { font-size: 1.1rem; }
       /* Keep help (?) and version visible — hide only the subtitle text to save space */
-      .logo-sub { display: flex; margin-top: 4px; }
+      .logo-wrap { display: flex; align-items: center; gap: 8px; }
+      .logo-sub { display: flex; margin-top: 0; }
       #logo-sub-text { display: none; }
       .sidebar-account { margin-top: 0; padding-top: 10px; }
       .sidebar-backup { margin-top: 0; }
@@ -6846,6 +6851,84 @@
       .week-strip-row { margin-bottom: 10px; }
 
       .board-column { margin-bottom: 12px; }
+
+      /* A sidebar collapsed on a wider screen has no expand button here, so keep it open */
+      .sidebar.collapsed { width: 100%; padding: 10px 14px 12px; overflow: visible; }
+
+      /* ── Phone menu: account, backup, Options, and What's new move into a bottom sheet ── */
+      .sidebar-header { display: flex; align-items: center; gap: 8px; }
+      .sidebar .sidebar-backup,
+      .sidebar .sidebar-account,
+      #sidebar-today-glance,
+      #version-btn,
+      #version-new-dot,
+      #density-toggle { display: none; }
+
+      .mobile-menu-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
+      .mobile-sync-dot {
+        width: 9px; height: 9px; margin: 0 8px; border-radius: 50%;
+        border: 1.5px solid var(--sidebar-muted); background: transparent;
+      }
+      .mobile-sync-dot[data-state="synced"] { background: var(--accent); border-color: var(--accent); }
+      .mobile-sync-dot[data-state="syncing"] { border-color: var(--accent); }
+      .mobile-sync-dot[data-state="error"] { background: #ef4444; border-color: #ef4444; }
+      .mobile-menu-btn {
+        position: relative; width: 40px; height: 36px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        background: transparent; color: var(--sidebar-active);
+        border: 1px solid var(--sidebar-btn-border, var(--sidebar-border));
+        touch-action: manipulation;
+      }
+      .mobile-menu-btn[aria-expanded="true"] { border-color: var(--accent); }
+      .mobile-menu-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+      .mobile-menu-alert:not(.hidden) {
+        position: absolute; top: 4px; right: 5px; width: 8px; height: 8px; border-radius: 50%;
+        background: var(--accent); box-shadow: 0 0 0 2px var(--sidebar);
+      }
+
+      .mobile-menu-backdrop:not(.hidden) {
+        display: block; position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, 0.45);
+      }
+      .mobile-menu-sheet:not(.hidden) {
+        display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 91;
+        max-height: 85vh; overflow-y: auto; overscroll-behavior: contain;
+        background: var(--sidebar); color: var(--sidebar-text);
+        border-top: 1px solid var(--sidebar-btn-border, var(--sidebar-border));
+        border-radius: 16px 16px 0 0;
+        padding: 4px 16px max(18px, env(safe-area-inset-bottom));
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+      }
+      .mobile-menu-grab { display: flex; justify-content: center; padding: 6px 0 10px; touch-action: none; }
+      .mobile-menu-grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--sidebar-muted); opacity: 0.6; }
+      .mobile-menu-close {
+        position: absolute; top: 6px; right: 8px; width: 40px; height: 40px;
+        background: none; border: none; color: var(--sidebar-muted); font-size: 1.5rem; line-height: 1;
+      }
+      .mobile-menu-moved { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+      .mobile-menu-sheet .sidebar-account { margin-top: 0; padding-top: 0; border-top: none; }
+      .mobile-menu-sheet .sidebar-account-top { padding-right: 40px; }
+      .mobile-menu-sheet .sidebar-backup { padding-top: 14px; border-top: 1px solid var(--sidebar-border); }
+      .mobile-menu-sheet .sidebar-backup .nav-label { display: none; }
+      .mobile-menu-sheet .backup-btn { min-height: 40px; }
+      .mobile-menu-sheet .backup-dropdown { position: static; margin-top: 6px; box-shadow: none; }
+      .mobile-menu-sheet .backup-dropdown-item { min-height: 40px; }
+      .mobile-menu-sheet .sidebar-repair-link { padding: 10px 6px; font-size: 0.8rem; }
+      .mobile-menu-links { margin-top: 12px; border-top: 1px solid var(--sidebar-border); }
+      .mobile-menu-link {
+        display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 0 2px;
+        background: none; border: none; border-bottom: 1px solid var(--sidebar-border);
+        color: var(--sidebar-active); font-size: 0.9rem; text-align: left;
+      }
+      .mobile-menu-link:last-child { border-bottom: none; }
+      .mobile-menu-link-sub { margin-left: auto; color: var(--sidebar-muted); font-size: 0.75rem; }
+
+      /* Options opens as its own bottom sheet instead of hanging off the (hidden) gear */
+      .density-popout {
+        position: fixed; top: auto; left: 0; right: 0; bottom: 0;
+        width: auto; max-width: none; max-height: 80vh;
+        border-radius: 16px 16px 0 0; z-index: 95;
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+      }
     }
   </style>
   <link rel="manifest" href="/work_desk/manifest.json" />
@@ -6896,6 +6979,13 @@
             <button id="version-btn" class="version-btn" type="button" title="What's new"></button>
             <span id="version-new-dot" class="version-new-dot hidden"></span>
           </p>
+        </div>
+        <div class="mobile-menu-actions">
+          <span id="mobile-sync-dot" class="mobile-sync-dot" data-status="idle" title="Cloud sync status"></span>
+          <button id="mobile-menu-btn" class="mobile-menu-btn" type="button" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu-sheet">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            <span id="mobile-menu-alert" class="mobile-menu-alert hidden"></span>
+          </button>
         </div>
       </div>
 
@@ -6999,6 +7089,17 @@
       </svg>
       <span class="sidebar-tooltip">Collapse sidebar</span>
     </button>
+
+    <div id="mobile-menu-backdrop" class="mobile-menu-backdrop hidden"></div>
+    <div id="mobile-menu-sheet" class="mobile-menu-sheet hidden" role="dialog" aria-modal="true" aria-label="Menu">
+      <div class="mobile-menu-grab"><span class="mobile-menu-grabber" aria-hidden="true"></span></div>
+      <button id="mobile-menu-close" class="mobile-menu-close" type="button" aria-label="Close menu">&times;</button>
+      <div id="mobile-menu-moved" class="mobile-menu-moved"></div>
+      <div class="mobile-menu-links">
+        <button id="mobile-menu-options" class="mobile-menu-link" type="button">Options <span class="mobile-menu-link-sub">Themes, appearance, behavior</span></button>
+        <button id="mobile-menu-whatsnew" class="mobile-menu-link" type="button">What's new <span id="mobile-menu-version" class="mobile-menu-link-sub"></span><span id="mobile-menu-new-dot" class="version-new-dot hidden"></span></button>
+      </div>
+    </div>
 
     <main class="main">
       <div id="desk-view">
@@ -7528,7 +7629,9 @@
           <li>Tap the <strong>checkbox</strong> to complete a task</li>
           <li>The add bar sticks to the bottom of the screen so you can capture a task without scrolling up</li>
           <li>The week strip above the board replaces the sidebar calendar on smaller screens</li>
-          <li>Account status, Sign in / Sign out, and Export/Import stay available in the sidebar on mobile</li>
+          <li><strong>Phone menu</strong> — the top bar keeps your tabs, search, and Help. Tap the <strong>menu button</strong> (three lines, top right) for your account and Sign in / Sign out, Export / Import, Repair duplicates, <strong>Options</strong>, and <strong>What's new</strong>. Close it with ×, a tap outside, Esc, or a swipe down on the handle</li>
+          <li>The <strong>dot</strong> beside the menu button shows sync: filled when synced, outlined while syncing, red on an error, hollow when you're not signed in. A small dot on the menu button means you're not signed in</li>
+          <li>On phones, Options opens as a sheet from the bottom and the Today's Progress card is hidden — the progress bar and <strong>Back to today</strong> at the top of the desk cover it</li>
         </ul>
 
         <h3>Tips</h3>
@@ -7541,7 +7644,8 @@
           <li>Use the sidebar collapse button (‹) to give the board more room</li>
           <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
           <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors; use the <strong>Custom</strong> tab to create your own theme from 5 picked colors</li>
-          <li>Click the version number (<strong>v1.x.x</strong>) at the bottom of the sidebar to see the full changelog; a pulsing dot means there's something new</li>
+          <li>Click the version number (<strong>v1.x.x</strong>) next to the app name to see the full changelog (on phones: menu → What's new); a pulsing dot means there's something new</li>
+        </ul>
 
         <h3>Keyboard shortcuts</h3>
         <ul>
@@ -7641,12 +7745,30 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.12.1';
+    const APP_VERSION = '1.13.0';
     const CHANGELOG = [
+      {
+        version: '1.13.0',
+        date: 'Oct 1, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Phone menu — on phones, a menu button at the top right opens a sheet with your account, Export / Import, Repair duplicates, Options, and What\'s new, so your tasks start much higher on the screen',
+            'Sync dot next to the menu button shows cloud sync at a glance (filled when synced, hollow when not signed in, red on an error), and the menu button gets a small dot when you\'re not signed in',
+          ]},
+          { label: 'Improved', items: [
+            'On phones, Options opens as a sheet from the bottom and works from Desk, Insights, and Projects',
+            'On phones, the Today\'s Progress card is hidden, since the progress bar and Back to today button at the top of the desk already cover it',
+            'Desktop and tablet layouts are unchanged',
+          ]},
+          { label: 'Fixed', items: [
+            'A sidebar collapsed on a wider screen no longer disappears on a phone with no way to bring it back',
+          ]},
+        ],
+      },
       {
         version: '1.12.1',
         date: 'Sep 30, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Improved', items: [
             'Streak bar now has day, date, or month labels underneath and a short note explaining the blocks',
@@ -18822,6 +18944,120 @@
 
     // restore persisted state
     if (localStorage.getItem(SIDEBAR_KEY) === '1') setSidebarCollapsed(true);
+
+    // ── Phone menu ───────────────────────────────────────────────────────────
+    // Account and backup are moved into the sheet only while it's open, then put back,
+    // so wider screens always see the original sidebar with its listeners intact.
+    const PHONE_QUERY = window.matchMedia('(max-width: 768px)');
+
+    function mobileSyncState({ signedIn, status }) {
+      if (!signedIn) return 'off';
+      if (status === 'error') return 'error';
+      if (status === 'syncing') return 'syncing';
+      return 'synced';
+    }
+
+    function initMobileMenu() {
+      const btn = document.getElementById('mobile-menu-btn');
+      const sheet = document.getElementById('mobile-menu-sheet');
+      const backdrop = document.getElementById('mobile-menu-backdrop');
+      const movedHost = document.getElementById('mobile-menu-moved');
+      const syncDot = document.getElementById('mobile-sync-dot');
+      const alertDot = document.getElementById('mobile-menu-alert');
+      const syncStatus = document.getElementById('sb-sync-status');
+      const signOutBtn = document.getElementById('sb-signout-btn');
+      const popout = document.getElementById('density-popout');
+      const sections = [document.getElementById('sidebar-account'), document.querySelector('.sidebar-backup')];
+      const homes = sections.map((el) => {
+        const mark = document.createComment('mobile-menu-home');
+        el.before(mark);
+        return mark;
+      });
+
+      function refreshIndicators() {
+        const signedIn = !signOutBtn.classList.contains('hidden');
+        const state = mobileSyncState({ signedIn, status: syncStatus.dataset.status });
+        syncDot.dataset.state = state;
+        syncDot.title = signedIn ? syncStatus.title || 'Cloud sync' : 'Not syncing — sign in from the menu';
+        alertDot.classList.toggle('hidden', signedIn);
+      }
+
+      function isOpen() { return !sheet.classList.contains('hidden'); }
+
+      function openMenu() {
+        if (!PHONE_QUERY.matches || isOpen()) return;
+        closeDensityPopout();
+        sections.forEach((el) => movedHost.appendChild(el));
+        document.getElementById('mobile-menu-version').textContent = `v${APP_VERSION}`;
+        document.getElementById('mobile-menu-new-dot').classList.toggle('hidden', versionDot.classList.contains('hidden'));
+        sheet.classList.remove('hidden');
+        backdrop.classList.remove('hidden');
+        document.body.classList.add('mobile-menu-open');
+        btn.setAttribute('aria-expanded', 'true');
+        document.getElementById('mobile-menu-close').focus({ preventScroll: true });
+      }
+
+      function closeMenu() {
+        if (!isOpen()) return;
+        closeBackupMenus();
+        sections.forEach((el, i) => homes[i].after(el));
+        sheet.classList.add('hidden');
+        backdrop.classList.add('hidden');
+        document.body.classList.remove('mobile-menu-open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+
+      // Options is its own sheet on phones; share the backdrop so a tap outside can't hit the desk
+      function syncOptionsBackdrop() {
+        if (isOpen()) return;
+        const optionsOpen = PHONE_QUERY.matches && !popout.classList.contains('hidden');
+        backdrop.classList.toggle('hidden', !optionsOpen);
+        document.body.classList.toggle('mobile-menu-open', optionsOpen);
+      }
+
+      btn.addEventListener('click', (e) => { e.stopPropagation(); isOpen() ? closeMenu() : openMenu(); });
+      document.getElementById('mobile-menu-close').addEventListener('click', closeMenu);
+      backdrop.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (isOpen()) closeMenu();
+        else closeDensityPopout();
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) closeMenu(); });
+
+      document.getElementById('mobile-menu-options').addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMenu();
+        openDensityPopout();
+        // The gear's header is hidden on Insights and Projects; the popout is fixed here, so body works everywhere
+        document.body.appendChild(popout);
+      });
+      document.getElementById('mobile-menu-whatsnew').addEventListener('click', () => {
+        closeMenu();
+        openChangelog();
+      });
+
+      let swipeStartY = null;
+      const grab = sheet.querySelector('.mobile-menu-grab');
+      grab.addEventListener('touchstart', (e) => { swipeStartY = e.touches[0].clientY; }, { passive: true });
+      grab.addEventListener('touchend', (e) => {
+        if (swipeStartY !== null && e.changedTouches[0].clientY - swipeStartY > 50) closeMenu();
+        swipeStartY = null;
+      });
+
+      PHONE_QUERY.addEventListener('change', (e) => {
+        if (e.matches) return;
+        closeMenu();
+        if (popout.parentElement === document.body) closeDensityPopout();
+        syncOptionsBackdrop();
+      });
+
+      const watch = new MutationObserver(refreshIndicators);
+      watch.observe(syncStatus, { attributes: true, attributeFilter: ['data-status', 'title'] });
+      watch.observe(signOutBtn, { attributes: true, attributeFilter: ['class'] });
+      new MutationObserver(syncOptionsBackdrop).observe(popout, { attributes: true, attributeFilter: ['class'] });
+      refreshIndicators();
+    }
+    initMobileMenu();
 
     els.searchInput.addEventListener('input', () => {
       state.searchQuery = els.searchInput.value;
