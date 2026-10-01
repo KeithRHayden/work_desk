@@ -124,7 +124,7 @@ async function seedLayout(page: Page, extra: Record<string, string> = {}) {
 }
 
 test.describe('Desktop layout baselines', () => {
-  // Re-captured at 1.13.2 (version moved to the sidebar footer). Version text is masked so bumps don't count as changes.
+  // Re-captured at 1.13.3 (page scroll on .main with a reserved scrollbar gutter). Version text is masked so bumps don't count as changes.
   const shot = (page: Page, name: string) =>
     expect(page).toHaveScreenshot(name, {
       fullPage: true,
