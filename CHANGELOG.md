@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.13.3] — 2026-10-01
+
+### Fixed
+- **Desktop page scroll** — the desk now scrolls like a normal page: the date / progress / add-task card sits at the top of the page and scrolls away as you scroll down, and the columns no longer slide underneath it. Since 1.4.2 the card had been pinned with the board scrolling in its own box below it, which was a misread of the original request. `.main` is now the scroll container and the board area no longer scrolls separately; space for its scrollbar is always reserved (`scrollbar-gutter: stable`) so the board doesn't shift sideways when a day gets long enough to scroll, and the Options panel's max height was trimmed so opening it never makes the page scroll. The sidebar still scrolls on its own, and phones are unchanged
+
 ## [1.13.2] — 2026-10-01
 
 ### Improved
