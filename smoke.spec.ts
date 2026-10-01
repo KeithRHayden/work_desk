@@ -95,6 +95,352 @@ test.describe('Search matching', () => {
   });
 });
 
+// ── Desktop must not change when phone layouts do ─────────────────────────────
+async function seedLayout(page: Page, extra: Record<string, string> = {}) {
+  await page.clock.setFixedTime(new Date('2026-09-30T10:00:00'));
+  await page.addInitScript((extraKeys) => {
+    if (localStorage.getItem('layout-seeded')) return;
+    localStorage.setItem('layout-seeded', '1');
+    const t = (id: string, content: string, more = {}) => ({
+      id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+      comments: [], tags: ['ace'], createdAt: '2026-09-28T09:00:00Z', ...more,
+    });
+    const days = {
+      '2026-09-28': { date: '2026-09-28', items: [t('done1', 'Renew vendor contract', { completed: true })] },
+      '2026-09-30': { date: '2026-09-30', items: [
+        t('open1', 'Review PR for IDS batching'),
+        t('open2', 'Call vendor about the renewal', { boardColumn: 'active' }),
+        t('done2', 'Send sprint notes', { completed: true }),
+      ] },
+    };
+    localStorage.setItem('work-desk-list-context', 'work');
+    localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+    localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    for (const [k, v] of Object.entries(extraKeys)) localStorage.setItem(k, v);
+  }, extra);
+  await page.goto(DESK_URL);
+  await dismissAuthModal(page);
+  await expect(page.locator('#add-form')).toBeVisible();
+}
+
+test.describe('Desktop layout baselines', () => {
+  // Captured from 1.12.1 before the phone menu. Version text is masked so bumps don't count as changes.
+  const shot = (page: Page, name: string) =>
+    expect(page).toHaveScreenshot(name, {
+      fullPage: true,
+      mask: [page.locator('#version-btn'), page.locator('#version-new-dot'), page.locator('#toast')],
+    });
+
+  for (const width of [1440, 1024, 820]) {
+    test(`desk at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await seedLayout(page);
+      await shot(page, `desk-${width}.png`);
+    });
+  }
+
+  test('insights at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    await page.locator('#tab-insights').click();
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    await shot(page, 'insights-1440.png');
+  });
+
+  test('collapsed sidebar at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page, { 'work-desk-sidebar-collapsed': '1' });
+    await shot(page, 'desk-collapsed-1440.png');
+  });
+
+  test('options panel at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await shot(page, 'options-1440.png');
+  });
+
+  test('export menu at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    await page.locator('#export-btn').click();
+    await expect(page.locator('#export-menu')).toBeVisible();
+    await shot(page, 'export-1440.png');
+  });
+});
+
+test.describe('Phone layout baselines', () => {
+  const shot = (page: Page, name: string) =>
+    expect(page).toHaveScreenshot(name, {
+      mask: [page.locator('#mobile-menu-version'), page.locator('#mobile-menu-new-dot'), page.locator('#toast')],
+    });
+
+  test('phone desk and menu at 390px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedLayout(page);
+    await shot(page, 'phone-desk-390.png');
+    await page.locator('#mobile-menu-btn').click();
+    await expect(page.locator('#mobile-menu-sheet')).toBeVisible();
+    await shot(page, 'phone-menu-390.png');
+  });
+});
+
+test.describe('Phone menu (1.13.0)', () => {
+  const sheet = (page: Page) => page.locator('#mobile-menu-sheet');
+  const menuBtn = (page: Page) => page.locator('#mobile-menu-btn');
+
+  async function openPhone(page: Page, width = 390, extra: Record<string, string> = {}) {
+    await page.setViewportSize({ width, height: 844 });
+    await seedLayout(page, extra);
+  }
+
+  async function openMenu(page: Page) {
+    await menuBtn(page).click();
+    await expect(sheet(page)).toBeVisible();
+    await expect(menuBtn(page)).toHaveAttribute('aria-expanded', 'true');
+  }
+
+  async function expectMenuClosed(page: Page) {
+    await expect(sheet(page)).toBeHidden();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    await expect(menuBtn(page)).toHaveAttribute('aria-expanded', 'false');
+    expect(await page.evaluate(() => document.body.classList.contains('mobile-menu-open'))).toBe(false);
+    // Account and backup are back in the sidebar, not left in the sheet
+    await expect(page.locator('.sidebar #sidebar-account')).toHaveCount(1);
+    await expect(page.locator('.sidebar .sidebar-backup')).toHaveCount(1);
+    await expect(page.locator('#mobile-menu-moved > *')).toHaveCount(0);
+  }
+
+  const singleIds = ['export-btn', 'import-btn', 'repair-btn', 'sb-signin-btn', 'sb-signout-btn', 'density-popout', 'density-toggle', 'version-btn'];
+  const expectNoDuplicates = async (page: Page) => {
+    const counts = await page.evaluate((ids) => ids.map((id) => document.querySelectorAll(`#${id}`).length), singleIds);
+    expect(counts).toEqual(singleIds.map(() => 1));
+  };
+
+  test('phone shows tabs, search, and a menu button; rarely used rows are tucked away', async ({ page }) => {
+    await openPhone(page);
+    for (const sel of ['#tab-desk', '#tab-insights', '#tab-work', '#tab-personal', '#tab-projects', '#search-input', '#help-btn', '#mobile-menu-btn', '#mobile-sync-dot']) {
+      await expect(page.locator(sel)).toBeVisible();
+    }
+    for (const sel of ['#sidebar-account', '.sidebar-backup', '#sidebar-today-glance', '#version-btn', '#density-toggle', '#mobile-menu-sheet']) {
+      await expect(page.locator(sel)).toBeHidden();
+    }
+    const box = await menuBtn(page).boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(36);
+    expect(box!.height).toBeGreaterThanOrEqual(36);
+    // Tasks start well above where they did when the whole sidebar was stacked on top (~430px of sidebar)
+    const firstTask = await page.locator('.item-card').first().evaluate((el) => el.getBoundingClientRect().top + scrollY);
+    expect(firstTask).toBeLessThan(470);
+  });
+
+  test('menu opens over the desk with account, backup, Options, and What\'s new', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    for (const sel of ['#account-email', '#sb-signin-btn', '#export-btn', '#import-btn', '#repair-btn', '#mobile-menu-options', '#mobile-menu-whatsnew']) {
+      await expect(sheet(page).locator(sel)).toBeVisible();
+    }
+    const version = await page.evaluate(() => (window as any).eval('APP_VERSION'));
+    await expect(page.locator('#mobile-menu-version')).toHaveText(`v${version}`);
+    // Sits above the pinned add-task dock
+    const hit = await page.locator('#import-btn').evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.id;
+    });
+    expect(hit).toBe('import-btn');
+    await expectNoDuplicates(page);
+  });
+
+  test('menu closes with the close button, a tap outside, Esc, and the menu button', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#mobile-menu-close').click();
+    await expectMenuClosed(page);
+
+    await openMenu(page);
+    await page.mouse.click(195, 60);
+    await expectMenuClosed(page);
+
+    await openMenu(page);
+    await page.keyboard.press('Escape');
+    await expectMenuClosed(page);
+
+    await openMenu(page);
+    await menuBtn(page).click({ force: true });
+    await expectMenuClosed(page);
+    await expectNoDuplicates(page);
+  });
+
+  test('swiping the sheet handle down closes it', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('.mobile-menu-grab').evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const touch = (y: number) => new Touch({ identifier: 1, target: el, clientX: r.left + 20, clientY: y });
+      el.dispatchEvent(new TouchEvent('touchstart', { touches: [touch(r.top + 4)], bubbles: true }));
+      el.dispatchEvent(new TouchEvent('touchend', { changedTouches: [touch(r.top + 90)], bubbles: true }));
+    });
+    await expectMenuClosed(page);
+  });
+
+  test('Export and Import work from the menu and keep it open', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#export-btn').click();
+    await expect(page.locator('#export-menu')).toBeVisible();
+    await expect(sheet(page)).toBeVisible();
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#export-desk-opt').click()]);
+    expect(download.suggestedFilename()).toMatch(/\.json$/);
+    await expect(sheet(page)).toBeVisible();
+
+    await page.locator('#import-btn').click();
+    await expect(page.locator('#import-menu')).toBeVisible();
+    await expect(page.locator('#export-menu')).toBeHidden();
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#import-desk-opt').click()]);
+    expect(chooser).toBeTruthy();
+
+    await page.locator('#export-btn').click();
+    await page.locator('#mobile-menu-close').click();
+    await expectMenuClosed(page);
+    await expect(page.locator('#export-menu')).toBeHidden();
+  });
+
+  test('Repair duplicates and Sign in work from the menu', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#repair-btn').click();
+    await expect(page.locator('#toast')).toBeVisible();
+    await page.locator('#sb-signin-btn').click();
+    await expect(page.locator('#auth-modal')).toBeVisible();
+  });
+
+  test('Options opens the settings sheet from any tab and closes on a tap outside', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#mobile-menu-options').click();
+    await expect(sheet(page)).toBeHidden();
+    const popout = page.locator('#density-popout');
+    await expect(popout).toBeVisible();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeVisible();
+    const box = await popout.boundingBox();
+    expect(Math.round(box!.y + box!.height)).toBeLessThanOrEqual(844);
+    expect(Math.round(box!.width)).toBe(390);
+
+    // Switching tabs inside replaces content; the sheet must stay open
+    for (const tab of ['appearance', 'behavior', 'themes']) {
+      await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+      await expect(popout).toBeVisible();
+    }
+
+    await page.mouse.click(195, 40);
+    await expect(popout).toBeHidden();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    expect(await popout.evaluate((el) => el.parentElement!.classList.contains('density-wrap'))).toBe(true);
+
+    await page.locator('#tab-insights').click();
+    await openMenu(page);
+    await page.locator('#mobile-menu-options').click();
+    await expect(popout).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(popout).toBeHidden();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    await expectNoDuplicates(page);
+  });
+
+  test('What\'s new opens the changelog and closes the menu', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#mobile-menu-whatsnew').click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expectMenuClosed(page);
+  });
+
+  test('sync dot and menu alert follow sign-in and sync status', async ({ page }) => {
+    await openPhone(page);
+    const dot = page.locator('#mobile-sync-dot');
+    await expect(dot).toHaveAttribute('data-state', 'off');
+    await expect(page.locator('#mobile-menu-alert')).toBeVisible();
+
+    await page.evaluate(() => (window as any).updateAccountChrome('signed-in', 'keith@example.com'));
+    await expect(dot).toHaveAttribute('data-state', 'synced');
+    await expect(page.locator('#mobile-menu-alert')).toBeHidden();
+
+    await page.evaluate(() => (window as any).sbSetStatus('syncing'));
+    await expect(dot).toHaveAttribute('data-state', 'syncing');
+    await page.evaluate(() => (window as any).sbSetStatus('error'));
+    await expect(dot).toHaveAttribute('data-state', 'error');
+
+    await openMenu(page);
+    await expect(sheet(page).locator('#sb-signout-btn')).toBeVisible();
+    await expect(sheet(page).locator('#account-email')).toHaveText('keith@example.com');
+  });
+
+  test('768px gets the phone menu; 769px keeps the desktop sidebar', async ({ page }) => {
+    await openPhone(page, 768);
+    await expect(menuBtn(page)).toBeVisible();
+    await expect(page.locator('.sidebar-backup')).toBeHidden();
+
+    await page.setViewportSize({ width: 769, height: 844 });
+    await expect(menuBtn(page)).toBeHidden();
+    await expect(page.locator('.sidebar-backup')).toBeVisible();
+    await expect(page.locator('#sidebar-account')).toBeVisible();
+    await expect(page.locator('#density-toggle')).toBeVisible();
+  });
+
+  test('widening the window with the menu or Options open restores the desktop layout', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.setViewportSize({ width: 1024, height: 844 });
+    await expectMenuClosed(page);
+    await expect(page.locator('.sidebar #export-btn')).toBeVisible();
+    await expect(page.locator('#sidebar-account')).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openMenu(page);
+    await page.locator('#mobile-menu-options').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.setViewportSize({ width: 1024, height: 844 });
+    await expect(page.locator('#density-popout')).toBeHidden();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    expect(await page.locator('#density-popout').evaluate((el) => el.parentElement!.classList.contains('density-wrap'))).toBe(true);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    await expectNoDuplicates(page);
+  });
+
+  test('a sidebar collapsed on desktop stays usable on a phone and collapsed again on desktop', async ({ page }) => {
+    await openPhone(page, 390, { 'work-desk-sidebar-collapsed': '1' });
+    await expect(page.locator('#tab-desk')).toBeVisible();
+    const width = await page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width);
+    expect(width).toBeGreaterThan(300);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect.poll(() => page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(0);
+    await expect(page.locator('#sidebar-toggle')).toBeVisible();
+  });
+
+  for (const width of [1440, 1024]) {
+    test(`desktop at ${width}px has no phone menu and the sidebar works as before`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await seedLayout(page);
+      for (const sel of ['#mobile-menu-btn', '#mobile-sync-dot', '#mobile-menu-sheet', '#mobile-menu-backdrop']) {
+        await expect(page.locator(sel)).toBeHidden();
+      }
+      await expect(page.locator('#version-btn')).toBeVisible();
+      await expect(page.locator('#sidebar-today-glance')).toBeVisible();
+      await page.locator('#export-btn').click();
+      await expect(page.locator('.sidebar #export-menu')).toBeVisible();
+      await page.locator('#density-toggle').click();
+      await expect(page.locator('#density-popout')).toBeVisible();
+      await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+      expect(await page.evaluate(() => document.body.classList.contains('mobile-menu-open'))).toBe(false);
+      await page.keyboard.press('Escape');
+      await page.locator('#sidebar-toggle').click();
+      await expect.poll(() => page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(0);
+    });
+  }
+});
+
 test.describe('UI audit fixes (1.12.1)', () => {
   // Wed Sep 30, 2026. One task carried from Tuesday (this week), none last week.
   async function seedAudit(page: Page) {
@@ -1881,7 +2227,7 @@ test.describe('Insights tab', () => {
 
   test('insights chart container is rendered', async ({ page }) => {
     await seedAndOpenInsights(page);
-    const chart = page.locator('.insights-bars-wrap, .insights-chart, svg');
+    const chart = page.locator('#insights-view').locator('.insight-bars, .line-chart-wrap, .stacked-chart-wrap, .pie-chart-wrap');
     await expect(chart.first()).toBeVisible();
   });
 
