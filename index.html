@@ -7488,7 +7488,7 @@
           <li><strong>Daily desk</strong> — tasks and notes organized by day in New, Active, and Completed / Shelved columns</li>
           <li><strong>Work, Personal &amp; Projects</strong> — three separate contexts, toggled in the sidebar</li>
           <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
-          <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card — your two most-used tags appear next to the box as one-click picks (they narrow as you type, and skip tags the card already has); tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
+          <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card — your two most-used tags appear next to the box as one-click picks (they narrow as you type, and skip tags the card already has); the box stays open until you add a tag, press Esc, or click outside it; tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
           <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
           <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag. Words on separate lines of a task still match (e.g. "vendor about" finds "Call vendor ↵ about the renewal"). Finished tasks are marked <strong>✓ Done</strong> or <strong>Shelved</strong></li>
           <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
@@ -7745,12 +7745,21 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.13.0';
+    const APP_VERSION = '1.13.1';
     const CHANGELOG = [
+      {
+        version: '1.13.1',
+        date: 'Oct 1, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'The tag box on a card no longer closes the instant it opens when another card has an unsent comment or a column\'s add box is open. It now stays open until you add a tag, press Esc, or click outside it, and the text field is ready to type in',
+          ]},
+        ],
+      },
       {
         version: '1.13.0',
         date: 'Oct 1, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Phone menu — on phones, a menu button at the top right opens a sheet with your account, Export / Import, Repair duplicates, Options, and What\'s new, so your tasks start much higher on the screen',
@@ -15912,11 +15921,6 @@
             if (e.key === 'Enter') { e.preventDefault(); commitTag(); }
             else if (e.key === 'Escape') { state.taggingId = null; render(); }
           });
-          tagInput.addEventListener('blur', () => {
-            setTimeout(() => {
-              if (tagInput.isConnected && state.taggingId === item.id) { state.taggingId = null; render(); }
-            }, 150);
-          });
           tagInputWrap.appendChild(tagInput);
 
           const usage = collectTagUsage();
@@ -15946,7 +15950,8 @@
           renderSuggestions();
           tagInputWrap.appendChild(suggestWrap);
           actionBar.appendChild(tagInputWrap);
-          setTimeout(() => tagInput.focus(), 0);
+          // Double-deferred so it lands after comment drafts and inline add boxes refocus themselves
+          setTimeout(() => setTimeout(() => { if (tagInput.isConnected) tagInput.focus(); }, 0), 0);
         } else {
           addAction('tag', () => {
             state.taggingId = item.id;
@@ -18761,6 +18766,15 @@
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.backup-btn-wrap')) closeBackupMenus();
     });
+
+    // Closed by outside clicks, not blur: open comment drafts and inline add boxes refocus themselves on every render
+    document.addEventListener('click', (e) => {
+      if (!state.taggingId || e.target.closest?.('.tag-input-wrap')) return;
+      state.taggingId = null;
+      setTimeout(() => {
+        if (!state.taggingId && document.querySelector('.tag-input-wrap')) render();
+      }, 0);
+    }, true);
 
     document.getElementById('repair-btn').addEventListener('click', repairData);
 
