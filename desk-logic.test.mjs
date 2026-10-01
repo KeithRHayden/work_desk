@@ -3140,9 +3140,6 @@ describe('Tag colors', () => {
       assert.match(mainScript, /btn\.addEventListener\('mousedown', \(e\) => e\.preventDefault\(\)\)/);
     });
 
-    it('a stale blur timer from a replaced tag input cannot close the reopened one', () => {
-      assert.match(mainScript, /if \(tagInput\.isConnected && state\.taggingId === item\.id\)/);
-    });
   });
 
   it('tag chip CSS centers the label in any font', () => {
@@ -3186,16 +3183,30 @@ describe('Tag colors', () => {
     assert.doesNotMatch(html, /New \/ Active \/ Done \/ Shelved/);
   });
 
-  it('1.13.0 is the latest version and documents the phone menu', () => {
-    assert.match(html, /const APP_VERSION = '1\.13\.0'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.13\.0'/);
-    assert.match(latest, /tag: 'latest'/);
-    assert.match(latest, /Phone menu/);
-    assert.match(latest, /Desktop and tablet layouts are unchanged/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+  it('1.13.0 documents the phone menu', () => {
+    const entry = html.match(/version: '1\.13\.0'[\s\S]*?\n      \},/)[0];
+    assert.match(entry, /Phone menu/);
+    assert.match(entry, /Desktop and tablet layouts are unchanged/);
+    assert.doesNotMatch(entry, /tag: 'latest'/);
     assert.match(html, /id="help-modal"[\s\S]*<strong>Phone menu<\/strong>/);
     assert.doesNotMatch(html, /stay available in the sidebar on mobile/);
+  });
+
+  it('1.13.1 is the latest version and documents the tag box fix', () => {
+    assert.match(html, /const APP_VERSION = '1\.13\.1'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.13\.1'/);
+    assert.match(latest, /tag: 'latest'/);
+    assert.match(latest, /tag box on a card no longer closes/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /id="help-modal"[\s\S]*box stays open until you add a tag, press Esc, or click outside it/);
+  });
+
+  it('card tag box closes on outside clicks, not on blur, and wins focus', () => {
+    const box = html.match(/if \(state\.taggingId === item\.id\) \{[\s\S]*?\n        \} else \{/)[0];
+    assert.doesNotMatch(box, /addEventListener\('blur'/);
+    assert.match(box, /setTimeout\(\(\) => setTimeout\(\(\) => \{ if \(tagInput\.isConnected\) tagInput\.focus\(\); \}, 0\), 0\)/);
+    assert.match(html, /if \(!state\.taggingId \|\| e\.target\.closest\?\.\('\.tag-input-wrap'\)\) return;[\s\S]{0,200}state\.taggingId = null;/);
   });
 
   it('carry-over weekday dates live inside the bar so bars keep full width', () => {
