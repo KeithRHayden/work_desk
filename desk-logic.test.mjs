@@ -873,6 +873,8 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
       removeAttribute(k) { delete this.attributes[k]; }
       appendChild(child) { this.children.push(child); return child; }
       append(...children) { this.children.push(...children); }
+      before() {}
+      after() {}
       removeChild(child) {
         const idx = this.children.indexOf(child);
         if (idx >= 0) this.children.splice(idx, 1);
@@ -945,6 +947,9 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
       createTextNode(text) {
         return { textContent: text };
       },
+      createComment() {
+        return new MockElement('', '#comment');
+      },
       addEventListener() {},
       removeEventListener() {},
     };
@@ -963,7 +968,9 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
         navigator: { userAgent: 'test', clipboard: { writeText() {} } },
         document: mockDoc,
         getSelection() { return { toString() { return ''; } }; },
+        matchMedia() { return { matches: false, addEventListener() {} }; },
       },
+      MutationObserver: class { observe() {} disconnect() {} },
       localStorage: mockStorage,
       sessionStorage: mockStorage,
       navigator: { userAgent: 'test', clipboard: { writeText() {} } },
@@ -3171,16 +3178,24 @@ describe('Tag colors', () => {
     assert.match(html, /id="help-modal"[\s\S]*<strong>Staying up to date<\/strong>/);
   });
 
-  it('1.12.1 is the latest version and documents the UI audit fixes', () => {
-    assert.match(html, /const APP_VERSION = '1\.12\.1'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.12\.1'/);
-    assert.match(latest, /tag: 'latest'/);
-    assert.match(latest, /more carry-over in red/);
-    assert.match(latest, /tag box no longer pushes cards/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+  it('1.12.1 documents the UI audit fixes', () => {
+    const entry = html.slice(html.indexOf("version: '1.12.1'"), html.indexOf("version: '1.12.0'"));
+    assert.match(entry, /more carry-over in red/);
+    assert.match(entry, /tag box no longer pushes cards/);
     assert.match(html, /id="help-modal"[\s\S]*New, Active, and Completed \/ Shelved columns/);
     assert.doesNotMatch(html, /New \/ Active \/ Done \/ Shelved/);
+  });
+
+  it('1.13.0 is the latest version and documents the phone menu', () => {
+    assert.match(html, /const APP_VERSION = '1\.13\.0'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.13\.0'/);
+    assert.match(latest, /tag: 'latest'/);
+    assert.match(latest, /Phone menu/);
+    assert.match(latest, /Desktop and tablet layouts are unchanged/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /id="help-modal"[\s\S]*<strong>Phone menu<\/strong>/);
+    assert.doesNotMatch(html, /stay available in the sidebar on mobile/);
   });
 
   it('carry-over weekday dates live inside the bar so bars keep full width', () => {
@@ -3509,5 +3524,68 @@ describe('Service worker (sw.js)', () => {
     assert.match(swSource, /keys\.filter\(k => k !== CACHE\)\.map\(k => caches\.delete\(k\)\)/);
     assert.match(swSource, /self\.skipWaiting\(\)/);
     assert.match(swSource, /self\.clients\.claim\(\)/);
+  });
+});
+
+describe('Phone menu (1.13.0)', () => {
+  const css = html.slice(html.indexOf('<style>'), html.indexOf('</style>'));
+
+  function phoneBlocks() {
+    const blocks = [];
+    let from = 0;
+    for (;;) {
+      const start = css.indexOf('@media (max-width: 768px) {', from);
+      if (start < 0) return blocks;
+      let depth = 0;
+      let i = css.indexOf('{', start);
+      for (; i < css.length; i++) {
+        if (css[i] === '{') depth++;
+        else if (css[i] === '}' && --depth === 0) break;
+      }
+      blocks.push([start, i + 1]);
+      from = i + 1;
+    }
+  }
+
+  it('sync dot shows off, synced, syncing, or error', () => {
+    const state = new Function(`${fnSource('mobileSyncState')}; return mobileSyncState;`)();
+    assert.equal(state({ signedIn: false, status: 'ok' }), 'off');
+    assert.equal(state({ signedIn: true, status: 'idle' }), 'synced');
+    assert.equal(state({ signedIn: true, status: 'ok' }), 'synced');
+    assert.equal(state({ signedIn: true, status: 'syncing' }), 'syncing');
+    assert.equal(state({ signedIn: true, status: 'error' }), 'error');
+  });
+
+  it('outside the phone breakpoint, the menu only ever hides itself', () => {
+    let outside = css;
+    for (const [s, e] of phoneBlocks().reverse()) outside = outside.slice(0, s) + outside.slice(e);
+    const rules = outside.match(/[^{}]*mobile-(menu|sync)[^{}]*\{[^}]*\}/g) || [];
+    assert.deepEqual(rules.map((r) => r.trim()), [
+      '/* Phone-only menu; every visible rule lives in the max-width: 768px block */\n    .mobile-menu-actions, .mobile-menu-sheet, .mobile-menu-backdrop { display: none; }',
+      'body.mobile-menu-open { overflow: hidden; }',
+    ]);
+  });
+
+  it('phone block hides the moved rows, Today card, version, and gear, and keeps a collapsed sidebar open', () => {
+    const phone = phoneBlocks().map(([s, e]) => css.slice(s, e)).join('\n');
+    assert.match(phone, /\.sidebar \.sidebar-backup,\s*\.sidebar \.sidebar-account,\s*#sidebar-today-glance,\s*#version-btn,\s*#version-new-dot,\s*#density-toggle \{ display: none; \}/);
+    assert.match(phone, /\.sidebar\.collapsed \{ width: 100%;/);
+    assert.match(phone, /\.mobile-menu-sheet:not\(\.hidden\) \{[^}]*position: fixed;[^}]*z-index: 91;/);
+    assert.match(phone, /\.density-popout \{[^}]*position: fixed;[^}]*bottom: 0;/);
+    // Above the pinned add-task dock (45), below modals (100)
+    const dock = Number(css.match(/#desk-view \.add-form \{[^}]*z-index: (\d+)/)[1]);
+    assert.ok(dock < 90 && 95 < 100);
+  });
+
+  it('account and backup are moved into the sheet and put back, never copied', () => {
+    const init = mainScript.slice(mainScript.indexOf('function initMobileMenu()'), mainScript.indexOf('initMobileMenu();'));
+    assert.match(init, /sections\.forEach\(\(el\) => movedHost\.appendChild\(el\)\)/);
+    assert.match(init, /sections\.forEach\(\(el, i\) => homes\[i\]\.after\(el\)\)/);
+    assert.doesNotMatch(init, /cloneNode/);
+    assert.match(init, /PHONE_QUERY\.addEventListener\('change'/);
+    assert.match(mainScript, /const PHONE_QUERY = window\.matchMedia\('\(max-width: 768px\)'\);/);
+    for (const id of ['mobile-menu-btn', 'mobile-menu-sheet', 'mobile-menu-backdrop', 'mobile-menu-close', 'mobile-menu-options', 'mobile-menu-whatsnew']) {
+      assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, id);
+    }
   });
 });
