@@ -745,18 +745,18 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
     assert.doesNotMatch(jumpFn[0], /state\.expandedTaskIds\.clear\(\)/);
   });
 
-  it('THEMES contains 84 themes (28 light, 28 medium, 28 dark) with complete wireframe properties', () => {
+  it('THEMES contains 96 themes (32 light, 32 medium, 32 dark) with complete wireframe properties', () => {
     const themesMatch = html.match(/const THEMES = (\[[\s\S]*?\n    \]);/);
     assert.ok(themesMatch, 'THEMES array not found in work-desk.html');
     const themes = new Function(`return ${themesMatch[1]}`)();
-    assert.equal(themes.length, 84);
-    assert.equal(new Set(themes.map((t) => t.id)).size, 84, 'theme ids must be unique');
+    assert.equal(themes.length, 96);
+    assert.equal(new Set(themes.map((t) => t.id)).size, 96, 'theme ids must be unique');
     const light  = themes.filter((t) => !t.dark && !t.medium);
     const medium = themes.filter((t) => t.medium);
     const dark   = themes.filter((t) => t.dark);
-    assert.equal(light.length, 28, 'expected 28 light themes');
-    assert.equal(medium.length, 28, 'expected 28 medium themes');
-    assert.equal(dark.length, 28, 'expected 28 dark themes');
+    assert.equal(light.length, 32, 'expected 32 light themes');
+    assert.equal(medium.length, 32, 'expected 32 medium themes');
+    assert.equal(dark.length, 32, 'expected 32 dark themes');
     for (const t of themes) {
       assert.equal(typeof t.id, 'string');
       assert.equal(typeof t.name, 'string');
@@ -1712,15 +1712,16 @@ describe('Holiday-aware recurring in work-desk.html (HTML invariants)', () => {
 });
 
 describe('Medium themes (HTML invariants)', () => {
-  it('all 28 medium themes have CSS [data-theme] rules with color-scheme: dark', () => {
+  it('all 32 medium themes have CSS [data-theme] rules with color-scheme: dark', () => {
     const mediumIds = [
       'fog','overcast','steel','fjord','nimbus','pewter','horizon','denim',
-      'lichen','fern','tundra','moss','basalt','gameboy',
+      'lichen','fern','tundra','moss','basalt','dot-matrix',
       'driftwood','clay','sandstone','umber','terracotta','flint',
       'twilight','haze','plum-mid','mulberry','merlot',
       'ash','graphite','concrete',
+      'unit-zero-mid','unit-one-mid','unit-two-mid','unit-eight-mid',
     ];
-    assert.equal(mediumIds.length, 28);
+    assert.equal(mediumIds.length, 32);
     for (const id of mediumIds) {
       const block = html.match(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`));
       assert.ok(block, `CSS rule for medium theme "${id}" not found`);
@@ -2813,7 +2814,7 @@ describe('v1.8.0 themes (HTML invariants)', () => {
   const themes = new Function(`return ${themesSrc}`)();
   const byId = Object.fromEntries(themes.map((t) => [t.id, t]));
   const NEW_LIGHT = ['retro', 'seafoam', 'mediterranean', 'citrus'];
-  const NEW_MEDIUM = ['gameboy', 'denim', 'terracotta', 'merlot'];
+  const NEW_MEDIUM = ['dot-matrix', 'denim', 'terracotta', 'merlot'];
   const NEW_DARK = ['monokai', 'one-dark', 'phosphor', 'rose-pine'];
   const cssBlock = (id) => [...html.matchAll(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`, 'g'))]
     .find((m) => /--accent:/.test(m[1]));
@@ -2865,7 +2866,7 @@ describe('v1.8.0 themes (HTML invariants)', () => {
   });
 
   it('bright-accent themes use dark text on primary buttons', () => {
-    for (const id of ['gameboy', 'phosphor', 'denim', 'terracotta', 'merlot', 'rose-pine']) {
+    for (const id of ['dot-matrix', 'phosphor', 'denim', 'terracotta', 'merlot', 'rose-pine']) {
       assert.match(html, new RegExp(`\\[data-theme="${id}"\\] \\.add-btn`), `${id} add-btn text override missing`);
     }
   });
@@ -2874,7 +2875,88 @@ describe('v1.8.0 themes (HTML invariants)', () => {
     const entry = html.match(/version: '1\.8\.0'[\s\S]*?\n      \},/)[0];
     assert.match(entry, /Retro/);
     assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /id="help-modal"[\s\S]*84 presets \(28 light, 28 medium, 28 dark/);
+    assert.match(html, /id="help-modal"[\s\S]*96 presets \(32 light, 32 medium, 32 dark/);
+  });
+});
+
+describe('v1.14.0 Unit themes and Dot Matrix rename (HTML invariants)', () => {
+  const themesSrc = html.match(/const THEMES = (\[[\s\S]*?\n    \]);/)[1];
+  const themes = new Function(`return ${themesSrc}`)();
+  const byId = Object.fromEntries(themes.map((t) => [t.id, t]));
+  const UNITS = { zero: 'Unit Zero', one: 'Unit One', two: 'Unit Two', eight: 'Unit Eight' };
+  const cssBlock = (id) => [...html.matchAll(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`, 'g'))]
+    .find((m) => /--accent:/.test(m[1]));
+
+  it('each unit exists in light, medium, and dark under the same display name', () => {
+    for (const [unit, name] of Object.entries(UNITS)) {
+      const light = byId[`unit-${unit}-light`];
+      const mid = byId[`unit-${unit}-mid`];
+      const dark = byId[`unit-${unit}`];
+      assert.ok(light && !light.dark && !light.medium, `unit-${unit}-light should be light`);
+      assert.ok(mid && mid.medium === true && mid.dark === false, `unit-${unit}-mid should be medium`);
+      assert.ok(dark && dark.dark === true, `unit-${unit} should be dark`);
+      for (const t of [light, mid, dark]) assert.equal(t.name, name);
+    }
+  });
+
+  it('every unit theme has a full CSS block, matching swatch accent, favicon, and the right color-scheme', () => {
+    const favicons = html.match(/const FAVICONS = \{[\s\S]*?\n\s*\};/)[0];
+    const shared = html.match(/Shared semantics for all non-default dark themes[\s\S]*?\{/)[0];
+    for (const unit of Object.keys(UNITS)) {
+      for (const id of [`unit-${unit}-light`, `unit-${unit}-mid`, `unit-${unit}`]) {
+        const block = cssBlock(id);
+        assert.ok(block, `CSS block for ${id} missing`);
+        for (const v of ['--bg', '--surface', '--sidebar', '--accent', '--text', '--border']) {
+          assert.match(block[1], new RegExp(`${v}:\\s*#`), `${id} missing ${v}`);
+        }
+        const accent = block[1].match(/--accent:\s*(#[0-9a-fA-F]{6})/)[1];
+        assert.equal(accent.toLowerCase(), byId[id].accent.toLowerCase(), `${id} swatch accent drifted from CSS`);
+        assert.ok(favicons.includes(`'${id}':`), `${id} missing from FAVICONS`);
+      }
+      assert.match(cssBlock(`unit-${unit}-light`)[1], /color-scheme:\s*light/);
+      assert.match(cssBlock(`unit-${unit}-mid`)[1], /color-scheme:\s*dark/);
+      assert.ok(shared.includes(`[data-theme="unit-${unit}"]`), `unit-${unit} not in shared dark list`);
+    }
+  });
+
+  it('each unit draws its header stripe in every tier', () => {
+    assert.match(html, /\[data-theme\^="unit-"\] \.desk-sticky \{[^}]*background-size: 100% 4px/);
+    for (const unit of Object.keys(UNITS)) {
+      assert.match(html, new RegExp(`\\[data-theme\\^="unit-${unit}"\\] \\.desk-sticky \\{ background-image: linear-gradient`));
+    }
+  });
+
+  it('bright-accent unit themes use dark text on primary buttons', () => {
+    for (const id of ['unit-zero-mid', 'unit-zero', 'unit-one-mid', 'unit-one', 'unit-two-mid', 'unit-eight-mid', 'unit-eight']) {
+      assert.match(html, new RegExp(`\\[data-theme="${id}"\\] \\.add-btn`), `${id} add-btn text override missing`);
+    }
+  });
+
+  it('no Game Boy name or gameboy id remains, except the rename map', () => {
+    assert.doesNotMatch(html, /Game Boy/);
+    assert.equal(byId.gameboy, undefined);
+    assert.equal(byId['dot-matrix'].name, 'Dot Matrix');
+    const mentions = html.match(/gameboy/g) || [];
+    assert.equal(mentions.length, 1, 'only RENAMED_THEME_IDS should mention gameboy');
+    assert.match(html, /const RENAMED_THEME_IDS = \{ gameboy: 'dot-matrix' \};/);
+  });
+
+  it('a saved gameboy theme is migrated before first paint and synced prefs are mapped', () => {
+    const boot = html.match(/const RENAMED_THEME_IDS[\s\S]*?setFavicon\(themeId\);/)[0];
+    assert.match(boot, /localStorage\.setItem\('work-desk-theme', stored\)/);
+    assert.match(boot, /window\.__RENAMED_THEME_IDS = RENAMED_THEME_IDS/);
+    assert.match(html, /const prefTheme = typeof prefs\.theme === 'string' \? \(window\.__RENAMED_THEME_IDS\?\.\[prefs\.theme\] \?\? prefs\.theme\) : null;/);
+  });
+
+  it('1.14.0 is the latest version and documents the Unit themes and rename', () => {
+    assert.match(html, /const APP_VERSION = '1\.14\.0'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.14\.0'/);
+    assert.match(latest, /tag: 'latest'/);
+    assert.match(latest, /12 Unit themes/);
+    assert.match(latest, /now called Dot Matrix/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /id="help-modal"[\s\S]*four Unit themes \(Zero, One, Two, Eight\)/);
   });
 });
 
@@ -3208,13 +3290,25 @@ describe('Tag colors', () => {
     assert.match(html, /id="help-modal"[\s\S]*box stays open until you add a tag, press Esc, or click outside it/);
   });
 
-  it('1.13.3 is the latest version and documents normal desktop page scroll', () => {
-    assert.match(html, /const APP_VERSION = '1\.13\.3'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.13\.3'/);
-    assert.match(latest, /tag: 'latest'/);
-    assert.match(latest, /scrolls like a normal page/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+  it('1.13.3 documents normal desktop page scroll', () => {
+    const entry = html.match(/version: '1\.13\.3'[\s\S]*?\n      \},/)[0];
+    assert.match(entry, /date: 'Oct 1, 2026'/);
+    assert.doesNotMatch(entry, /tag: 'latest'/);
+    assert.match(entry, /scrolls like a normal page/);
+    assert.doesNotMatch(entry, /recurring tasks appear/);
+  });
+
+  it('1.13.4: Help and README explain when recurring tasks are added', () => {
+    const latestEntry = html.match(/version: '1\.13\.4'[\s\S]*?\n      \},/)[0];
+    assert.match(latestEntry, /date: 'Oct 6, 2026'/);
+    assert.doesNotMatch(latestEntry, /tag: 'latest'/);
+    assert.match(html, /<strong>When they appear<\/strong> — a due task is added to <em>today<\/em> whenever the app opens or refreshes, syncs/);
+    assert.match(html, /Days the app wasn't opened aren't filled in afterward/);
+    assert.match(latestEntry, /explains when recurring tasks appear/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /## How it behaves/);
+    assert.match(readme, /\*\*When they're added\*\* — a due template is added to \*today's\* date/);
+    assert.match(readme, /\*\*No backfill, no preview\*\*/);
   });
 
   it('1.13.2 documents the version move', () => {
