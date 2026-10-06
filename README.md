@@ -49,10 +49,10 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 ### Customization
 
-- **84 preset themes** — 28 light + 28 medium + 28 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Retro, Game Boy, Monokai, Phosphor, Fog, Twilight, etc.), browsed as mini wireframe previews, filterable by Light/Med/Dark
+- **96 preset themes** — 32 light + 32 medium + 32 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Retro, Dot Matrix, Monokai, Phosphor, Fog, Twilight, the four Unit themes, etc.), browsed as mini wireframe previews, filterable by Light/Med/Dark
 - **Custom Theme Builder** — create up to 5 of your own themes from 5 picked colors (Background, Surface, Sidebar, Accent, Text); ~30 CSS variables auto-derived, live preview, synced across devices
 - **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date; on phones, **Options** in the menu)
-  - Themes: 84 presets with Light/Med/Dark filters, plus Custom tab for user-created themes
+  - Themes: 96 presets with Light/Med/Dark filters, plus Custom tab for user-created themes
   - Appearance: Comfortable/Compact density, text size, font family, sidebar position, card glow, gradient header
   - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view, celebration confetti, confirm before delete, strike-through completed tasks, truncate long project notes, weekends don't break streaks, holiday settings
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
@@ -236,13 +236,15 @@ E2E covers add → New, complete/uncomplete, reload persistence, export tombston
 
 ## Themes
 
-84 presets — 28 light + 28 medium + 28 dark — browsable as mini wireframe previews in Options → Themes, filterable by Light/Med/Dark.
+96 presets — 32 light + 32 medium + 32 dark — browsable as mini wireframe previews in Options → Themes, filterable by Light/Med/Dark.
 
-**Light (28):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Solarized, Sepia, Tokyo Day, Nord Light, Honey, Cloud, Peach, Olive, Seafoam, Citrus, Mediterranean, Vaporwave, Synthwave, Cyberpunk, Outrun, Retro (SNES)
+**Light (32):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Solarized, Sepia, Tokyo Day, Nord Light, Honey, Cloud, Peach, Olive, Seafoam, Citrus, Mediterranean, Vaporwave, Synthwave, Cyberpunk, Outrun, Retro, Unit Zero, Unit One, Unit Two, Unit Eight
 
-**Medium (28):** Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Denim, Lichen, Fern, Tundra, Moss, Basalt, Game Boy, Driftwood, Clay, Sandstone, Umber, Terracotta, Flint, Twilight, Haze, Plum Mid, Mulberry, Merlot, Ash, Graphite, Concrete
+**Medium (32):** Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Denim, Lichen, Fern, Tundra, Moss, Basalt, Dot Matrix, Driftwood, Clay, Sandstone, Umber, Terracotta, Flint, Twilight, Haze, Plum Mid, Mulberry, Merlot, Ash, Graphite, Concrete, Unit Zero, Unit One, Unit Two, Unit Eight
 
-**Dark (28):** Default, OLED, Nord, Dracula, Catppuccin, Tokyo Storm, Solarized, Gruvbox, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Ember, Glacier, Plum, Storm, One Dark, Phosphor, Monokai, Rosé Pine, Synthwave, Cyberpunk, Outrun, Vaporwave
+**Dark (32):** Default, OLED, Nord, Dracula, Catppuccin, Tokyo Storm, Solarized, Gruvbox, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Ember, Glacier, Plum, Storm, One Dark, Phosphor, Monokai, Rosé Pine, Synthwave, Cyberpunk, Outrun, Vaporwave, Unit Zero, Unit One, Unit Two, Unit Eight
+
+**Unit themes** — one per pilot (Zero: prototype blue and white; One: purple and neon green; Two: production red and orange; Eight: pink and mint), each in all three tiers, with a thin color stripe across the top header. **Dot Matrix** was called Game Boy before 1.14.0; a saved selection carries over automatically.
 
 ## License
 
