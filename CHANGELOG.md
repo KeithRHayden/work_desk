@@ -8,6 +8,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ## [1.13.3] — 2026-10-01
 
+### Improved
+- **Help: when recurring tasks appear** — the Recurring tasks section now explains that a due task is added to today on open/refresh, on sync (every 5 minutes and when switching back to the tab, if signed in), or when switching Work/Personal; that you don't need to be viewing today; that each is added once per day; that skipped days aren't backfilled and future days don't preview; and how offline mode behaves overnight
+- **README: How it behaves** — new section covering recurring timing, carry forward (what counts as unfinished, auto carry across all past days, when it runs), sync timing, the delete Undo window, desktop scrolling, completed-task collapse, the tag box, Today's Progress, the What's new link, and local history pruning
+
 ### Fixed
 - **Desktop page scroll** — the desk now scrolls like a normal page: the date / progress / add-task card sits at the top of the page and scrolls away as you scroll down, and the columns no longer slide underneath it. Since 1.4.2 the card had been pinned with the board scrolling in its own box below it, which was a misread of the original request. `.main` is now the scroll container and the board area no longer scrolls separately; space for its scrollbar is always reserved (`scrollbar-gutter: stable`) so the board doesn't shift sideways when a day gets long enough to scroll, and the Options panel's max height was trimmed so opening it never makes the page scroll. The sidebar still scrolls on its own, and phones are unchanged
 
