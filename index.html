@@ -4781,6 +4781,126 @@
     .streak-heatmap.period-week + .streak-heatmap-labels span { text-align: center; }
     .streak-hint { margin: 8px 0 0; font-size: 0.7rem; color: var(--text-muted); }
 
+    /* ── Click-through to the desk ───────────────────────────────── */
+    .insight-bar-row.is-link,
+    .insight-table tr.is-link,
+    .heatmap-cell[data-open-day] { cursor: pointer; }
+    .insight-bar-row.is-link { border-radius: 6px; }
+    .insight-bar-row.is-link:hover .insight-bar-label,
+    .insight-bar-row.is-link:focus-visible .insight-bar-label { color: var(--accent); }
+    .insight-bar-row.is-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .heatmap-cell[data-open-day]:hover { cursor: pointer; }
+    .insight-day-link {
+      font: inherit;
+      color: inherit;
+      text-align: left;
+      padding: 0;
+    }
+    .insight-table tr.is-link:hover .insight-day-link,
+    .insight-day-link:focus-visible { color: var(--accent); text-decoration: underline; }
+
+    .insights-current-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .insights-current-btn:hover { background: var(--accent-light); }
+
+    .comparison-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin: -8px 0 8px;
+    }
+
+    /* ── Tags / Lingering / Shelved cards ────────────────────────── */
+    .insight-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .insight-card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .insight-card .carryover-hint { margin: 0 0 12px; }
+    .insight-card-foot { margin-top: 12px; font-size: 0.78rem; color: var(--text-muted); }
+
+    /* One grid for every row so all bars share the same track width */
+    .tag-breakdown {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr) auto;
+      gap: 8px 10px;
+      align-items: center;
+    }
+    .tag-breakdown-row { display: contents; }
+    .tags-card .insight-legend { margin-bottom: 12px; }
+    .tag-breakdown-name { min-width: 0; overflow: hidden; font-size: 0.82rem; color: var(--text-muted); }
+    .tag-breakdown-track {
+      height: 12px;
+      border-radius: 6px;
+      background: var(--panel-bg);
+      overflow: hidden;
+    }
+    .tag-breakdown-fill { display: flex; height: 100%; min-width: 4px; }
+    .tag-breakdown-counts {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .insight-task-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .insight-task-row:last-of-type { border-bottom: none; }
+    .insight-task-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .insight-task-text {
+      font-size: 0.9rem;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .insight-task-meta { font-size: 0.76rem; color: var(--text-muted); }
+    .insight-task-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+    .insight-task-tags .tag-chip { font-size: 0.66rem; }
+    .insight-task-actions { display: flex; gap: 6px; flex: none; }
+    .insight-task-btn {
+      padding: 5px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .insight-task-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .insight-task-btn.bring-back { background: var(--accent-light); border-color: transparent; color: var(--accent); font-weight: 600; }
+    .insight-show-all {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .insight-show-all:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .tag-breakdown { grid-template-columns: 90px minmax(0, 1fr); }
+      .tag-breakdown-counts { grid-column: 1 / -1; margin-top: -4px; }
+      .insight-task-row { flex-direction: column; align-items: stretch; }
+      .insight-task-actions { justify-content: flex-end; }
+    }
+
     /* ── Chart Type Selector ─────────────────────────────────── */
     .chart-section-header {
       display: flex;
@@ -7883,7 +8003,12 @@
         <ul>
           <li>Switch between <strong>Week</strong>, <strong>Month</strong>, and <strong>Year</strong> views, and step back/forward with the arrows</li>
           <li><strong>Productivity summary</strong> — completion rate, average daily completions, carry-over rate, and your most productive day</li>
-          <li><strong>Week-over-week</strong> (week view) — compares this week's completions against the previous one</li>
+          <li><strong>Click a day to open it</strong> — click a row in the Day-by-day table, a bar in the breakdown chart, or any heatmap square to jump to that day on the Desk. In Year view, clicking a month bar opens that month in Insights instead</li>
+          <li><strong>This week / This month / This year</strong> — after stepping to another period with the arrows, this button next to them takes you back to the current one</li>
+          <li><strong>Week-over-week, Month-over-month, Year-over-year</strong> — compares completions, carry-overs, and completion rate with the previous period. A month or year still in progress is compared with the same number of days at the start of the last one (e.g. Oct 1–6 vs Sep 1–6), so early-month numbers aren't measured against a whole month</li>
+          <li><strong>Tasks by Tag</strong> — done, open, shelved, and carried counts for each tag in the period. A task with two tags counts under both, and untagged tasks show as <em>No tag</em>. Long lists show the top 8 with a <em>Show all</em> link</li>
+          <li><strong>Lingering Tasks</strong> — your five oldest open tasks right now (regardless of the period), with how long each has been open, when it was created, and the day it was last carried from. <em>Open</em> jumps to it on the Desk</li>
+          <li><strong>Shelved Review</strong> — shelved tasks sitting on days in the period. <em>Bring back</em> unshelves the task and moves it onto today's Active column (the same task, not a copy); <em>Open</em> jumps to the day it's on. The footer shows how many tasks are shelved in total and the oldest one's date. Tasks are dated by the day they sit on, since the app doesn't record when something was shelved</li>
           <li><strong>Carry-over analysis</strong> — each carry-over is counted on the day the task was left unfinished. Month and Year add a trend chart (by week or by month; Year stops at the current month), and each weekday bar shows the specific dates behind it on the same line (e.g. Wed: Sep 9 (2) · Sep 23 (1)); hover a row to see the full list when it's too long to fit</li>
           <li><strong>Streak tracking</strong> — current and longest streaks based on days with desk activity, plus a heatmap matched to the period you're viewing. Each block is a day (darker means more tasks), labeled by weekday, date, or month underneath</li>
           <li><strong>Weekends don't break streaks</strong> (Options → Behavior → Insights, on by default) — Fri → Mon stays consecutive for streak counting; if you work a Saturday or Sunday it still counts, but an idle weekend does not reset the streak</li>
@@ -7926,7 +8051,7 @@
           <li>Double-click a task, note, or comment to edit it on desktop</li>
           <li>Click <strong>Aa</strong> next to the input box to show bold, italic, underline, and bullet formatting buttons</li>
           <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
-          <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box to submit without clicking Add</li>
+          <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box or a comment box to submit without clicking Add</li>
           <li>Use the sidebar collapse button (‹) to give the board more room</li>
           <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
           <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors; use the <strong>Custom</strong> tab to create your own theme from 5 picked colors</li>
@@ -7936,6 +8061,7 @@
         <h3>Keyboard shortcuts</h3>
         <ul>
           <li><strong>Add task/note</strong> — Ctrl/Cmd + Enter</li>
+          <li><strong>Add comment/update</strong> — Ctrl/Cmd + Enter</li>
           <li><strong>Bold</strong> — Ctrl/Cmd + B</li>
           <li><strong>Italic</strong> — Ctrl/Cmd + I</li>
           <li><strong>Underline</strong> — Ctrl/Cmd + U</li>
@@ -8031,12 +8157,27 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.14.0';
+    const APP_VERSION = '1.15.0';
     const CHANGELOG = [
+      {
+        version: '1.15.0',
+        date: 'Oct 6, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Insights: click a day to open it on the Desk, from the Day-by-day table, the breakdown bars, or any heatmap square. In Year view, clicking a month bar opens that month in Insights',
+            'Insights: a "This week / This month / This year" button appears after you step to another period, and takes you straight back',
+            'Insights: Month-over-Month and Year-over-Year comparisons, alongside Week-over-Week. A month or year still in progress is compared with the same days last time, so early in the month isn\'t measured against all of last month',
+            'Insights: Tasks by Tag card. Done, open, shelved, and carried counts for each tag in the period',
+            'Insights: Lingering Tasks card. Your five oldest open tasks, how long each has been open, and an Open button to jump to it',
+            'Insights: Shelved Review card. Shelved tasks on days in the period, each with Bring back (moves it to today\'s Active column) and Open, plus an all-time shelved count',
+            'Ctrl+Enter (Cmd+Enter on Mac) adds a comment or note update, the same way it adds tasks and notes',
+          ]},
+        ],
+      },
       {
         version: '1.14.0',
         date: 'Oct 6, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             '12 Unit themes — Unit Zero (prototype blue and white), Unit One (purple with neon green), Unit Two (production red and orange), and Unit Eight (pink with mint), each in light, medium, and dark, with a thin color stripe across the top header',
@@ -8741,6 +8882,7 @@
       insightsPeriod: localStorage.getItem(INSIGHTS_PERIOD_KEY) || 'week',
       insightsAnchor: localStorage.getItem(INSIGHTS_ANCHOR_KEY) || todayKey(),
       insightsChartType: 'bar', // bar, line, pie, stacked
+      insightsExpanded: {},
       calendarView: null,
       moveCalendarView: null,
       weekAnchorKey: null,
@@ -10671,6 +10813,16 @@
       return { wrap, editor, toolbar };
     }
 
+    function bindCtrlEnterSubmit(editor, form, submitBtn) {
+      editor.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!submitBtn.disabled) form.requestSubmit();
+        }
+      });
+    }
+
     function initAddEditor() {
       const { wrap, editor } = createRichEditor({
         className: 'add-input',
@@ -10681,13 +10833,7 @@
       });
       addEditor = editor;
       els.addEditorHost.appendChild(wrap);
-
-      editor.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-          e.preventDefault();
-          if (!els.addBtn.disabled) els.addForm.requestSubmit();
-        }
-      });
+      bindCtrlEnterSubmit(editor, els.addForm, els.addBtn);
 
       els.formatToggleBtn.addEventListener('click', () => {
         const expanded = els.addForm.classList.toggle('format-expanded');
@@ -16053,6 +16199,7 @@
           e.preventDefault();
           addComment(item.id, getEditorHtml(commentEditor));
         });
+        bindCtrlEnterSubmit(commentEditor, form, addBtn);
 
         form.appendChild(editorWrap);
         form.appendChild(addBtn);
@@ -16750,6 +16897,7 @@
           const monthEnd = new Date(monthStart.getFullYear(), month + 1, 0);
           const seg = {
             label: monthStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+            monthKey: formatDateKey(monthStart),
             completed: 0,
             shelved: 0,
             openNew: 0,
@@ -16774,6 +16922,7 @@
         segments = daily.map((s) => ({
           label: (() => { const d = dateFromKey(s.dayKey); return `<strong>${d.getDate()}</strong> – ${d.toLocaleDateString('en-US', { weekday: 'short' })}`; })(),
           labelIsHtml: true,
+          dayKey: s.dayKey,
           completed: s.completed,
           shelved: s.shelved,
           openNew: s.openNew,
@@ -16784,6 +16933,7 @@
       } else {
         segments = daily.map((s) => ({
           label: dateFromKey(s.dayKey).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          dayKey: s.dayKey,
           completed: s.completed,
           shelved: s.shelved,
           openNew: s.openNew,
@@ -16886,6 +17036,159 @@
       return { total, carryOverByDay, datesByWeekday, trend, perDate };
     }
 
+    function daysBetweenKeys(fromKey, toKey) {
+      return Math.round((dateFromKey(toKey) - dateFromKey(fromKey)) / 86400000);
+    }
+
+    function isKeyInRange(key, range) {
+      return key >= range.startKey && key <= range.endKey;
+    }
+
+    function summarizeRange(startKey, endKey) {
+      const totals = { activeDays: 0, tasks: 0, completed: 0, shelved: 0, unfinished: 0, carriedOver: 0 };
+      eachDateInRange(startKey, endKey, (dayKey) => {
+        const s = analyzeDayItems(dayKey, state.data.days[dayKey]?.items || []);
+        if (s.hasActivity) totals.activeDays++;
+        for (const k of ['tasks', 'completed', 'shelved', 'unfinished', 'carriedOver']) totals[k] += s[k];
+      });
+      const denom = totals.completed + totals.shelved + totals.unfinished;
+      return { totals, completionRate: denom > 0 ? Math.round((totals.completed / denom) * 100) : null };
+    }
+
+    // A period still in progress is compared with the same number of days at the start of the previous one,
+    // so the first week of a month isn't measured against all of last month.
+    function computePeriodComparison(period, anchorKey, today) {
+      const range = getPeriodRange(period, anchorKey);
+      const prevAnchor = dateFromKey(range.startKey);
+      if (period === 'month') prevAnchor.setMonth(prevAnchor.getMonth() - 1);
+      else prevAnchor.setFullYear(prevAnchor.getFullYear() - 1);
+      const prevRange = getPeriodRange(period, formatDateKey(prevAnchor));
+      const toDate = isKeyInRange(today, range);
+      let currentEnd = range.endKey;
+      let previousEnd = prevRange.endKey;
+      if (toDate) {
+        currentEnd = today;
+        const e = dateFromKey(prevRange.startKey);
+        e.setDate(e.getDate() + daysBetweenKeys(range.startKey, today));
+        const k = formatDateKey(e);
+        if (k < previousEnd) previousEnd = k;
+      }
+      const current = summarizeRange(range.startKey, currentEnd);
+      const previous = summarizeRange(prevRange.startKey, previousEnd);
+      const currentRate = current.completionRate ?? 0;
+      const previousRate = previous.completionRate ?? 0;
+      return {
+        current: current.totals,
+        previous: previous.totals,
+        currentRate,
+        previousRate,
+        toDate,
+        previousRange: { startKey: prevRange.startKey, endKey: previousEnd },
+        change: {
+          completed: current.totals.completed - previous.totals.completed,
+          carriedOver: current.totals.carriedOver - previous.totals.carriedOver,
+          completionRate: currentRate - previousRate,
+        },
+      };
+    }
+
+    // Tasks on days in the range, grouped by tag. A task with two tags counts under both.
+    function computeTagBreakdown(range) {
+      const byTag = new Map();
+      const blank = (tag) => ({ tag, total: 0, done: 0, open: 0, shelved: 0, carried: 0 });
+      const untagged = blank(null);
+      eachDateInRange(range.startKey, range.endKey, (dayKey) => {
+        for (const item of state.data.days[dayKey]?.items || []) {
+          if (item.type !== 'task') continue;
+          const tags = normalizeTagList(item.tags);
+          const rows = tags.length
+            ? tags.map((t) => { if (!byTag.has(t)) byTag.set(t, blank(t)); return byTag.get(t); })
+            : [untagged];
+          for (const row of rows) {
+            row.total++;
+            if (item.completed) row.done++;
+            else if (item.shelved) row.shelved++;
+            else row.open++;
+            if (item.carriedFrom) row.carried++;
+          }
+        }
+      });
+      const rows = [...byTag.values()].sort((a, b) => b.total - a.total || a.tag.localeCompare(b.tag));
+      return { rows, untagged: untagged.total ? untagged : null };
+    }
+
+    // Oldest still-open tasks right now. Tasks scheduled on a future day aren't lingering.
+    function findLingeringTasks(today, limit = 5) {
+      const seen = new Set();
+      const list = [];
+      for (const [dayKey, day] of Object.entries(state.data.days || {})) {
+        if (dayKey > today) continue;
+        for (const item of day.items || []) {
+          if (item.type !== 'task' || item.completed || item.shelved || seen.has(item.id)) continue;
+          seen.add(item.id);
+          const created = createdDateKey(item) || dayKey;
+          const age = daysBetweenKeys(created < dayKey ? created : dayKey, today);
+          if (age < 1) continue;
+          list.push({ item, dayKey, created, age });
+        }
+      }
+      list.sort((a, b) => b.age - a.age || a.dayKey.localeCompare(b.dayKey) || String(a.item.id).localeCompare(String(b.item.id)));
+      return { total: list.length, items: list.slice(0, limit) };
+    }
+
+    // Shelved tasks sitting on days in the range (oldest first), plus an all-time count
+    function findShelvedTasks(range) {
+      const seen = new Set();
+      const items = [];
+      let allTime = 0;
+      let oldestKey = null;
+      for (const dayKey of Object.keys(state.data.days || {}).sort()) {
+        for (const item of state.data.days[dayKey].items || []) {
+          if (item.type !== 'task' || !item.shelved || item.completed || seen.has(item.id)) continue;
+          seen.add(item.id);
+          allTime++;
+          if (!oldestKey) oldestKey = dayKey;
+          if (isKeyInRange(dayKey, range)) items.push({ item, dayKey });
+        }
+      }
+      return { items, allTime, oldestKey };
+    }
+
+    function bringBackShelvedTask(id) {
+      const found = findItem(id);
+      if (!found || found.item.type !== 'task' || !found.item.shelved) return;
+      const today = todayKey();
+      const item = { ...JSON.parse(JSON.stringify(found.item)), shelved: false, boardColumn: 'active' };
+      delete item.carriedFrom;
+      for (const date of Object.keys(state.data.days)) {
+        const day = state.data.days[date];
+        const remaining = day.items.filter(i => i.id !== id);
+        if (remaining.length === 0) delete state.data.days[date];
+        else if (remaining.length !== day.items.length) state.data.days[date] = { ...day, items: remaining };
+      }
+      const targetDay = state.data.days[today] || { date: today, items: [] };
+      state.data.days[today] = { date: today, items: [...targetDay.items, item] };
+      clearItemDeleted(id);
+      saveData();
+      showToast('Task brought back to today');
+      render();
+    }
+
+    function openDayFromInsights(dateKey, itemId = null) {
+      state.highlightItemId = itemId;
+      selectCalendarDate(dateKey);
+      if (!itemId) return;
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`item-${itemId}`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          state.highlightItemId = null;
+          el.classList.remove('search-highlight');
+        }, 2500);
+      });
+    }
+
     // Compute streak data
     function computeStreaks() {
       const activeDays = Object.keys(state.data.days || {})
@@ -16950,6 +17253,18 @@
       for (const seg of segments) {
         const row = document.createElement('div');
         row.className = 'insight-bar-row';
+        if (seg.dayKey || seg.monthKey) {
+          row.classList.add('is-link');
+          row.setAttribute('role', 'button');
+          row.tabIndex = 0;
+          if (seg.dayKey) {
+            row.dataset.openDay = seg.dayKey;
+            row.setAttribute('aria-label', `Open ${formatInsightsDayLabel(seg.dayKey)} on the desk`);
+          } else {
+            row.dataset.openMonth = seg.monthKey;
+            row.setAttribute('aria-label', `Show ${dateFromKey(seg.monthKey).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} in Insights`);
+          }
+        }
 
         const label = document.createElement('span');
         label.className = 'insight-bar-label';
@@ -17456,8 +17771,10 @@
 
       for (const row of active) {
         const tr = document.createElement('tr');
+        tr.className = 'is-link';
+        tr.dataset.openDay = row.dayKey;
         tr.innerHTML =
-          `<td>${escapeHtml(formatInsightsDayLabel(row.dayKey))}</td>` +
+          `<td><button type="button" class="insight-day-link" data-open-day="${row.dayKey}">${escapeHtml(formatInsightsDayLabel(row.dayKey))}</button></td>` +
           `<td class="num">${row.tasks}</td>` +
           `<td class="num">${row.completed}</td>` +
           `<td class="num">${row.shelved}</td>` +
@@ -17554,6 +17871,7 @@
 
           const cell = document.createElement('span');
           cell.className = 'heatmap-cell' + (inRange && val > 0 ? ' has-data' : '') + (!inRange ? ' out-of-range' : '');
+          if (inRange) cell.dataset.openDay = key;
 
           if (inRange && val > 0) {
             // 4-level intensity using CSS custom property
@@ -17565,7 +17883,7 @@
 
           const dateLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           cell.title = inRange
-            ? (val > 0 ? `${dateLabel}: ${val} completed` : `${dateLabel}: no activity`)
+            ? (val > 0 ? `${dateLabel}: ${val} completed` : `${dateLabel}: no activity`) + ' · click to open'
             : '';
           row.appendChild(cell);
         }
@@ -17587,6 +17905,174 @@
       section.appendChild(wrap);
       section.appendChild(legend);
       return section;
+    }
+
+    const INSIGHTS_LIST_CAP = 8;
+
+    function insightCard(className, title, hint) {
+      const card = document.createElement('div');
+      card.className = `insight-card ${className}`;
+      const h = document.createElement('h3');
+      h.className = 'insight-card-title';
+      h.textContent = title;
+      card.appendChild(h);
+      if (hint) {
+        const p = document.createElement('p');
+        p.className = 'carryover-hint';
+        p.textContent = hint;
+        card.appendChild(p);
+      }
+      return card;
+    }
+
+    function insightTagChips(tags) {
+      const wrap = document.createElement('span');
+      wrap.className = 'insight-task-tags';
+      for (const tag of normalizeTagList(tags)) {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        decorateTagChip(chip, tag);
+        chip.appendChild(tagChipLabel(tag.toUpperCase()));
+        wrap.appendChild(chip);
+      }
+      return wrap;
+    }
+
+    function insightShowAllButton(key, total) {
+      const expanded = !!state.insightsExpanded?.[key];
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'insight-show-all';
+      btn.dataset.toggleList = key;
+      btn.setAttribute('aria-expanded', String(expanded));
+      btn.textContent = expanded ? 'Show fewer' : `Show all (${total})`;
+      return btn;
+    }
+
+    function renderTagBreakdownCard(range) {
+      const { rows, untagged } = computeTagBreakdown(range);
+      if (!rows.length) return null;
+      const card = insightCard('tags-card', 'Tasks by Tag', 'Tasks on days in this period; a task with two tags counts under both');
+      const expanded = !!state.insightsExpanded?.tags;
+      const shown = expanded ? rows : rows.slice(0, INSIGHTS_LIST_CAP);
+      const all = untagged ? [...shown, untagged] : shown;
+      const max = Math.max(...all.map(r => r.total), 1);
+      const legend = document.createElement('div');
+      legend.className = 'insight-legend';
+      legend.innerHTML =
+        '<span class="legend-item"><span class="legend-swatch completed"></span>Done</span>' +
+        '<span class="legend-item"><span class="legend-swatch shelved"></span>Shelved</span>' +
+        '<span class="legend-item"><span class="legend-swatch unfinished"></span>Open</span>';
+      card.appendChild(legend);
+      const list = document.createElement('div');
+      list.className = 'tag-breakdown';
+      for (const r of all) {
+        const row = document.createElement('div');
+        row.className = 'tag-breakdown-row';
+        row.dataset.tag = r.tag ?? '';
+        const name = document.createElement('span');
+        name.className = 'tag-breakdown-name';
+        if (r.tag) name.appendChild(insightTagChips([r.tag]));
+        else name.textContent = 'No tag';
+        const track = document.createElement('div');
+        track.className = 'tag-breakdown-track';
+        const fill = document.createElement('div');
+        fill.className = 'tag-breakdown-fill';
+        fill.style.width = `${(r.total / max) * 100}%`;
+        for (const [key, val] of [['completed', r.done], ['shelved', r.shelved], ['unfinished', r.open]]) {
+          if (!val) continue;
+          const seg = document.createElement('div');
+          seg.className = `insight-bar-seg ${key}`;
+          seg.style.flex = String(val);
+          fill.appendChild(seg);
+        }
+        track.appendChild(fill);
+        const counts = document.createElement('span');
+        counts.className = 'tag-breakdown-counts';
+        const parts = [`${r.done} done`, `${r.open} open`];
+        if (r.shelved) parts.push(`${r.shelved} shelved`);
+        if (r.carried) parts.push(`${r.carried} carried`);
+        counts.textContent = parts.join(' · ');
+        track.title = `${r.total} task${r.total === 1 ? '' : 's'}: ${parts.join(', ')}`;
+        row.append(name, track, counts);
+        list.appendChild(row);
+      }
+      card.appendChild(list);
+      if (rows.length > INSIGHTS_LIST_CAP) card.appendChild(insightShowAllButton('tags', rows.length));
+      return card;
+    }
+
+    function insightTaskRow(item, metaText, actions) {
+      const row = document.createElement('div');
+      row.className = 'insight-task-row';
+      row.dataset.itemId = item.id;
+      const main = document.createElement('div');
+      main.className = 'insight-task-main';
+      const text = document.createElement('span');
+      text.className = 'insight-task-text';
+      text.textContent = plainTextPreview(item.content, 90) || '(empty task)';
+      const meta = document.createElement('span');
+      meta.className = 'insight-task-meta';
+      meta.textContent = metaText;
+      main.append(text, meta);
+      if (normalizeTagList(item.tags).length) main.appendChild(insightTagChips(item.tags));
+      const btns = document.createElement('div');
+      btns.className = 'insight-task-actions';
+      for (const a of actions) btns.appendChild(a);
+      row.append(main, btns);
+      return row;
+    }
+
+    function insightActionButton(label, className, data) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `insight-task-btn ${className}`;
+      btn.textContent = label;
+      Object.assign(btn.dataset, data);
+      return btn;
+    }
+
+    const insightAgo = (days) => (days === 1 ? '1 day' : `${days} days`);
+    const insightShortDate = (k) => dateFromKey(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    function renderLingeringCard(today) {
+      const { total, items } = findLingeringTasks(today, 5);
+      if (!items.length) return null;
+      const card = insightCard('lingering-card', 'Lingering Tasks',
+        `Your oldest open tasks right now${total > items.length ? ` (${items.length} of ${total})` : ''}`);
+      for (const { item, dayKey, created, age } of items) {
+        let meta = `Open ${insightAgo(age)} · created ${insightShortDate(created)}`;
+        if (item.carriedFrom) meta += ` · last carried from ${insightShortDate(item.carriedFrom)}`;
+        if (dayKey !== today) meta += ` · on ${insightShortDate(dayKey)}`;
+        card.appendChild(insightTaskRow(item, meta, [
+          insightActionButton('Open', 'open', { openItem: item.id, day: dayKey }),
+        ]));
+      }
+      return card;
+    }
+
+    function renderShelvedCard(range, today) {
+      const { items, allTime, oldestKey } = findShelvedTasks(range);
+      if (!items.length) return null;
+      const card = insightCard('shelved-card', 'Shelved Review',
+        `${items.length} shelved task${items.length === 1 ? '' : 's'} sitting on days in this period`);
+      const expanded = !!state.insightsExpanded?.shelved;
+      const shown = expanded ? items : items.slice(0, INSIGHTS_LIST_CAP);
+      for (const { item, dayKey } of shown) {
+        const ago = daysBetweenKeys(dayKey, today);
+        const when = ago > 0 ? `${insightAgo(ago)} ago` : ago === 0 ? 'today' : `in ${insightAgo(-ago)}`;
+        card.appendChild(insightTaskRow(item, `On ${insightShortDate(dayKey)} · ${when}`, [
+          insightActionButton('Bring back', 'bring-back', { bringBack: item.id }),
+          insightActionButton('Open', 'open', { openItem: item.id, day: dayKey }),
+        ]));
+      }
+      if (items.length > INSIGHTS_LIST_CAP) card.appendChild(insightShowAllButton('shelved', items.length));
+      const foot = document.createElement('p');
+      foot.className = 'insight-card-foot';
+      const oldest = dateFromKey(oldestKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      foot.textContent = `All time: ${allTime} shelved, oldest from ${oldest}`;
+      card.appendChild(foot);
+      return card;
     }
 
     function renderInsights() {
@@ -17651,8 +18137,52 @@
       nav.appendChild(nextBtn);
       controls.appendChild(periodTabs);
       controls.appendChild(nav);
+      if (!isKeyInRange(todayKey(), range)) {
+        const currentBtn = document.createElement('button');
+        currentBtn.type = 'button';
+        currentBtn.className = 'insights-current-btn';
+        currentBtn.dataset.insightsCurrent = '';
+        currentBtn.textContent = `This ${state.insightsPeriod}`;
+        controls.appendChild(currentBtn);
+      }
       header.appendChild(controls);
       panel.appendChild(header);
+
+      const activate = (el) => {
+        if (el.dataset.insightsCurrent !== undefined) {
+          state.insightsAnchor = todayKey();
+          localStorage.setItem(INSIGHTS_ANCHOR_KEY, state.insightsAnchor);
+          render();
+        } else if (el.dataset.bringBack) {
+          bringBackShelvedTask(el.dataset.bringBack);
+        } else if (el.dataset.openItem) {
+          openDayFromInsights(el.dataset.day, el.dataset.openItem);
+        } else if (el.dataset.openMonth) {
+          state.insightsPeriod = 'month';
+          state.insightsAnchor = el.dataset.openMonth;
+          localStorage.setItem(INSIGHTS_PERIOD_KEY, 'month');
+          localStorage.setItem(INSIGHTS_ANCHOR_KEY, state.insightsAnchor);
+          render();
+        } else if (el.dataset.openDay) {
+          openDayFromInsights(el.dataset.openDay);
+        } else if (el.dataset.toggleList) {
+          const key = el.dataset.toggleList;
+          state.insightsExpanded = { ...state.insightsExpanded, [key]: !state.insightsExpanded?.[key] };
+          render();
+        }
+      };
+      const ACTION_SELECTOR = '[data-insights-current], [data-bring-back], [data-open-item], [data-open-month], [data-open-day], [data-toggle-list]';
+      panel.addEventListener('click', (e) => {
+        const el = e.target.closest(ACTION_SELECTOR);
+        if (el && panel.contains(el)) activate(el);
+      });
+      panel.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const el = e.target.closest('[role="button"]');
+        if (!el || !el.matches(ACTION_SELECTOR)) return;
+        e.preventDefault();
+        activate(el);
+      });
 
       if (!hasData) {
         const empty = document.createElement('div');
@@ -17719,31 +18249,48 @@
       `;
       panel.appendChild(metricsCard);
 
-      // Week-over-Week Comparison (for week view only)
-      if (state.insightsPeriod === 'week' && totals.activeDays > 0) {
-        const comparison = computeWeekComparison(data, state.insightsAnchor);
+      // Period-over-period comparison
+      if (totals.activeDays > 0) {
+        const period = state.insightsPeriod;
+        const rateOf = (t) => (t.completed + t.shelved + t.unfinished > 0
+          ? Math.round((t.completed / (t.completed + t.shelved + t.unfinished)) * 100) : 0);
+        let comparison;
+        if (period === 'week') {
+          comparison = computeWeekComparison(data, state.insightsAnchor);
+          comparison.currentRate = rateOf(comparison.current);
+          comparison.previousRate = rateOf(comparison.previous);
+        } else {
+          comparison = computePeriodComparison(period, state.insightsAnchor, todayKey());
+        }
+        const titles = { week: 'Week-over-Week', month: 'Month-over-Month', year: 'Year-over-Year' };
+        const prev = comparison.toDate ? `by this point last ${period}` : `last ${period}`;
+        const shortDate = (k) => dateFromKey(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const hint = comparison.toDate
+          ? `<p class="comparison-hint">So far this ${period}, compared with ${shortDate(comparison.previousRange.startKey)} – ${shortDate(comparison.previousRange.endKey)}</p>`
+          : '';
         const compCard = document.createElement('div');
         compCard.className = 'comparison-card';
-        
+        compCard.dataset.comparison = period;
         compCard.innerHTML = `
-          <h3 class="comparison-title">Week-over-Week</h3>
+          <h3 class="comparison-title">${titles[period]}</h3>
+          ${hint}
           <div class="comparison-grid">
             <div class="comparison-row">
               <span class="comp-label">Completed:</span>
               <span class="comp-current">${comparison.current.completed}</span>
-              <span class="comp-previous">(${comparison.previous.completed} last week)</span>
+              <span class="comp-previous">(${comparison.previous.completed} ${prev})</span>
               ${formatChange(comparison.change.completed)}
             </div>
             <div class="comparison-row">
               <span class="comp-label">Carried Over:</span>
               <span class="comp-current">${comparison.current.carriedOver}</span>
-              <span class="comp-previous">(${comparison.previous.carriedOver} last week)</span>
+              <span class="comp-previous">(${comparison.previous.carriedOver} ${prev})</span>
               ${formatChange(comparison.change.carriedOver, { lowerIsBetter: true })}
             </div>
             <div class="comparison-row">
               <span class="comp-label">Completion Rate:</span>
-              <span class="comp-current">${comparison.current.completed + comparison.current.shelved + comparison.current.unfinished > 0 ? Math.round((comparison.current.completed / (comparison.current.completed + comparison.current.shelved + comparison.current.unfinished)) * 100) : 0}%</span>
-              <span class="comp-previous">(${comparison.previous.completed + comparison.previous.shelved + comparison.previous.unfinished > 0 ? Math.round((comparison.previous.completed / (comparison.previous.completed + comparison.previous.shelved + comparison.previous.unfinished)) * 100) : 0}% last week)</span>
+              <span class="comp-current">${comparison.currentRate}%</span>
+              <span class="comp-previous">(${comparison.previousRate}% ${prev})</span>
               ${formatChange(comparison.change.completionRate)}
             </div>
           </div>
@@ -17812,6 +18359,14 @@
         panel.appendChild(carryCard);
       }
 
+      for (const card of [
+        renderTagBreakdownCard(range),
+        renderLingeringCard(todayKey()),
+        renderShelvedCard(range, todayKey()),
+      ]) {
+        if (card) panel.appendChild(card);
+      }
+
       // Streak Tracking
       const streaks = computeStreaks();
       if (streaks.current > 0 || streaks.longest > 0 || daily.length > 0) {
@@ -17852,9 +18407,10 @@
         daily.forEach(day => {
           const cell = document.createElement('div');
           cell.className = 'heatmap-cell';
+          cell.dataset.openDay = day.dayKey;
           const dObj = dateFromKey(day.dayKey);
           const dateLabel = dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          cell.title = `${dateLabel}: ${day.completed} completed, ${day.tasks} total tasks`;
+          cell.title = `${dateLabel}: ${day.completed} completed, ${day.tasks} total tasks · click to open`;
           
           if (day.tasks > 0) {
             const intensity = Math.ceil((day.tasks / maxCount) * 4);
@@ -19022,6 +19578,7 @@
           e.preventDefault();
           addComment(draft.add.taskId, getEditorHtml(commentEditor));
         });
+        bindCtrlEnterSubmit(commentEditor, form, addBtn);
         form.appendChild(editorWrap);
         form.appendChild(addBtn);
         panel.appendChild(form);
