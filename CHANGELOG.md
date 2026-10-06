@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.14.0] — 2026-10-06
+
+### Added
+- **12 Unit themes** — four themes, one per pilot, each in light, medium, and dark, bringing the total to 96 (32 light + 32 medium + 32 dark). Each tier uses the same four names, like Synthwave and Cyberpunk do
+  - **Unit Zero** — prototype blue and white with a pale-blue accent; red is saved for the today ring and delete
+  - **Unit One** — purple with a neon green accent and an orange highlight
+  - **Unit Two** — production red with an orange accent; in dark, delete turns orange so it doesn't blend into the red
+  - **Unit Eight** — plugsuit pink with mint for completed tasks and notes
+  - Every Unit theme draws a thin stripe across the top header in that unit's colors (like Retro's controller stripe). Turning on the gradient header replaces it, same as Retro
+  - Bright accents (medium and dark Zero, One, and Eight; medium Two) use dark text on primary buttons
+
+### Improved
+- **Game Boy theme renamed to Dot Matrix** — same colors, new name and theme id (`dot-matrix`). A saved `gameboy` selection is moved over on load, and synced preferences from devices still on the old name are mapped too, so nobody gets bumped back to the default theme
+
 ## [1.13.4] — 2026-10-06
 
 ### Improved
@@ -141,9 +155,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 ### Added
 - **12 new themes** — 4 per tier, bringing the total to 84 (28 light + 28 medium + 28 dark)
   - **Light:** Retro (SNES console gray, purple buttons, red/yellow/green/blue controller stripe across the desk header), Seafoam, Mediterranean, Citrus
-  - **Medium:** Game Boy (classic DMG four-shade green), Denim, Terracotta, Merlot
+  - **Medium:** Dot Matrix (classic four-shade handheld green; renamed in 1.14.0), Denim, Terracotta, Merlot
   - **Dark:** Monokai, One Dark, Phosphor (green-screen CRT glow), Rosé Pine
-- Bright-accent themes (Game Boy, Phosphor, Denim, Terracotta, Merlot, Rosé Pine) use dark text on primary buttons for readability
+- Bright-accent themes (Dot Matrix, Phosphor, Denim, Terracotta, Merlot, Rosé Pine) use dark text on primary buttons for readability
 
 ## [1.7.0] — 2026-09-22
 
