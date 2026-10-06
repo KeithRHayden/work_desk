@@ -40,7 +40,12 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - Week / month / year views with a period selector and prev/next navigation
 - **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day
-- **Week-over-week** comparison (week view)
+- **Click a day to open it** — Day-by-day rows, breakdown bars, and heatmap squares jump to that day on the Desk; in Year view a month bar opens that month
+- **This week / month / year** button returns to the current period after stepping away
+- **Week-over-week, month-over-month, year-over-year** comparisons; an in-progress month or year is compared with the same days at the start of the previous one
+- **Tasks by Tag** — done / open / shelved / carried per tag for the period
+- **Lingering Tasks** — the five oldest open tasks right now, with days open and a jump link
+- **Shelved Review** — shelved tasks in the period with *Bring back* (to today's Active column) and *Open*, plus an all-time shelved count
 - **Carry-over analysis** — counted on the day each task was left unfinished; Month/Year views add a by-week / by-month trend chart (Year stops at the current month) and show the specific dates behind each weekday bar inline (hover a row for the full list)
 - **Streak tracking** — current/longest streaks based on days with desk activity, with a heatmap matched to the selected period, labeled by weekday, date, or month
 - **Weekends don't break streaks** — Options → Behavior toggle (on by default); Fri → Mon stays consecutive; active weekend days still count, idle weekends do not reset the streak
@@ -102,6 +107,13 @@ The details behind the features above: when things happen automatically, and wha
 - **Pull and merge** — on open, when you switch back to the tab, and every 5 minutes while the tab is visible (at most once every 10 seconds)
 - **Push** — your edits, including auto carry, upload about 2.5 seconds after the last change; auto-added recurring tasks upload immediately
 - **Offline** — nothing leaves the browser; use Export All for backups
+
+### Insights
+
+- **Lingering Tasks ignores the period** — it always shows what's open right now; tasks on future days and tasks created today are left out
+- **Shelved Review dates** — tasks are grouped by the day they sit on, because the app doesn't record when a task was shelved
+- **Bring back** — moves the task (same ID, not a copy) to today's Active column and clears its carry stamp, so it isn't counted as a carry-over
+- **Comparisons in progress** — Month and Year compare against the same number of days at the start of the previous period until the period ends; Week compares full weeks
 
 ### Deleting
 
@@ -192,6 +204,7 @@ work-desk/
 | Action | Shortcut |
 |--------|----------|
 | Add task / note | `Ctrl/Cmd + Enter` |
+| Add comment / update | `Ctrl/Cmd + Enter` |
 | Bold / Italic / Underline | `Ctrl/Cmd + B` / `I` / `U` |
 | Cancel / close | `Escape` |
 
