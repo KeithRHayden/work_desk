@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.15.0] — 2026-10-06
+
+### Added
+- **Insights: click a day to open it** — Day-by-day table rows, breakdown chart bars (Week and Month), the streak strip, and the Year heatmap now open that day on the Desk. In Year view, a month bar opens that month in Insights. Bars and table days are keyboard-reachable (Enter / Space)
+- **Insights: back to the current period** — after stepping away with the arrows, a *This week* / *This month* / *This year* button appears beside them and returns to the period containing today. It also shows on an empty period
+- **Insights: Month-over-Month and Year-over-Year** — the comparison card now appears in every view. While a month or year is still in progress it's compared with the same number of days at the start of the previous one (e.g. Oct 1–6 vs Sep 1–6), noted under the title; finished periods compare in full. Week-over-Week is unchanged
+- **Insights: Tasks by Tag** — done / open / shelved / carried counts per tag for tasks on days in the period, with a stacked bar per tag. A task with several tags counts under each; untagged tasks show as *No tag*; the top 8 show by default with *Show all (N)* / *Show fewer*
+- **Insights: Lingering Tasks** — the five oldest open tasks right now, regardless of period: days open, created date, the day it was last carried from, and *Open* to jump to it (highlighted on the Desk). Tasks scheduled on a future day and tasks created today are left out
+- **Insights: Shelved Review** — shelved tasks on days in the period, oldest first. *Bring back* unshelves a task and moves it to today's Active column, keeping the same ID and clearing its carry stamp (like a manual move, so it isn't counted as a carry-over); *Open* jumps to the day it's on. The footer shows the all-time shelved count and oldest date. Top 8 by default with *Show all*. Tasks are dated by the day they sit on, since shelve dates aren't recorded
+- **Ctrl+Enter adds comments** — Ctrl+Enter (Cmd+Enter on Mac) in a comment or note-update box adds it, matching the task/note add box. It does nothing while the box is empty, and also works in a draft restored after a sync
+
 ## [1.14.0] — 2026-10-06
 
 ### Added
