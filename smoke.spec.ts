@@ -2046,6 +2046,66 @@ test.describe('Comments', () => {
     await expect(page.locator('.comment', { hasText: 'First comment here' })).toBeVisible();
   });
 
+  async function openCommentEditor(page: Page, taskText: string, action: RegExp = /^comment/i) {
+    const card = page.locator('.item-card', { hasText: taskText }).first();
+    await card.locator('.card-action', { hasText: action }).click();
+    const trigger = card.locator('.add-comment-trigger');
+    if (await trigger.isVisible()) await trigger.click();
+    const editor = card.locator('.add-comment-form .comment-input');
+    await expect(editor).toBeVisible();
+    await editor.click();
+    return { card, editor };
+  }
+
+  test('Ctrl+Enter adds a comment without clicking Add', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Shortcut task');
+    const { card, editor } = await openCommentEditor(page, 'Shortcut task');
+    await editor.pressSequentially('Via keyboard', { delay: 15 });
+    await editor.press('Control+Enter');
+    await expect(card.locator('.comment', { hasText: 'Via keyboard' })).toHaveCount(1);
+    await expect(card.locator('.card-action.has-comments')).toContainText('comments (1)');
+    await expect(page.locator('.item-card', { hasText: 'Shortcut task' })).toHaveCount(1);
+  });
+
+  test('Cmd+Enter adds a comment too, and adds the next one after it', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Mac shortcut task');
+    const { card, editor } = await openCommentEditor(page, 'Mac shortcut task');
+    await editor.pressSequentially('First', { delay: 15 });
+    await editor.press('Meta+Enter');
+    await expect(card.locator('.comment', { hasText: 'First' })).toBeVisible();
+    const trigger = card.locator('.add-comment-trigger');
+    if (await trigger.isVisible()) await trigger.click();
+    const next = card.locator('.add-comment-form .comment-input');
+    await next.click();
+    await next.pressSequentially('Second', { delay: 15 });
+    await next.press('Control+Enter');
+    await expect(card.locator('.comment')).toHaveCount(2);
+  });
+
+  test('Ctrl+Enter in an empty comment box adds nothing and keeps the box open', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Empty shortcut task');
+    const { card, editor } = await openCommentEditor(page, 'Empty shortcut task');
+    await expect(card.locator('.comment-add-btn')).toBeDisabled();
+    await editor.press('Control+Enter');
+    await expect(card.locator('.comment')).toHaveCount(0);
+    await expect(card.locator('.add-comment-form .comment-input')).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Empty shortcut task' })).toHaveCount(1);
+  });
+
+  test('Ctrl+Enter adds an update to a note', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('.type-btn[data-type="note"]').click();
+    await addTask(page, 'Shortcut note');
+    const { card, editor } = await openCommentEditor(page, 'Shortcut note', /add update/i);
+    await editor.pressSequentially('Note update', { delay: 15 });
+    await editor.press('Control+Enter');
+    await expect(card.locator('.comment', { hasText: 'Note update' })).toBeVisible();
+    await expect(card.locator('.card-action', { hasText: 'updates (1)' })).toBeVisible();
+  });
+
   test('comment count badge increments after adding a comment', async ({ page }) => {
     await openDesk(page);
     await addTask(page, 'Badge counter task');
@@ -3027,5 +3087,256 @@ test.describe('What\'s new link and version footer (1.13.2)', () => {
     await expect(page.locator('#mobile-menu-sheet')).toBeVisible();
     await expect(page.locator('#mobile-menu-new-dot')).toBeHidden();
     await expect(page.locator('#whats-new-link')).toBeHidden();
+  });
+});
+
+// ── Insights 1.15.0 additions ──────────────────────────────────────────
+// Fixed "today" of Tue Oct 6, 2026 (week Mon Oct 5 – Sun Oct 11)
+test.describe('Insights 1.15.0 additions', () => {
+  async function openInsights(page: Page, period: 'week' | 'month' | 'year' = 'week', anchor = '2026-10-06') {
+    await page.clock.setFixedTime(new Date('2026-10-06T10:00:00'));
+    await page.addInitScript(([p, a]) => {
+      if (localStorage.getItem('qol-seeded')) return;
+      localStorage.setItem('qol-seeded', '1');
+      const t = (id: string, content: string, extra: Record<string, unknown> = {}) => ({
+        id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], tags: [], createdAt: '2026-10-06T09:00:00', ...extra,
+      });
+      const days: Record<string, { date: string; items: any[] }> = {
+        '2026-09-02': { date: '2026-09-02', items: [t('sep1', 'Early September win', { completed: true, createdAt: '2026-09-02T09:00:00' })] },
+        '2026-09-14': { date: '2026-09-14', items: [t('s-old', 'Old cache spike', { shelved: true, tags: ['ids'], createdAt: '2026-09-14T09:00:00' })] },
+        '2026-10-01': { date: '2026-10-01', items: [
+          t('d1', 'Renew vendor contract', { completed: true, tags: ['ace'] }),
+          t('d2', 'Review IDS batching', { completed: true, tags: ['ids'] }),
+          t('s1', 'Draft Postgres migration plan', { shelved: true, tags: ['ace', 'postgres'], createdAt: '2026-10-01T09:00:00' }),
+        ] },
+        '2026-10-02': { date: '2026-10-02', items: Array.from({ length: 8 }, (_, i) =>
+          t(`tg${i}`, `Tagged ${i}`, { completed: true, tags: [`tag${i}`] })) },
+        '2026-10-03': { date: '2026-10-03', items: Array.from({ length: 8 }, (_, i) =>
+          t(`sh${i}`, `Parked ${i}`, { shelved: true, createdAt: '2026-10-03T09:00:00' })) },
+        '2026-10-05': { date: '2026-10-05', items: [
+          t('s2', 'Look into flaky test', { shelved: true, createdAt: '2026-10-05T09:00:00' }),
+          t('d3', 'Send sprint notes', { completed: true }),
+        ] },
+        '2026-10-06': { date: '2026-10-06', items: [
+          t('o1', 'Follow up on silver layer', { tags: ['databricks'], carriedFrom: '2026-10-05', createdAt: '2026-09-17T09:00:00' }),
+          t('o2', 'Write KT notes', { boardColumn: 'active', carriedFrom: '2026-10-05', createdAt: '2026-09-28T09:00:00' }),
+          t('d4', 'Standup', { completed: true, tags: ['ace'] }),
+        ] },
+      };
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-insights-period', p);
+      localStorage.setItem('work-desk-insights-anchor', a);
+    }, [period, anchor]);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+  }
+
+  const expectDeskOn = async (page: Page, title: string, key: string) => {
+    await expect(page.locator('#insights-view')).toBeHidden();
+    await expect(page.locator('#date-title')).toHaveText(title);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-selected-date'))).toBe(key);
+  };
+  const workDay = (page: Page, key: string) =>
+    page.evaluate((k) => JSON.parse(localStorage.getItem('work-desk-data-work')!).days[k]?.items ?? null, key);
+
+  test('clicking a Day-by-day row opens that day on the desk', async ({ page }) => {
+    await openInsights(page, 'month');
+    await page.locator('.insight-table .insight-day-link[data-open-day="2026-10-01"]').click();
+    await expectDeskOn(page, 'Thursday, October 1, 2026', '2026-10-01');
+    await expect(page.locator('#item-d1')).toBeVisible();
+  });
+
+  test('clicking a breakdown bar opens that day; Enter on a focused bar does too', async ({ page }) => {
+    await openInsights(page, 'week');
+    const bar = page.locator('.insight-bar-row[data-open-day="2026-10-05"]');
+    await expect(bar).toHaveAttribute('role', 'button');
+    await bar.click();
+    await expectDeskOn(page, 'Monday, October 5, 2026', '2026-10-05');
+
+    await page.locator('#tab-insights').click();
+    await page.locator('.insight-bar-row[data-open-day="2026-10-06"]').focus();
+    await page.keyboard.press('Enter');
+    await expectDeskOn(page, 'Tuesday, October 6, 2026', '2026-10-06');
+  });
+
+  test('clicking a streak-strip square opens that day', async ({ page }) => {
+    await openInsights(page, 'month');
+    await page.locator('.streak-heatmap .heatmap-cell[data-open-day="2026-10-03"]').click();
+    await expectDeskOn(page, 'Saturday, October 3, 2026', '2026-10-03');
+  });
+
+  test('Year view: a month bar opens that month in Insights, and a heatmap square opens the day', async ({ page }) => {
+    await openInsights(page, 'year');
+    await page.locator('.insight-bar-row[data-open-month="2026-09-01"]').click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(page.locator('.period-tab.active')).toHaveText('Month');
+    await expect(page.locator('.insights-nav-label')).toHaveText('September 2026');
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-insights-period'))).toBe('month');
+
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await page.locator('.heatmap-wrap .heatmap-cell[data-open-day="2026-09-14"]').click();
+    await expectDeskOn(page, 'Monday, September 14, 2026', '2026-09-14');
+    await expect(page.locator('.heatmap-wrap .heatmap-cell.out-of-range[data-open-day]')).toHaveCount(0);
+  });
+
+  test('"This week" appears only away from the current week and returns to it, even from an empty week', async ({ page }) => {
+    await openInsights(page, 'week');
+    const btn = page.locator('.insights-current-btn');
+    await expect(btn).toHaveCount(0);
+    const label = page.locator('.insights-nav-label');
+    const current = await label.textContent();
+
+    for (let i = 0; i < 6; i++) await page.locator('.insights-nav .nav-arrow').first().click();
+    await expect(page.locator('.insight-empty')).toBeVisible();
+    await expect(btn).toHaveText('This week');
+    await btn.click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(label).toHaveText(current!);
+    await expect(btn).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-insights-anchor'))).toBe('2026-10-06');
+
+    await page.locator('.insights-nav .nav-arrow').last().click();
+    await btn.click();
+    await expect(label).toHaveText(current!);
+  });
+
+  test('"This month" and "This year" follow the period', async ({ page }) => {
+    await openInsights(page, 'month');
+    await page.locator('.insights-nav .nav-arrow').first().click();
+    await expect(page.locator('.insights-current-btn')).toHaveText('This month');
+    await page.locator('.insights-current-btn').click();
+    await expect(page.locator('.insights-nav-label')).toHaveText('October 2026');
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await page.locator('.insights-nav .nav-arrow').first().click();
+    await expect(page.locator('.insights-current-btn')).toHaveText('This year');
+    await page.locator('.insights-current-btn').click();
+    await expect(page.locator('.insights-nav-label')).toHaveText('2026');
+  });
+
+  test('comparison card: Week, Month to date, a finished Month, and Year', async ({ page }) => {
+    await openInsights(page, 'week');
+    await expect(page.locator('.comparison-card[data-comparison="week"] .comparison-title')).toHaveText('Week-over-Week');
+    await expect(page.locator('.comparison-card .comparison-hint')).toHaveCount(0);
+
+    await page.locator('.period-tab', { hasText: 'Month' }).click();
+    const month = page.locator('.comparison-card[data-comparison="month"]');
+    await expect(month.locator('.comparison-title')).toHaveText('Month-over-Month');
+    await expect(month.locator('.comparison-hint')).toHaveText('So far this month, compared with Sep 1 – Sep 6');
+    await expect(month.locator('.comparison-row').first().locator('.comp-current')).toHaveText('12');
+    await expect(month.locator('.comparison-row').first().locator('.comp-previous')).toHaveText('(1 by this point last month)');
+    await expect(month.locator('.comparison-row').first().locator('.change-good')).toHaveText('+11 ↑');
+
+    await page.locator('.insights-nav .nav-arrow').first().click();
+    const sept = page.locator('.comparison-card[data-comparison="month"]');
+    await expect(sept.locator('.comparison-hint')).toHaveCount(0);
+    await expect(sept.locator('.comparison-row').first().locator('.comp-previous')).toHaveText('(0 last month)');
+
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await expect(page.locator('.comparison-card[data-comparison="year"] .comparison-title')).toHaveText('Year-over-Year');
+  });
+
+  test('Tasks by Tag: counts per tag, No tag row, and Show all / Show fewer keep Insights open', async ({ page }) => {
+    await openInsights(page, 'month');
+    const card = page.locator('.tags-card');
+    await expect(card.locator('.insight-card-title')).toHaveText('Tasks by Tag');
+    const rows = card.locator('.tag-breakdown-row');
+    await expect(rows).toHaveCount(9);
+    await expect(rows.first()).toHaveAttribute('data-tag', 'ace');
+    await expect(rows.first().locator('.tag-breakdown-counts')).toHaveText('2 done · 0 open · 1 shelved');
+    await expect(card.locator('.tag-breakdown-row[data-tag=""] .tag-breakdown-name')).toHaveText('No tag');
+    await expect(card.locator('.tag-breakdown-row[data-tag="databricks"] .tag-breakdown-counts')).toHaveText('0 done · 1 open · 1 carried');
+
+    const toggle = card.locator('.insight-show-all');
+    await expect(toggle).toHaveText('Show all (12)');
+    await toggle.click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(page.locator('.tags-card .tag-breakdown-row')).toHaveCount(13);
+    await expect(page.locator('.tags-card .insight-show-all')).toHaveText('Show fewer');
+    await expect(page.locator('.tags-card .insight-show-all')).toHaveAttribute('aria-expanded', 'true');
+    await page.locator('.tags-card .insight-show-all').click();
+    await expect(page.locator('.tags-card .tag-breakdown-row')).toHaveCount(9);
+  });
+
+  test('Tasks by Tag hides the Show all link when there are 8 tags or fewer', async ({ page }) => {
+    await openInsights(page, 'week');
+    await expect(page.locator('.tags-card .tag-breakdown-row[data-tag="ace"]')).toBeVisible();
+    await expect(page.locator('.tags-card .insight-show-all')).toHaveCount(0);
+  });
+
+  test('Lingering Tasks lists the oldest open tasks and Open jumps to the highlighted card', async ({ page }) => {
+    await openInsights(page, 'week');
+    const card = page.locator('.lingering-card');
+    const rows = card.locator('.insight-task-row');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toHaveAttribute('data-item-id', 'o1');
+    await expect(rows.first().locator('.insight-task-meta')).toHaveText('Open 19 days · created Sep 17 · last carried from Oct 5');
+    await expect(rows.nth(1).locator('.insight-task-text')).toHaveText('Write KT notes');
+    await rows.first().locator('.insight-task-btn.open').click();
+    await expectDeskOn(page, 'Tuesday, October 6, 2026', '2026-10-06');
+    await expect(page.locator('#item-o1')).toHaveClass(/search-highlight/);
+  });
+
+  test('Lingering Tasks ignores the period; Shelved Review hides when the period has no shelved tasks', async ({ page }) => {
+    await openInsights(page, 'week', '2026-09-02');
+    await expect(page.locator('.lingering-card .insight-task-row')).toHaveCount(2);
+    await expect(page.locator('.shelved-card')).toHaveCount(0);
+  });
+
+  test('Shelved Review: list, Show all, footer, and Open', async ({ page }) => {
+    await openInsights(page, 'month');
+    const card = page.locator('.shelved-card');
+    await expect(card.locator('.carryover-hint')).toHaveText('10 shelved tasks sitting on days in this period');
+    await expect(card.locator('.insight-task-row')).toHaveCount(8);
+    await expect(card.locator('.insight-task-row').first()).toHaveAttribute('data-item-id', 's1');
+    await expect(card.locator('.insight-task-row').first().locator('.insight-task-meta')).toHaveText('On Oct 1 · 5 days ago');
+    await expect(card.locator('.insight-card-foot')).toHaveText('All time: 11 shelved, oldest from Sep 14, 2026');
+
+    await card.locator('.insight-show-all').click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(page.locator('.shelved-card .insight-task-row')).toHaveCount(10);
+    await page.locator('.shelved-card .insight-show-all').click();
+    await expect(page.locator('.shelved-card .insight-task-row')).toHaveCount(8);
+
+    await page.locator('.shelved-card .insight-show-all').click();
+    await page.locator('.shelved-card .insight-task-row[data-item-id="s2"] .insight-task-btn.open').click();
+    await expectDeskOn(page, 'Monday, October 5, 2026', '2026-10-05');
+    await expect(page.locator('#item-s2')).toHaveClass(/search-highlight/);
+  });
+
+  test('Bring back moves a shelved task to today\'s Active column and keeps Insights open', async ({ page }) => {
+    await openInsights(page, 'month');
+    const row = page.locator('.shelved-card .insight-task-row[data-item-id="s1"]');
+    await row.locator('.insight-task-btn.bring-back').click();
+    await expect(page.locator('#toast')).toContainText('Task brought back to today');
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(page.locator('.shelved-card .insight-task-row[data-item-id="s1"]')).toHaveCount(0);
+    await expect(page.locator('.shelved-card .carryover-hint')).toHaveText('9 shelved tasks sitting on days in this period');
+    await expect(page.locator('.lingering-card')).toBeVisible();
+
+    const oct1 = await workDay(page, '2026-10-01');
+    expect(oct1.map((i: any) => i.id)).not.toContain('s1');
+    const today = await workDay(page, '2026-10-06');
+    const s1 = today.find((i: any) => i.id === 's1');
+    expect(s1).toMatchObject({ shelved: false, boardColumn: 'active', tags: ['ace', 'postgres'] });
+    expect(s1.carriedFrom).toBeUndefined();
+
+    await page.locator('#tab-desk').click();
+    await expect(page.locator('#date-title')).toHaveText('Tuesday, October 6, 2026');
+    await expect(page.locator('.board-column.active #item-s1')).toBeVisible();
+  });
+
+  test('bringing back the last shelved task in a period hides the card', async ({ page }) => {
+    await openInsights(page, 'week', '2026-09-14');
+    await expect(page.locator('.shelved-card .insight-task-row')).toHaveCount(1);
+    await page.locator('.shelved-card .insight-task-btn.bring-back').click();
+    await expect(page.locator('.shelved-card')).toHaveCount(0);
+    await expect(page.locator('.insight-empty')).toBeVisible();
+    await expect(page.locator('.insights-current-btn')).toHaveText('This week');
   });
 });
