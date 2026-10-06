@@ -7595,6 +7595,7 @@
         <ul>
           <li>Open via the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
           <li>Templates auto-add on the schedule you set (daily, weekly, specific days, etc.)</li>
+          <li><strong>When they appear</strong> — a due task is added to <em>today</em> whenever the app opens or refreshes, syncs (if signed in: every 5 minutes and when you switch back to the tab), or you switch between Work and Personal. You don't need to be viewing today. Each one is added once per day, so deleting or completing it won't bring it back. Days the app wasn't opened aren't filled in afterward, and future days show their recurring tasks only once that day arrives. In offline mode, a tab left open overnight picks up the new day after a refresh</li>
           <li>Injected tasks show a <strong><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></strong> badge on the card</li>
           <li><strong>Edit or delete</strong> — click <em>edit</em> or <em>delete</em> on any template in the recurring panel, or use the overflow menu (⋮) on an injected task card and choose <em>Edit recurring</em></li>
           <li><strong>Tags on templates</strong> — add tags via the <em>tag</em> link or type <code>#tagname</code> in the content; every injected task inherits them</li>
@@ -7754,12 +7755,21 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.13.3';
+    const APP_VERSION = '1.13.4';
     const CHANGELOG = [
+      {
+        version: '1.13.4',
+        date: 'Oct 6, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'Help → Recurring tasks now explains when recurring tasks appear: on open, on sync, or when switching Work/Personal, once per day, with no backfill for skipped days and no preview of future days',
+          ]},
+        ],
+      },
       {
         version: '1.13.3',
         date: 'Oct 1, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'Desktop: the desk scrolls like a normal page again. The date and add-task card sits at the top and scrolls away as you scroll down, instead of staying pinned while the columns slide underneath it',
