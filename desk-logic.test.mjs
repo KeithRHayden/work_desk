@@ -2948,15 +2948,254 @@ describe('v1.14.0 Unit themes and Dot Matrix rename (HTML invariants)', () => {
     assert.match(html, /const prefTheme = typeof prefs\.theme === 'string' \? \(window\.__RENAMED_THEME_IDS\?\.\[prefs\.theme\] \?\? prefs\.theme\) : null;/);
   });
 
-  it('1.14.0 is the latest version and documents the Unit themes and rename', () => {
-    assert.match(html, /const APP_VERSION = '1\.14\.0'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.14\.0'/);
-    assert.match(latest, /tag: 'latest'/);
-    assert.match(latest, /12 Unit themes/);
-    assert.match(latest, /now called Dot Matrix/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+  it('1.14.0 documents the Unit themes and rename', () => {
+    const entry = html.match(/version: '1\.14\.0'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(entry, /tag: 'latest'/);
+    assert.match(entry, /12 Unit themes/);
+    assert.match(entry, /now called Dot Matrix/);
     assert.match(html, /id="help-modal"[\s\S]*four Unit themes \(Zero, One, Two, Eight\)/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// v1.15.0 Insights additions (functional + invariants)
+// ═══════════════════════════════════════════════════════════════════════
+describe('v1.15.0 Insights additions', () => {
+  function fns(days = {}, extra = {}) {
+    return new Function('days', 'extra', `
+      const state = { data: { days, deletedIds: {} }, selectedDate: null, highlightItemId: null };
+      const calls = { saved: 0, toasts: [], renders: 0 };
+      const todayKey = () => extra.today || '2026-10-06';
+      const saveData = () => { calls.saved++; };
+      const showToast = (m) => { calls.toasts.push(m); };
+      const render = () => { calls.renders++; };
+      ${fnSource('dateFromKey')}
+      ${fnSource('formatDateKey')}
+      ${fnSource('eachDateInRange')}
+      ${fnSource('getPeriodRange')}
+      ${fnSource('createdDateKey')}
+      ${fnSource('sortNewColumnTasks')}
+      ${fnSource('getTaskBuckets')}
+      ${fnSource('analyzeDayItems')}
+      ${fnSource('normalizeTag')}
+      ${fnSource('normalizeTagList')}
+      ${fnSource('daysBetweenKeys')}
+      ${fnSource('isKeyInRange')}
+      ${fnSource('summarizeRange')}
+      ${fnSource('computePeriodComparison')}
+      ${fnSource('computeTagBreakdown')}
+      ${fnSource('findLingeringTasks')}
+      ${fnSource('findShelvedTasks')}
+      ${fnSource('findItem')}
+      ${fnSource('clearItemDeleted')}
+      ${fnSource('bringBackShelvedTask')}
+      return { state, calls, summarizeRange, computePeriodComparison, computeTagBreakdown, findLingeringTasks, findShelvedTasks, bringBackShelvedTask, daysBetweenKeys };
+    `)(days, extra);
+  }
+  const at = (k) => `${k}T09:00:00Z`;
+
+  it('summarizeRange totals tasks and returns a null rate for an empty range', () => {
+    const { summarizeRange } = fns({
+      '2026-10-01': { items: [task({ id: 'a', completed: true }), task({ id: 'b', shelved: true }), task({ id: 'c', carriedFrom: '2026-09-30' })] },
+    });
+    const r = summarizeRange('2026-10-01', '2026-10-31');
+    assert.deepEqual(r.totals, { activeDays: 1, tasks: 3, completed: 1, shelved: 1, unfinished: 1, carriedOver: 1 });
+    assert.equal(r.completionRate, 33);
+    assert.equal(summarizeRange('2026-11-01', '2026-11-30').completionRate, null);
+  });
+
+  it('an in-progress month is compared with the same number of days at the start of last month', () => {
+    const { computePeriodComparison } = fns({
+      '2026-09-03': { items: [task({ id: 'early', completed: true })] },
+      '2026-09-20': { items: [task({ id: 'late', completed: true }), task({ id: 'late2', completed: true })] },
+      '2026-10-02': { items: [task({ id: 'now', completed: true }), task({ id: 'open', carriedFrom: '2026-10-01' })] },
+    });
+    const c = computePeriodComparison('month', '2026-10-06', '2026-10-06');
+    assert.equal(c.toDate, true);
+    assert.deepEqual(c.previousRange, { startKey: '2026-09-01', endKey: '2026-09-06' });
+    assert.equal(c.current.completed, 1);
+    assert.equal(c.previous.completed, 1, 'Sep 20 is past "this point" last month');
+    assert.equal(c.change.completed, 0);
+    assert.equal(c.change.carriedOver, 1);
+    assert.equal(c.currentRate, 50);
+    assert.equal(c.previousRate, 100);
+  });
+
+  it('a finished month compares in full, and a long month clamps to a short previous month', () => {
+    const days = {
+      '2026-09-20': { items: [task({ id: 'sep', completed: true })] },
+      '2026-08-31': { items: [task({ id: 'aug', completed: true })] },
+    };
+    const full = fns(days).computePeriodComparison('month', '2026-09-15', '2026-10-06');
+    assert.equal(full.toDate, false);
+    assert.deepEqual(full.previousRange, { startKey: '2026-08-01', endKey: '2026-08-31' });
+    assert.equal(full.change.completed, 0);
+    const clamp = fns({}).computePeriodComparison('month', '2026-03-31', '2026-03-31');
+    assert.deepEqual(clamp.previousRange, { startKey: '2026-02-01', endKey: '2026-02-28' });
+  });
+
+  it('year-over-year to date stops last year at the same day', () => {
+    const { computePeriodComparison } = fns({
+      '2025-02-01': { items: [task({ id: 'a', completed: true })] },
+      '2025-11-01': { items: [task({ id: 'b', completed: true })] },
+      '2026-03-01': { items: [task({ id: 'c', completed: true }), task({ id: 'd', completed: true })] },
+    });
+    const c = computePeriodComparison('year', '2026-10-06', '2026-10-06');
+    assert.deepEqual(c.previousRange, { startKey: '2025-01-01', endKey: '2025-10-06' });
+    assert.equal(c.previous.completed, 1);
+    assert.equal(c.change.completed, 1);
+  });
+
+  it('computeTagBreakdown counts each tag, splits states, counts multi-tag tasks under each, and sorts by total', () => {
+    const { computeTagBreakdown } = fns({
+      '2026-10-01': { items: [
+        task({ id: '1', completed: true, tags: ['ACE'] }),
+        task({ id: '2', tags: ['ace', 'ids'], carriedFrom: '2026-09-30' }),
+        task({ id: '3', shelved: true, tags: ['#ids'] }),
+        task({ id: '4', tags: [] }),
+        { id: 'n', type: 'note', content: 'x', tags: ['ace'] },
+      ] },
+      '2026-11-01': { items: [task({ id: 'out', tags: ['zzz'] })] },
+    });
+    const { rows, untagged } = computeTagBreakdown({ startKey: '2026-10-01', endKey: '2026-10-31' });
+    assert.deepEqual(rows.map(r => r.tag), ['ace', 'ids']);
+    assert.deepEqual(rows[0], { tag: 'ace', total: 2, done: 1, open: 1, shelved: 0, carried: 1 });
+    assert.deepEqual(rows[1], { tag: 'ids', total: 2, done: 0, open: 1, shelved: 1, carried: 1 });
+    assert.equal(untagged.total, 1);
+    assert.equal(computeTagBreakdown({ startKey: '2026-12-01', endKey: '2026-12-31' }).untagged, null);
+  });
+
+  it('findLingeringTasks returns the oldest open tasks, skipping done, shelved, today-created, future, and duplicates', () => {
+    const { findLingeringTasks } = fns({
+      '2026-10-06': { items: [
+        task({ id: 'old', createdAt: at('2026-09-01'), carriedFrom: '2026-10-05' }),
+        task({ id: 'mid', createdAt: at('2026-09-20') }),
+        task({ id: 'fresh', createdAt: at('2026-10-06') }),
+        task({ id: 'done', completed: true, createdAt: at('2026-08-01') }),
+        task({ id: 'shelf', shelved: true, createdAt: at('2026-08-01') }),
+      ] },
+      '2026-10-05': { items: [task({ id: 'old', createdAt: at('2026-09-01') })] },
+      '2026-10-20': { items: [task({ id: 'future', createdAt: at('2026-08-01') })] },
+    });
+    const r = findLingeringTasks('2026-10-06', 5);
+    assert.deepEqual(r.items.map(x => x.item.id), ['old', 'mid']);
+    assert.equal(r.items[0].age, 35);
+    assert.equal(r.total, 2);
+    assert.equal(findLingeringTasks('2026-10-06', 1).items.length, 1);
+  });
+
+  it('findLingeringTasks ages a task by its day when it sits on a day before it was created', () => {
+    const { findLingeringTasks } = fns({
+      '2026-09-30': { items: [task({ id: 'moved-back', createdAt: at('2026-10-04') })] },
+    });
+    assert.equal(findLingeringTasks('2026-10-06').items[0].age, 6);
+  });
+
+  it('findShelvedTasks lists shelved tasks in range oldest first with an all-time count', () => {
+    const { findShelvedTasks } = fns({
+      '2026-08-02': { items: [task({ id: 'aug', shelved: true })] },
+      '2026-10-05': { items: [task({ id: 'b', shelved: true }), task({ id: 'done-shelf', shelved: true, completed: true })] },
+      '2026-10-01': { items: [task({ id: 'a', shelved: true }), task({ id: 'open' })] },
+    });
+    const r = findShelvedTasks({ startKey: '2026-10-01', endKey: '2026-10-31' });
+    assert.deepEqual(r.items.map(x => [x.item.id, x.dayKey]), [['a', '2026-10-01'], ['b', '2026-10-05']]);
+    assert.equal(r.allTime, 3);
+    assert.equal(r.oldestKey, '2026-08-02');
+    assert.equal(findShelvedTasks({ startKey: '2026-11-01', endKey: '2026-11-30' }).items.length, 0);
+  });
+
+  it('bringBackShelvedTask moves the same task to today as Active, clears its carry stamp, and empties the old day', () => {
+    const { state, calls, bringBackShelvedTask } = fns({
+      '2026-09-14': { date: '2026-09-14', items: [task({ id: 's', shelved: true, boardColumn: 'new', carriedFrom: '2026-09-13', tags: ['ace'] })] },
+      '2026-10-06': { date: '2026-10-06', items: [task({ id: 'x' })] },
+    });
+    state.data.deletedIds.s = '2026-10-01T00:00:00Z';
+    bringBackShelvedTask('s');
+    assert.equal(state.data.days['2026-09-14'], undefined);
+    const today = state.data.days['2026-10-06'].items;
+    assert.deepEqual(today.map(i => i.id), ['x', 's']);
+    const s = today[1];
+    assert.equal(s.shelved, false);
+    assert.equal(s.boardColumn, 'active');
+    assert.equal('carriedFrom' in s, false);
+    assert.deepEqual(s.tags, ['ace']);
+    assert.equal(state.data.deletedIds.s, undefined);
+    assert.equal(calls.saved, 1);
+    assert.deepEqual(calls.toasts, ['Task brought back to today']);
+  });
+
+  it('bringBackShelvedTask creates today when missing and ignores tasks that are not shelved', () => {
+    const { state, calls, bringBackShelvedTask } = fns({
+      '2026-09-14': { date: '2026-09-14', items: [task({ id: 's', shelved: true }), task({ id: 'open' })] },
+    });
+    bringBackShelvedTask('open');
+    bringBackShelvedTask('missing');
+    assert.equal(calls.saved, 0);
+    bringBackShelvedTask('s');
+    assert.deepEqual(state.data.days['2026-09-14'].items.map(i => i.id), ['open']);
+    assert.deepEqual(state.data.days['2026-10-06'].items.map(i => i.id), ['s']);
+  });
+
+  it('chart segments carry the day or month they open', () => {
+    const fn = html.match(/function computeInsights[\s\S]*?\n    \}/)[0];
+    assert.match(fn, /monthKey: formatDateKey\(monthStart\)/);
+    assert.equal((fn.match(/dayKey: s\.dayKey/g) || []).length, 2);
+    const bars = html.match(/function renderInsightBars[\s\S]*?\n    \}/)[0];
+    assert.match(bars, /row\.dataset\.openDay = seg\.dayKey/);
+    assert.match(bars, /row\.dataset\.openMonth = seg\.monthKey/);
+    assert.match(bars, /row\.tabIndex = 0/);
+  });
+
+  it('table days, both heatmaps, and the current-period button carry their actions', () => {
+    const table = html.match(/function renderInsightsTable[\s\S]*?\n    \}/)[0];
+    assert.match(table, /class="insight-day-link" data-open-day="\$\{row\.dayKey\}"/);
+    const heat = html.match(/function renderHeatmap[\s\S]*?\n    \}/)[0];
+    assert.match(heat, /if \(inRange\) cell\.dataset\.openDay = key;/);
+    const ri = html.match(/function renderInsights\(\)[\s\S]*?\n    \}/)[0];
+    assert.match(ri, /cell\.dataset\.openDay = day\.dayKey/);
+    assert.match(ri, /if \(!isKeyInRange\(todayKey\(\), range\)\)/);
+    assert.match(ri, /currentBtn\.textContent = `This \$\{state\.insightsPeriod\}`/);
+    assert.ok(ri.indexOf("panel.addEventListener('click'") < ri.indexOf('if (!hasData)'),
+      'actions must be wired before the empty-state return so "This week" works on an empty period');
+  });
+
+  it('comparison card runs in every period with the right titles', () => {
+    const ri = html.match(/function renderInsights\(\)[\s\S]*?\n    \}/)[0];
+    assert.doesNotMatch(ri, /state\.insightsPeriod === 'week' && totals\.activeDays > 0/);
+    assert.match(ri, /week: 'Week-over-Week', month: 'Month-over-Month', year: 'Year-over-Year'/);
+    assert.match(ri, /computePeriodComparison\(period, state\.insightsAnchor, todayKey\(\)\)/);
+  });
+
+  it('1.15.0 is the latest version and documents every Insights addition', () => {
+    assert.match(html, /const APP_VERSION = '1\.15\.0'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.15\.0'/);
+    assert.match(latest, /tag: 'latest'/);
+    for (const s of ['click a day', 'This week', 'Month-over-Month', 'Tasks by Tag', 'Lingering Tasks', 'Shelved Review']) {
+      assert.ok(latest.includes(s), `changelog missing ${s}`);
+    }
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    const help = html.match(/<h3>Insights<\/h3>[\s\S]*?<\/ul>/)[0];
+    for (const s of ['Click a day to open it', 'This week / This month / This year', 'Month-over-month', 'Tasks by Tag', 'Lingering Tasks', 'Shelved Review', 'Bring back']) {
+      assert.ok(help.includes(s), `Help missing ${s}`);
+    }
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /\*\*Shelved Review\*\*/);
+    assert.match(readme, /### Insights\n\n- \*\*Lingering Tasks ignores the period\*\*/);
+  });
+
+  it('Ctrl/Cmd+Enter submits the task add box and both comment add forms', () => {
+    const fn = fnSource('bindCtrlEnterSubmit');
+    assert.match(fn, /\(e\.ctrlKey \|\| e\.metaKey\) && e\.key === 'Enter'/);
+    assert.match(fn, /if \(!submitBtn\.disabled\) form\.requestSubmit\(\)/);
+    assert.match(fnSource('initAddEditor'), /bindCtrlEnterSubmit\(editor, els\.addForm, els\.addBtn\)/);
+    assert.match(fnSource('restoreCommentDraft'), /bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/);
+    assert.equal((mainScript.match(/bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/g) || []).length, 2);
+    assert.match(html, /<li><strong>Add comment\/update<\/strong> — Ctrl\/Cmd \+ Enter<\/li>/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.ok(latest.includes('Ctrl+Enter (Cmd+Enter on Mac) adds a comment'));
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /\| Add comment \/ update \| `Ctrl\/Cmd \+ Enter` \|/);
   });
 });
 
@@ -3153,7 +3392,9 @@ describe('Tag colors', () => {
 
   it('every chip builder decorates chips; only card chips open the popover', () => {
     const builders = mainScript.match(/chip\.className = 'tag-chip[^']*';[\s\S]{0,300}?decorateTagChip\(chip, tag\)/g) || [];
-    assert.equal(builders.length, 4, 'card chips, recurring list chips, template editor chips, and the Options tag list');
+    assert.equal(builders.length, 5, 'card chips, recurring list chips, template editor chips, the Options tag list, and Insights chips');
+    assert.match(fnSource('insightTagChips'), /decorateTagChip\(chip, tag\);\s*chip\.appendChild\(tagChipLabel\(tag\.toUpperCase\(\)\)\)/);
+    assert.doesNotMatch(fnSource('insightTagChips'), /openTagColorPopover/);
     const cardRow = fnSource('buildTagChipRow');
     assert.match(cardRow, /tag-clickable/);
     assert.match(cardRow, /openTagColorPopover\(tag, chip\)/);
@@ -3185,9 +3426,9 @@ describe('Tag colors', () => {
   });
 
   it('every tag chip wraps its text in a label so it can be centered', () => {
-    assert.equal((mainScript.match(/className = 'tag-chip( tag-clickable)?';/g) || []).length, 5);
+    assert.equal((mainScript.match(/className = 'tag-chip( tag-clickable)?';/g) || []).length, 6);
     assert.doesNotMatch(mainScript, /(chip|preview)\.textContent = tag/);
-    assert.equal((mainScript.match(/appendChild\(tagChipLabel\(/g) || []).length, 6);
+    assert.equal((mainScript.match(/appendChild\(tagChipLabel\(/g) || []).length, 7);
     assert.match(fnSource('tagChipLabel'), /label\.className = 'tag-chip-label'/);
   });
 
