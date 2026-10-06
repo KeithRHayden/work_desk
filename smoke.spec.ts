@@ -1715,19 +1715,19 @@ test.describe('Theme filter buttons', () => {
     const swatches = page.locator('#customize-theme-grid .theme-swatch');
     await expect(swatches.first()).toBeVisible();
     const count = await swatches.count();
-    expect(count).toBe(28);
+    expect(count).toBe(32);
   });
 
-  test('Light and Dark filters each show 28 swatches', async ({ page }) => {
+  test('Light and Dark filters each show 32 swatches', async ({ page }) => {
     await openThemesTab(page);
-    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(28);
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(32);
     await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
-    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(28);
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(32);
   });
 
   const NEW_THEMES: Array<[string, 'light' | 'medium' | 'dark']> = [
     ['retro', 'light'], ['seafoam', 'light'], ['mediterranean', 'light'], ['citrus', 'light'],
-    ['gameboy', 'medium'], ['denim', 'medium'], ['terracotta', 'medium'], ['merlot', 'medium'],
+    ['dot-matrix', 'medium'], ['denim', 'medium'], ['terracotta', 'medium'], ['merlot', 'medium'],
     ['monokai', 'dark'], ['one-dark', 'dark'], ['phosphor', 'dark'], ['rose-pine', 'dark'],
   ];
 
@@ -1749,11 +1749,11 @@ test.describe('Theme filter buttons', () => {
   test('active swatch is highlighted in the tier the new theme belongs to', async ({ page }) => {
     await openThemesTab(page);
     await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
-    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="gameboy"]').click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'gameboy');
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="dot-matrix"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dot-matrix');
     await page.locator('#density-toggle').click();
     await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveClass(/active/);
-    await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="gameboy"]')).toHaveClass(/active/);
+    await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="dot-matrix"]')).toHaveClass(/active/);
   });
 
   test('Retro theme shows the SNES controller stripe and survives reload', async ({ page }) => {
@@ -1774,6 +1774,77 @@ test.describe('Theme filter buttons', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'phosphor');
     const addBtn = page.locator('.add-btn').first();
     await expect.poll(() => addBtn.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(3, 20, 10)');
+  });
+
+  const UNIT_STRIPE_LEAD: Record<string, string> = {
+    zero: 'rgb(47, 111, 184)', one: 'rgb(107, 63, 160)', two: 'rgb(215, 38, 61)', eight: 'rgb(232, 85, 154)',
+  };
+  const UNIT_TIERS: Array<['light' | 'medium' | 'dark', string]> = [['light', '-light'], ['medium', '-mid'], ['dark', '']];
+
+  test('every Unit swatch in every tier applies its theme, draws the header stripe, and persists', async ({ page }) => {
+    await openDesk(page);
+    for (const [tier, suffix] of UNIT_TIERS) {
+      for (const unit of Object.keys(UNIT_STRIPE_LEAD)) {
+        const id = `unit-${unit}${suffix}`;
+        await page.locator('#density-toggle').click();
+        await expect(page.locator('#options-pane-themes')).toBeVisible();
+        await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+        await expect(page.locator('#density-popout')).toBeVisible();
+        const swatch = page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="${id}"]`);
+        await swatch.scrollIntoViewIfNeeded();
+        await expect(swatch).toBeVisible();
+        await swatch.click();
+        await expect(page.locator('html')).toHaveAttribute('data-theme', id);
+        await expect(page.locator('#density-popout')).toBeHidden();
+        expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe(id);
+        const stripe = await page.locator('.desk-sticky').first().evaluate((el) => getComputedStyle(el).backgroundImage);
+        expect(stripe, id).toContain(UNIT_STRIPE_LEAD[unit]);
+      }
+    }
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'unit-eight');
+  });
+
+  test('Unit themes keep the same names in each tier and show as active when reopened', async ({ page }) => {
+    await openThemesTab(page);
+    for (const [tier, suffix] of UNIT_TIERS) {
+      await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+      for (const [unit, name] of [['zero', 'Unit Zero'], ['one', 'Unit One'], ['two', 'Unit Two'], ['eight', 'Unit Eight']]) {
+        await expect(page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="unit-${unit}${suffix}"]`)).toContainText(name);
+      }
+    }
+    await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="unit-one-mid"]').click();
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveClass(/active/);
+    await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="unit-one-mid"]')).toHaveClass(/active/);
+  });
+
+  test('bright Unit accents use dark text on the Add button', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="unit-one"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'unit-one');
+    const addBtn = page.locator('.add-btn').first();
+    await expect.poll(() => addBtn.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(16, 10, 28)');
+  });
+
+  test('a saved gameboy theme loads as Dot Matrix and is rewritten in storage', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('rename-seeded')) {
+        localStorage.setItem('rename-seeded', '1');
+        localStorage.setItem('work-desk-theme', 'gameboy');
+      }
+    });
+    await openDesk(page);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dot-matrix');
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe('dot-matrix');
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveClass(/active/);
+    const swatch = page.locator('#customize-theme-grid .theme-swatch[data-theme-id="dot-matrix"]');
+    await expect(swatch).toHaveClass(/active/);
+    await expect(swatch).toContainText('Dot Matrix');
+    await expect(page.locator('#customize-theme-grid')).not.toContainText('Game Boy');
   });
 
   test('switching between all four filters keeps popout open', async ({ page }) => {
