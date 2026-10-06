@@ -79,6 +79,43 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Stale-copy protection** — each sync records the app version; if an out-of-date copy opens and sees cloud data from a newer version, it reloads instead of carrying tasks or overwriting settings
 - Touch-friendly week strip and tap-to-complete
 
+## How it behaves
+
+The details behind the features above: when things happen automatically, and what to expect.
+
+### Recurring tasks
+
+- **When they're added** — a due template is added to *today's* date whenever the app opens or refreshes, syncs (signed in: every 5 minutes while the tab is visible, and whenever you switch back to the tab), or you switch between Work and Personal. Creating a template that's due today adds it right away. You don't need to be viewing today
+- **Once per day** — each template adds at most one task per day; deleting or completing it won't bring it back that day
+- **No backfill, no preview** — days the app was never opened don't get filled in later, and future days stay empty until that day arrives
+- **Offline mode** — with no account there's no periodic sync, so a tab left open overnight adds the new day's tasks after a refresh or a Work/Personal switch
+- **Skip holidays** — templates with *skip holidays* on aren't added on US federal holidays (when enabled in Options → Behavior) or your custom holidays
+
+### Carry forward
+
+- **Unfinished means open** — only tasks that are neither completed nor shelved are carried; shelved tasks stay where they are
+- **Auto carry** (Options → Behavior) — moves every open task from *all* earlier days onto today, not just yesterday, and stamps the day it came from so Insights can count carry-overs. It runs when the desk opens and, when signed in, on each sync, so a task you reopen on a past day moves to today at the next sync. A toast reports how many moved
+- **Manual** — the *Carry forward* button appears only when there's something to carry
+
+### Sync timing (signed in)
+
+- **Pull and merge** — on open, when you switch back to the tab, and every 5 minutes while the tab is visible (at most once every 10 seconds)
+- **Push** — your edits, including auto carry, upload about 2.5 seconds after the last change; auto-added recurring tasks upload immediately
+- **Offline** — nothing leaves the browser; use Export All for backups
+
+### Deleting
+
+- **Undo** — the toast after a delete offers *Undo* for 8 seconds
+
+### Layout and controls
+
+- **Desktop scrolling** — the desk scrolls like a normal page: the date / progress / add-task card scrolls away at the top, and the sidebar scrolls on its own
+- **Completed tasks collapse** — once a day has 5 completed tasks (adjustable 3–20, or off, in Options → Behavior) they fold into a *Completed (N)* row you can tap to open
+- **Tag box** — clicking *tag* on a card opens a text field with your two most-used tags; it stays open until you add a tag, press Esc, or click outside it
+- **Today's Progress** — the sidebar card always shows today, whichever day you're viewing
+- **What's new** — the link under the subtitle appears once per new version and disappears after you close the changelog
+- **Local history** — days older than 12 months are pruned from this browser's copy to keep it fast
+
 ## Tech stack
 
 - Single-file app: `index.html` / `work-desk.html` (vanilla JS, no build required to run)
