@@ -41,10 +41,15 @@
         mediterranean: '🏛️',
         citrus: '🍋',
         // Medium — Retro/rich
-        gameboy: '👾',
+        'dot-matrix': '👾',
         denim: '👖',
         terracotta: '🏺',
         merlot: '🍷',
+        // Units — one per pilot, in every tier
+        'unit-zero-light': '🌙', 'unit-zero-mid': '🌙', 'unit-zero': '🌙',
+        'unit-one-light': '💜', 'unit-one-mid': '💜', 'unit-one': '💜',
+        'unit-two-light': '🔴', 'unit-two-mid': '🔴', 'unit-two': '🔴',
+        'unit-eight-light': '🎀', 'unit-eight-mid': '🎀', 'unit-eight': '🎀',
         // Dark — Editor/retro
         monokai: '🖥️',
         'one-dark': '⚛️',
@@ -90,7 +95,14 @@
       }
       window.__setThemeFavicon = setFavicon;
 
-      const stored = localStorage.getItem('work-desk-theme');
+      // Saved theme ids from before a rename; also used when applying synced prefs
+      const RENAMED_THEME_IDS = { gameboy: 'dot-matrix' };
+      window.__RENAMED_THEME_IDS = RENAMED_THEME_IDS;
+      let stored = localStorage.getItem('work-desk-theme');
+      if (stored && RENAMED_THEME_IDS[stored]) {
+        stored = RENAMED_THEME_IDS[stored];
+        localStorage.setItem('work-desk-theme', stored);
+      }
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       let themeId = '';
       if (stored !== null && (stored === '' || stored in FAVICONS)) {
@@ -635,8 +647,8 @@
       --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
       color-scheme: dark;
     }
-    /* Game Boy — classic DMG four-shade green */
-    [data-theme="gameboy"] {
+    /* Dot Matrix — classic four-shade handheld green */
+    [data-theme="dot-matrix"] {
       --bg: #4f6b24; --surface: #5e7b2e; --panel-bg: #46601f; --input-bg: #6a8836;
       --sidebar: #0f380f; --sidebar-text: #9bbc0f; --sidebar-active: #e0f0b0;
       --sidebar-muted: #5a7a2a; --sidebar-border: rgba(155,188,15,.14);
@@ -719,6 +731,90 @@
       --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
       color-scheme: dark;
     }
+    /* Unit Zero (medium) — prototype blue, pale-blue accent, red-eye danger */
+    [data-theme="unit-zero-mid"] {
+      --bg: #4c6282; --surface: #5a7194; --panel-bg: #445877; --input-bg: #667ea2;
+      --sidebar: #121c30; --sidebar-text: #a8c4e6; --sidebar-active: #eef4fb;
+      --sidebar-muted: #6a82a8; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.10);
+      --accent: #a8cdf0; --accent-hover: #8bbbe8; --accent-light: #2c4060;
+      --text: #f0f5fb; --text-muted: #c8d4e6;
+      --border: #3e5270; --done: #8ea4c4;
+      --note-bg: #536a8c; --note-border: #3e5270;
+      --danger: #ff8a98; --danger-surface: #4a2830; --danger-surface-hover: #5a3038; --danger-border: #7a4048;
+      --shelved-border: #5a6a84; --shelved-label: #a8b8d0;
+      --shadow: 0 1px 4px rgba(0,0,0,.24);
+      --tooltip-bg: #121c30; --tooltip-text: #eef4fb;
+      --modal-overlay: rgba(0,0,0,.48); --modal-shadow: 0 8px 32px rgba(0,0,0,.28);
+      --move-hover-bg: #586a80; --delete-hover-bg: #5e4050; --shelf-hover-bg: #50607a;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Unit One (medium) — test-type purple, neon green accent */
+    [data-theme="unit-one-mid"] {
+      --bg: #4e3f6a; --surface: #5d4d7c; --panel-bg: #46385f; --input-bg: #695a88;
+      --sidebar: #1a1028; --sidebar-text: #c4b0e4; --sidebar-active: #f2ecfa;
+      --sidebar-muted: #7a68a0; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.10);
+      --accent: #8be04e; --accent-hover: #7ed321; --accent-light: #34402c;
+      --text: #f4f0fa; --text-muted: #d0c6e0;
+      --border: #403458; --done: #a0c080;
+      --note-bg: #564874; --note-border: #403458;
+      --danger: #fca5a5; --danger-surface: #4a2828; --danger-surface-hover: #5a3232; --danger-border: #7a4040;
+      --shelved-border: #5e5276; --shelved-label: #b8a8d0;
+      --shadow: 0 1px 4px rgba(0,0,0,.26);
+      --tooltip-bg: #1a1028; --tooltip-text: #f2ecfa;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #5a5a58; --delete-hover-bg: #5e3a48; --shelf-hover-bg: #54486c;
+      --sidebar-tab-active-bg: color-mix(in srgb, #8b5cc8 40%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #8b5cc8 32%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Unit Two (medium) — production red, orange accent */
+    [data-theme="unit-two-mid"] {
+      --bg: #7a3436; --surface: #8a4244; --panel-bg: #6e2e30; --input-bg: #964e50;
+      --sidebar: #2a0a0c; --sidebar-text: #f0b0a8; --sidebar-active: #fdeeec;
+      --sidebar-muted: #a05a58; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.10);
+      --accent: #ffa060; --accent-hover: #ff8a3c; --accent-light: #5a3024;
+      --text: #fdf2f0; --text-muted: #e8c4c0;
+      --border: #642a2c; --done: #c09088;
+      --note-bg: #823c3e; --note-border: #642a2c;
+      --danger: #ffd27a; --danger-surface: #4a2a1c; --danger-surface-hover: #5a3424; --danger-border: #7a4a30;
+      --shelved-border: #7a4a4a; --shelved-label: #d8a8a0;
+      --shadow: 0 1px 4px rgba(0,0,0,.28);
+      --tooltip-bg: #2a0a0c; --tooltip-text: #fdeeec;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #7a4a3a; --delete-hover-bg: #6a2a2e; --shelf-hover-bg: #704244;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Unit Eight (medium) — plugsuit pink, mint done */
+    [data-theme="unit-eight-mid"] {
+      --bg: #6e4560; --surface: #7e5470; --panel-bg: #643e57; --input-bg: #8a607c;
+      --sidebar: #26101f; --sidebar-text: #f0b4d0; --sidebar-active: #fdeef5;
+      --sidebar-muted: #9a6688; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.10);
+      --accent: #ff9cc8; --accent-hover: #ff7ab4; --accent-light: #563048;
+      --text: #fdf0f6; --text-muted: #e6c6d8;
+      --border: #5e3a52; --done: #a8c8b4;
+      --note-bg: #764c68; --note-border: #5e3a52;
+      --danger: #fca5a5; --danger-surface: #4a2028; --danger-surface-hover: #5a2a32; --danger-border: #7a3842;
+      --shelved-border: #7a5a70; --shelved-label: #d4a8c4;
+      --shadow: 0 1px 4px rgba(0,0,0,.26);
+      --tooltip-bg: #26101f; --tooltip-text: #fdeef5;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #6e5a5a; --delete-hover-bg: #6a3040; --shelf-hover-bg: #6a4e64;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #5fd09a 60%, transparent);
+      color-scheme: dark;
+    }
 
     [data-theme="dark"] {
       --bg: #12151c;
@@ -788,7 +884,11 @@
     [data-theme="monokai"],
     [data-theme="one-dark"],
     [data-theme="phosphor"],
-    [data-theme="rose-pine"] {
+    [data-theme="rose-pine"],
+    [data-theme="unit-zero"],
+    [data-theme="unit-one"],
+    [data-theme="unit-two"],
+    [data-theme="unit-eight"] {
       --text: #e8ecf3; --text-muted: #919aad; --done: #6b7588;
       --note-bg: #252218; --note-border: #3d3628; --danger: #f07171;
       --shadow: 0 1px 4px rgba(0,0,0,.35); --tooltip-text: #ffffff;
@@ -1273,6 +1373,80 @@
       --sidebar-tab-active-bg: color-mix(in srgb, #ebbcba 26%, transparent);
       --sidebar-cal-selected-bg: color-mix(in srgb, #ebbcba 20%, transparent);
       --sidebar-cal-today-ring: color-mix(in srgb, #9ccfd8 60%, transparent);
+    }
+
+    /* Unit Zero (dark) — night navy, pale-blue accent, red-eye danger */
+    [data-theme="unit-zero"] {
+      --bg: #0a1120; --surface: #121c30; --panel-bg: #0d1628; --input-bg: #121c30;
+      --sidebar: #060b16; --sidebar-text: #8fa8cc; --sidebar-active: #e2ecf8;
+      --sidebar-muted: #4a648c; --sidebar-border: rgba(168,205,240,.1);
+      --sidebar-hover: rgba(168,205,240,.07); --sidebar-btn-border: rgba(168,205,240,.15);
+      --accent: #7fb2ea; --accent-hover: #a8cdf0; --accent-light: #18304e;
+      --text: #e6eef8; --text-muted: #8fa2bf;
+      --border: #1e2e48; --tooltip-bg: #121c30;
+      --done: #4f74a8; --shelved-label: #6a88b0;
+      --note-bg: #111a2c; --note-border: #1e2e48;
+      --shelved-border: #1e2e48;
+      --danger: #ff5a6e;
+      --move-hover-bg: #16243a; --delete-hover-bg: #2e1620; --shelf-hover-bg: #1a2238;
+      --sidebar-tab-active-bg: color-mix(in srgb, #7fb2ea 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #7fb2ea 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #ff5a6e 60%, transparent);
+    }
+
+    /* Unit One (dark) — deep purple, neon green accent */
+    [data-theme="unit-one"] {
+      --bg: #100a1c; --surface: #1a1229; --panel-bg: #0c0716; --input-bg: #1a1229;
+      --sidebar: #08050f; --sidebar-text: #a490c8; --sidebar-active: #ece2f8;
+      --sidebar-muted: #5e4c84; --sidebar-border: rgba(164,144,200,.1);
+      --sidebar-hover: rgba(164,144,200,.07); --sidebar-btn-border: rgba(164,144,200,.15);
+      --accent: #8be04e; --accent-hover: #a6ec74; --accent-light: #1e3018;
+      --text: #ece6f6; --text-muted: #9c90b4;
+      --border: #2a1e40; --tooltip-bg: #1a1229;
+      --done: #6a9a48; --shelved-label: #a08ac8;
+      --note-bg: #17102a; --note-border: #2a1e40;
+      --shelved-border: #2a1e40;
+      --move-hover-bg: #1e1830; --delete-hover-bg: #2e1424; --shelf-hover-bg: #1e1430;
+      --sidebar-tab-active-bg: color-mix(in srgb, #8b5cc8 40%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #8b5cc8 32%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #8be04e 60%, transparent);
+    }
+
+    /* Unit Two (dark) — near-black crimson, red accent, orange danger */
+    [data-theme="unit-two"] {
+      --bg: #160708; --surface: #241012; --panel-bg: #10050a; --input-bg: #241012;
+      --sidebar: #0d0405; --sidebar-text: #d0908a; --sidebar-active: #f8e0dc;
+      --sidebar-muted: #7a3c3c; --sidebar-border: rgba(240,124,40,.1);
+      --sidebar-hover: rgba(240,124,40,.07); --sidebar-btn-border: rgba(240,124,40,.15);
+      --accent: #ff4d4d; --accent-hover: #ff7366; --accent-light: #3e1414;
+      --text: #f6e8e6; --text-muted: #b8908c;
+      --border: #3a1618; --tooltip-bg: #241012;
+      --done: #a85048; --shelved-label: #b07068;
+      --note-bg: #1e0e0e; --note-border: #3a1618;
+      --shelved-border: #3a1618;
+      --danger: #ffb86b; --danger-surface: #2e1c10; --danger-surface-hover: #3a2414; --danger-border: #5c3a20;
+      --move-hover-bg: #2a1810; --delete-hover-bg: #2e1c10; --shelf-hover-bg: #261418;
+      --sidebar-tab-active-bg: color-mix(in srgb, #ff4d4d 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #f07c28 24%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #f07c28 65%, transparent);
+    }
+
+    /* Unit Eight (dark) — inky plum, hot-pink accent, mint done */
+    [data-theme="unit-eight"] {
+      --bg: #160a12; --surface: #24101e; --panel-bg: #10060c; --input-bg: #24101e;
+      --sidebar: #0e050b; --sidebar-text: #c890ae; --sidebar-active: #f8e0ec;
+      --sidebar-muted: #7a4466; --sidebar-border: rgba(255,121,176,.1);
+      --sidebar-hover: rgba(255,121,176,.07); --sidebar-btn-border: rgba(255,121,176,.15);
+      --accent: #ff79b0; --accent-hover: #ff9cc8; --accent-light: #3e1630;
+      --text: #f6e8ef; --text-muted: #b090a2;
+      --border: #3a1a30; --tooltip-bg: #24101e;
+      --done: #4caf7a; --shelved-label: #b07898;
+      --note-bg: #1e0c18; --note-border: #3a1a30;
+      --shelved-border: #3a1a30;
+      --move-hover-bg: #2a1824; --delete-hover-bg: #2e1420; --shelf-hover-bg: #26142a;
+      --sidebar-tab-active-bg: color-mix(in srgb, #ff79b0 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #ff79b0 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #4caf7a 65%, transparent);
     }
 
     /* Solarized Light */
@@ -1846,8 +2020,110 @@
       color-scheme: light;
     }
 
+    /* Unit Zero (light) — white plugsuit, prototype blue, red-eye ring */
+    [data-theme="unit-zero-light"] {
+      --bg: #eef3fa; --surface: #ffffff; --panel-bg: #e2eaf5; --input-bg: #ffffff;
+      --sidebar: #14233d; --sidebar-text: #a8c4e6; --sidebar-active: #eef3fa;
+      --sidebar-muted: #5a78a0; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #2f6fb8; --accent-hover: #255a99; --accent-light: #dbe7f6;
+      --text: #12203a; --text-muted: #556580;
+      --border: #d2dded; --done: #9aaac2;
+      --note-bg: #f6f9fd; --note-border: #d2dded;
+      --danger: #c8102e; --danger-surface: #fdeaec; --danger-surface-hover: #f8d2d7; --danger-border: #f0b0ba;
+      --shelved-border: #c4d0e2; --shelved-label: #5a78a0;
+      --move-hover-bg: #f2f7fd; --delete-hover-bg: #fdeaec; --shelf-hover-bg: #e6ecf5;
+      --shadow: 0 1px 4px rgba(20,35,61,.08); --modal-overlay: rgba(18,32,58,.45); --modal-shadow: 0 8px 32px rgba(20,35,61,.14);
+      --tooltip-bg: #14233d; --tooltip-text: #eef3fa;
+      --sidebar-tab-active-bg: color-mix(in srgb, #2f6fb8 34%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #2f6fb8 26%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #d0213a 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Unit One (light) — lilac paper, test-type purple, green ring */
+    [data-theme="unit-one-light"] {
+      --bg: #f4f1fa; --surface: #ffffff; --panel-bg: #e9e3f4; --input-bg: #ffffff;
+      --sidebar: #24133f; --sidebar-text: #c4b0e4; --sidebar-active: #f4f1fa;
+      --sidebar-muted: #7a64a0; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #6b3fa0; --accent-hover: #57318a; --accent-light: #e8def6;
+      --text: #1e1430; --text-muted: #615476;
+      --border: #ddd4ec; --done: #8fae6c;
+      --note-bg: #f8f5fc; --note-border: #ddd4ec;
+      --danger: #c62828; --danger-surface: #fdeaea; --danger-surface-hover: #f9d4d4; --danger-border: #f0b0b0;
+      --shelved-border: #cfc4e2; --shelved-label: #7a64a0;
+      --move-hover-bg: #f6f2fb; --delete-hover-bg: #fdeaea; --shelf-hover-bg: #ece6f5;
+      --shadow: 0 1px 4px rgba(36,19,63,.08); --modal-overlay: rgba(30,20,48,.45); --modal-shadow: 0 8px 32px rgba(36,19,63,.14);
+      --tooltip-bg: #24133f; --tooltip-text: #f4f1fa;
+      --sidebar-tab-active-bg: color-mix(in srgb, #8b5cc8 40%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #8b5cc8 30%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #7ed321 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Unit Two (light) — warm white, production red, orange sidebar highlights */
+    [data-theme="unit-two-light"] {
+      --bg: #fdf2ef; --surface: #ffffff; --panel-bg: #f8e4df; --input-bg: #ffffff;
+      --sidebar: #3e0b12; --sidebar-text: #f0b0a8; --sidebar-active: #fdf2ef;
+      --sidebar-muted: #a05a58; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #c81e32; --accent-hover: #a8182a; --accent-light: #fadcd8;
+      --text: #2a1214; --text-muted: #725254;
+      --border: #f0d6d0; --done: #c0a09c;
+      --note-bg: #fff6e8; --note-border: #f5d8a8;
+      --danger: #9b1c1c; --danger-surface: #fde8e6; --danger-surface-hover: #f9d0cc; --danger-border: #f0aaa4;
+      --shelved-border: #e2c8c4; --shelved-label: #a05a58;
+      --move-hover-bg: #fff6e8; --delete-hover-bg: #fde8e6; --shelf-hover-bg: #f5e8e6;
+      --shadow: 0 1px 4px rgba(62,11,18,.08); --modal-overlay: rgba(42,18,20,.45); --modal-shadow: 0 8px 32px rgba(62,11,18,.14);
+      --tooltip-bg: #3e0b12; --tooltip-text: #fdf2ef;
+      --sidebar-tab-active-bg: color-mix(in srgb, #f07c28 34%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #f07c28 26%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #f07c28 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Unit Eight (light) — blush, plugsuit pink, mint notes */
+    [data-theme="unit-eight-light"] {
+      --bg: #fdf1f6; --surface: #ffffff; --panel-bg: #f8e2ec; --input-bg: #ffffff;
+      --sidebar: #3a1430; --sidebar-text: #f0b4d0; --sidebar-active: #fdf1f6;
+      --sidebar-muted: #a05a80; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #c8377a; --accent-hover: #a82a64; --accent-light: #f8dcea;
+      --text: #2a1222; --text-muted: #74506a;
+      --border: #f0d4e2; --done: #c4a0b4;
+      --note-bg: #f2faf5; --note-border: #cfe8d8;
+      --danger: #b91c1c; --danger-surface: #fdeaea; --danger-surface-hover: #f9d4d4; --danger-border: #f0b0b0;
+      --shelved-border: #e2c6d4; --shelved-label: #a05a80;
+      --move-hover-bg: #f2faf5; --delete-hover-bg: #fdeaea; --shelf-hover-bg: #f5e6ee;
+      --shadow: 0 1px 4px rgba(58,20,48,.08); --modal-overlay: rgba(42,18,34,.45); --modal-shadow: 0 8px 32px rgba(58,20,48,.14);
+      --tooltip-bg: #3a1430; --tooltip-text: #fdf1f6;
+      --sidebar-tab-active-bg: color-mix(in srgb, #e8559a 34%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #e8559a 26%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #3fbf8a 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Units — a thin stripe across the desk header in each unit's colors */
+    [data-theme^="unit-"] .desk-sticky {
+      background-size: 100% 4px;
+      background-repeat: no-repeat;
+      background-position: top;
+    }
+    [data-theme^="unit-zero"] .desk-sticky { background-image: linear-gradient(90deg, #2f6fb8 0 70%, #dfe8f4 70% 85%, #d0213a 85% 100%); }
+    [data-theme^="unit-one"] .desk-sticky { background-image: linear-gradient(90deg, #6b3fa0 0 60%, #7ed321 60% 85%, #f08a24 85% 100%); }
+    [data-theme^="unit-two"] .desk-sticky { background-image: linear-gradient(90deg, #d7263d 0 65%, #f07c28 65% 85%, #2a2a2a 85% 100%); }
+    [data-theme^="unit-eight"] .desk-sticky { background-image: linear-gradient(90deg, #e8559a 0 65%, #3fbf8a 65% 85%, #f2e6ec 85% 100%); }
+
     /* Bright-accent themes need dark text on accent-filled buttons */
-    [data-theme="gameboy"] .add-btn, [data-theme="gameboy"] .modal-btn.primary { color: #0f380f; }
+    [data-theme="dot-matrix"] .add-btn, [data-theme="dot-matrix"] .modal-btn.primary { color: #0f380f; }
+    [data-theme="unit-zero-mid"] .add-btn, [data-theme="unit-zero-mid"] .modal-btn.primary,
+    [data-theme="unit-zero"] .add-btn, [data-theme="unit-zero"] .modal-btn.primary { color: #0a1120; }
+    [data-theme="unit-one-mid"] .add-btn, [data-theme="unit-one-mid"] .modal-btn.primary,
+    [data-theme="unit-one"] .add-btn, [data-theme="unit-one"] .modal-btn.primary { color: #100a1c; }
+    [data-theme="unit-two-mid"] .add-btn, [data-theme="unit-two-mid"] .modal-btn.primary { color: #2a0a0c; }
+    [data-theme="unit-eight-mid"] .add-btn, [data-theme="unit-eight-mid"] .modal-btn.primary,
+    [data-theme="unit-eight"] .add-btn, [data-theme="unit-eight"] .modal-btn.primary { color: #160a12; }
     [data-theme="phosphor"] .add-btn, [data-theme="phosphor"] .modal-btn.primary { color: #03140a; }
     [data-theme="denim"] .add-btn, [data-theme="denim"] .modal-btn.primary,
     [data-theme="terracotta"] .add-btn, [data-theme="terracotta"] .modal-btn.primary { color: #2e1a14; }
@@ -7505,7 +7781,7 @@
           <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
           <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
-          <li><strong>Themes</strong> — 84 presets (28 light, 28 medium, 28 dark, including Retro, Game Boy, and Phosphor) with mini wireframe previews in Options → Themes, filterable by Light/Med/Dark; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
+          <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark, including Retro, Dot Matrix, and Phosphor) with mini wireframe previews in Options → Themes, filterable by Light/Med/Dark. The four Unit themes (Zero, One, Two, Eight) come in every tier, each with a thin color stripe across the top header; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
           <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically. Deleting a task or note removes it from every device; <strong>Undo</strong> brings it back everywhere</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
           <li><strong>Staying up to date</strong> — the app loads the latest version whenever you're online (the saved copy is only used offline). If the app has been open in the background when a new version ships, a <em>Work Desk x.y.z is available</em> message with a <strong>Reload</strong> button appears when you come back to it</li>
@@ -7569,7 +7845,7 @@
         <h3>Options menu</h3>
         <ul>
           <li>Open with the customize button (⊟) near the date; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
-          <li><strong>Themes</strong> — 84 presets (28 light, 28 medium, 28 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes</li>
+          <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes</li>
           <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
           <li><strong>Behavior</strong> — organized into General, Tasks, Projects, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
         </ul>
@@ -7755,12 +8031,25 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.13.4';
+    const APP_VERSION = '1.14.0';
     const CHANGELOG = [
+      {
+        version: '1.14.0',
+        date: 'Oct 6, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            '12 Unit themes — Unit Zero (prototype blue and white), Unit One (purple with neon green), Unit Two (production red and orange), and Unit Eight (pink with mint), each in light, medium, and dark, with a thin color stripe across the top header',
+            'Theme count raised to 96 (32 light + 32 medium + 32 dark)',
+          ]},
+          { label: 'Improved', items: [
+            'The green handheld theme (medium) is now called Dot Matrix. Same colors, and if you were using it, it stays selected',
+          ]},
+        ],
+      },
       {
         version: '1.13.4',
         date: 'Oct 6, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Improved', items: [
             'Help → Recurring tasks now explains when recurring tasks appear: on open, on sync, or when switching Work/Personal, once per day, with no backfill for skipped days and no preview of future days',
@@ -7945,7 +8234,7 @@
         date: 'Sep 29, 2026',
         sections: [
           { label: 'Added', items: [
-            '12 new themes — Retro (SNES console gray with purple buttons and a red/yellow/green/blue controller stripe), Seafoam, Mediterranean, Citrus (light); Game Boy, Denim, Terracotta, Merlot (medium); Monokai, One Dark, Phosphor, Rosé Pine (dark)',
+            '12 new themes — Retro (SNES console gray with purple buttons and a red/yellow/green/blue controller stripe), Seafoam, Mediterranean, Citrus (light); Dot Matrix (four-shade handheld green), Denim, Terracotta, Merlot (medium); Monokai, One Dark, Phosphor, Rosé Pine (dark)',
             'Theme count raised to 84 (28 light + 28 medium + 28 dark) plus custom themes',
           ]},
         ],
@@ -8689,6 +8978,11 @@
       { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', bg: '#ffe0c8', surface: '#fff0e4', accent: '#ff2d95', dark: false },
       // Light — Retro
       { id: 'retro',           name: 'Retro',     sidebar: '#2e2a3c', bg: '#dcdce4', surface: '#f0f0f4', accent: '#5b4cbf', dark: false },
+      // Light — Units
+      { id: 'unit-zero-light', name: 'Unit Zero', sidebar: '#14233d', bg: '#eef3fa', surface: '#ffffff', accent: '#2f6fb8', dark: false },
+      { id: 'unit-one-light',  name: 'Unit One',  sidebar: '#24133f', bg: '#f4f1fa', surface: '#ffffff', accent: '#6b3fa0', dark: false },
+      { id: 'unit-two-light',  name: 'Unit Two',  sidebar: '#3e0b12', bg: '#fdf2ef', surface: '#ffffff', accent: '#c81e32', dark: false },
+      { id: 'unit-eight-light',name: 'Unit Eight',sidebar: '#3a1430', bg: '#fdf1f6', surface: '#ffffff', accent: '#c8377a', dark: false },
       // Medium — Blue/cool
       { id: 'fog',             name: 'Fog',        sidebar: '#2a3040', bg: '#6b7280', surface: '#7d8594', accent: '#60a5fa', dark: false, medium: true },
       { id: 'overcast',        name: 'Overcast',   sidebar: '#1e2838', bg: '#5c6878', surface: '#6a7688', accent: '#38bdf8', dark: false, medium: true },
@@ -8704,7 +8998,7 @@
       { id: 'tundra',          name: 'Tundra',     sidebar: '#1c2c24', bg: '#566e60', surface: '#647e70', accent: '#2dd4bf', dark: false, medium: true },
       { id: 'moss',            name: 'Moss',       sidebar: '#1a2818', bg: '#4c5e44', surface: '#5c6e54', accent: '#84cc16', dark: false, medium: true },
       { id: 'basalt',          name: 'Basalt',     sidebar: '#18201c', bg: '#505c54', surface: '#606c64', accent: '#34d399', dark: false, medium: true },
-      { id: 'gameboy',         name: 'Game Boy',   sidebar: '#0f380f', bg: '#4f6b24', surface: '#5e7b2e', accent: '#9bbc0f', dark: false, medium: true },
+      { id: 'dot-matrix',      name: 'Dot Matrix', sidebar: '#0f380f', bg: '#4f6b24', surface: '#5e7b2e', accent: '#9bbc0f', dark: false, medium: true },
       // Medium — Warm/earthy
       { id: 'driftwood',       name: 'Driftwood',  sidebar: '#2e2418', bg: '#7a6e5e', surface: '#8a7e6e', accent: '#e8a040', dark: false, medium: true },
       { id: 'clay',            name: 'Clay',       sidebar: '#2a1c14', bg: '#6e5848', surface: '#7e6858', accent: '#f59e0b', dark: false, medium: true },
@@ -8722,6 +9016,11 @@
       { id: 'ash',             name: 'Ash',        sidebar: '#1a1a1a', bg: '#585858', surface: '#686868', accent: '#a78bfa', dark: false, medium: true },
       { id: 'graphite',        name: 'Graphite',   sidebar: '#101418', bg: '#484e58', surface: '#565c66', accent: '#fb923c', dark: false, medium: true },
       { id: 'concrete',        name: 'Concrete',   sidebar: '#1c1c1c', bg: '#6a6a6a', surface: '#7a7a7a', accent: '#3b82f6', dark: false, medium: true },
+      // Medium — Units
+      { id: 'unit-zero-mid',   name: 'Unit Zero',  sidebar: '#121c30', bg: '#4c6282', surface: '#5a7194', accent: '#a8cdf0', dark: false, medium: true },
+      { id: 'unit-one-mid',    name: 'Unit One',   sidebar: '#1a1028', bg: '#4e3f6a', surface: '#5d4d7c', accent: '#8be04e', dark: false, medium: true },
+      { id: 'unit-two-mid',    name: 'Unit Two',   sidebar: '#2a0a0c', bg: '#7a3436', surface: '#8a4244', accent: '#ffa060', dark: false, medium: true },
+      { id: 'unit-eight-mid',  name: 'Unit Eight', sidebar: '#26101f', bg: '#6e4560', surface: '#7e5470', accent: '#ff9cc8', dark: false, medium: true },
       // Dark — Blue/cool
       { id: 'dark',            name: 'Default',   sidebar: '#0d1017', bg: '#12151c', surface: '#1a1f2b', accent: '#5b8def', dark: true  },
       { id: 'oled',            name: 'OLED',      sidebar: '#000000', bg: '#000000', surface: '#0c0c0c', accent: '#3b82f6', dark: true  },
@@ -8756,6 +9055,11 @@
       { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', surface: '#121218', accent: '#00ff9f', dark: true  },
       { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', bg: '#1a0828', surface: '#280a3a', accent: '#ff2d95', dark: true  },
       { id: 'vaporwave-dark',  name: 'Vaporwave', sidebar: '#1a1030', bg: '#120a24', surface: '#24163d', accent: '#ff77c8', dark: true  },
+      // Dark — Units
+      { id: 'unit-zero',       name: 'Unit Zero', sidebar: '#060b16', bg: '#0a1120', surface: '#121c30', accent: '#7fb2ea', dark: true  },
+      { id: 'unit-one',        name: 'Unit One',  sidebar: '#08050f', bg: '#100a1c', surface: '#1a1229', accent: '#8be04e', dark: true  },
+      { id: 'unit-two',        name: 'Unit Two',  sidebar: '#0d0405', bg: '#160708', surface: '#241012', accent: '#ff4d4d', dark: true  },
+      { id: 'unit-eight',      name: 'Unit Eight',sidebar: '#0e050b', bg: '#160a12', surface: '#24101e', accent: '#ff79b0', dark: true  },
     ];
 
     function getCurrentThemeId() {
@@ -8957,9 +9261,10 @@
         }
       }
 
-      if (typeof prefs.theme === 'string' && (THEMES.some(t => t.id === prefs.theme) || (isCustomThemeId(prefs.theme) && loadCustomThemes().some(t => t.id === prefs.theme)))) {
-        if ((localStorage.getItem(THEME_KEY) ?? '') !== prefs.theme) {
-          applyTheme(prefs.theme, { fromSync: true });
+      const prefTheme = typeof prefs.theme === 'string' ? (window.__RENAMED_THEME_IDS?.[prefs.theme] ?? prefs.theme) : null;
+      if (prefTheme !== null && (THEMES.some(t => t.id === prefTheme) || (isCustomThemeId(prefTheme) && loadCustomThemes().some(t => t.id === prefTheme)))) {
+        if ((localStorage.getItem(THEME_KEY) ?? '') !== prefTheme) {
+          applyTheme(prefTheme, { fromSync: true });
           changed = true;
         }
       }
