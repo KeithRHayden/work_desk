@@ -2209,6 +2209,126 @@
     [data-sidebar-position="right"] .sidebar-collapse-btn { left: auto; right: 256px; transform: translateX(50%); }
     [data-sidebar-position="right"] .app.sidebar-collapsed .sidebar-collapse-btn { left: auto; right: 12px; transform: translateX(0); }
 
+    /* Sidebar position: top / bottom bar (desktop and tablet; phones keep their own layout) */
+    @media (min-width: 769px) {
+      [data-sidebar-position="top"] .app { flex-direction: column; }
+      [data-sidebar-position="bottom"] .app { flex-direction: column-reverse; }
+      [data-sidebar-bar] .sidebar,
+      [data-sidebar-bar] .sidebar.collapsed {
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        padding: 10px 24px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 20px;
+        overflow: visible;
+      }
+      [data-sidebar-position="top"] .sidebar { border-bottom: 1px solid var(--sidebar-border); }
+      [data-sidebar-position="bottom"] .sidebar { border-top: 1px solid var(--sidebar-border); }
+      [data-sidebar-bar] .sidebar-collapse-btn { display: none; }
+      [data-sidebar-bar] .main { height: auto; flex: 1; min-height: 0; }
+
+      [data-sidebar-bar] .sidebar-header { align-items: center; flex-shrink: 0; }
+      [data-sidebar-bar] .logo-wrap { display: flex; align-items: center; gap: 10px; }
+      [data-sidebar-bar] .logo { font-size: 1.15rem; white-space: nowrap; }
+      [data-sidebar-bar] .logo-sub { margin-top: 0; white-space: nowrap; }
+      [data-sidebar-bar] #logo-sub-text { display: none; }
+
+      [data-sidebar-bar] .sidebar-body {
+        flex: 1 1 auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        min-width: 0;
+        overflow: visible;
+      }
+      [data-sidebar-bar] .sidebar-tabs { flex-direction: row; margin-bottom: 0; padding: 3px; }
+      [data-sidebar-bar] .context-tabs {
+        margin: 0 0 0 3px;
+        padding: 0 0 0 3px;
+        border-top: none;
+        border-left: 1px solid var(--sidebar-border);
+      }
+      [data-sidebar-bar] .app-tab { padding: 6px 12px; white-space: nowrap; }
+
+      [data-sidebar-bar] .sidebar-daily {
+        flex: 1 1 auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        min-width: 0;
+        overflow: visible;
+      }
+      [data-sidebar-bar] .search-section { flex: 1 1 220px; min-width: 180px; max-width: 300px; }
+      [data-sidebar-bar] .date-nav { display: none; }
+      [data-sidebar-bar] .week-strip-row { display: flex; }
+      [data-sidebar-bar] .sidebar-glance-card { margin-top: 0; flex: 0 0 190px; padding: 6px 10px; gap: 5px; }
+      [data-sidebar-bar] .glance-stats-text { display: none; }
+
+      [data-sidebar-bar] .sidebar-projects {
+        flex: 1 1 auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        padding: 0;
+        min-width: 0;
+      }
+      [data-sidebar-bar] .projects-header { padding: 0; margin: 0; gap: 6px; flex-shrink: 0; }
+      [data-sidebar-bar] .projects-list {
+        flex-direction: row;
+        gap: 4px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+      }
+      [data-sidebar-bar] .project-list-item { padding: 6px 10px; flex-shrink: 0; max-width: 200px; }
+      [data-sidebar-bar] .project-list-meta { display: none; }
+
+      [data-sidebar-bar] .sidebar-backup {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+      }
+      [data-sidebar-bar] .sidebar-backup .nav-label { display: none; }
+      [data-sidebar-bar] .sidebar-backup-btns { width: auto; grid-template-columns: auto auto; }
+      [data-sidebar-bar] .sidebar-repair-link { width: auto; font-size: 0; padding: 4px 6px; }
+      [data-sidebar-bar] .sidebar-repair-link::before { content: '\1F527'; font-size: 0.85rem; }
+      [data-sidebar-bar] .backup-dropdown { right: auto; min-width: 130px; white-space: nowrap; }
+      [data-sidebar-position="top"] .backup-dropdown { bottom: auto; top: calc(100% + 4px); }
+
+      [data-sidebar-bar] .sidebar-account {
+        margin-left: auto;
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        min-height: 0;
+      }
+      [data-sidebar-bar] .sidebar-account-email { max-width: 180px; }
+      [data-sidebar-bar] .sidebar-account-actions { width: auto; }
+      [data-sidebar-bar] .sidebar-version { padding-top: 0; }
+
+      [data-sidebar-position="bottom"] .toast { bottom: calc(var(--sidebar-bar-h, 0px) + 16px); }
+      [data-sidebar-bar] .sidebar-version { flex-shrink: 0; }
+      [data-sidebar-bar] .density-popout { max-height: calc(100vh - 112px - var(--sidebar-bar-h, 0px)); }
+    }
+
+    /* Wide screens keep the bar on one row; the search box and project list give up width */
+    @media (min-width: 1280px) {
+      [data-sidebar-bar] .sidebar,
+      [data-sidebar-bar] .sidebar.collapsed { flex-wrap: nowrap; }
+      [data-sidebar-bar] .sidebar-body { flex: 1 1 0; }
+      [data-sidebar-bar] .search-section { min-width: 140px; }
+      [data-sidebar-bar] .sidebar-account { flex-shrink: 0; }
+    }
+
     /* Font size presets */
     [data-font-size="small"]   { font-size: 13px; }
     [data-font-size="default"] { font-size: 15px; }
@@ -6001,6 +6121,30 @@
       background: var(--accent-light);
     }
 
+    .board-lane-ghost {
+      position: fixed;
+      z-index: 90;
+      pointer-events: none;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 6px;
+      box-sizing: border-box;
+      border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--accent-light) 45%, transparent);
+    }
+    .board-lane-ghost[hidden] { display: none; }
+    .board-lane-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--surface);
+      padding: 2px 10px;
+      border-radius: 999px;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
     .col-subsection.drop-zone {
       border: 2px solid transparent;
       border-radius: 8px;
@@ -6605,23 +6749,51 @@
     .card-action.has-comments { color: var(--accent); opacity: 0.8; }
     .card-action.has-comments:hover { opacity: 1; }
 
-    /* Tag chips — floated at the top-right corner of the card, same pattern as
-       .item-trigger-area (bottom-right). Board-column cards use CSS Grid for
-       check/content (checkbox stacked above wrapped text), so a chip row can't
-       be a normal grid/flex sibling without landing in its own unstyled row —
-       absolute positioning sidesteps that regardless of which layout mode the
-       card is in (grid, flex, mobile, edit, menu-open, etc). */
-    .item.has-tags .item-content { padding-right: 96px; }
+    /* Tag chips — their own "tags" grid area in the card's top row (beside the
+       checkbox / note icon), never beside the text, so tagging a card must not
+       change the content's width. Many or long tags wrap and grow the top row. */
     .tag-chip-row {
-      position: absolute;
-      top: 14px;
-      right: 16px;
+      grid-area: tags;
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
       justify-content: flex-end;
-      max-width: 150px;
-      z-index: 3;
+      align-self: center;
+      min-width: 0;
+      margin-right: -36px; /* sit near the card edge, inside the .item trigger-area padding */
+    }
+    .tag-chip-row .tag-chip { max-width: 100%; }
+    .tag-chip-row .tag-chip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .board-column .item.has-tags {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas:
+        "check tags"
+        "content content";
+    }
+    .board-column .item-card.menu-open .item.has-tags:not(:has(.edit-wrap)) {
+      grid-template-areas:
+        "check tags"
+        "content content"
+        "actions actions";
+    }
+    .item.note.has-tags {
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr);
+      grid-template-areas:
+        "icon tags"
+        "icon content";
+      align-items: start;
+      row-gap: 6px;
+    }
+    .item.note.has-tags .note-icon { grid-area: icon; align-self: center; }
+    .item.note.has-tags .item-content { grid-area: content; }
+    .item-section .item.note.has-tags > .item-actions { grid-area: auto; } /* abspos popout: anchor to the whole row */
+    /* Compact board rows are a single flex line, so chips take their own line above it */
+    #desk-view[data-density="compact"] .board-column .item.has-tags:not(:has(.edit-wrap)) { flex-wrap: wrap; }
+    #desk-view[data-density="compact"] .board-column .item.has-tags .tag-chip-row {
+      order: -1;
+      flex: 0 0 100%;
+      margin: 0 0 1px;
     }
     .tag-chip {
       --tag-fg: var(--accent);
@@ -6987,6 +7159,18 @@
         grid-template-columns: 24px minmax(0, 1fr);
         grid-template-areas: "icon content";
       }
+      .item.has-tags {
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-areas:
+          "check tags"
+          "content content";
+      }
+      .item.note.has-tags {
+        grid-template-columns: 24px minmax(0, 1fr);
+        grid-template-areas:
+          "icon tags"
+          "icon content";
+      }
 
       .board-column .item:has(.edit-wrap),
       .item:has(.edit-wrap) {
@@ -7031,6 +7215,18 @@
       .item-card.menu-open .item.note:not(:has(.edit-wrap)) {
         grid-template-columns: 24px minmax(0, 1fr);
         grid-template-areas:
+          "icon content"
+          "actions actions";
+      }
+      .item-card.menu-open .item.has-tags:not(:has(.edit-wrap)) {
+        grid-template-areas:
+          "check tags"
+          "content content"
+          "actions actions";
+      }
+      .item-card.menu-open .item.note.has-tags:not(:has(.edit-wrap)) {
+        grid-template-areas:
+          "icon tags"
           "icon content"
           "actions actions";
       }
@@ -7666,6 +7862,8 @@
                       <select id="sidebar-position-select" aria-label="Sidebar position">
                         <option value="left">Left</option>
                         <option value="right">Right</option>
+                        <option value="top">Top</option>
+                        <option value="bottom">Bottom</option>
                       </select>
                     </div>
 
@@ -8019,14 +8217,16 @@
           <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
           <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
           <li>Drag tasks between columns or reorder within a column (desktop)</li>
+          <li><strong>Drop below a column</strong> — on desktop, the empty space under a column counts as that column while you drag, down to the bottom of the board. A dashed strip labeled <em>Drop in Active</em> (or New / Completed) shows where the task will go, so you don't have to scroll back up to the box. Below Completed / Shelved it marks the task Completed; to shelve, drop on the Shelved box. The gaps between columns and the Notes area below the board don't accept drops</li>
         </ul>
 
         <h3>Options menu</h3>
         <ul>
           <li>Open with the customize button (⊟) near the date; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
           <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
-          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, gradient header effect, and tag colors. The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
+          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left, right, top, or bottom), card glow on hover, gradient header effect, and tag colors. The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
           <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
+          <li><strong>Sidebar at the top or bottom</strong> — Options → Appearance → Sidebar position. The sidebar becomes a bar across the screen: tabs, search, Today's Progress, Export / Import, and your account in one row (it wraps to two on narrower windows). The calendar is replaced by the week strip above the board, Repair duplicates becomes the 🔧 button, and the collapse button is hidden. With the bar at the bottom, search results and toasts open above it. Phones keep their usual layout</li>
           <li><strong>Custom holidays</strong> — upcoming holidays are listed with their weekday; past ones are tucked away behind <strong>Show past</strong></li>
           <li><strong>Reset to defaults</strong> — the link at the bottom of Appearance or Behavior puts that tab's settings back to how a new install starts. Your theme, pinned tag colors, and custom holidays are kept</li>
         </ul>
@@ -8218,12 +8418,25 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.15.1';
+    const APP_VERSION = '1.16.0';
     const CHANGELOG = [
+      {
+        version: '1.16.0',
+        date: 'Oct 13, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Drop below a column: on desktop, while you drag a task, the empty space under New, Active, or Completed / Shelved counts as that column, so a long New list no longer means scrolling back up to the Active box. A dashed "Drop in Active" strip shows where it will land. Below Completed / Shelved marks the task done; drop on the Shelved box to shelve',
+            'Sidebar at the top or bottom: Options → Appearance → Sidebar position now has Top and Bottom alongside Left and Right. The sidebar becomes a bar across the screen with the week strip standing in for the calendar. Phones keep their usual layout',
+          ]},
+          { label: 'Fixed', items: [
+            'Adding a tag no longer squeezes a card\'s text into a narrower column. Tags now sit on the top row next to the checkbox (or note icon) and the text keeps the full card width; lots of tags or long ones wrap onto extra lines instead of crowding the text',
+          ]},
+        ],
+      },
       {
         version: '1.15.1',
         date: 'Oct 13, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Improved', items: [
             'Options → Themes: the line under the filter names your current theme, with a Show link that jumps to its group',
@@ -9509,7 +9722,7 @@
         }
       }
 
-      if (prefs.sidebarPosition && ['left', 'right'].includes(prefs.sidebarPosition)) {
+      if (prefs.sidebarPosition && SIDEBAR_POSITIONS.includes(prefs.sidebarPosition)) {
         if ((localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left') !== prefs.sidebarPosition) {
           applySidebarPosition(prefs.sidebarPosition, { fromSync: true });
           changed = true;
@@ -11060,12 +11273,44 @@
       if (!fromSync) schedulePrefsPush();
     }
 
+    const SIDEBAR_POSITIONS = ['left', 'right', 'top', 'bottom'];
+    let sidebarBarObserver = null;
+
+    function normalizeSidebarPosition(pos) {
+      return SIDEBAR_POSITIONS.includes(pos) ? pos : 'left';
+    }
+
+    // Top/bottom bars wrap to a variable height; the toast and Options panel offset by it
+    function syncSidebarBarHeight() {
+      const root = document.documentElement;
+      const sidebar = document.querySelector('.sidebar');
+      const isBar = root.dataset.sidebarBar === 'true' && window.innerWidth > 768;
+      // Set on <body>: theme switches clear inline custom properties from <html>
+      document.body.style.setProperty('--sidebar-bar-h', isBar && sidebar ? `${sidebar.offsetHeight}px` : '0px');
+    }
+
     function applySidebarPosition(pos, options = {}) {
       const { fromSync = false } = options;
-      document.documentElement.dataset.sidebarPosition = pos;
+      const next = normalizeSidebarPosition(pos);
+      const root = document.documentElement;
+      const sidebarEl = document.querySelector('.sidebar');
+      // The width transition is for collapse/expand; switching layouts should snap
+      if (sidebarEl && root.dataset.sidebarPosition !== next) {
+        sidebarEl.style.transition = 'none';
+        requestAnimationFrame(() => requestAnimationFrame(() => { sidebarEl.style.transition = ''; }));
+      }
+      root.dataset.sidebarPosition = next;
+      if (next === 'top' || next === 'bottom') root.dataset.sidebarBar = 'true';
+      else delete root.dataset.sidebarBar;
       const el = document.getElementById('sidebar-position-select');
-      if (el) el.value = pos;
-      localStorage.setItem(SIDEBAR_POSITION_KEY, pos);
+      if (el) el.value = next;
+      localStorage.setItem(SIDEBAR_POSITION_KEY, next);
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar && !sidebarBarObserver && typeof ResizeObserver === 'function') {
+        sidebarBarObserver = new ResizeObserver(syncSidebarBarHeight);
+        sidebarBarObserver.observe(sidebar);
+      }
+      syncSidebarBarHeight();
       if (!fromSync) schedulePrefsPush();
     }
 
@@ -13831,7 +14076,13 @@
       const maxLeft = Math.max(12, window.innerWidth - width - 12);
       const left = Math.min(rect.left, maxLeft);
       overlay.style.left = `${left}px`;
-      overlay.style.top = `${rect.bottom + 8}px`;
+      if (document.documentElement.dataset.sidebarPosition === 'bottom' && window.innerWidth > 768) {
+        overlay.style.top = 'auto';
+        overlay.style.bottom = `${window.innerHeight - rect.top + 8}px`;
+      } else {
+        overlay.style.bottom = '';
+        overlay.style.top = `${rect.bottom + 8}px`;
+      }
     }
 
     function closeSearchOverlay() {
@@ -15814,6 +16065,109 @@
       });
     }
 
+    // ── Board lanes: empty space below a column accepts drops for that column (desktop) ──
+    const BOARD_LANE_LABELS = { new: 'New', active: 'Active', completed: 'Completed' };
+    const BOARD_LANE_BOTTOM_SLACK = 24;
+    let laneHighlightEl = null;
+
+    // columns: [{ target, rect }] in board order. Lanes only exist while columns sit side by side.
+    function findBoardLane(columns, boardBottom, x, y) {
+      if (!columns || columns.length < 2) return null;
+      const top = columns[0].rect.top;
+      if (columns.some(c => Math.abs(c.rect.top - top) > 2)) return null;
+      if (y > boardBottom) return null;
+      const hit = columns.find(c => x >= c.rect.left && x <= c.rect.right);
+      if (!hit || y <= hit.rect.bottom) return null;
+      return hit;
+    }
+
+    function boardLaneLayout() {
+      const board = els.itemLists.querySelector('.sprint-board');
+      if (!board || !board.offsetParent) return null;
+      const columns = [...board.children]
+        .filter(col => col.classList.contains('board-column'))
+        .map(col => ({
+          col,
+          target: col.classList.contains('done') ? 'completed' : col.classList.contains('new') ? 'new' : 'active',
+          rect: col.getBoundingClientRect(),
+        }));
+      return { columns, boardBottom: board.getBoundingClientRect().bottom + BOARD_LANE_BOTTOM_SLACK };
+    }
+
+    function boardLaneAt(e) {
+      if (isTouchLikePointer() || state.activeTab !== 'desk') return null;
+      if (!e.dataTransfer || ![...e.dataTransfer.types].includes('text/task-id')) return null;
+      if (e.target?.closest?.('[data-drop-target], .item-card')) return null;
+      const layout = boardLaneLayout();
+      if (!layout) return null;
+      return findBoardLane(layout.columns, layout.boardBottom, e.clientX, e.clientY);
+    }
+
+    function hideBoardLaneGhost() {
+      const ghost = document.getElementById('board-lane-ghost');
+      if (ghost) ghost.hidden = true;
+    }
+
+    function clearBoardLane() {
+      if (laneHighlightEl) laneHighlightEl.classList.remove('drag-over');
+      laneHighlightEl = null;
+      hideBoardLaneGhost();
+    }
+
+    function showBoardLane(lane, y) {
+      const el = lane.target === 'completed'
+        ? lane.col.querySelector('.col-subsection[data-drop-target="completed"]')
+        : lane.col;
+      if (laneHighlightEl && laneHighlightEl !== el) laneHighlightEl.classList.remove('drag-over');
+      laneHighlightEl = el;
+      if (el) el.classList.add('drag-over');
+
+      let ghost = document.getElementById('board-lane-ghost');
+      if (!ghost) {
+        ghost = document.createElement('div');
+        ghost.id = 'board-lane-ghost';
+        ghost.className = 'board-lane-ghost';
+        ghost.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.className = 'board-lane-label';
+        ghost.appendChild(label);
+        document.body.appendChild(ghost);
+      }
+      const top = lane.rect.bottom + 6;
+      ghost.hidden = false;
+      ghost.dataset.target = lane.target;
+      ghost.style.left = `${lane.rect.left}px`;
+      ghost.style.width = `${lane.rect.width}px`;
+      ghost.style.top = `${top}px`;
+      ghost.style.height = `${Math.max(36, y - top + 22)}px`;
+      ghost.firstChild.textContent = `Drop in ${BOARD_LANE_LABELS[lane.target]}`;
+    }
+
+    function initBoardLanes() {
+      document.addEventListener('dragover', (e) => {
+        const lane = boardLaneAt(e);
+        if (!lane) {
+          // A column's own box keeps the highlight its drop zone set
+          if (laneHighlightEl && !laneHighlightEl.contains(e.target)) laneHighlightEl.classList.remove('drag-over');
+          laneHighlightEl = null;
+          hideBoardLaneGhost();
+          return;
+        }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        showBoardLane(lane, e.clientY);
+      });
+      document.addEventListener('drop', (e) => {
+        const lane = boardLaneAt(e);
+        clearBoardLane();
+        if (!lane) return;
+        e.preventDefault();
+        const taskId = e.dataTransfer.getData('text/task-id');
+        if (taskId) moveTaskToColumn(taskId, lane.target);
+      });
+      document.addEventListener('dragend', clearBoardLane);
+    }
+
     function reorderTaskWithinDay(draggedId, targetId) {
       const date = state.selectedDate;
       const day = state.data.days[date];
@@ -16535,7 +16889,7 @@
       }
 
       const row = document.createElement('div');
-      row.className = `item ${item.type}${item.completed ? ' completed' : ''}${isShelved ? ' shelved' : ''}${tags.length ? ' has-tags' : ''}`;
+      row.className = `item ${item.type}${item.completed ? ' completed' : ''}${isShelved ? ' shelved' : ''}${tags.length && !isEditing ? ' has-tags' : ''}`;
 
       if (item.type === 'task') {
         const check = document.createElement('button');
@@ -16555,6 +16909,7 @@
         icon.textContent = '📝';
         row.appendChild(icon);
       }
+      if (!isEditing && tags.length) row.appendChild(buildTagChipRow(item, tags));
 
       if (isEditing) {
         const editWrap = document.createElement('div');
@@ -16601,7 +16956,6 @@
       }
 
       card.appendChild(row);
-      if (!isEditing && tags.length) card.appendChild(buildTagChipRow(item, tags));
 
       // ── Inline action bar at bottom of card ───────────────────────────────
       if (!isEditing) {
@@ -20354,6 +20708,7 @@
     initAddEditor();
     initSearchScope();
     initCarryForwardMenu();
+    initBoardLanes();
     initDensityToggle();
     maybeAutoArchive();
     // Carry/inject run after sync when signed in (sbStartSync); offline/guest path carries there too
