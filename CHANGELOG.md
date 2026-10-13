@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.16.1] — 2026-10-13
+
+### Added
+- **Patterned backgrounds** — Options → Appearance → *Background* adds a *Patterned background* toggle. Turning it on shows a 4×3 grid of patterns — Graph paper, Plus grid, Isometric, Diagonal, Pinstripe, Crosshatch, Hexagon, Herringbone, Basketweave, Chevron, Greek key, Dot grid — and a *Strength* slider (2–45%, default 10%). Patterns are tiny inline SVG tiles drawn in the theme's text color, so they recolor when you switch themes (light or dark). The pattern sits on the page behind the board; cards, columns, the header, and the sidebar stay solid. Arrow keys move between patterns. Turning it off keeps your last pattern and strength. Synced like the other preferences; *Reset Appearance to defaults* turns it off and restores Graph paper at 10%. (Shipped as a patch release by choice; it would normally be a minor bump)
+
+### Improved
+- **Drop anywhere below a column** — the 1.16.0 lanes stopped 24px under the tallest column, so on a short board there was little room to drop. Lanes now run from the top of the columns to the bottom of the page (or to the top of the Notes section when there are notes). The outer margins count too: the far left of the page drops into New and the far right into Completed. Beside a column the column's own outline is the cue; below it the *Drop in …* strip still follows the cursor. The 14px gaps between columns still don't accept drops
+
+---
+
 ## [1.16.0] — 2026-10-13
 
 ### Added
