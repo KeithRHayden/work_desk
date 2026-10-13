@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.15.1] — 2026-10-13
+
+### Improved
+- **Current theme name** — Options → Themes shows "Current: Monokai · Dark" under the filter. When the current theme is in another group, a *Show* link jumps there
+- **Tag color list** — shows the 8 most-used tags with *Show all (N)* / *Show fewer* instead of a 180px scrolling box inside the scrolling menu. The per-tag button is now labeled *Reset* (was "auto") and only appears when a color is pinned
+- **Confirm before delete** — moved from General into the Tasks section of Options → Behavior
+- **Custom holidays** — dates read like "Sat, Oct 31, 2026"; past holidays are hidden behind *Show past (N)* (adding a past date opens it); the label box sits on its own line above the date and Add button so the placeholder isn't cut off
+- **Reset to defaults** — *Reset Appearance to defaults* and *Reset Behavior to defaults* at the bottom of those tabs, after a confirm prompt. Each setting goes back to its new-install value through its normal handler, so the change saves and syncs. Theme, pinned tag colors, and custom holidays are kept
+
+### Fixed
+- **Custom holiday labels** were inserted as HTML; they're now set as plain text
+
+---
+
 ## [1.15.0] — 2026-10-06
 
 ### Added
