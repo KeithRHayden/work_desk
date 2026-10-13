@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.16.0] — 2026-10-13
+
+### Added
+- **Drop below a column** — on desktop (columns side by side, 1025px and wider), while dragging a task, the empty space under each column down to the bottom of the board accepts drops for that column: New, Active, or Completed (the Completed / Shelved column marks the task done; shelving still means dropping on the Shelved box). The column's box shows its usual dashed outline, and a faint dashed strip labeled *Drop in Active* (or New / Completed) runs from the box down to the cursor. The 14px gaps between columns and the Notes section below the board don't accept drops. Boxes keep their normal size when not dragging; touch devices are unchanged
+- **Sidebar at the top or bottom** — Options → Appearance → Sidebar position adds *Top* and *Bottom*. Above 768px the sidebar becomes a horizontal bar: logo and help, Desk/Insights and Work/Personal/Projects tabs, search, a compact Today's Progress, Export / Import with Repair duplicates as a 🔧 icon, and the account area pushed right. It stays on one row from 1280px and wraps to two below that. In Projects the list runs sideways and scrolls. The calendar gives way to the week strip, the collapse button is hidden, and the Export menu opens downward from a top bar. With a bottom bar, search results open upward and toasts sit above it. Phones (768px and narrower) keep their existing layout. Synced like the other preferences; *Reset Appearance to defaults* returns it to Left
+
+### Fixed
+- **Tags narrowing card text** — tagged cards reserved a 96px gutter on the right of the text for the absolutely positioned tag chips, so adding a tag re-wrapped the text into a visibly narrower column (and three or more chips could still overlap it). The chips now sit in their own grid area on the top row beside the checkbox / note icon, and the text spans the same width with or without tags. Many or long tags wrap onto extra chip lines (a single overlong tag is shortened with an ellipsis); in Compact layout the chips get their own line above the one-line row. Applies to tasks and notes, desktop and phone
+
+---
+
 ## [1.15.1] — 2026-10-13
 
 ### Improved
