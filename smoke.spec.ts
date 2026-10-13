@@ -2910,8 +2910,8 @@ test.describe('Rendered text has no mojibake', () => {
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await expect(page.locator('#changelog-body')).toContainText('—');
-    await expect(page.locator('#changelog-body')).toContainText('"✓ Done"');
-    await expect(page.locator('#changelog-body')).toContainText('the ⋮ menu, tag ×');
+    await expect(page.locator('#changelog-body')).toContainText('Options → Themes');
+    await expect(page.locator('#changelog-body')).toContainText('Reset (formerly "auto")');
     await expectClean(page, '#changelog-body');
     await page.locator('#changelog-modal-dismiss').click();
 
@@ -3338,5 +3338,267 @@ test.describe('Insights 1.15.0 additions', () => {
     await expect(page.locator('.shelved-card')).toHaveCount(0);
     await expect(page.locator('.insight-empty')).toBeVisible();
     await expect(page.locator('.insights-current-btn')).toHaveText('This week');
+  });
+});
+
+// ── Options menu 1.15.1 polish ──────────────────────────────────────────
+test.describe('Options menu 1.15.1 polish', () => {
+  type Seed = { theme?: string; holidays?: { date: string; label: string }[]; tags?: boolean };
+  const DEFAULT_HOLIDAYS = [
+    { date: '2026-10-06', label: 'National Taco Day' },
+    { date: '2026-10-31', label: 'Halloween' },
+    { date: '2026-12-24', label: '<b>Eve</b>' },
+  ];
+
+  async function openOptions(page: Page, tab: 'themes' | 'appearance' | 'behavior', seed: Seed = {}) {
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript((s) => {
+      if (localStorage.getItem('opts-seeded')) return;
+      localStorage.setItem('opts-seeded', '1');
+      const items: any[] = [];
+      if (s.tags) {
+        for (let i = 0; i < 10; i++) {
+          for (let n = 0; n < 10 - i; n++) {
+            items.push({ id: `k${i}-${n}`, type: 'task', content: `Tagged ${i}.${n}`, completed: false, shelved: false,
+              boardColumn: 'new', comments: [], tags: [`k${i}`], createdAt: '2026-10-13T09:00:00' });
+          }
+        }
+      }
+      const days = items.length ? { '2026-10-13': { date: '2026-10-13', items } } : {};
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      if (s.theme) localStorage.setItem('work-desk-theme', s.theme);
+      if (s.holidays) localStorage.setItem('work-desk-custom-holidays', JSON.stringify(s.holidays));
+    }, seed);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+  }
+
+  const popout = (page: Page) => page.locator('#density-popout');
+  const holidayRows = (page: Page) => page.locator('#custom-holidays-list .custom-holiday-item');
+
+  const controlSnapshot = (page: Page) => page.evaluate(() => {
+    const out: Record<string, string | boolean> = {};
+    document.querySelectorAll<HTMLInputElement>('#options-pane-appearance input[type=checkbox], #options-pane-behavior input[type=checkbox]')
+      .forEach(el => { out[el.id] = el.checked; });
+    document.querySelectorAll<HTMLSelectElement>('#options-pane-appearance select, #options-pane-behavior select')
+      .forEach(el => { out[el.id] = el.value; });
+    out.density = document.getElementById('desk-view')!.dataset.density || 'comfortable';
+    return out;
+  });
+
+  test('Themes: the current theme is named, and Show jumps back to its group', async ({ page }) => {
+    await openOptions(page, 'themes', { theme: 'monokai' });
+    const current = page.locator('#current-theme-btn');
+    await expect(current).toHaveText('Current: Monokai · Dark');
+    await expect(current.locator('.current-theme-jump')).toHaveCount(0);
+
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await expect(current).toHaveText('Current: Monokai · DarkShow');
+    await current.locator('.current-theme-jump').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="dark"]')).toHaveClass(/active/);
+    await expect(page.locator('.theme-swatch.active')).toHaveAttribute('data-theme-id', 'monokai');
+    await expect(current.locator('.current-theme-jump')).toHaveCount(0);
+
+    await current.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="dark"]')).toHaveClass(/active/);
+  });
+
+  test('Themes: a new install names Default · Light, and picking a theme updates the line', async ({ page }) => {
+    await openOptions(page, 'themes');
+    await expect(page.locator('#current-theme-btn')).toHaveText('Current: Default · Light');
+    await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
+    await page.locator('.theme-swatch').first().click();
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#current-theme-btn')).toHaveText(/^Current: .+ · Medium$/);
+  });
+
+  test('Appearance: tag list shows 8 tags, Show all / Show fewer keep the menu open', async ({ page }) => {
+    await openOptions(page, 'appearance', { tags: true });
+    const rows = page.locator('#tag-color-list .tag-color-row');
+    await expect(rows).toHaveCount(10);
+    await expect(page.locator('#tag-color-list .tag-color-row:visible')).toHaveCount(8);
+    await expect(rows.first()).toHaveAttribute('data-tag-row', 'k0');
+    await expect(page.locator('#tag-color-list .tag-color-row[data-tag-row="k8"]')).toBeHidden();
+
+    const more = page.locator('#tag-color-list .tag-color-more-btn');
+    await expect(more).toHaveText('Show all (10)');
+    await more.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#tag-color-list .tag-color-row:visible')).toHaveCount(10);
+    await expect(more).toHaveText('Show fewer');
+    await expect(more).toHaveAttribute('aria-expanded', 'true');
+    await more.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#tag-color-list .tag-color-row:visible')).toHaveCount(8);
+    expect(await page.locator('#tag-color-list').evaluate(el => getComputedStyle(el).overflowY)).toBe('visible');
+  });
+
+  test('Appearance: Reset only shows on a tag with a pinned color', async ({ page }) => {
+    await openOptions(page, 'appearance', { tags: true });
+    const row = page.locator('#tag-color-list .tag-color-row[data-tag-row="k1"]');
+    const reset = row.locator('.tag-color-row-reset');
+    await expect(reset).toBeHidden();
+    await row.locator('.tag-color-input').fill('#22c55e');
+    await expect(reset).toBeVisible();
+    await expect(reset).toHaveText('Reset');
+    await reset.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(reset).toBeHidden();
+    await expect(row).not.toHaveClass(/has-custom/);
+  });
+
+  test('Appearance: no Show all link with 8 tags or fewer', async ({ page }) => {
+    await openOptions(page, 'appearance');
+    await expect(page.locator('#tag-color-list .tag-color-empty')).toBeVisible();
+    await expect(page.locator('#tag-color-list .tag-color-more-btn')).toHaveCount(0);
+  });
+
+  test('Behavior: Confirm before delete lives under Tasks and still saves', async ({ page }) => {
+    await openOptions(page, 'behavior');
+    const order = await page.evaluate(() => {
+      const pane = document.getElementById('options-pane-behavior')!;
+      const labels = [...pane.querySelectorAll('.density-popout-label')];
+      const confirm = document.getElementById('confirm-delete-toggle')!;
+      const tasks = labels.find(el => el.textContent === 'Tasks')!;
+      return { after: !!(tasks.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING) };
+    });
+    expect(order.after).toBe(true);
+    await page.locator('label:has(#confirm-delete-toggle)').click();
+    await expect(page.locator('#confirm-delete-toggle')).toBeChecked();
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-confirm-delete'))).toBe('true');
+  });
+
+  test('Behavior: holidays list readable dates, plain-text labels, and Show past / Hide past', async ({ page }) => {
+    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS });
+    await expect(holidayRows(page)).toHaveCount(2);
+    await expect(holidayRows(page).first().locator('.holiday-date')).toHaveText('Sat, Oct 31, 2026');
+    await expect(holidayRows(page).first().locator('.holiday-label')).toHaveText('Halloween');
+    await expect(holidayRows(page).nth(1).locator('.holiday-label')).toHaveText('<b>Eve</b>');
+    await expect(holidayRows(page).nth(1).locator('.holiday-label')).toHaveAttribute('title', '<b>Eve</b>');
+    await expect(holidayRows(page).nth(1).locator('b')).toHaveCount(0);
+
+    const past = page.locator('#custom-holidays-list .custom-holidays-past-btn');
+    await expect(past).toHaveText('Show past (1)');
+    await past.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(holidayRows(page)).toHaveCount(3);
+    await expect(holidayRows(page).first()).toHaveClass(/is-past/);
+    await expect(holidayRows(page).first().locator('.holiday-label')).toHaveText('National Taco Day');
+    await expect(page.locator('#custom-holidays-list .custom-holidays-past-btn')).toHaveText('Hide past');
+    await page.locator('#custom-holidays-list .custom-holidays-past-btn').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(holidayRows(page)).toHaveCount(2);
+  });
+
+  test('Behavior: removing a past holiday and adding past and upcoming ones keep the menu open', async ({ page }) => {
+    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS });
+    await page.locator('#custom-holidays-list .custom-holidays-past-btn').click();
+    await holidayRows(page).first().locator('.holiday-remove').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(holidayRows(page)).toHaveCount(2);
+    await expect(page.locator('#custom-holidays-list .custom-holidays-past-btn')).toHaveCount(0);
+
+    await page.locator('#custom-holiday-label').fill('Team offsite');
+    await page.locator('#custom-holiday-date').fill('2026-10-01');
+    await page.locator('#custom-holiday-add-btn').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(holidayRows(page)).toHaveCount(3);
+    await expect(holidayRows(page).first().locator('.holiday-label')).toHaveText('Team offsite');
+    await expect(holidayRows(page).first()).toHaveClass(/is-past/);
+
+    await page.locator('#custom-holiday-date').fill('2026-11-27');
+    await page.locator('#custom-holiday-add-btn').click();
+    await expect(holidayRows(page)).toHaveCount(4);
+    await expect(holidayRows(page).nth(2).locator('.holiday-label')).toHaveText('(no label)');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-custom-holidays')!).map((h: any) => h.date));
+    expect(saved).toEqual(['2026-10-01', '2026-10-31', '2026-11-27', '2026-12-24']);
+  });
+
+  test('Behavior: only past holidays shows "No upcoming holidays" with Show past', async ({ page }) => {
+    await openOptions(page, 'behavior', { holidays: [{ date: '2026-10-06', label: 'National Taco Day' }] });
+    await expect(page.locator('#custom-holidays-list .custom-holidays-empty')).toHaveText('No upcoming holidays');
+    await expect(holidayRows(page)).toHaveCount(0);
+    await page.locator('#custom-holidays-list .custom-holidays-past-btn').click();
+    await expect(holidayRows(page)).toHaveCount(1);
+    await expect(page.locator('#custom-holidays-list .custom-holidays-empty')).toHaveCount(0);
+  });
+
+  test('Behavior: the label box gets its own full-width line', async ({ page }) => {
+    await openOptions(page, 'behavior');
+    const label = await page.locator('#custom-holiday-label').boundingBox();
+    const date = await page.locator('#custom-holiday-date').boundingBox();
+    const row = await page.locator('.custom-holiday-add-row').boundingBox();
+    expect(label!.width).toBeGreaterThan(row!.width - 2);
+    expect(date!.y).toBeGreaterThan(label!.y + label!.height - 1);
+  });
+
+  test('Reset Behavior: cancel changes nothing; confirm restores defaults and keeps custom holidays', async ({ page }) => {
+    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS });
+    const fresh = await controlSnapshot(page);
+    await page.locator('label:has(#confirm-delete-toggle)').click();
+    await page.locator('label:has(#confetti-toggle)').click();
+    await page.locator('label:has(#us-federal-holidays-toggle)').click();
+    await page.locator('#week-start-select').selectOption('monday');
+    await page.locator('#auto-collapse-completed-at').selectOption('10');
+    await page.locator('#startup-view-select').selectOption('today');
+    const changed = await controlSnapshot(page);
+    expect(changed).not.toEqual(fresh);
+
+    page.once('dialog', d => d.dismiss());
+    await page.locator('[data-options-reset="behavior"]').click();
+    expect(await controlSnapshot(page)).toEqual(changed);
+
+    page.once('dialog', d => { expect(d.message()).toContain('Custom holidays are kept'); d.accept(); });
+    await page.locator('[data-options-reset="behavior"]').click();
+    await expect(page.locator('#toast')).toContainText('Behavior reset to defaults');
+    await expect(popout(page)).toBeVisible();
+    expect(await controlSnapshot(page)).toEqual(fresh);
+    const stored = await page.evaluate(() => ({
+      confirm: localStorage.getItem('work-desk-confirm-delete'),
+      week: localStorage.getItem('work-desk-week-start'),
+      holidays: JSON.parse(localStorage.getItem('work-desk-custom-holidays')!).length,
+    }));
+    expect(stored).toEqual({ confirm: 'false', week: 'sunday', holidays: 3 });
+
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="behavior"]').click();
+    await expect(page.locator('#toast')).toContainText('Behavior is already on the defaults');
+  });
+
+  test('Reset Appearance: restores defaults, survives reload, keeps theme and pinned tag colors', async ({ page }) => {
+    await openOptions(page, 'appearance', { theme: 'monokai', tags: true });
+    const fresh = await controlSnapshot(page);
+    await page.locator('#font-size-select').selectOption('large');
+    await page.locator('#font-family-select').selectOption('jetbrains');
+    await page.locator('#sidebar-position-select').selectOption('right');
+    await page.locator('#tag-color-mode-select').selectOption('palette');
+    await page.locator('label:has(#card-glow-toggle)').click();
+    await page.locator('#tag-color-list .tag-color-row[data-tag-row="k0"] .tag-color-input').fill('#22c55e');
+    await page.locator('.density-option[data-density="compact"]').click();
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    expect((await controlSnapshot(page)).density).toBe('compact');
+
+    page.once('dialog', d => { expect(d.message()).toContain('Pinned tag colors are kept'); d.accept(); });
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(page.locator('#toast')).toContainText('Appearance reset to defaults');
+    await expect(popout(page)).toBeVisible();
+    expect(await controlSnapshot(page)).toEqual(fresh);
+    const kept = await page.evaluate(() => ({
+      theme: localStorage.getItem('work-desk-theme'),
+      pinned: JSON.parse(localStorage.getItem('work-desk-tag-colors') || '{}').k0,
+    }));
+    expect(kept).toEqual({ theme: 'monokai', pinned: '#22c55e' });
+
+    await page.reload();
+    await dismissAuthModal(page);
+    expect(await controlSnapshot(page)).toEqual(fresh);
   });
 });
