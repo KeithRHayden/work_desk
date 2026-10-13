@@ -3166,15 +3166,12 @@ describe('v1.15.0 Insights additions', () => {
     assert.match(ri, /computePeriodComparison\(period, state\.insightsAnchor, todayKey\(\)\)/);
   });
 
-  it('1.15.0 is the latest version and documents every Insights addition', () => {
-    assert.match(html, /const APP_VERSION = '1\.15\.0'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.15\.0'/);
-    assert.match(latest, /tag: 'latest'/);
+  it('1.15.0 documents every Insights addition', () => {
+    const entry = html.match(/version: '1\.15\.0'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(entry, /tag: 'latest'/);
     for (const s of ['click a day', 'This week', 'Month-over-Month', 'Tasks by Tag', 'Lingering Tasks', 'Shelved Review']) {
-      assert.ok(latest.includes(s), `changelog missing ${s}`);
+      assert.ok(entry.includes(s), `changelog missing ${s}`);
     }
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
     const help = html.match(/<h3>Insights<\/h3>[\s\S]*?<\/ul>/)[0];
     for (const s of ['Click a day to open it', 'This week / This month / This year', 'Month-over-month', 'Tasks by Tag', 'Lingering Tasks', 'Shelved Review', 'Bring back']) {
       assert.ok(help.includes(s), `Help missing ${s}`);
@@ -3192,10 +3189,114 @@ describe('v1.15.0 Insights additions', () => {
     assert.match(fnSource('restoreCommentDraft'), /bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/);
     assert.equal((mainScript.match(/bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/g) || []).length, 2);
     assert.match(html, /<li><strong>Add comment\/update<\/strong> — Ctrl\/Cmd \+ Enter<\/li>/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.ok(latest.includes('Ctrl+Enter (Cmd+Enter on Mac) adds a comment'));
+    const entry = html.match(/version: '1\.15\.0'[\s\S]*?\n      \},/)[0];
+    assert.ok(entry.includes('Ctrl+Enter (Cmd+Enter on Mac) adds a comment'));
     const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
     assert.match(readme, /\| Add comment \/ update \| `Ctrl\/Cmd \+ Enter` \|/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// v1.15.1 Options menu polish
+// ═══════════════════════════════════════════════════════════════════════
+describe('v1.15.1 Options menu polish', () => {
+  const pane = (id) => html.match(new RegExp(`<div class="options-pane[^"]*" id="options-pane-${id}">[\\s\\S]*?data-options-reset="${id}"`))[0];
+  const defaults = () => new Function(`${mainScript.match(/const OPTIONS_DEFAULTS = \{[\s\S]*?\n    \};/)[0]}; return OPTIONS_DEFAULTS;`)();
+
+  it('every checkbox and select in Appearance and Behavior has a reset default', () => {
+    const d = defaults();
+    for (const tab of ['appearance', 'behavior']) {
+      const body = pane(tab);
+      const checkboxes = [...body.matchAll(/<input id="([^"]+)" type="checkbox"/g)].map(m => m[1]);
+      const selects = [...body.matchAll(/<select id="([^"]+)"/g)].map(m => m[1]);
+      assert.ok(checkboxes.length && selects.length, `${tab} pane parsed`);
+      assert.deepEqual(Object.keys(d[tab].toggles).sort(), checkboxes.sort(), `${tab} toggles`);
+      assert.deepEqual(Object.keys(d[tab].selects).sort(), selects.sort(), `${tab} selects`);
+    }
+  });
+
+  it('reset defaults match the first-launch state', () => {
+    const { appearance, behavior } = defaults();
+    const off = (key) => new RegExp(`localStorage\\.getItem\\(${key}\\) === 'true'`);
+    const on = (key) => new RegExp(`localStorage\\.getItem\\(${key}\\) !== 'false'`);
+    const t = behavior.toggles;
+    assert.equal(t['confirm-delete-toggle'], false); assert.match(mainScript, off('CONFIRM_DELETE_KEY'));
+    assert.equal(t['auto-carry-toggle-popout'], false); assert.match(mainScript, off('AUTO_CARRY_FORWARD_KEY'));
+    assert.equal(t['keep-comments-open-toggle'], false); assert.match(mainScript, off("'work-desk-keep-comments-open'"));
+    assert.equal(t['auto-collapse-completed-toggle'], true); assert.match(mainScript, on("'work-desk-auto-collapse-completed'"));
+    assert.equal(t['confetti-toggle'], true); assert.match(mainScript, on('CONFETTI_KEY'));
+    assert.equal(t['strike-completed-toggle'], true); assert.match(mainScript, on('STRIKE_COMPLETED_KEY'));
+    assert.equal(t['truncate-notes-toggle'], true); assert.match(mainScript, on('TRUNCATE_NOTES_KEY'));
+    assert.equal(t['streak-skip-weekends-toggle'], true); assert.match(mainScript, on('STREAK_SKIP_WEEKENDS_KEY'));
+    assert.equal(t['us-federal-holidays-toggle'], true); assert.match(mainScript, on('US_FEDERAL_HOLIDAYS_KEY'));
+    assert.match(mainScript, /getItem\('work-desk-auto-collapse-completed-at'\) \|\| '5'/);
+    assert.equal(behavior.selects['auto-collapse-completed-at'], '5');
+    assert.match(mainScript, /localStorage\.getItem\(WEEK_START_KEY\) \|\| 'sunday'/);
+    assert.match(mainScript, /localStorage\.getItem\(STARTUP_VIEW_KEY\) \|\| 'last_viewed'/);
+    assert.match(mainScript, /localStorage\.getItem\(FONT_SIZE_KEY\) \|\| 'default'/);
+    assert.match(mainScript, /localStorage\.getItem\(FONT_FAMILY_KEY\) \|\| 'system'/);
+    assert.match(mainScript, /localStorage\.getItem\(SIDEBAR_POSITION_KEY\) \|\| 'left'/);
+    assert.match(mainScript, /applyCardGlow\(localStorage\.getItem\(CARD_GLOW_KEY\) === 'true'/);
+    assert.match(mainScript, /applyGradientHeader\(localStorage\.getItem\(GRADIENT_HEADER_KEY\) === 'true'/);
+    assert.match(fnSource('normalizeTagColorMode'), /: 'theme'/);
+    assert.equal(appearance.selects['tag-color-mode-select'], 'theme');
+  });
+
+  it('resetOptionsTab drives controls through their change handlers and resets density', () => {
+    const fn = fnSource('resetOptionsTab');
+    assert.match(fn, /el\.dispatchEvent\(new Event\('change'\)\)/);
+    assert.match(fn, /applyDensity\('comfortable'\)/);
+    assert.doesNotMatch(fn, /customHolidays|tagColors|THEME_KEY/);
+  });
+
+  it('Confirm before delete sits in the Tasks section', () => {
+    const body = pane('behavior');
+    const tasksAt = body.indexOf('<p class="density-popout-label">Tasks</p>');
+    const confirmAt = body.indexOf('id="confirm-delete-toggle"');
+    const projectsAt = body.indexOf('<p class="density-popout-label">Projects</p>');
+    assert.ok(tasksAt > 0 && confirmAt > tasksAt && confirmAt < projectsAt);
+  });
+
+  it('splitCustomHolidays and formatHolidayDate', () => {
+    const split = new Function(`${fnSource('splitCustomHolidays')}; return splitCustomHolidays;`)();
+    const fmt = new Function(`${fnSource('formatHolidayDate')}; return formatHolidayDate;`)();
+    const r = split([{ date: '2026-10-06' }, { date: '2026-10-13' }, { date: '2026-10-31' }], '2026-10-13');
+    assert.deepEqual(r.past.map(h => h.date), ['2026-10-06']);
+    assert.deepEqual(r.upcoming.map(h => h.date), ['2026-10-13', '2026-10-31']);
+    assert.equal(fmt('2026-10-31'), 'Sat, Oct 31, 2026');
+    assert.equal(fmt('bogus'), 'bogus');
+  });
+
+  it('custom holiday labels are set as text, never HTML', () => {
+    const fn = fnSource('renderCustomHolidaysList');
+    assert.doesNotMatch(fn, /innerHTML\s*=\s*`/);
+    assert.match(fn, /labelEl\.textContent = h\.label \|\| '\(no label\)'/);
+  });
+
+  it('tag color list caps at 8 rows and hides Reset unless a color is pinned', () => {
+    assert.match(mainScript, /const TAG_COLOR_LIST_CAP = 8;/);
+    const fn = fnSource('renderTagColorList');
+    assert.match(fn, /index >= TAG_COLOR_LIST_CAP \? ' is-overflow' : ''/);
+    assert.match(fn, /reset\.textContent = 'Reset'/);
+    assert.match(html, /\.tag-color-row-reset:disabled \{ visibility: hidden; \}/);
+    assert.doesNotMatch(html, /\.tag-color-list \{[^}]*max-height/);
+  });
+
+  it('1.15.1 is the latest version and is documented', () => {
+    assert.match(html, /const APP_VERSION = '1\.15\.1'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.15\.1'/);
+    assert.match(latest, /tag: 'latest'/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    for (const s of ['current theme', 'Show all', 'Confirm before delete', 'Show past', 'Reset Appearance / Behavior to defaults', 'plain text']) {
+      assert.ok(latest.includes(s), `changelog missing ${s}`);
+    }
+    const help = html.match(/<h3>Options menu<\/h3>[\s\S]*?<\/ul>/)[0];
+    for (const s of ['Show past', 'Reset to defaults', 'Show all', 'current theme']) assert.ok(help.includes(s), `Help missing ${s}`);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.15\.1\] — 2026-10-13/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /\*Reset to defaults\* at the bottom of Appearance and Behavior/);
   });
 });
 
