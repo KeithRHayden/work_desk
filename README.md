@@ -58,7 +58,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Custom Theme Builder** — create up to 5 of your own themes from 5 picked colors (Background, Surface, Sidebar, Accent, Text); ~30 CSS variables auto-derived, live preview, synced across devices
 - **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date; on phones, **Options** in the menu)
   - Themes: 96 presets with Light/Med/Dark filters, plus Custom tab for user-created themes; a line under the filter names the current theme, with *Show* to jump to its group
-  - Appearance: Comfortable/Compact density, text size, font family, sidebar position (left, right, top, or bottom), card glow, gradient header, tag colors (top 8 tags with *Show all*; *Reset* only on pinned colors)
+  - Appearance: Comfortable/Compact density, text size, font family, sidebar position (left, right, top, or bottom), card glow, gradient header, patterned background (12 patterns, 2–45% strength), tag colors (top 8 tags with *Show all*; *Reset* only on pinned colors)
   - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view, celebration confetti, confirm before delete, strike-through completed tasks, truncate long project notes, weekends don't break streaks, holiday settings (past custom holidays hidden behind *Show past*)
   - *Reset to defaults* at the bottom of Appearance and Behavior restores new-install settings for that tab; theme, pinned tag colors, and custom holidays are kept
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
@@ -123,8 +123,9 @@ The details behind the features above: when things happen automatically, and wha
 ### Layout and controls
 
 - **Desktop scrolling** — the desk scrolls like a normal page: the date / progress / add-task card scrolls away at the top, and the sidebar scrolls on its own
+- **Patterned background** — Options → Appearance → Background. Twelve line-based patterns (Graph paper, Plus grid, Isometric, Diagonal, Pinstripe, Crosshatch, Hexagon, Herringbone, Basketweave, Chevron, Greek key, Dot grid) at 2–45% strength. Drawn in the theme's text color so it follows theme changes; only the page behind the board is patterned, cards stay solid. Off by default
 - **Sidebar at the top or bottom** — above 768px the sidebar becomes a horizontal bar (one row from 1280px, two below). The week strip replaces the calendar, Repair duplicates is the 🔧 icon, the collapse button is hidden, the Export menu opens downward from a top bar, and with a bottom bar search results open upward and toasts sit above it. Phones keep their normal layout whatever the setting
-- **Column lanes when dragging** (desktop, 1025px and wider, where the columns sit side by side) — while you drag a task, the space under each column down to the bottom of the board belongs to that column: New, Active, or Completed (the Completed / Shelved column marks it done; drop on the Shelved box to shelve). The column's box gets the dashed outline and a strip runs from the box to your cursor. Gaps between columns and the Notes area don't accept drops, and the boxes keep their normal size when you're not dragging. Phones and tablets stack the columns, so there are no lanes there
+- **Column lanes when dragging** (desktop, 1025px and wider, where the columns sit side by side) — while you drag a task, the space under each column all the way down the page belongs to that column: New, Active, or Completed (the Completed / Shelved column marks it done; drop on the Shelved box to shelve). The far left margin counts as New and the far right as Completed. The column's box gets the dashed outline and, below it, a strip runs from the box to your cursor. Gaps between columns and the Notes area don't accept drops, and the boxes keep their normal size when you're not dragging. Phones and tablets stack the columns, so there are no lanes there
 - **Completed tasks collapse** — once a day has 5 completed tasks (adjustable 3–20, or off, in Options → Behavior) they fold into a *Completed (N)* row you can tap to open
 - **Tag box** — clicking *tag* on a card opens a text field with your two most-used tags; it stays open until you add a tag, press Esc, or click outside it
 - **Today's Progress** — the sidebar card always shows today, whichever day you're viewing
@@ -266,8 +267,6 @@ E2E covers add → New, complete/uncomplete, reload persistence, export tombston
 
 - **Faster edge scrolling while dragging** — scroll the page quickly when a dragged task nears the top or bottom of the window, so reaching a column far up the page doesn't rely on the browser's slow built-in scrolling
 - **Suggested colors for custom themes** — next to the five manual pickers, a *Suggest from a color* option: pick a color (color wheel or hex) or a mood (e.g. calm, cozy, energetic, focused), choose dark or light, and the app fills in background, surface, sidebar, accent, and text from color-harmony rules, with readable contrast enforced. A *Surprise me* button rolls a random harmonious set. Every suggestion stays editable with the existing pickers. Roughly 100–150 lines and no new files, so low overhead
-- **Patterned backgrounds** — optional subtle patterns behind the desk (e.g. paisley, herringbone, Greek key, dots, grid), with an on/off toggle, a pattern picker, and an opacity slider from 0% (invisible) up. Patterns would be small inline SVGs tinted from the theme so they follow theme changes; text sits on cards, so readability is unaffected. Each pattern is a few hundred bytes
-
 ## License
 
 Personal use. Feel free to fork and customize for your own productivity needs.
