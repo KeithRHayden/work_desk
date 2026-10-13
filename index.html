@@ -5236,6 +5236,22 @@
       transition: background 0.12s, color 0.12s;
     }
     .theme-filter-btn:hover { color: var(--text); }
+    .current-theme-btn {
+      display: block;
+      margin: -2px 0 10px;
+      padding: 0;
+      background: none;
+      border: none;
+      font: inherit;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      text-align: left;
+      cursor: default;
+    }
+    .current-theme-btn strong { color: var(--text); font-weight: 600; }
+    .current-theme-btn.can-jump { cursor: pointer; }
+    .current-theme-btn.can-jump .current-theme-jump { color: var(--accent); margin-left: 4px; }
+    .current-theme-btn.can-jump:hover .current-theme-jump { text-decoration: underline; }
     .theme-filter-btn.active {
       background: var(--surface);
       color: var(--text);
@@ -5387,8 +5403,8 @@
       color: var(--text-muted);
       padding: 3px 0;
     }
-    .custom-holiday-item .holiday-date { font-weight: 600; color: var(--text); min-width: 78px; }
-    .custom-holiday-item .holiday-label { flex: 1; }
+    .custom-holiday-item .holiday-date { font-weight: 600; color: var(--text); white-space: nowrap; }
+    .custom-holiday-item .holiday-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .custom-holiday-item .holiday-remove {
       background: transparent;
       border: none;
@@ -5399,11 +5415,25 @@
       opacity: 0.6;
     }
     .custom-holiday-item .holiday-remove:hover { opacity: 1; }
+    .custom-holiday-item.is-past { opacity: 0.6; }
+    .custom-holidays-past-btn {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      padding: 2px 0;
+      font: inherit;
+      font-size: 0.72rem;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .custom-holidays-past-btn:hover { text-decoration: underline; }
     .custom-holiday-add-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 4px;
       align-items: center;
     }
+    #custom-holiday-label { grid-column: 1 / -1; }
     .custom-holiday-input {
       font-size: 0.74rem;
       padding: 4px 6px;
@@ -5414,7 +5444,21 @@
       flex: 1;
       min-width: 0;
     }
-    .custom-holiday-input[type="date"] { flex: 0 0 auto; width: 120px; }
+    .custom-holiday-input[type="date"] { width: 100%; }
+    .options-reset-btn {
+      display: block;
+      width: 100%;
+      margin-top: 14px;
+      padding: 7px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      background: transparent;
+      font: inherit;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .options-reset-btn:hover { color: var(--danger); border-color: var(--danger); }
     .custom-holiday-add-btn {
       font-size: 0.72rem;
       font-weight: 600;
@@ -6711,8 +6755,8 @@
       cursor: pointer;
       padding: 2px 4px;
     }
-    .tag-color-reset:disabled,
-    .tag-color-row-reset:disabled { color: var(--text-muted); opacity: 0.5; cursor: default; }
+    .tag-color-reset:disabled { color: var(--text-muted); opacity: 0.5; cursor: default; }
+    .tag-color-row-reset:disabled { visibility: hidden; }
 
     .tag-color-hint {
       font-size: 0.72rem;
@@ -6724,9 +6768,20 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 180px;
-      overflow-y: auto;
     }
+    .tag-color-row.is-overflow { display: none; }
+    .tag-color-list.show-all .tag-color-row.is-overflow { display: grid; }
+    .tag-color-more-btn {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      padding: 2px 0;
+      font: inherit;
+      font-size: 0.72rem;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .tag-color-more-btn:hover { text-decoration: underline; }
     .tag-color-row {
       display: grid;
       grid-template-columns: 1fr auto auto auto;
@@ -7546,6 +7601,7 @@
                         <button type="button" class="theme-filter-btn" data-theme-filter="custom">Custom</button>
                       </div>
                     </div>
+                    <button type="button" id="current-theme-btn" class="current-theme-btn" title="Show the current theme"></button>
                     <div id="customize-theme-grid"></div>
                     <div id="custom-theme-panel" class="custom-theme-panel hidden"></div>
                   </div>
@@ -7643,6 +7699,7 @@
                     <p class="tag-color-hint">Analogous and Multi-color give each tag its own color that follows the theme when you switch. Pick a color below (or click a tag on a card) to pin a custom color that overrides any mode.</p>
                     <div id="tag-color-list" class="tag-color-list"></div>
 
+                    <button type="button" class="options-reset-btn" data-options-reset="appearance" title="Pinned tag colors are kept">Reset Appearance to defaults</button>
                   </div>
 
                   <!-- Behavior Tab Pane -->
@@ -7663,6 +7720,9 @@
                         <option value="monday">Monday</option>
                       </select>
                     </div>
+
+                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                    <p class="density-popout-label">Tasks</p>
                     <label class="customize-toggle" title="Ask for confirmation before permanently deleting a task">
                       <input id="confirm-delete-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -7670,9 +7730,6 @@
                         <span class="customize-toggle-sub">Show a prompt before permanently removing tasks</span>
                       </span>
                     </label>
-
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Tasks</p>
                     <label class="customize-toggle" title="Automatically bring forward unfinished tasks when opening today">
                       <input id="auto-carry-toggle-popout" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -7753,11 +7810,13 @@
                       <p class="density-popout-label" style="margin-top:6px;">Custom holidays</p>
                       <div id="custom-holidays-list" class="custom-holidays-list"></div>
                       <div class="custom-holiday-add-row">
-                        <input id="custom-holiday-date" type="date" class="custom-holiday-input" />
-                        <input id="custom-holiday-label" type="text" class="custom-holiday-input" placeholder="Label (optional)" />
+                        <input id="custom-holiday-label" type="text" class="custom-holiday-input" placeholder="Label (optional)" aria-label="Holiday label" />
+                        <input id="custom-holiday-date" type="date" class="custom-holiday-input" aria-label="Holiday date" />
                         <button id="custom-holiday-add-btn" type="button" class="custom-holiday-add-btn">Add</button>
                       </div>
                     </div>
+
+                    <button type="button" class="options-reset-btn" data-options-reset="behavior" title="Custom holidays are kept">Reset Behavior to defaults</button>
                   </div>
                 </div>
               </div>
@@ -7965,9 +8024,11 @@
         <h3>Options menu</h3>
         <ul>
           <li>Open with the customize button (⊟) near the date; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
-          <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes</li>
-          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, and gradient header effect</li>
-          <li><strong>Behavior</strong> — organized into General, Tasks, Projects, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
+          <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
+          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left/right), card glow on hover, gradient header effect, and tag colors. The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
+          <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
+          <li><strong>Custom holidays</strong> — upcoming holidays are listed with their weekday; past ones are tucked away behind <strong>Show past</strong></li>
+          <li><strong>Reset to defaults</strong> — the link at the bottom of Appearance or Behavior puts that tab's settings back to how a new install starts. Your theme, pinned tag colors, and custom holidays are kept</li>
         </ul>
 
         <h3>Navigation</h3>
@@ -8157,12 +8218,28 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.15.0';
+    const APP_VERSION = '1.15.1';
     const CHANGELOG = [
+      {
+        version: '1.15.1',
+        date: 'Oct 13, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'Options → Themes: the line under the filter names your current theme, with a Show link that jumps to its group',
+            'Options → Appearance: the tag color list shows your 8 most-used tags with Show all for the rest, instead of a small scrolling box. Reset (formerly "auto") only appears on tags with a pinned color',
+            'Options → Behavior: Confirm before delete moved into the Tasks section',
+            'Custom holidays show the weekday and a readable date, hide past holidays behind Show past, and the label box gets its own line so it\'s no longer cut off',
+            'Reset Appearance / Behavior to defaults links at the bottom of those tabs. Your theme, pinned tag colors, and custom holidays are kept',
+          ]},
+          { label: 'Fixed', items: [
+            'Custom holiday labels are now shown as plain text rather than read as HTML',
+          ]},
+        ],
+      },
       {
         version: '1.15.0',
         date: 'Oct 6, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Insights: click a day to open it on the Desk, from the Day-by-day table, the breakdown bars, or any heatmap square. In Year view, clicking a month bar opens that month in Insights',
@@ -9684,6 +9761,39 @@
     let currentThemeFilter = 'light';
     let customEditorState = null; // null = browse, { id, name, dark, bg, surface, sidebar, accent, text } = editing
 
+    const THEME_GROUP_LABELS = { light: 'Light', medium: 'Medium', dark: 'Dark', custom: 'Custom' };
+
+    function describeCurrentTheme() {
+      const stored = localStorage.getItem(THEME_KEY) || '';
+      if (isCustomThemeId(stored)) {
+        const ct = loadCustomThemes().find(t => t.id === stored);
+        if (ct) return { name: ct.name || 'Custom', group: 'custom' };
+      }
+      const t = THEMES.find(x => x.id === stored) || THEMES[0];
+      return { name: t.name, group: t.medium ? 'medium' : t.dark ? 'dark' : 'light' };
+    }
+
+    function renderCurrentThemeName() {
+      const el = document.getElementById('current-theme-btn');
+      if (!el) return;
+      const { name, group } = describeCurrentTheme();
+      const canJump = group !== currentThemeFilter;
+      el.innerHTML = '';
+      el.append('Current: ');
+      const strong = document.createElement('strong');
+      strong.textContent = name;
+      el.append(strong, ` · ${THEME_GROUP_LABELS[group]}`);
+      if (canJump) {
+        const jump = document.createElement('span');
+        jump.className = 'current-theme-jump';
+        jump.textContent = 'Show';
+        el.append(jump);
+      }
+      el.classList.toggle('can-jump', canJump);
+      el.dataset.themeGroup = group;
+      el.title = canJump ? `Show ${THEME_GROUP_LABELS[group]} themes` : 'Your current theme';
+    }
+
     function renderThemeSwatches(filter) {
       if (!elThemeGrid) return;
       const current = getCurrentThemeId();
@@ -9706,6 +9816,7 @@
       document.querySelectorAll('.theme-filter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.themeFilter === currentThemeFilter);
       });
+      renderCurrentThemeName();
 
       const isCustom = currentThemeFilter === 'custom';
       elThemeGrid.innerHTML = '';
@@ -11019,6 +11130,63 @@
       }
     }
 
+    // Must match the first-launch defaults in `state` and the init* readers
+    const OPTIONS_DEFAULTS = {
+      appearance: {
+        toggles: { 'card-glow-toggle': false, 'gradient-header-toggle': false },
+        selects: {
+          'font-size-select': 'default',
+          'font-family-select': 'system',
+          'sidebar-position-select': 'left',
+          'tag-color-mode-select': 'theme',
+        },
+      },
+      behavior: {
+        toggles: {
+          'confirm-delete-toggle': false,
+          'auto-carry-toggle-popout': false,
+          'auto-collapse-completed-toggle': true,
+          'keep-comments-open-toggle': false,
+          'confetti-toggle': true,
+          'strike-completed-toggle': true,
+          'truncate-notes-toggle': true,
+          'streak-skip-weekends-toggle': true,
+          'us-federal-holidays-toggle': true,
+        },
+        selects: {
+          'startup-view-select': 'last_viewed',
+          'week-start-select': 'sunday',
+          'auto-collapse-completed-at': '5',
+        },
+      },
+    };
+
+    // Drives each control through its own change handler so saving and syncing stay in one place
+    function resetOptionsTab(tab) {
+      const defaults = OPTIONS_DEFAULTS[tab];
+      if (!defaults) return 0;
+      let changed = 0;
+      for (const [id, value] of Object.entries(defaults.toggles)) {
+        const el = document.getElementById(id);
+        if (!el || el.checked === value) continue;
+        el.checked = value;
+        el.dispatchEvent(new Event('change'));
+        changed++;
+      }
+      for (const [id, value] of Object.entries(defaults.selects)) {
+        const el = document.getElementById(id);
+        if (!el || el.value === value) continue;
+        el.value = value;
+        el.dispatchEvent(new Event('change'));
+        changed++;
+      }
+      if (tab === 'appearance' && (localStorage.getItem(DENSITY_KEY) || 'comfortable') !== 'comfortable') {
+        applyDensity('comfortable');
+        changed++;
+      }
+      return changed;
+    }
+
     function initDensityToggle() {
       const btn    = document.getElementById('density-toggle');
       const popout = document.getElementById('density-popout');
@@ -11096,6 +11264,27 @@
       popout.querySelectorAll('.theme-filter-btn').forEach(fBtn => {
         fBtn.addEventListener('click', () => {
           renderThemeSwatches(fBtn.dataset.themeFilter);
+        });
+      });
+
+      const currentThemeBtn = document.getElementById('current-theme-btn');
+      if (currentThemeBtn) {
+        currentThemeBtn.addEventListener('click', (e) => {
+          if (!currentThemeBtn.classList.contains('can-jump')) return;
+          // The button's contents are rebuilt, detaching the clicked span
+          e.stopPropagation();
+          renderThemeSwatches(currentThemeBtn.dataset.themeGroup);
+        });
+      }
+
+      popout.querySelectorAll('[data-options-reset]').forEach(resetBtn => {
+        resetBtn.addEventListener('click', () => {
+          const tab = resetBtn.dataset.optionsReset;
+          const label = tab === 'appearance' ? 'Appearance' : 'Behavior';
+          const kept = tab === 'appearance' ? 'Pinned tag colors are kept.' : 'Custom holidays are kept.';
+          if (!confirm(`Reset ${label} settings to their defaults? ${kept}`)) return;
+          const changed = resetOptionsTab(tab);
+          showToast(changed ? `${label} reset to defaults` : `${label} is already on the defaults`);
         });
       });
 
@@ -11268,6 +11457,7 @@
         if (!date) { showToast('Pick a date first'); return; }
         if (state.customHolidays.some(h => h.date === date)) { showToast('That date is already added'); return; }
         state.customHolidays.push({ date, label: labelInput.value.trim() || '' });
+        if (date < todayKey()) showPastHolidays = true;
         state.customHolidays.sort((a, b) => a.date.localeCompare(b.date));
         localStorage.setItem(CUSTOM_HOLIDAYS_KEY, JSON.stringify(state.customHolidays));
         schedulePrefsPush();
@@ -11933,10 +12123,14 @@
         .map(({ tag }) => tag);
     }
 
+    const TAG_COLOR_LIST_CAP = 8;
+    let tagColorListExpanded = false;
+
     function renderTagColorList() {
       const host = document.getElementById('tag-color-list');
       if (!host) return;
       host.innerHTML = '';
+      host.classList.toggle('show-all', tagColorListExpanded);
       const tags = collectTagUsage();
       if (!tags.length) {
         const empty = document.createElement('p');
@@ -11945,9 +12139,9 @@
         host.appendChild(empty);
         return;
       }
-      for (const { tag, count } of tags) {
+      tags.forEach(({ tag, count }, index) => {
         const row = document.createElement('div');
-        row.className = 'tag-color-row';
+        row.className = 'tag-color-row' + (index >= TAG_COLOR_LIST_CAP ? ' is-overflow' : '');
         row.dataset.tagRow = tag;
 
         const chip = document.createElement('span');
@@ -11968,12 +12162,29 @@
         const reset = document.createElement('button');
         reset.type = 'button';
         reset.className = 'tag-color-row-reset';
-        reset.textContent = 'auto';
-        reset.title = 'Use the automatic color';
+        reset.textContent = 'Reset';
+        reset.title = 'Go back to the automatic color';
+        reset.setAttribute('aria-label', `Reset color for tag ${tag}`);
         reset.addEventListener('click', () => setTagColor(tag, null));
 
         row.append(chip, uses, input, reset);
         host.appendChild(row);
+      });
+      if (tags.length > TAG_COLOR_LIST_CAP) {
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'tag-color-more-btn';
+        const syncMore = () => {
+          more.textContent = tagColorListExpanded ? 'Show fewer' : `Show all (${tags.length})`;
+          more.setAttribute('aria-expanded', tagColorListExpanded ? 'true' : 'false');
+        };
+        more.addEventListener('click', () => {
+          tagColorListExpanded = !tagColorListExpanded;
+          host.classList.toggle('show-all', tagColorListExpanded);
+          syncMore();
+        });
+        syncMore();
+        host.appendChild(more);
       }
       syncTagColorListRows();
     }
@@ -15160,23 +15371,53 @@
       render();
     }
 
+    let showPastHolidays = false;
+
+    function formatHolidayDate(dateKey) {
+      const d = new Date(dateKey + 'T12:00:00');
+      if (Number.isNaN(d.getTime())) return dateKey;
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function splitCustomHolidays(holidays, today) {
+      const past = holidays.filter(h => h.date < today);
+      const upcoming = holidays.filter(h => h.date >= today);
+      return { past, upcoming };
+    }
+
     function renderCustomHolidaysList() {
       const list = document.getElementById('custom-holidays-list');
       if (!list) return;
       list.innerHTML = '';
-      if (!state.customHolidays.length) {
-        list.innerHTML = '<span style="font-size:.72rem;color:var(--text-muted)">None added yet</span>';
-        return;
+      const { past, upcoming } = splitCustomHolidays(state.customHolidays, todayKey());
+      if (!state.customHolidays.length || (!upcoming.length && !showPastHolidays)) {
+        const empty = document.createElement('span');
+        empty.className = 'custom-holidays-empty';
+        empty.style.cssText = 'font-size:.72rem;color:var(--text-muted)';
+        empty.textContent = state.customHolidays.length ? 'No upcoming holidays' : 'None added yet';
+        list.appendChild(empty);
       }
-      for (const h of state.customHolidays) {
+      const shown = showPastHolidays ? [...past, ...upcoming] : upcoming;
+      for (const h of shown) {
         const row = document.createElement('div');
-        row.className = 'custom-holiday-item';
-        row.innerHTML = `<span class="holiday-date">${h.date}</span><span class="holiday-label">${h.label || '(no label)'}</span>`;
+        row.className = 'custom-holiday-item' + (h.date < todayKey() ? ' is-past' : '');
+        row.dataset.holidayDate = h.date;
+        const dateEl = document.createElement('span');
+        dateEl.className = 'holiday-date';
+        dateEl.textContent = formatHolidayDate(h.date);
+        dateEl.title = h.date;
+        const labelEl = document.createElement('span');
+        labelEl.className = 'holiday-label';
+        labelEl.textContent = h.label || '(no label)';
+        if (h.label) labelEl.title = h.label;
+        row.append(dateEl, labelEl);
         const btn = document.createElement('button');
         btn.className = 'holiday-remove';
         btn.textContent = '✕';
         btn.title = 'Remove';
-        btn.addEventListener('click', () => {
+        btn.setAttribute('aria-label', `Remove holiday ${h.date}`);
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
           state.customHolidays = state.customHolidays.filter(x => x.date !== h.date);
           localStorage.setItem(CUSTOM_HOLIDAYS_KEY, JSON.stringify(state.customHolidays));
           schedulePrefsPush();
@@ -15185,6 +15426,19 @@
         });
         row.appendChild(btn);
         list.appendChild(row);
+      }
+      if (past.length) {
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'custom-holidays-past-btn';
+        toggle.textContent = showPastHolidays ? 'Hide past' : `Show past (${past.length})`;
+        toggle.setAttribute('aria-expanded', showPastHolidays ? 'true' : 'false');
+        toggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showPastHolidays = !showPastHolidays;
+          renderCustomHolidaysList();
+        });
+        list.appendChild(toggle);
       }
     }
 
