@@ -57,9 +57,10 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **96 preset themes** — 32 light + 32 medium + 32 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Retro, Dot Matrix, Monokai, Phosphor, Fog, Twilight, the four Unit themes, etc.), browsed as mini wireframe previews, filterable by Light/Med/Dark
 - **Custom Theme Builder** — create up to 5 of your own themes from 5 picked colors (Background, Surface, Sidebar, Accent, Text); ~30 CSS variables auto-derived, live preview, synced across devices
 - **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date; on phones, **Options** in the menu)
-  - Themes: 96 presets with Light/Med/Dark filters, plus Custom tab for user-created themes
-  - Appearance: Comfortable/Compact density, text size, font family, sidebar position, card glow, gradient header
-  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view, celebration confetti, confirm before delete, strike-through completed tasks, truncate long project notes, weekends don't break streaks, holiday settings
+  - Themes: 96 presets with Light/Med/Dark filters, plus Custom tab for user-created themes; a line under the filter names the current theme, with *Show* to jump to its group
+  - Appearance: Comfortable/Compact density, text size, font family, sidebar position, card glow, gradient header, tag colors (top 8 tags with *Show all*; *Reset* only on pinned colors)
+  - Behavior: keep comments open, auto-collapse completed (threshold 3–20), auto carry each day, first day of week, startup view, celebration confetti, confirm before delete, strike-through completed tasks, truncate long project notes, weekends don't break streaks, holiday settings (past custom holidays hidden behind *Show past*)
+  - *Reset to defaults* at the bottom of Appearance and Behavior restores new-install settings for that tab; theme, pinned tag colors, and custom holidays are kept
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
 - Collapsible sidebar on desktop, with a "Today's Progress" mini card that always reflects today regardless of which day you're viewing (hidden on phones, where the desk header's progress bar and Back to today cover it)
 
