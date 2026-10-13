@@ -2209,6 +2209,23 @@
     [data-sidebar-position="right"] .sidebar-collapse-btn { left: auto; right: 256px; transform: translateX(50%); }
     [data-sidebar-position="right"] .app.sidebar-collapsed .sidebar-collapse-btn { left: auto; right: 12px; transform: translateX(0); }
 
+    /* Background pattern controls; .main draws the tile from --desk-pattern */
+    .bg-pattern-controls { margin: 2px 0 6px; }
+    .bg-pattern-controls[hidden] { display: none; }
+    .bg-pattern-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 10px; }
+    .bg-pattern-tile {
+      display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-width: 0; padding: 3px 3px 4px;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-muted);
+      font: inherit; font-size: 0.66rem; line-height: 1.15; cursor: pointer; text-align: center;
+    }
+    .bg-pattern-tile:hover { border-color: var(--accent); }
+    .bg-pattern-tile.active { border: 2px solid var(--accent); padding: 2px 2px 3px; color: var(--accent); font-weight: 600; }
+    .bg-pattern-tile-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bg-pattern-swatch { display: block; height: 34px; border-radius: 5px; background-color: var(--bg); }
+    .bg-pattern-strength-row { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text); }
+    .bg-pattern-strength-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+    .bg-pattern-strength-val { width: 34px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
     /* Sidebar position: top / bottom bar (desktop and tablet; phones keep their own layout) */
     @media (min-width: 769px) {
       [data-sidebar-position="top"] .app { flex-direction: column; }
@@ -4235,6 +4252,8 @@
       scrollbar-gutter: stable;
       display: flex;
       flex-direction: column;
+      /* Set on <body> by renderBgPattern */
+      background-image: var(--desk-pattern, none);
     }
 
     /* The whole desk scrolls with .main like a normal page: the top card scrolls away and
@@ -7885,6 +7904,24 @@
                     </label>
 
                     <hr class="theme-section-divider" style="margin: 10px 0 8px;">
+                    <p class="density-popout-label">Background</p>
+                    <label class="customize-toggle" title="Add a subtle pattern behind the board">
+                      <input id="bg-pattern-toggle" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>Patterned background</span>
+                        <span class="customize-toggle-sub">Subtle texture behind the board; cards stay solid</span>
+                      </span>
+                    </label>
+                    <div id="bg-pattern-controls" class="bg-pattern-controls" hidden>
+                      <div id="bg-pattern-grid" class="bg-pattern-grid" role="radiogroup" aria-label="Background pattern"></div>
+                      <div class="bg-pattern-strength-row">
+                        <label for="bg-pattern-strength">Strength</label>
+                        <input id="bg-pattern-strength" type="range" min="2" max="45" step="1" value="10" />
+                        <span id="bg-pattern-strength-val" class="bg-pattern-strength-val">10%</span>
+                      </div>
+                    </div>
+
+                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
                     <p class="density-popout-label">Tags</p>
                     <div class="customize-select-row">
                       <label for="tag-color-mode-select">Tag colors</label>
@@ -8217,15 +8254,16 @@
           <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
           <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
           <li>Drag tasks between columns or reorder within a column (desktop)</li>
-          <li><strong>Drop below a column</strong> — on desktop, the empty space under a column counts as that column while you drag, down to the bottom of the board. A dashed strip labeled <em>Drop in Active</em> (or New / Completed) shows where the task will go, so you don't have to scroll back up to the box. Below Completed / Shelved it marks the task Completed; to shelve, drop on the Shelved box. The gaps between columns and the Notes area below the board don't accept drops</li>
+          <li><strong>Drop below a column</strong> — on desktop, the empty space under a column counts as that column while you drag, all the way down the page. The far left margin counts as New and the far right as Completed. A dashed strip labeled <em>Drop in Active</em> (or New / Completed) shows where the task will go, so you don't have to scroll back up to the box. Below Completed / Shelved it marks the task Completed; to shelve, drop on the Shelved box. The gaps between columns and the Notes area don't accept drops</li>
         </ul>
 
         <h3>Options menu</h3>
         <ul>
           <li>Open with the customize button (⊟) near the date; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
           <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
-          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left, right, top, or bottom), card glow on hover, gradient header effect, and tag colors. The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
+          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left, right, top, or bottom), card glow on hover, gradient header effect, patterned background, and tag colors. The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
           <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
+          <li><strong>Patterned background</strong> — Options → Appearance → Background. Turn on <em>Patterned background</em>, pick one of 12 patterns (Graph paper, Isometric, Herringbone, Greek key, and more), and drag <em>Strength</em> from 2% (barely there) to 45%. The pattern follows your theme's colors and only shows behind the board; cards stay solid. Arrow keys move between patterns. Turning it off remembers your choice</li>
           <li><strong>Sidebar at the top or bottom</strong> — Options → Appearance → Sidebar position. The sidebar becomes a bar across the screen: tabs, search, Today's Progress, Export / Import, and your account in one row (it wraps to two on narrower windows). The calendar is replaced by the week strip above the board, Repair duplicates becomes the 🔧 button, and the collapse button is hidden. With the bar at the bottom, search results and toasts open above it. Phones keep their usual layout</li>
           <li><strong>Custom holidays</strong> — upcoming holidays are listed with their weekday; past ones are tucked away behind <strong>Show past</strong></li>
           <li><strong>Reset to defaults</strong> — the link at the bottom of Appearance or Behavior puts that tab's settings back to how a new install starts. Your theme, pinned tag colors, and custom holidays are kept</li>
@@ -8406,6 +8444,9 @@
     const SIDEBAR_POSITION_KEY = 'work-desk-sidebar-position';
     const CARD_GLOW_KEY = 'work-desk-card-glow';
     const GRADIENT_HEADER_KEY = 'work-desk-gradient-header';
+    const BG_PATTERN_ON_KEY = 'work-desk-bg-pattern-on';
+    const BG_PATTERN_KEY = 'work-desk-bg-pattern';
+    const BG_PATTERN_STRENGTH_KEY = 'work-desk-bg-pattern-strength';
     const US_FEDERAL_HOLIDAYS_KEY = 'work-desk-us-federal-holidays';
     const STREAK_SKIP_WEEKENDS_KEY = 'work-desk-streak-skip-weekends';
     const TAG_COLOR_MODE_KEY = 'work-desk-tag-color-mode';
@@ -8418,12 +8459,24 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.16.0';
+    const APP_VERSION = '1.16.1';
     const CHANGELOG = [
+      {
+        version: '1.16.1',
+        date: 'Oct 13, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Patterned backgrounds: Options → Appearance → Background adds a subtle texture behind the board. Pick from 12 patterns (Graph paper, Plus grid, Isometric, Diagonal, Pinstripe, Crosshatch, Hexagon, Herringbone, Basketweave, Chevron, Greek key, Dot grid) and set the strength from 2% to 45%. The pattern takes its color from your theme, cards stay solid, and it syncs with your other settings',
+          ]},
+          { label: 'Improved', items: [
+            'Drop anywhere below a column: the drop lanes from 1.16.0 now run all the way down the page instead of stopping just under the tallest column, and the outer margins count too — the far left drops into New, the far right into Completed. Lanes still stop at the Notes section',
+          ]},
+        ],
+      },
       {
         version: '1.16.0',
         date: 'Oct 13, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Drop below a column: on desktop, while you drag a task, the empty space under New, Active, or Completed / Shelved counts as that column, so a long New list no longer means scrolling back up to the Active box. A dashed "Drop in Active" strip shows where it will land. Below Completed / Shelved marks the task done; drop on the Shelved box to shelve',
@@ -9630,6 +9683,10 @@
         sidebarPosition: localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left',
         cardGlow: localStorage.getItem(CARD_GLOW_KEY) === 'true',
         gradientHeader: localStorage.getItem(GRADIENT_HEADER_KEY) === 'true',
+        ...(() => {
+          const bg = readBgPatternState();
+          return { bgPatternOn: bg.on, bgPattern: bg.pattern, bgPatternStrength: bg.strength };
+        })(),
         keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
         autoCollapseCompleted: localStorage.getItem('work-desk-auto-collapse-completed') !== 'false',
         autoCollapseCompletedAt: (() => {
@@ -9732,6 +9789,20 @@
       if (typeof prefs.cardGlow === 'boolean') {
         if ((localStorage.getItem(CARD_GLOW_KEY) === 'true') !== prefs.cardGlow) {
           applyCardGlow(prefs.cardGlow, { fromSync: true });
+          changed = true;
+        }
+      }
+
+      {
+        const cur = readBgPatternState();
+        const next = {};
+        if (typeof prefs.bgPatternOn === 'boolean' && prefs.bgPatternOn !== cur.on) next.on = prefs.bgPatternOn;
+        if (BG_PATTERNS.some(p => p.id === prefs.bgPattern) && prefs.bgPattern !== cur.pattern) next.pattern = prefs.bgPattern;
+        if (Number.isFinite(prefs.bgPatternStrength) && normalizeBgPatternStrength(prefs.bgPatternStrength) !== cur.strength) {
+          next.strength = prefs.bgPatternStrength;
+        }
+        if (Object.keys(next).length) {
+          applyBgPattern(next, { fromSync: true });
           changed = true;
         }
       }
@@ -11332,6 +11403,137 @@
       if (!fromSync) schedulePrefsPush();
     }
 
+    // ── Background pattern: small SVG tiles; INK becomes the theme's text color ──
+    const BG_PATTERNS = [
+      { id: 'graph', name: 'Graph paper', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><path d='M12 0V60M24 0V60M36 0V60M48 0V60M0 12H60M0 24H60M0 36H60M0 48H60' stroke='INK' stroke-width='.6' opacity='.45'/><path d='M60 0H0V60' fill='none' stroke='INK' stroke-width='1'/></svg>" },
+      { id: 'plus', name: 'Plus grid', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='M12 8.5V15.5M8.5 12H15.5' stroke='INK' stroke-width='1.2'/></svg>" },
+      { id: 'isometric', name: 'Isometric', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='41.57'><path d='M0 0H24M0 20.78H24M0 0L24 41.57M12 0L24 20.78M0 20.78L12 41.57M24 0L0 41.57M12 0L0 20.78M24 20.78L12 41.57' stroke='INK' stroke-width='.7'/></svg>" },
+      { id: 'diagonal', name: 'Diagonal', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M-1 1L1 -1M0 12L12 0M11 13L13 11' stroke='INK' stroke-width='.9'/></svg>" },
+      { id: 'pinstripe', name: 'Pinstripe', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><path d='M5 0V10' stroke='INK' stroke-width='.9'/></svg>" },
+      { id: 'crosshatch', name: 'Crosshatch', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><path d='M0 14L14 0M-1 1L1 -1M13 15L15 13M0 0L14 14M-1 13L1 15M13 -1L15 1' stroke='INK' stroke-width='.7'/></svg>" },
+      { id: 'hexagon', name: 'Hexagon', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='17.32' height='30'><path d='M8.66 0L17.32 5V15L8.66 20L0 15V5ZM8.66 20V30' fill='none' stroke='INK' stroke-width='.9'/></svg>" },
+      { id: 'herringbone', name: 'Herringbone', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='12'><path d='M0 12L12 0M0 6L6 0M6 12L12 6M12 0L24 12M12 6L18 12M18 0L24 6' fill='none' stroke='INK' stroke-width='.9'/></svg>" },
+      { id: 'basketweave', name: 'Basketweave', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><path d='M0 0H20M0 0V20M0 10H20M10 0V20M0 3.33H10M0 6.67H10M13.33 0V10M16.67 0V10M3.33 10V20M6.67 10V20M10 13.33H20M10 16.67H20' stroke='INK' stroke-width='.6'/></svg>" },
+      { id: 'chevron', name: 'Chevron', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='12'><path d='M0 10L12 2L24 10' fill='none' stroke='INK' stroke-width='.9'/></svg>" },
+      { id: 'greek-key', name: 'Greek key', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='M0 21H21V3H3V15H15V9H9' fill='none' stroke='INK' stroke-width='1.2'/></svg>" },
+      { id: 'dot-grid', name: 'Dot grid', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><circle cx='6' cy='6' r='.8' fill='INK'/></svg>" },
+    ];
+    const BG_PATTERN_DEFAULT = 'graph';
+    const BG_PATTERN_STRENGTH_DEFAULT = 10;
+    const BG_PATTERN_STRENGTH_MIN = 2;
+    const BG_PATTERN_STRENGTH_MAX = 45;
+    const BG_PATTERN_SWATCH_OPACITY = 0.35;
+    let bgPatternObserver = null;
+
+    function normalizeBgPattern(id) {
+      return BG_PATTERNS.some(p => p.id === id) ? id : BG_PATTERN_DEFAULT;
+    }
+
+    function normalizeBgPatternStrength(value) {
+      const n = Math.round(Number(value));
+      if (!Number.isFinite(n)) return BG_PATTERN_STRENGTH_DEFAULT;
+      return Math.min(BG_PATTERN_STRENGTH_MAX, Math.max(BG_PATTERN_STRENGTH_MIN, n));
+    }
+
+    function readBgPatternState() {
+      const raw = localStorage.getItem(BG_PATTERN_STRENGTH_KEY);
+      return {
+        on: localStorage.getItem(BG_PATTERN_ON_KEY) === 'true',
+        pattern: normalizeBgPattern(localStorage.getItem(BG_PATTERN_KEY)),
+        strength: raw === null ? BG_PATTERN_STRENGTH_DEFAULT : normalizeBgPatternStrength(raw),
+      };
+    }
+
+    function bgPatternTileUrl(id, ink, opacity) {
+      const pattern = BG_PATTERNS.find(p => p.id === id);
+      if (!pattern) return 'none';
+      const svg = pattern.svg
+        .replace(/^(<svg[^>]*>)([\s\S]*)(<\/svg>)$/, (m, open, body, close) => `${open}<g opacity='${opacity}'>${body}</g>${close}`)
+        .replaceAll('INK', ink);
+      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    }
+
+    function renderBgPattern() {
+      const bg = readBgPatternState();
+      const ink = (typeof getComputedStyle === 'function' && document.body
+        ? getComputedStyle(document.body).getPropertyValue('--text').trim() : '') || '#1a1f2e';
+      // Set on <body>: theme switches clear inline custom properties from <html>
+      document.body.style.setProperty('--desk-pattern', bg.on ? bgPatternTileUrl(bg.pattern, ink, bg.strength / 100) : 'none');
+      const toggle = document.getElementById('bg-pattern-toggle');
+      if (toggle) toggle.checked = bg.on;
+      const controls = document.getElementById('bg-pattern-controls');
+      if (controls) controls.hidden = !bg.on;
+      const slider = document.getElementById('bg-pattern-strength');
+      if (slider) slider.value = String(bg.strength);
+      const val = document.getElementById('bg-pattern-strength-val');
+      if (val) val.textContent = `${bg.strength}%`;
+      document.querySelectorAll('#bg-pattern-grid .bg-pattern-tile').forEach(tile => {
+        const active = tile.dataset.bgPattern === bg.pattern;
+        tile.classList.toggle('active', active);
+        tile.setAttribute('aria-checked', active ? 'true' : 'false');
+        tile.tabIndex = active ? 0 : -1;
+        const swatch = tile.querySelector('.bg-pattern-swatch');
+        if (swatch) swatch.style.backgroundImage = bgPatternTileUrl(tile.dataset.bgPattern, ink, BG_PATTERN_SWATCH_OPACITY);
+      });
+    }
+
+    function applyBgPattern(changes, options = {}) {
+      const { fromSync = false } = options;
+      if ('on' in changes) localStorage.setItem(BG_PATTERN_ON_KEY, changes.on ? 'true' : 'false');
+      if ('pattern' in changes) localStorage.setItem(BG_PATTERN_KEY, normalizeBgPattern(changes.pattern));
+      if ('strength' in changes) localStorage.setItem(BG_PATTERN_STRENGTH_KEY, String(normalizeBgPatternStrength(changes.strength)));
+      renderBgPattern();
+      if (!fromSync) schedulePrefsPush();
+    }
+
+    function initBgPattern() {
+      const grid = document.getElementById('bg-pattern-grid');
+      if (grid && !grid.children.length) {
+        for (const p of BG_PATTERNS) {
+          const tile = document.createElement('button');
+          tile.type = 'button';
+          tile.className = 'bg-pattern-tile';
+          tile.dataset.bgPattern = p.id;
+          tile.setAttribute('role', 'radio');
+          tile.title = p.name;
+          const swatch = document.createElement('span');
+          swatch.className = 'bg-pattern-swatch';
+          swatch.setAttribute('aria-hidden', 'true');
+          const name = document.createElement('span');
+          name.className = 'bg-pattern-tile-name';
+          name.textContent = p.name;
+          tile.append(swatch, name);
+          grid.appendChild(tile);
+        }
+        grid.addEventListener('click', (e) => {
+          const tile = e.target.closest('.bg-pattern-tile');
+          if (tile) applyBgPattern({ pattern: tile.dataset.bgPattern });
+        });
+        grid.addEventListener('keydown', (e) => {
+          const step = { ArrowRight: 1, ArrowDown: 4, ArrowLeft: -1, ArrowUp: -4 }[e.key];
+          if (!step) return;
+          e.preventDefault();
+          const i = BG_PATTERNS.findIndex(p => p.id === readBgPatternState().pattern);
+          const next = BG_PATTERNS[(i + step + BG_PATTERNS.length) % BG_PATTERNS.length].id;
+          applyBgPattern({ pattern: next });
+          grid.querySelector(`[data-bg-pattern="${next}"]`)?.focus();
+        });
+      }
+      document.getElementById('bg-pattern-toggle')?.addEventListener('change', (e) => applyBgPattern({ on: e.target.checked }));
+      document.getElementById('bg-pattern-strength')?.addEventListener('input', (e) => applyBgPattern({ strength: e.target.value }));
+      // Theme changes swap CSS variables on <html>; recolor the pattern to match
+      if (!bgPatternObserver && typeof MutationObserver === 'function') {
+        let queued = false;
+        bgPatternObserver = new MutationObserver(() => {
+          if (queued) return;
+          queued = true;
+          requestAnimationFrame(() => { queued = false; renderBgPattern(); });
+        });
+        bgPatternObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
+      }
+      renderBgPattern();
+    }
+
     function openDensityPopout() {
       renderThemeSwatches();
       renderTagColorList();
@@ -11378,7 +11580,7 @@
     // Must match the first-launch defaults in `state` and the init* readers
     const OPTIONS_DEFAULTS = {
       appearance: {
-        toggles: { 'card-glow-toggle': false, 'gradient-header-toggle': false },
+        toggles: { 'card-glow-toggle': false, 'gradient-header-toggle': false, 'bg-pattern-toggle': false },
         selects: {
           'font-size-select': 'default',
           'font-family-select': 'system',
@@ -11429,6 +11631,13 @@
         applyDensity('comfortable');
         changed++;
       }
+      if (tab === 'appearance') {
+        const bg = readBgPatternState();
+        if (bg.pattern !== BG_PATTERN_DEFAULT || bg.strength !== BG_PATTERN_STRENGTH_DEFAULT) {
+          applyBgPattern({ pattern: BG_PATTERN_DEFAULT, strength: BG_PATTERN_STRENGTH_DEFAULT });
+          changed++;
+        }
+      }
       return changed;
     }
 
@@ -11478,6 +11687,8 @@
         gradientHeaderToggle.checked = localStorage.getItem(GRADIENT_HEADER_KEY) === 'true';
         gradientHeaderToggle.addEventListener('change', () => applyGradientHeader(gradientHeaderToggle.checked));
       }
+
+      initBgPattern();
 
       // Tag colors
       applyTagColorMode(state.tagColorMode, { fromSync: true });
@@ -16067,18 +16278,21 @@
 
     // ── Board lanes: empty space below a column accepts drops for that column (desktop) ──
     const BOARD_LANE_LABELS = { new: 'New', active: 'Active', completed: 'Completed' };
-    const BOARD_LANE_BOTTOM_SLACK = 24;
     let laneHighlightEl = null;
 
-    // columns: [{ target, rect }] in board order. Lanes only exist while columns sit side by side.
-    function findBoardLane(columns, boardBottom, x, y) {
-      if (!columns || columns.length < 2) return null;
+    // columns: [{ target, rect }] in board order; bounds: { left, right, bottom } of the area lanes may fill.
+    // Lanes only exist while columns sit side by side. The outer margins belong to the first and last
+    // columns; the gutters between columns stay dead so a drop there is never ambiguous.
+    function findBoardLane(columns, bounds, x, y) {
+      if (!columns || columns.length < 2 || !bounds) return null;
       const top = columns[0].rect.top;
       if (columns.some(c => Math.abs(c.rect.top - top) > 2)) return null;
-      if (y > boardBottom) return null;
-      const hit = columns.find(c => x >= c.rect.left && x <= c.rect.right);
-      if (!hit || y <= hit.rect.bottom) return null;
-      return hit;
+      if (y < top || y > bounds.bottom || x < bounds.left || x > bounds.right) return null;
+      const last = columns.length - 1;
+      const hit = columns.find((c, i) => x >= (i === 0 ? bounds.left : c.rect.left) && x <= (i === last ? bounds.right : c.rect.right));
+      if (!hit) return null;
+      const overBox = x >= hit.rect.left && x <= hit.rect.right && y <= hit.rect.bottom;
+      return overBox ? null : hit;
     }
 
     function boardLaneLayout() {
@@ -16091,7 +16305,12 @@
           target: col.classList.contains('done') ? 'completed' : col.classList.contains('new') ? 'new' : 'active',
           rect: col.getBoundingClientRect(),
         }));
-      return { columns, boardBottom: board.getBoundingClientRect().bottom + BOARD_LANE_BOTTOM_SLACK };
+      const main = board.closest('.main') || document.querySelector('.main');
+      const mainRect = main ? main.getBoundingClientRect() : { left: 0, right: window.innerWidth, bottom: window.innerHeight };
+      // Lanes run to the bottom of the page, or stop where the Notes section starts
+      const after = board.nextElementSibling;
+      const bottom = Math.min(mainRect.bottom, window.innerHeight, after ? after.getBoundingClientRect().top - 4 : Infinity);
+      return { columns, bounds: { left: mainRect.left, right: mainRect.right, bottom } };
     }
 
     function boardLaneAt(e) {
@@ -16100,7 +16319,7 @@
       if (e.target?.closest?.('[data-drop-target], .item-card')) return null;
       const layout = boardLaneLayout();
       if (!layout) return null;
-      return findBoardLane(layout.columns, layout.boardBottom, e.clientX, e.clientY);
+      return findBoardLane(layout.columns, layout.bounds, e.clientX, e.clientY);
     }
 
     function hideBoardLaneGhost() {
@@ -16133,6 +16352,8 @@
         ghost.appendChild(label);
         document.body.appendChild(ghost);
       }
+      // Beside a column (in the outer margin) the column highlight is enough
+      if (y <= lane.rect.bottom) { ghost.hidden = true; return; }
       const top = lane.rect.bottom + 6;
       ghost.hidden = false;
       ghost.dataset.target = lane.target;
