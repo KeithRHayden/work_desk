@@ -11,6 +11,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Task management
 
 - **Kanban board** — New → Active → Completed / Shelved
+- **Complete button on the card edge** — click a task's left edge to finish it (again to reopen). Choose its look in Options → Appearance → Card layout → *Complete button*: a *"Done" label* (default; DONE? on hover, DOING while dragging, DONE! when finished, UNDO? to reopen), bar, raised bar, switch, circle, square, diamond, faint ✓, plain edge, or *Checkbox*
 - **Drag and drop** — reorder within a day or move between columns; on desktop, the empty space below a column accepts drops for that column, with a *Drop in …* strip showing where the task will land
 - **Shelving** — park a task without deleting it
 - **Carry forward** — a one-click button that only appears when there's something to carry; enable auto-carry (Options → Behavior) to pull it in every time you open the desk
@@ -31,8 +32,11 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **Work / Personal / Projects** — separate contexts
 - **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens). The calendar's selected day is a solid fill in the theme color; yellow number badges count tasks left open (rose on amber-accent themes, matching Insights *carried over*); a legend underneath explains *Has items · Left open · Holiday*; and a *Today* chip appears when you've browsed to another month
-- **Quieter weekends** — Options → Behavior → General grays Sat/Sun on the sidebar calendar: *Off* (default), *Work desk only*, or *Both desks*
+- **Quieter weekends** — Options → Behavior → General grays Sat/Sun on the sidebar calendar: *Off* (default), *Work only*, or *Both desks*
+- **Open desk** — Options → Behavior → General picks the desk the app starts on: *Last used* (default), *Work*, or *Personal*
+- **Calendar legend / Today's Progress switches** — Options → Appearance → Layout can hide the key under the sidebar calendar and the Today's Progress card (both on by default)
 - **Tags** — tag a task or note by typing `#word` inline or clicking the `tag` action (which offers your two most-used tags as one-click picks, narrowing as you type); chips render top-right on the card, always uppercase and case-insensitive (`#ACE` == `#ace`)
+- **Tag position** — Options → Appearance → Card layout: *Own row* (default), *Slim headroom* (every task keeps a short tag row so text starts at the same height with or without tags), or *Action bar* (chips beside ⋮; on narrow cards they drop to a second line with ⋮, right-aligned)
 - **Tag colors** — Options → Appearance → Tags: *Single color (accent)* (default, every tag uses the accent), *Shades of accent* (lighter/darker/neighboring shades of the accent), or *Multi-color* (hues spread around the color wheel at the accent's brightness); both follow the theme when you switch and are stable across devices. Each mode has 8 colors, so with more tags some share one. Click any chip on a card, or use the tag list in Options, to pin a custom color that overrides any mode; synced with your other preferences
 - **Search** — floating overlay with a result count; search current list or both Work and Personal, and use `#tagname` to filter by tag; finished tasks are marked `✓ Done` or `Shelved`
 - **Repair duplicates** — cleans same-ID and same-day recurring copies left by sync races
@@ -57,9 +61,9 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **96 preset themes** — 32 light + 32 medium + 32 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Retro, Dot Matrix, Monokai, Phosphor, Fog, Twilight, the four Unit themes, etc.), browsed as mini wireframe previews, filterable by Light/Med/Dark
 - **Custom Theme Builder** — create up to 5 of your own themes from 5 picked colors (Background, Surface, Sidebar, Accent, Text); ~30 CSS variables auto-derived, live preview, synced across devices
-- **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date, or **Options** in the account menu; on phones, **Options** in the menu sheet). Appearance and Behavior open on a summary list where each row shows its current value; click a row to open that section, then *‹ Back* or Esc to return (Esc again closes). On/off settings are switches, and settings added in the current release carry a *New* tag
+- **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date, or **Options** in the account menu; on phones, **Options** in the menu sheet). Appearance and Behavior open on a summary list where each row shows its current value; click a row to open that section, then *‹ Back* or Esc to return (Esc again closes). On/off settings are switches, and settings added in the current release carry a *New* tag until you open their section
   - Themes: 96 presets with Light/Med/Dark filters, plus Custom tab for user-created themes; a line under the filter names the current theme, with *Show* to jump to its group
-  - Appearance: Card layout (Comfortable/Compact), Typography (text size, font family), Layout (sidebar left, right, top, or bottom), Effects (card glow, gradient header), Background (12 patterns, 2–45% strength), Tags (tag colors; top 8 tags with *Show all*; *Reset* only on pinned colors)
+  - Appearance: Card layout (Comfortable/Compact, complete button style, tag position), Typography (text size, font family), Layout (sidebar left, right, top, or bottom), Effects (card glow, gradient header), Background (12 patterns, 2–45% strength), Tags (tag colors; top 8 tags with *Show all*; *Reset* only on pinned colors)
   - Behavior: General (startup view, first day of week, quieter weekends), Tasks (keep comments open, auto-collapse completed with threshold 3–20, auto carry each day, celebration confetti, confirm before delete, strike-through completed tasks), Projects (truncate long notes), Insights (weekends don't break streaks), Holidays (past custom holidays hidden behind *Show past*)
   - *Reset to defaults* at the bottom of Appearance and Behavior restores new-install settings for that tab; theme, pinned tag colors, and custom holidays are kept
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
@@ -69,7 +73,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **Optional Supabase sync** — email sign-in; devices merge rather than overwrite
 - **Deletes stick everywhere** — a deleted task or note is removed from every device, even one that still has an old copy; **Undo** restores it on every device
-- **Synced preferences** — theme, density, strike-through, comment/completed/auto-carry toggles, week start day, startup view, and confetti follow your account (last change wins)
+- **Synced preferences** — theme, density, complete button style, tag position, strike-through, comment/completed/auto-carry toggles, week start day, startup view, and confetti follow your account (last change wins)
 - **Continue offline** — use the desk without an account; data stays in this browser only (clearing site data can wipe it). Use **Sign in** in the sidebar account footer (on phones, in the menu) when you’re ready to sync.
 - **Export / Import Desk** — save or restore a single tab (Work, Personal, or Projects) as a JSON file; the export stamps which desk it came from, and importing into the wrong tab shows a confirmation warning
 - **Export / Import All** — bundles Work + Personal + Projects into a single file for a complete one-click backup and restore
@@ -85,7 +89,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - Installable home-screen app and service worker offline shell
 - **Always the latest version online** — the service worker (`sw.js`) loads the page network-first and only falls back to the saved copy offline, so a new deploy shows on the first load; an app left open in the background offers a **Reload** when a newer version ships
 - **Stale-copy protection** — each sync records the app version; if an out-of-date copy opens and sees cloud data from a newer version, it reloads instead of carrying tasks or overwriting settings
-- Touch-friendly week strip and tap-to-complete
+- Touch-friendly week strip and tap-to-complete (the complete edge widens to 40px on touch screens)
 
 ## How it behaves
 
