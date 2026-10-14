@@ -18,6 +18,28 @@ async function dismissAuthModal(page: Page) {
   await expect(modal).toBeHidden();
 }
 
+/** Options settings sit behind summary rows; open the section holding `selector` (Options must already be open). */
+async function openOptionsSectionFor(page: Page, selector: string) {
+  const info = await page.locator(selector).first().evaluate(el => {
+    const s = el.closest('.options-section');
+    return s ? { id: s.getAttribute('data-options-section')!, pane: s.closest('.options-pane')!.id, open: !s.hasAttribute('hidden') } : null;
+  });
+  if (!info || info.open) return;
+  const pane = page.locator(`#${info.pane}`);
+  if (!(await pane.isVisible())) await page.locator(`.options-nav-btn[data-options-tab="${info.pane.replace('options-pane-', '')}"]`).click();
+  const back = pane.locator('.options-section:not([hidden]) [data-options-back]');
+  if (await back.count()) await back.click();
+  await pane.locator(`[data-options-open="${info.id}"]`).click();
+  await expect(page.locator(selector).first()).toBeAttached();
+  await expect(pane.locator(`[data-options-section="${info.id}"]`)).toBeVisible();
+}
+
+async function openAccountMenu(page: Page) {
+  if (await page.locator('#account-menu').isVisible()) return;
+  await page.locator('#account-menu-btn').click();
+  await expect(page.locator('#account-menu')).toBeVisible();
+}
+
 async function openDesk(page: Page) {
   // Seed only once per browser context — init scripts also run on reload,
   // so never clear localStorage here or persistence tests will fail.
@@ -164,6 +186,7 @@ test.describe('Desktop layout baselines', () => {
   test('export menu at 1440px', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await seedLayout(page);
+    await openAccountMenu(page);
     await page.locator('#export-btn').click();
     await expect(page.locator('#export-menu')).toBeVisible();
     await shot(page, 'export-1440.png');
@@ -382,7 +405,9 @@ test.describe('Phone menu (1.13.0)', () => {
 
     await page.setViewportSize({ width: 769, height: 844 });
     await expect(menuBtn(page)).toBeHidden();
-    await expect(page.locator('.sidebar-backup')).toBeVisible();
+    await expect(page.locator('#account-menu-btn')).toBeVisible();
+    await openAccountMenu(page);
+    await expect(page.locator('#account-menu .sidebar-backup')).toBeVisible();
     await expect(page.locator('#sidebar-account')).toBeVisible();
     await expect(page.locator('#density-toggle')).toBeVisible();
   });
@@ -392,8 +417,9 @@ test.describe('Phone menu (1.13.0)', () => {
     await openMenu(page);
     await page.setViewportSize({ width: 1024, height: 844 });
     await expectMenuClosed(page);
-    await expect(page.locator('.sidebar #export-btn')).toBeVisible();
-    await expect(page.locator('#sidebar-account')).toBeVisible();
+    await expect(page.locator('#account-menu .sidebar-backup #export-btn')).toHaveCount(1);
+    await expect(page.locator('#account-menu-btn')).toBeVisible();
+    await expect(page.locator('#account-menu')).toBeHidden();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await openMenu(page);
@@ -426,8 +452,9 @@ test.describe('Phone menu (1.13.0)', () => {
       for (const sel of ['#mobile-menu-btn', '#mobile-sync-dot', '#mobile-menu-sheet', '#mobile-menu-backdrop']) {
         await expect(page.locator(sel)).toBeHidden();
       }
-      await expect(page.locator('#version-btn')).toBeVisible();
       await expect(page.locator('#sidebar-today-glance')).toBeVisible();
+      await openAccountMenu(page);
+      await expect(page.locator('#version-btn')).toBeVisible();
       await page.locator('#export-btn').click();
       await expect(page.locator('.sidebar #export-menu')).toBeVisible();
       await page.locator('#density-toggle').click();
@@ -726,7 +753,8 @@ test.describe('Work Desk smoke', () => {
     await openDesk(page);
     await addTask(page, 'Export probe');
 
-    // Export button now opens a dropdown; click the single-desk export option
+    // Export lives in the account menu and opens a dropdown; click the single-desk export option
+    await openAccountMenu(page);
     await page.locator('#export-btn').click();
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -985,6 +1013,7 @@ test.describe('Font family persistence', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
     await page.locator('#density-toggle').click();
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await openOptionsSectionFor(page, '#font-family-select');
     await page.locator('#font-family-select').selectOption('jetbrains');
     await expect.poll(() => bodyFont(page)).toContain('JetBrains Mono');
   }
@@ -1058,6 +1087,7 @@ test.describe('Tag colors', () => {
     await page.locator('#density-toggle').click();
     await expect(page.locator('#density-popout')).toBeVisible();
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await openOptionsSectionFor(page, '#tag-color-mode-select');
     await expect(page.locator('#tag-color-mode-select')).toBeVisible();
   }
 
@@ -1247,7 +1277,9 @@ test.describe('Tag colors', () => {
       await setupTwoTaggedTasks(page);
       for (const font of ['system', 'inter', 'nunito', 'jetbrains', 'merriweather']) {
         await openAppearance(page);
+        await openOptionsSectionFor(page, '#font-family-select');
         await page.locator('#font-family-select').selectOption(font);
+        await openOptionsSectionFor(page, '#tag-color-list');
         await page.evaluate(() => document.fonts.ready);
         const g = await inkGaps(page, page.locator(`#tag-color-list .tag-color-row[data-tag-row="${TAG_A}"] .tag-chip`));
         expect.soft(Math.abs(g.top - g.bottom), `${font}: vertical ${JSON.stringify(g)}`).toBeLessThanOrEqual(1.5);
@@ -1317,7 +1349,7 @@ test.describe('Tag colors', () => {
       }
     }
     await expect(page.locator('#tag-color-mode-select option')).toHaveText([
-      'Single color (accent)', 'Analogous (shades of accent)', 'Multi-color (from theme)',
+      'Single color (accent)', 'Shades of accent', 'Multi-color',
     ]);
   });
 
@@ -1669,6 +1701,7 @@ test.describe('Settings popout tabs', () => {
   test('behavior pane contains auto-carry toggle', async ({ page }) => {
     await openSettings(page);
     await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('#options-pane-behavior [data-options-open="tasks"]').click();
     await expect(page.locator('#options-pane-behavior #auto-carry-toggle-popout')).toBeVisible();
   });
 
@@ -2600,6 +2633,7 @@ test.describe('Streak weekend handling', () => {
     expect(on.longest).toBe(on.current);
 
     await openSettingsBehavior(page);
+    await openOptionsSectionFor(page, '#streak-skip-weekends-toggle');
     await page.locator('#streak-skip-weekends-toggle').click();
     await expect(page.locator('#streak-skip-weekends-toggle')).not.toBeChecked();
 
@@ -2611,6 +2645,7 @@ test.describe('Streak weekend handling', () => {
   test('toggle choice persists across reload', async ({ page }) => {
     await openDesk(page);
     await openSettingsBehavior(page);
+    await openOptionsSectionFor(page, '#streak-skip-weekends-toggle');
     await page.locator('#streak-skip-weekends-toggle').click();
     expect(await page.evaluate(() => localStorage.getItem('work-desk-streak-skip-weekends'))).toBe('false');
 
@@ -2885,6 +2920,7 @@ test.describe('Auto carry toggle', () => {
   test('turning Auto carry off in Behavior settings persists', async ({ page }) => {
     await openDesk(page);
     await openSettingsBehavior(page);
+    await openOptionsSectionFor(page, '#auto-carry-toggle-popout');
     const toggle = page.locator('#auto-carry-toggle-popout');
     if (!(await toggle.isChecked())) await toggle.click();
     await toggle.click();
@@ -2907,6 +2943,8 @@ test.describe('Rendered text has no mojibake', () => {
     await openDesk(page);
     await expectClean(page, 'body');
 
+    await openAccountMenu(page);
+    await expectClean(page, '#account-menu');
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await expect(page.locator('#changelog-body')).toContainText('—');
@@ -2959,7 +2997,9 @@ test.describe('Help and What\'s New modals', () => {
     const label = (await page.locator('#version-btn').textContent())?.trim() || '';
     expect(label).toMatch(/^v\d+\.\d+\.\d+$/);
 
+    await openAccountMenu(page);
     await page.locator('#version-btn').click();
+    await expect(page.locator('#account-menu')).toBeHidden();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await expect(page.locator('#changelog-body')).toContainText(label.slice(1));
 
@@ -3023,23 +3063,29 @@ test.describe('What\'s new link and version footer (1.13.2)', () => {
     });
   }
 
-  test('version button lives at the bottom of the sidebar and opens the changelog any time', async ({ page }) => {
+  test('version button sits at the bottom of the account menu and opens the changelog any time', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await seedLayout(page);
-    const ver = page.locator('.sidebar > .sidebar-version > #version-btn');
+    const ver = page.locator('#account-menu > .sidebar-version > #version-btn');
+    await expect(ver).toBeHidden();
+    await openAccountMenu(page);
     await expect(ver).toBeVisible();
     await expect(ver).toHaveText(/^v\d+\.\d+\.\d+$/);
     const verBox = await box(page, '#version-btn');
-    const account = await box(page, '#sidebar-account');
-    expect(verBox.y).toBeGreaterThanOrEqual(account.y + account.height - 1);
+    const signIn = await box(page, '#sb-signin-btn');
+    expect(verBox.y).toBeGreaterThanOrEqual(signIn.y + signIn.height - 1);
+    const menu = await box(page, '#account-menu');
+    const btn = await box(page, '#account-menu-btn');
+    expect(menu.y + menu.height).toBeLessThanOrEqual(btn.y);
 
-    // Footer click while the link is showing: closing still clears the link
+    // Version click while the link is showing: closing still clears the link
     await ver.click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await page.locator('#changelog-modal-dismiss').click();
     await expect(page.locator('#whats-new-link')).toBeHidden();
 
-    // Already seen: footer still opens it, link never comes back
+    // Already seen: it still opens the changelog, link never comes back
+    await openAccountMenu(page);
     await ver.click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await expect(page.locator('#changelog-body')).toContainText((await ver.textContent())!.slice(1));
@@ -3056,7 +3102,10 @@ test.describe('What\'s new link and version footer (1.13.2)', () => {
     await dismissAuthModal(page);
     await expect(page.locator('#whats-new-link')).toBeHidden();
     expect(await headerHeight(page)).toBe(50);
+    await expect(page.locator('#account-menu-btn-dot')).toBeHidden();
+    await openAccountMenu(page);
     await expect(page.locator('#version-btn')).toBeVisible();
+    await expect(page.locator('#account-menu-new-dot')).toBeHidden();
   });
 
   test('collapsed sidebar hides both; expanding brings them back', async ({ page }) => {
@@ -3065,10 +3114,10 @@ test.describe('What\'s new link and version footer (1.13.2)', () => {
     await page.locator('#sidebar-toggle').click();
     await expect.poll(() => page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(0);
     await expect(page.locator('#whats-new-link')).not.toBeInViewport();
-    await expect(page.locator('#version-btn')).not.toBeInViewport();
+    await expect(page.locator('#account-menu-btn')).not.toBeInViewport();
     await page.locator('#sidebar-toggle').click();
     await expect(page.locator('#whats-new-link')).toBeInViewport();
-    await expect(page.locator('#version-btn')).toBeInViewport();
+    await expect(page.locator('#account-menu-btn')).toBeInViewport();
     await page.locator('#whats-new-link').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
   });
@@ -3350,7 +3399,7 @@ test.describe('Options menu 1.15.1 polish', () => {
     { date: '2026-12-24', label: '<b>Eve</b>' },
   ];
 
-  async function openOptions(page: Page, tab: 'themes' | 'appearance' | 'behavior', seed: Seed = {}) {
+  async function openOptions(page: Page, tab: 'themes' | 'appearance' | 'behavior', seed: Seed = {}, section?: string) {
     await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
     await page.addInitScript((s) => {
       if (localStorage.getItem('opts-seeded')) return;
@@ -3376,7 +3425,9 @@ test.describe('Options menu 1.15.1 polish', () => {
     await page.locator('#density-toggle').click();
     await expect(page.locator('#density-popout')).toBeVisible();
     await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+    if (section) await page.locator(`#options-pane-${tab} [data-options-open="${section}"]`).click();
   }
+  const backToList = (page: Page) => page.locator('.options-pane:not(.hidden) .options-section:not([hidden]) [data-options-back]').click();
 
   const popout = (page: Page) => page.locator('#density-popout');
   const holidayRows = (page: Page) => page.locator('#custom-holidays-list .custom-holiday-item');
@@ -3420,7 +3471,7 @@ test.describe('Options menu 1.15.1 polish', () => {
   });
 
   test('Appearance: tag list shows 8 tags, Show all / Show fewer keep the menu open', async ({ page }) => {
-    await openOptions(page, 'appearance', { tags: true });
+    await openOptions(page, 'appearance', { tags: true }, 'tags');
     const rows = page.locator('#tag-color-list .tag-color-row');
     await expect(rows).toHaveCount(10);
     await expect(page.locator('#tag-color-list .tag-color-row:visible')).toHaveCount(8);
@@ -3441,7 +3492,7 @@ test.describe('Options menu 1.15.1 polish', () => {
   });
 
   test('Appearance: Reset only shows on a tag with a pinned color', async ({ page }) => {
-    await openOptions(page, 'appearance', { tags: true });
+    await openOptions(page, 'appearance', { tags: true }, 'tags');
     const row = page.locator('#tag-color-list .tag-color-row[data-tag-row="k1"]');
     const reset = row.locator('.tag-color-row-reset');
     await expect(reset).toBeHidden();
@@ -3455,28 +3506,21 @@ test.describe('Options menu 1.15.1 polish', () => {
   });
 
   test('Appearance: no Show all link with 8 tags or fewer', async ({ page }) => {
-    await openOptions(page, 'appearance');
+    await openOptions(page, 'appearance', {}, 'tags');
     await expect(page.locator('#tag-color-list .tag-color-empty')).toBeVisible();
     await expect(page.locator('#tag-color-list .tag-color-more-btn')).toHaveCount(0);
   });
 
   test('Behavior: Confirm before delete lives under Tasks and still saves', async ({ page }) => {
-    await openOptions(page, 'behavior');
-    const order = await page.evaluate(() => {
-      const pane = document.getElementById('options-pane-behavior')!;
-      const labels = [...pane.querySelectorAll('.density-popout-label')];
-      const confirm = document.getElementById('confirm-delete-toggle')!;
-      const tasks = labels.find(el => el.textContent === 'Tasks')!;
-      return { after: !!(tasks.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING) };
-    });
-    expect(order.after).toBe(true);
+    await openOptions(page, 'behavior', {}, 'tasks');
+    await expect(page.locator('[data-options-section="tasks"] #confirm-delete-toggle')).toBeVisible();
     await page.locator('label:has(#confirm-delete-toggle)').click();
     await expect(page.locator('#confirm-delete-toggle')).toBeChecked();
     expect(await page.evaluate(() => localStorage.getItem('work-desk-confirm-delete'))).toBe('true');
   });
 
   test('Behavior: holidays list readable dates, plain-text labels, and Show past / Hide past', async ({ page }) => {
-    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS });
+    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS }, 'holidays');
     await expect(holidayRows(page)).toHaveCount(2);
     await expect(holidayRows(page).first().locator('.holiday-date')).toHaveText('Sat, Oct 31, 2026');
     await expect(holidayRows(page).first().locator('.holiday-label')).toHaveText('Halloween');
@@ -3498,7 +3542,7 @@ test.describe('Options menu 1.15.1 polish', () => {
   });
 
   test('Behavior: removing a past holiday and adding past and upcoming ones keep the menu open', async ({ page }) => {
-    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS });
+    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS }, 'holidays');
     await page.locator('#custom-holidays-list .custom-holidays-past-btn').click();
     await holidayRows(page).first().locator('.holiday-remove').click();
     await expect(popout(page)).toBeVisible();
@@ -3522,7 +3566,7 @@ test.describe('Options menu 1.15.1 polish', () => {
   });
 
   test('Behavior: only past holidays shows "No upcoming holidays" with Show past', async ({ page }) => {
-    await openOptions(page, 'behavior', { holidays: [{ date: '2026-10-06', label: 'National Taco Day' }] });
+    await openOptions(page, 'behavior', { holidays: [{ date: '2026-10-06', label: 'National Taco Day' }] }, 'holidays');
     await expect(page.locator('#custom-holidays-list .custom-holidays-empty')).toHaveText('No upcoming holidays');
     await expect(holidayRows(page)).toHaveCount(0);
     await page.locator('#custom-holidays-list .custom-holidays-past-btn').click();
@@ -3531,7 +3575,7 @@ test.describe('Options menu 1.15.1 polish', () => {
   });
 
   test('Behavior: the label box gets its own full-width line', async ({ page }) => {
-    await openOptions(page, 'behavior');
+    await openOptions(page, 'behavior', {}, 'holidays');
     const label = await page.locator('#custom-holiday-label').boundingBox();
     const date = await page.locator('#custom-holiday-date').boundingBox();
     const row = await page.locator('.custom-holiday-add-row').boundingBox();
@@ -3542,12 +3586,17 @@ test.describe('Options menu 1.15.1 polish', () => {
   test('Reset Behavior: cancel changes nothing; confirm restores defaults and keeps custom holidays', async ({ page }) => {
     await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS });
     const fresh = await controlSnapshot(page);
-    await page.locator('label:has(#confirm-delete-toggle)').click();
-    await page.locator('label:has(#confetti-toggle)').click();
-    await page.locator('label:has(#us-federal-holidays-toggle)').click();
+    for (const sel of ['#confirm-delete-toggle', '#confetti-toggle', '#us-federal-holidays-toggle']) {
+      await openOptionsSectionFor(page, sel);
+      await page.locator(`label:has(${sel})`).click();
+    }
+    await openOptionsSectionFor(page, '#week-start-select');
     await page.locator('#week-start-select').selectOption('monday');
-    await page.locator('#auto-collapse-completed-at').selectOption('10');
     await page.locator('#startup-view-select').selectOption('today');
+    await page.locator('#quiet-weekends-select').selectOption('both');
+    await openOptionsSectionFor(page, '#auto-collapse-completed-at');
+    await page.locator('#auto-collapse-completed-at').selectOption('10');
+    await backToList(page);
     const changed = await controlSnapshot(page);
     expect(changed).not.toEqual(fresh);
 
@@ -3575,15 +3624,20 @@ test.describe('Options menu 1.15.1 polish', () => {
   test('Reset Appearance: restores defaults, survives reload, keeps theme and pinned tag colors', async ({ page }) => {
     await openOptions(page, 'appearance', { theme: 'monokai', tags: true });
     const fresh = await controlSnapshot(page);
+    await openOptionsSectionFor(page, '#font-size-select');
     await page.locator('#font-size-select').selectOption('large');
     await page.locator('#font-family-select').selectOption('jetbrains');
+    await openOptionsSectionFor(page, '#sidebar-position-select');
     await page.locator('#sidebar-position-select').selectOption('right');
+    await openOptionsSectionFor(page, '#tag-color-mode-select');
     await page.locator('#tag-color-mode-select').selectOption('palette');
-    await page.locator('label:has(#card-glow-toggle)').click();
     await page.locator('#tag-color-list .tag-color-row[data-tag-row="k0"] .tag-color-input').fill('#22c55e');
+    await openOptionsSectionFor(page, '#card-glow-toggle');
+    await page.locator('label:has(#card-glow-toggle)').click();
+    await openOptionsSectionFor(page, '.density-option[data-density="compact"]');
     await page.locator('.density-option[data-density="compact"]').click();
-    await page.locator('#density-toggle').click();
-    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(popout(page)).toBeVisible();
+    await backToList(page);
     expect((await controlSnapshot(page)).density).toBe('compact');
 
     page.once('dialog', d => { expect(d.message()).toContain('Pinned tag colors are kept'); d.accept(); });
@@ -3600,5 +3654,1191 @@ test.describe('Options menu 1.15.1 polish', () => {
     await page.reload();
     await dismissAuthModal(page);
     expect(await controlSnapshot(page)).toEqual(fresh);
+  });
+});
+
+// ── Board lanes 1.16.0: drop below a column ─────────────────────────────
+test.describe('Board lanes 1.16.0', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  async function openBoard(page: Page, opts: { newCount?: number; activeCount?: number; note?: boolean } = {}) {
+    const { newCount = 12, activeCount = 1, note = false } = opts;
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript(([n, a, withNote]) => {
+      if (localStorage.getItem('lane-seeded')) return;
+      localStorage.setItem('lane-seeded', '1');
+      const t = (id: string, content: string, extra: Record<string, unknown> = {}) => ({
+        id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], tags: [], createdAt: '2026-10-13T09:00:00', ...extra,
+      });
+      const items: any[] = [];
+      for (let i = 0; i < n; i++) items.push(t(`n${i}`, `New task ${i + 1}`));
+      for (let i = 0; i < a; i++) items.push(t(`a${i}`, `Active task ${i + 1}`, { boardColumn: 'active' }));
+      items.push(t('c0', 'Finished already', { completed: true }));
+      if (withNote) items.push({ id: 'note1', type: 'note', content: 'Meeting notes', comments: [], createdAt: '2026-10-13T09:00:00' });
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-13': { date: '2026-10-13', items } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    }, [newCount, activeCount, note] as const);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('.sprint-board')).toBeVisible();
+  }
+
+  // Starts a real mouse drag on a card and moves to (x, y) in viewport coordinates
+  async function dragCardTo(page: Page, cardId: string, point: (page: Page) => Promise<{ x: number; y: number }>) {
+    const card = page.locator(`#item-${cardId}`);
+    await card.scrollIntoViewIfNeeded();
+    const cb = (await card.boundingBox())!;
+    const sx = cb.x + cb.width * 0.4;
+    const sy = cb.y + cb.height / 2;
+    await page.mouse.move(sx, sy);
+    await page.mouse.down();
+    await page.mouse.move(sx + 15, sy + 10, { steps: 4 });
+    const p = await point(page);
+    await page.mouse.move(p.x, p.y, { steps: 10 });
+    await page.mouse.move(p.x, p.y + 2, { steps: 2 });
+  }
+
+  const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
+  const ghost = (page: Page) => page.locator('#board-lane-ghost');
+  const columnIds = (page: Page, cls: string) =>
+    page.locator(`.board-column.${cls} .item-card`).evaluateAll(els => els.map(e => e.id.replace(/^item-/, '')));
+
+  test('dragging into the space under Active shows the lane and drops into Active', async ({ page }) => {
+    await openBoard(page);
+    await dragCardTo(page, 'n10', async (p) => {
+      const a = await box(p, '.board-column.active');
+      const card = await box(p, '#item-n10');
+      return { x: a.x + a.width / 2, y: card.y + card.height / 2 };
+    });
+    await expect(ghost(page)).toBeVisible();
+    await expect(ghost(page)).toHaveAttribute('data-target', 'active');
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in Active');
+    await expect(page.locator('.board-column.active')).toHaveClass(/drag-over/);
+    await expect(page.locator('.board-column.new')).not.toHaveClass(/drag-over/);
+    const g = (await ghost(page).boundingBox())!;
+    const a = await box(page, '.board-column.active');
+    expect(Math.abs(g.x - a.x)).toBeLessThan(2);
+    expect(Math.abs(g.width - a.width)).toBeLessThan(2);
+
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Moved to Active');
+    expect(await columnIds(page, 'active')).toContain('n10');
+    expect(await columnIds(page, 'new')).not.toContain('n10');
+    await expect(ghost(page)).toBeHidden();
+    await expect(page.locator('.drag-over')).toHaveCount(0);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!).days['2026-10-13'].items.find((i: any) => i.id === 'n10'));
+    expect(saved.boardColumn).toBe('active');
+  });
+
+  test('the lane under Completed / Shelved marks the task done and highlights Completed only', async ({ page }) => {
+    await openBoard(page);
+    await dragCardTo(page, 'n8', async (p) => {
+      const d = await box(p, '.board-column.done');
+      const card = await box(p, '#item-n8');
+      return { x: d.x + d.width / 2, y: card.y + card.height / 2 };
+    });
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in Completed');
+    await expect(page.locator('.board-column.done .col-subsection[data-drop-target="completed"]')).toHaveClass(/drag-over/);
+    await expect(page.locator('.board-column.done .col-subsection[data-drop-target="shelved"]')).not.toHaveClass(/drag-over/);
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Task completed');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!).days['2026-10-13'].items.find((i: any) => i.id === 'n8'));
+    expect(saved.completed).toBe(true);
+    expect(saved.shelved).toBe(false);
+  });
+
+  test('when Active is the long column, the space under New drops into New', async ({ page }) => {
+    await openBoard(page, { newCount: 1, activeCount: 10 });
+    await dragCardTo(page, 'a8', async (p) => {
+      const n = await box(p, '.board-column.new');
+      const card = await box(p, '#item-a8');
+      return { x: n.x + n.width / 2, y: card.y + card.height / 2 };
+    });
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in New');
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Moved to New');
+    expect(await columnIds(page, 'new')).toContain('a8');
+  });
+
+  test('the gap between columns does not accept a drop', async ({ page }) => {
+    await openBoard(page);
+    await dragCardTo(page, 'n10', async (p) => {
+      const n = await box(p, '.board-column.new');
+      const a = await box(p, '.board-column.active');
+      const card = await box(p, '#item-n10');
+      return { x: (n.x + n.width + a.x) / 2, y: card.y + card.height / 2 };
+    });
+    await expect(ghost(page)).toBeHidden();
+    await expect(page.locator('.board-column.active')).not.toHaveClass(/drag-over/);
+    await page.mouse.up();
+    expect(await columnIds(page, 'new')).toContain('n10');
+    await expect(page.locator('.drag-over')).toHaveCount(0);
+  });
+
+  test('the Notes area below the board does not accept a drop', async ({ page }) => {
+    await openBoard(page, { note: true });
+    await dragCardTo(page, 'n11', async (p) => {
+      const a = await box(p, '.board-column.active');
+      const notes = await box(p, '.item-section');
+      return { x: a.x + a.width / 2, y: notes.y + Math.min(notes.height / 2, 40) };
+    });
+    await expect(ghost(page)).toBeHidden();
+    await page.mouse.up();
+    expect(await columnIds(page, 'new')).toContain('n11');
+  });
+
+  test('moving from the lane back over New clears the lane; moving into the Active box keeps its own highlight', async ({ page }) => {
+    await openBoard(page, { newCount: 6 });
+    await dragCardTo(page, 'n5', async (p) => {
+      const a = await box(p, '.board-column.active');
+      return { x: a.x + a.width / 2, y: a.y + a.height + 60 };
+    });
+    await expect(ghost(page)).toBeVisible();
+    await expect(page.locator('.board-column.active')).toHaveClass(/drag-over/);
+
+    const n = await box(page, '.board-column.new');
+    await page.mouse.move(n.x + n.width / 2, n.y + n.height - 30, { steps: 8 });
+    await page.mouse.move(n.x + n.width / 2, n.y + n.height - 28, { steps: 2 });
+    await expect(ghost(page)).toBeHidden();
+    await expect(page.locator('.board-column.active')).not.toHaveClass(/drag-over/);
+
+    const a = await box(page, '.board-column.active');
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height - 20, { steps: 8 });
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height - 18, { steps: 2 });
+    await expect(ghost(page)).toBeHidden();
+    await expect(page.locator('.board-column.active')).toHaveClass(/drag-over/);
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Moved to Active');
+    expect(await columnIds(page, 'active')).toContain('n5');
+    await expect(page.locator('.drag-over')).toHaveCount(0);
+  });
+
+  test('1.16.1: on a short board, the bottom of the page under Active still drops into Active', async ({ page }) => {
+    await openBoard(page, { newCount: 3, activeCount: 1 });
+    const boardBottom = (await box(page, '.sprint-board')).y + (await box(page, '.sprint-board')).height;
+    await dragCardTo(page, 'n2', async (p) => {
+      const a = await box(p, '.board-column.active');
+      return { x: a.x + a.width / 2, y: 870 };
+    });
+    expect(870).toBeGreaterThan(boardBottom + 100);
+    await expect(ghost(page)).toBeVisible();
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in Active');
+    await expect(page.locator('.board-column.active')).toHaveClass(/drag-over/);
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Moved to Active');
+    expect(await columnIds(page, 'active')).toContain('n2');
+    await expect(page.locator('.drag-over')).toHaveCount(0);
+  });
+
+  test('1.16.1: the far right margin drops into Completed; the far left margin is New', async ({ page }) => {
+    await openBoard(page, { newCount: 3, activeCount: 1 });
+    await dragCardTo(page, 'n1', async (p) => {
+      const d = await box(p, '.board-column.done');
+      return { x: d.x + d.width + 12, y: d.y + 40 };
+    });
+    await expect(page.locator('.board-column.done .col-subsection[data-drop-target="completed"]')).toHaveClass(/drag-over/);
+    await expect(ghost(page)).toBeHidden();
+    const n = await box(page, '.board-column.new');
+    await page.mouse.move(n.x - 10, 860, { steps: 8 });
+    await page.mouse.move(n.x - 10, 862, { steps: 2 });
+    await expect(ghost(page)).toBeVisible();
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in New');
+    await expect(page.locator('.board-column.done .drag-over')).toHaveCount(0);
+    const d = await box(page, '.board-column.done');
+    await page.mouse.move(d.x + d.width + 12, d.y + 40, { steps: 8 });
+    await page.mouse.move(d.x + d.width + 12, d.y + 42, { steps: 2 });
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Task completed');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!).days['2026-10-13'].items.find((i: any) => i.id === 'n1'));
+    expect(saved.completed).toBe(true);
+  });
+
+  test('1.16.1: dragging over the sidebar or the header above the board is not a lane', async ({ page }) => {
+    await openBoard(page, { newCount: 3, activeCount: 1 });
+    await dragCardTo(page, 'n0', async (p) => {
+      const s = await box(p, '.sidebar');
+      return { x: s.x + s.width / 2, y: 700 };
+    });
+    await expect(ghost(page)).toBeHidden();
+    const a = await box(page, '.board-column.active');
+    await page.mouse.move(a.x + a.width / 2, a.y - 30, { steps: 8 });
+    await page.mouse.move(a.x + a.width / 2, a.y - 28, { steps: 2 });
+    await expect(ghost(page)).toBeHidden();
+    await page.mouse.up();
+    expect(await columnIds(page, 'new')).toContain('n0');
+  });
+
+  test('stacked columns (1000px wide) have no lanes', async ({ page }) => {
+    await page.setViewportSize({ width: 1000, height: 900 });
+    await openBoard(page, { newCount: 3 });
+    await dragCardTo(page, 'n1', async (p) => {
+      const d = await box(p, '.board-column.done');
+      return { x: d.x + d.width / 2, y: d.y + d.height + 10 };
+    });
+    await expect(ghost(page)).toHaveCount(0);
+    await page.mouse.up();
+    expect(await columnIds(page, 'new')).toContain('n1');
+  });
+});
+
+// ── Patterned background 1.16.1 ─────────────────────────────────────────
+test.describe('Patterned background 1.16.1', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  async function openAppearance(page: Page, stored?: Record<string, string>) {
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript((s) => {
+      if (localStorage.getItem('bgp-seeded')) return;
+      localStorage.setItem('bgp-seeded', '1');
+      const items = [{ id: 'n1', type: 'task', content: 'Review PR', completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: '2026-10-13T09:00:00' }];
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-13': { date: '2026-10-13', items } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      for (const [k, v] of Object.entries(s || {})) localStorage.setItem(k, v);
+    }, stored);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    if ((page.viewportSize()?.width ?? 1440) <= 768) {
+      await page.locator('#mobile-menu-btn').click();
+      await page.locator('#mobile-menu-options').click();
+    } else {
+      await page.locator('#density-toggle').click();
+    }
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance')).toBeVisible();
+    await page.locator('#options-pane-appearance [data-options-open="background"]').click();
+    await expect(page.locator('[data-options-section="background"]')).toBeVisible();
+  }
+
+  const popout = (page: Page) => page.locator('#density-popout');
+  const tiles = (page: Page) => page.locator('#bg-pattern-grid .bg-pattern-tile');
+  // Theme switches cross-fade the background; read it once the fade settles
+  const mainTile = async (page: Page) => {
+    const raw = () => page.locator('.main').evaluate(el => getComputedStyle(el).backgroundImage);
+    await expect.poll(async () => (await raw()).startsWith('cross-fade')).toBe(false);
+    return decodeURIComponent(await raw());
+  };
+
+  test('off by default: just the toggle, no pattern on the page', async ({ page }) => {
+    await openAppearance(page);
+    await expect(page.locator('#bg-pattern-toggle')).not.toBeChecked();
+    await expect(page.locator('#bg-pattern-controls')).toBeHidden();
+    expect(await mainTile(page)).toBe('none');
+  });
+
+  test('turning it on shows 12 patterns and the slider, applies Graph paper at 10%, and keeps Options open', async ({ page }) => {
+    await openAppearance(page);
+    await page.locator('label:has(#bg-pattern-toggle)').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#bg-pattern-controls')).toBeVisible();
+    await expect(tiles(page)).toHaveCount(12);
+    expect(await tiles(page).evaluateAll(els => els.map(el => el.getAttribute('aria-label')))).toEqual(['Graph paper', 'Plus grid', 'Isometric',
+      'Diagonal', 'Pinstripe', 'Crosshatch', 'Hexagon', 'Herringbone', 'Basketweave', 'Chevron', 'Greek key', 'Dot grid']);
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'graph');
+    await expect(page.locator('#bg-pattern-name')).toHaveText('Graph paper');
+    await expect(page.locator('#bg-pattern-strength-val')).toHaveText('10%');
+    const tile = await mainTile(page);
+    expect(tile).toContain('data:image/svg+xml');
+    expect(tile).toContain("<g opacity='0.1'>");
+    expect(tile).toContain("width='60'");
+  });
+
+  test('clicking every pattern applies it, marks it checked, and never closes Options', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    const seen = new Set<string>();
+    for (let i = 0; i < 12; i++) {
+      const tile = tiles(page).nth(i);
+      const id = (await tile.getAttribute('data-bg-pattern'))!;
+      await tile.click();
+      await expect(popout(page)).toBeVisible();
+      await expect(tile).toHaveClass(/active/);
+      await expect(tile).toHaveAttribute('aria-checked', 'true');
+      await expect(page.locator('.bg-pattern-tile.active')).toHaveCount(1);
+      await expect(page.locator('#bg-pattern-name')).toHaveText((await tile.getAttribute('aria-label'))!);
+      expect(await page.evaluate(() => localStorage.getItem('work-desk-bg-pattern'))).toBe(id);
+      seen.add(await mainTile(page));
+    }
+    expect(seen.size).toBe(12);
+  });
+
+  test('Strength slider changes the pattern opacity live and the label follows', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    await page.locator('#bg-pattern-strength').fill('25');
+    await expect(page.locator('#bg-pattern-strength-val')).toHaveText('25%');
+    expect(await mainTile(page)).toContain("<g opacity='0.25'>");
+    await page.locator('#bg-pattern-strength').fill('2');
+    await expect(page.locator('#bg-pattern-strength-val')).toHaveText('2%');
+    expect(await mainTile(page)).toContain("<g opacity='0.02'>");
+    await expect(popout(page)).toBeVisible();
+  });
+
+  test('choices survive a reload; turning off hides the controls but remembers the pattern and strength', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    await page.locator('.bg-pattern-tile[data-bg-pattern="herringbone"]').click();
+    await page.locator('#bg-pattern-strength').fill('18');
+    await page.reload();
+    await dismissAuthModal(page);
+    expect(await mainTile(page)).toContain("<g opacity='0.18'>");
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance [data-options-value="background"]')).toHaveText('Herringbone · 18%');
+    await page.locator('#options-pane-appearance [data-options-open="background"]').click();
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'herringbone');
+
+    await page.locator('label:has(#bg-pattern-toggle)').click();
+    await expect(page.locator('#bg-pattern-controls')).toBeHidden();
+    expect(await mainTile(page)).toBe('none');
+    await page.locator('label:has(#bg-pattern-toggle)').click();
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'herringbone');
+    await expect(page.locator('#bg-pattern-strength-val')).toHaveText('18%');
+  });
+
+  test('switching to a dark theme recolors the pattern with the theme text color', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    const lightInk = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text').trim());
+    expect(await mainTile(page)).toContain(`stroke='${lightInk}'`);
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch').first().click();
+    const textColor = () => page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text').trim());
+    await expect.poll(textColor).not.toBe(lightInk);
+    const darkInk = await textColor();
+    await expect.poll(() => mainTile(page)).toContain(`stroke='${darkInk}'`);
+    if (!(await popout(page).isVisible())) await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await page.locator('#options-pane-appearance [data-options-open="background"]').click();
+    const swatch = await page.locator('.bg-pattern-tile.active .bg-pattern-swatch').evaluate(el => decodeURIComponent(getComputedStyle(el).backgroundImage));
+    expect(swatch).toContain(`stroke='${darkInk}'`);
+  });
+
+  test('arrow keys move between patterns', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    await page.locator('.bg-pattern-tile[data-bg-pattern="graph"]').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'plus');
+    await expect(page.locator('.bg-pattern-tile[data-bg-pattern="plus"]')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'pinstripe');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'diagonal');
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'graph');
+    await expect(popout(page)).toBeVisible();
+  });
+
+  test('Reset Appearance turns the pattern off and restores Graph paper at 10%', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true', 'work-desk-bg-pattern': 'greek-key', 'work-desk-bg-pattern-strength': '30' });
+    expect(await mainTile(page)).toContain("<g opacity='0.3'>");
+    await page.locator('[data-options-section="background"] [data-options-back]').click();
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(page.locator('#toast')).toContainText('Appearance reset to defaults');
+    await expect(page.locator('#bg-pattern-toggle')).not.toBeChecked();
+    expect(await mainTile(page)).toBe('none');
+    const stored = await page.evaluate(() => [localStorage.getItem('work-desk-bg-pattern'), localStorage.getItem('work-desk-bg-pattern-strength')]);
+    expect(stored).toEqual(['graph', '10']);
+  });
+
+  test('phone: the pattern grid fits the Options sheet and the pattern shows behind the board', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    const grid = page.locator('#bg-pattern-grid');
+    await grid.scrollIntoViewIfNeeded();
+    const g = (await grid.boundingBox())!;
+    expect(g.x).toBeGreaterThanOrEqual(0);
+    expect(g.x + g.width).toBeLessThanOrEqual(390);
+    await page.locator('.bg-pattern-tile[data-bg-pattern="isometric"]').click();
+    await expect(popout(page)).toBeVisible();
+    expect(await mainTile(page)).toContain("height='41.57'");
+  });
+});
+
+// ── Sidebar top / bottom 1.16.0 ─────────────────────────────────────────
+test.describe('Card tags 1.16.0', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  const LONG = 'Sometimes if there are too many items under new, it becomes a chore to drag the item under the active card. Let us add the ability to drop in the middle of the page.';
+
+  async function openTagged(page: Page) {
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript((long) => {
+      if (localStorage.getItem('cardtags-seeded')) return;
+      localStorage.setItem('cardtags-seeded', '1');
+      const t = (id: string, extra: Record<string, unknown> = {}) => ({
+        id, type: 'task', content: long, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], createdAt: '2026-10-13T09:00:00', ...extra,
+      });
+      const n = (id: string, extra: Record<string, unknown> = {}) => ({ id, type: 'note', content: long, comments: [], createdAt: '2026-10-13T09:00:00', ...extra });
+      const items = [
+        t('tagged', { tags: ['workdesk'] }),
+        t('plain'),
+        t('many', { tags: ['workdesk', 'averyveryverylongtagnamethatkeepsgoing', 'eoyreview', 'ops'] }),
+        t('later'),
+        n('note-tagged', { tags: ['notes'] }),
+        n('note-plain'),
+      ];
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-13': { date: '2026-10-13', items } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    }, LONG);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('#item-plain')).toBeVisible();
+  }
+
+  // Width actually available to the text (content box minus padding) plus its rendered height
+  const textBox = (page: Page, id: string) => page.locator(`#item-${id} .item-content`).evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return {
+      width: el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+      height: el.getBoundingClientRect().height,
+    };
+  });
+
+  async function expectSameText(page: Page, a: string, b: string) {
+    const [x, y] = [await textBox(page, a), await textBox(page, b)];
+    expect(Math.abs(x.width - y.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(x.height - y.height)).toBeLessThanOrEqual(2);
+  }
+
+  async function expectChipsClearOfText(page: Page, id: string) {
+    const chips = (await page.locator(`#item-${id} .tag-chip-row`).boundingBox())!;
+    const text = (await page.locator(`#item-${id} .item-content`).boundingBox())!;
+    const card = (await page.locator(`#item-${id}`).boundingBox())!;
+    expect(chips.y + chips.height).toBeLessThanOrEqual(text.y + 1);
+    expect(chips.x + chips.width).toBeLessThanOrEqual(card.x + card.width);
+  }
+
+  test('a tagged card wraps its text exactly like an untagged one', async ({ page }) => {
+    await openTagged(page);
+    await expectSameText(page, 'tagged', 'plain');
+    await expectSameText(page, 'many', 'plain');
+    await expectSameText(page, 'note-tagged', 'note-plain');
+    for (const id of ['tagged', 'many', 'note-tagged']) await expectChipsClearOfText(page, id);
+    await expect(page.locator('#item-many .tag-chip')).toHaveCount(4);
+  });
+
+  test('adding a tag through the tag button leaves the text width unchanged', async ({ page }) => {
+    await openTagged(page);
+    const card = page.locator('#item-later');
+    const before = await textBox(page, 'later');
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await card.locator('.tag-input-inline').fill('fresh');
+    await card.locator('.tag-input-inline').press('Enter');
+    await expect(card.locator('.tag-chip-row .tag-chip-label')).toHaveText(['fresh']);
+    const after = await textBox(page, 'later');
+    expect(Math.abs(after.width - before.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(2);
+    await expectChipsClearOfText(page, 'later');
+    await card.locator('.tag-chip-remove').click();
+    await expect(card.locator('.tag-chip')).toHaveCount(0);
+    expect(Math.abs((await textBox(page, 'later')).width - before.width)).toBeLessThanOrEqual(2);
+  });
+
+  test('compact layout keeps the one-line text the same width with tags', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('work-desk-density', 'compact'));
+    await openTagged(page);
+    await expect(page.locator('#desk-view')).toHaveAttribute('data-density', 'compact');
+    await expectSameText(page, 'tagged', 'plain');
+    await expectSameText(page, 'many', 'plain');
+    await expectChipsClearOfText(page, 'many');
+  });
+
+  test('phone width keeps tagged and untagged text the same', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openTagged(page);
+    await expectSameText(page, 'tagged', 'plain');
+    await expectSameText(page, 'many', 'plain');
+    await expectSameText(page, 'note-tagged', 'note-plain');
+    for (const id of ['tagged', 'many', 'note-tagged']) await expectChipsClearOfText(page, id);
+  });
+});
+
+test.describe('Sidebar top and bottom 1.16.0', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  async function openDesk(page: Page, position?: string) {
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript((pos) => {
+      if (localStorage.getItem('bar-seeded')) return;
+      localStorage.setItem('bar-seeded', '1');
+      const t = (id: string, content: string, extra: Record<string, unknown> = {}) => ({
+        id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], tags: [], createdAt: '2026-10-13T09:00:00', ...extra,
+      });
+      const items = [t('n1', 'Review PR for IDS batching'), t('a1', 'Call vendor about the renewal', { boardColumn: 'active' })];
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-13': { date: '2026-10-13', items } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+        { id: 'p1', name: 'EoY Review', createdAt: '2026-10-13T09:00:00', notes: [], tasks: [] },
+        { id: 'p2', name: 'Databricks Silver Layer', createdAt: '2026-10-13T09:00:00', notes: [], tasks: [] },
+      ] }));
+      if (pos) localStorage.setItem('work-desk-sidebar-position', pos);
+    }, position);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('.sprint-board')).toBeVisible();
+  }
+
+  async function pickPosition(page: Page, pos: string) {
+    if (!(await page.locator('#density-popout').isVisible())) await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await openOptionsSectionFor(page, '#sidebar-position-select');
+    await page.locator('#sidebar-position-select').selectOption(pos);
+    await expect(page.locator('#density-popout')).toBeVisible();
+  }
+
+  const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
+
+  test('Options: Top, Bottom, Right, and Left each move the sidebar', async ({ page }) => {
+    await openDesk(page);
+    const sel = page.locator('#sidebar-position-select');
+    await expect(sel.locator('option')).toHaveText(['Left', 'Right', 'Top', 'Bottom']);
+
+    await pickPosition(page, 'top');
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar-bar', 'true');
+    let s = await box(page, '.sidebar');
+    expect(s.y).toBe(0);
+    expect(s.width).toBe(1440);
+    expect((await box(page, '.main')).y).toBeGreaterThanOrEqual(s.height - 1);
+
+    await pickPosition(page, 'bottom');
+    s = await box(page, '.sidebar');
+    expect(s.width).toBe(1440);
+    expect(Math.round(s.y + s.height)).toBe(900);
+    expect((await box(page, '.main')).y).toBe(0);
+
+    await pickPosition(page, 'right');
+    await expect(page.locator('html')).not.toHaveAttribute('data-sidebar-bar', /.*/);
+    s = await box(page, '.sidebar');
+    expect(s.height).toBe(900);
+    expect(Math.round(s.x + s.width)).toBe(1440);
+
+    await pickPosition(page, 'left');
+    s = await box(page, '.sidebar');
+    expect(s.x).toBe(0);
+    expect(s.height).toBe(900);
+    expect(s.width).toBeLessThan(400);
+    await expect(page.locator('#sidebar-toggle')).toBeVisible();
+    await expect(page.locator('.date-nav')).toBeVisible();
+  });
+
+  test('top bar: one row at 1440, collapse and calendar hidden, week strip shown, survives reload', async ({ page }) => {
+    await openDesk(page);
+    await pickPosition(page, 'top');
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeHidden();
+    expect((await box(page, '.sidebar')).height).toBeLessThan(80);
+    await expect(page.locator('#sidebar-toggle')).toBeHidden();
+    await expect(page.locator('.date-nav')).toBeHidden();
+    await expect(page.locator('#week-strip-row')).toBeVisible();
+    await expect(page.locator('#logo-sub-text')).toBeHidden();
+    const barH = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--sidebar-bar-h'));
+    expect(parseFloat(barH)).toBeGreaterThan(40);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar-position', 'top');
+    expect((await box(page, '.sidebar')).y).toBe(0);
+    expect((await box(page, '.sidebar')).width).toBe(1440);
+  });
+
+  test('top bar: tabs, Projects list, account menu Export, and Repair all work', async ({ page }) => {
+    await openDesk(page, 'top');
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('#tab-insights')).toHaveClass(/active/);
+    await page.locator('#tab-desk').click();
+    await expect(page.locator('.sprint-board')).toBeVisible();
+
+    await openAccountMenu(page);
+    const acct = await box(page, '#account-menu');
+    const acctBtn = await box(page, '#account-menu-btn');
+    expect(acct.y).toBeGreaterThanOrEqual(acctBtn.y + acctBtn.height);
+    expect(Math.round(acct.x + acct.width)).toBeLessThanOrEqual(1440);
+    await page.locator('#export-btn').click();
+    const menu = page.locator('#export-menu');
+    await expect(menu).toBeVisible();
+    const m = await box(page, '#export-menu');
+    const b = await box(page, '#export-btn');
+    expect(m.y).toBeGreaterThanOrEqual(b.y + b.height);
+    expect(m.y + m.height).toBeLessThanOrEqual(900);
+    await page.locator('#export-btn').click();
+    await expect(menu).toBeHidden();
+
+    await page.locator('#repair-btn').click();
+    await expect(page.locator('#toast')).toContainText('No duplicates found');
+
+    await page.locator('#tab-projects').click();
+    const projects = page.locator('#projects-list li');
+    await expect(projects).toHaveCount(2);
+    const p0 = await projects.nth(0).boundingBox();
+    const p1 = await projects.nth(1).boundingBox();
+    expect(Math.abs(p0!.y - p1!.y)).toBeLessThan(4);
+    expect(p1!.x).toBeGreaterThan(p0!.x);
+    expect((await box(page, '.sidebar')).height).toBeLessThan(80);
+    await page.locator('#tab-work').click();
+    await expect(page.locator('.sprint-board')).toBeVisible();
+  });
+
+  test('bottom bar: search results and toasts open above it', async ({ page }) => {
+    await openDesk(page, 'bottom');
+    const bar = await box(page, '.sidebar');
+    await page.locator('#search-input').fill('vendor');
+    const overlay = page.locator('#search-overlay');
+    await expect(overlay).toBeVisible();
+    await expect(overlay).toContainText('Call vendor');
+    const o = await box(page, '#search-overlay');
+    const input = await box(page, '#search-input');
+    expect(o.y).toBeGreaterThanOrEqual(0);
+    expect(o.y + o.height).toBeLessThanOrEqual(input.y);
+    expect(o.y + o.height).toBeLessThan(bar.y + 12);
+    await page.locator('#search-overlay-close').click();
+    await expect(overlay).toBeHidden();
+
+    await openAccountMenu(page);
+    const acct = await box(page, '#account-menu');
+    expect(acct.y + acct.height).toBeLessThanOrEqual((await box(page, '#account-menu-btn')).y);
+    expect(acct.y).toBeGreaterThanOrEqual(0);
+    await page.locator('#repair-btn').click();
+    await expect(page.locator('#account-menu')).toBeHidden();
+    const toast = page.locator('#toast');
+    await expect(toast).toContainText('No duplicates found');
+    await expect.poll(async () => {
+      const t = await box(page, '#toast');
+      return t.y + t.height;
+    }).toBeLessThanOrEqual(bar.y);
+  });
+
+  test('1024px: the top bar wraps but stays full width above the board', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await openDesk(page, 'top');
+    const s = await box(page, '.sidebar');
+    expect(s.y).toBe(0);
+    expect(s.width).toBe(1024);
+    expect((await box(page, '.main')).y).toBeGreaterThanOrEqual(s.height - 1);
+    await expect(page.locator('#week-strip-row')).toBeVisible();
+  });
+
+  test('phones ignore Top and Bottom and keep the normal phone header', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await openDesk(page, 'left');
+    const phone = await box(page, '.sidebar');
+    await page.evaluate(() => localStorage.setItem('work-desk-sidebar-position', 'bottom'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar-position', 'bottom');
+    const s = await box(page, '.sidebar');
+    expect(s.y).toBe(0);
+    expect(s.height).toBe(phone.height);
+    await expect(page.locator('#mobile-menu-btn')).toBeVisible();
+    const barH = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--sidebar-bar-h'));
+    expect(barH.trim()).toBe('0px');
+  });
+
+  test('Reset Appearance returns a bar to the left sidebar', async ({ page }) => {
+    await openDesk(page, 'bottom');
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#sidebar-position-select')).toHaveValue('bottom');
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#sidebar-position-select')).toHaveValue('left');
+    await expect(page.locator('html')).not.toHaveAttribute('data-sidebar-bar', /.*/);
+    expect((await box(page, '.sidebar')).x).toBe(0);
+    expect((await box(page, '.sidebar')).height).toBe(900);
+  });
+});
+
+// ── 1.17.0: Options summary list, account menu, calendar polish, quieter weekends ──
+async function open117(page: Page, stored: Record<string, string> = {}) {
+  await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+  await page.addInitScript((s) => {
+    if (localStorage.getItem('v117-seeded')) return;
+    localStorage.setItem('v117-seeded', '1');
+    const task = (id: string, content: string) => ({ id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: '2026-10-05T09:00:00' });
+    localStorage.setItem('work-desk-list-context', 'work');
+    localStorage.setItem('work-desk-auto-carry-forward', 'false');
+    localStorage.setItem('work-desk-data-work', JSON.stringify({ deletedIds: {}, days: {
+      '2026-10-05': { date: '2026-10-05', items: [task('w1', 'Left open on Monday'), task('w2', 'Also left open')] },
+      '2026-10-13': { date: '2026-10-13', items: [task('w3', 'Today task')] },
+    } }));
+    localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v);
+  }, stored);
+  await page.goto(DESK_URL);
+  await dismissAuthModal(page);
+  await expect(page.locator('.sprint-board')).toBeVisible();
+}
+
+test.describe('Options summary list 1.17.0', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const popout = (page: Page) => page.locator('#density-popout');
+  const ROWS = {
+    appearance: ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags'],
+    behavior: ['general', 'tasks', 'projects', 'insights', 'holidays'],
+  } as const;
+
+  async function openTab(page: Page, tab: 'appearance' | 'behavior') {
+    if (!(await popout(page).isVisible())) await page.locator('#density-toggle').click();
+    await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+    await expect(page.locator(`#options-pane-${tab} .options-summary`)).toBeVisible();
+  }
+
+  for (const tab of ['appearance', 'behavior'] as const) {
+    test(`${tab}: every row opens its section and the back button returns to the list`, async ({ page }) => {
+      await open117(page);
+      await openTab(page, tab);
+      const pane = page.locator(`#options-pane-${tab}`);
+      await expect(pane.locator('[data-options-open]')).toHaveCount(ROWS[tab].length);
+      for (const id of ROWS[tab]) {
+        await expect(pane.locator(`[data-options-value="${id}"]`)).not.toHaveText('');
+        await pane.locator(`[data-options-open="${id}"]`).click();
+        // The clicked row is hidden by the click; Options must stay open
+        await expect(popout(page)).toBeVisible();
+        const section = pane.locator(`[data-options-section="${id}"]`);
+        await expect(section).toBeVisible();
+        await expect(pane.locator('.options-section:visible')).toHaveCount(1);
+        await expect(pane.locator('.options-summary')).toBeHidden();
+        await expect(pane.locator(`[data-options-reset="${tab}"]`)).toBeHidden();
+        const back = section.locator('[data-options-back]');
+        await expect(back).toHaveText(tab === 'appearance' ? '‹ Appearance' : '‹ Behavior');
+        await expect(back).toBeFocused();
+        await back.click();
+        await expect(popout(page)).toBeVisible();
+        await expect(section).toBeHidden();
+        await expect(pane.locator('.options-summary')).toBeVisible();
+        await expect(pane.locator(`[data-options-reset="${tab}"]`)).toBeVisible();
+        await expect(pane.locator(`[data-options-open="${id}"]`)).toBeFocused();
+      }
+    });
+  }
+
+  test('Esc goes back to the list first, then closes Options', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'behavior');
+    await page.locator('#options-pane-behavior [data-options-open="tasks"]').click();
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#options-pane-behavior .options-summary')).toBeVisible();
+    await expect(page.locator('[data-options-section="tasks"]')).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+  });
+
+  test('switching tabs or reopening Options always lands on the list', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    await page.locator('#options-pane-appearance [data-options-open="effects"]').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance .options-summary')).toBeVisible();
+    await expect(page.locator('[data-options-section="effects"]')).toBeHidden();
+
+    await page.locator('#options-pane-appearance [data-options-open="effects"]').click();
+    await page.locator('#density-toggle').click();
+    await expect(popout(page)).toBeHidden();
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance .options-summary')).toBeVisible();
+  });
+
+  test('the panel keeps its height between the list and a short section', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    const listH = (await popout(page).boundingBox())!.height;
+    await page.locator('#options-pane-appearance [data-options-open="layout"]').click();
+    const sectionH = (await popout(page).boundingBox())!.height;
+    expect(Math.abs(sectionH - listH)).toBeLessThanOrEqual(2);
+  });
+
+  test('summary values follow changes made inside a section (round trip)', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    const value = (id: string) => page.locator(`[data-options-value="${id}"]`);
+    await expect(value('typography')).toHaveText('Default · System font');
+    await page.locator('[data-options-open="typography"]').click();
+    await page.locator('#font-size-select').selectOption('large');
+    await page.locator('#font-family-select').selectOption('jetbrains');
+    await page.locator('[data-options-section="typography"] [data-options-back]').click();
+    await expect(value('typography')).toHaveText('Large · JetBrains Mono');
+
+    await expect(value('card-layout')).toHaveText('Comfortable');
+    await page.locator('[data-options-open="card-layout"]').click();
+    await page.locator('.density-option[data-density="compact"]').click();
+    await expect(popout(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(value('card-layout')).toHaveText('Compact');
+
+    await expect(value('effects')).toHaveText('Off');
+    await page.locator('[data-options-open="effects"]').click();
+    await page.locator('label:has(#card-glow-toggle)').click();
+    await page.keyboard.press('Escape');
+    await expect(value('effects')).toHaveText('Glow');
+
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    const before = (await value('tasks').textContent())!;
+    const on = Number(before.split(' ')[0]);
+    await page.locator('[data-options-open="tasks"]').click();
+    await page.locator('label:has(#confetti-toggle)').click();
+    await page.keyboard.press('Escape');
+    await expect(value('tasks')).not.toHaveText(before);
+    expect(Math.abs(Number((await value('tasks').textContent())!.split(' ')[0]) - on)).toBe(1);
+
+    await page.locator('[data-options-open="general"]').click();
+    await page.locator('#startup-view-select').selectOption('today');
+    await page.locator('#week-start-select').selectOption('monday');
+    await page.keyboard.press('Escape');
+    await expect(value('general')).toHaveText('Open Today · Monday');
+  });
+
+  test('settings switches flip on click and persist', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    await page.locator('[data-options-open="effects"]').click();
+    const glow = page.locator('#card-glow-toggle');
+    expect(await glow.evaluate(el => getComputedStyle(el).appearance)).toBe('none');
+    const offBg = await glow.evaluate(el => getComputedStyle(el).backgroundColor);
+    await glow.click();
+    await expect(glow).toBeChecked();
+    await expect.poll(() => glow.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(offBg);
+    await page.reload();
+    await dismissAuthModal(page);
+    await openTab(page, 'appearance');
+    await page.locator('[data-options-open="effects"]').click();
+    await expect(page.locator('#card-glow-toggle')).toBeChecked();
+    await page.locator('#card-glow-toggle').click();
+    await expect(page.locator('#card-glow-toggle')).not.toBeChecked();
+  });
+
+  test('New tags mark the General row and Quieter weekends in this release', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'behavior');
+    await expect(page.locator('[data-options-open="general"] .options-new-tag')).toBeVisible();
+    await expect(page.locator('#options-pane-appearance .options-new-tag:not([hidden])')).toHaveCount(0);
+    await page.locator('[data-options-open="general"]').click();
+    await expect(page.locator('label[for="quiet-weekends-select"] .options-new-tag')).toBeVisible();
+    await expect(page.locator('label[for="quiet-weekends-select"] .options-new-tag')).toHaveText(/new/i);
+  });
+
+  test('phone: sections and back work in the Options sheet', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open117(page);
+    await page.locator('#mobile-menu-btn').click();
+    await page.locator('#mobile-menu-options').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('#options-pane-behavior [data-options-open="holidays"]').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#custom-holiday-label')).toBeVisible();
+    // The section slides in 14px; measure once it settles
+    await expect.poll(async () => {
+      const box = (await page.locator('[data-options-section="holidays"]').boundingBox())!;
+      return box.x + box.width;
+    }).toBeLessThanOrEqual(390);
+    await page.locator('[data-options-section="holidays"] [data-options-back]').click();
+    await expect(page.locator('#options-pane-behavior .options-summary')).toBeVisible();
+    await expect(popout(page)).toBeVisible();
+  });
+});
+
+test.describe('Account menu 1.17.0', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const menu = (page: Page) => page.locator('#account-menu');
+  const btn = (page: Page) => page.locator('#account-menu-btn');
+
+  test('the button opens and closes the menu: click, click outside, and Esc', async ({ page }) => {
+    await open117(page);
+    await expect(menu(page)).toBeHidden();
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'false');
+    await btn(page).click();
+    await expect(menu(page)).toBeVisible();
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'true');
+    for (const id of ['account-menu-options', 'account-menu-help', 'account-menu-whatsnew', 'export-btn', 'import-btn', 'repair-btn', 'version-btn']) {
+      await expect(page.locator(`#account-menu #${id}`)).toBeVisible();
+    }
+    const m = (await menu(page).boundingBox())!;
+    expect(m.y).toBeGreaterThanOrEqual(0);
+    await btn(page).click();
+    await expect(menu(page)).toBeHidden();
+
+    await btn(page).click();
+    await page.locator('.date-title').click();
+    await expect(menu(page)).toBeHidden();
+
+    await btn(page).click();
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect(btn(page)).toBeFocused();
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('Options opens next to the gear on the Desk and stays open', async ({ page }) => {
+    await open117(page);
+    await openAccountMenu(page);
+    await page.locator('#account-menu-options').click();
+    await expect(menu(page)).toBeHidden();
+    const popout = page.locator('#density-popout');
+    await expect(popout).toBeVisible();
+    await expect(popout).not.toHaveClass(/options-floating/);
+    expect(await popout.evaluate(el => el.parentElement!.classList.contains('density-wrap'))).toBe(true);
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await expect(popout).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(popout).toBeHidden();
+  });
+
+  for (const tab of ['insights', 'projects'] as const) {
+    test(`Options opens from the menu on ${tab} and returns home when closed`, async ({ page }) => {
+      await open117(page);
+      await page.locator(`#tab-${tab}`).click();
+      await openAccountMenu(page);
+      await page.locator('#account-menu-options').click();
+      const popout = page.locator('#density-popout');
+      await expect(popout).toBeVisible();
+      const b = (await popout.boundingBox())!;
+      expect(b.x).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width).toBeLessThanOrEqual(1440);
+      expect(b.y).toBeGreaterThanOrEqual(0);
+      await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+      await page.locator('#options-pane-appearance [data-options-open="typography"]').click();
+      await expect(popout).toBeVisible();
+      await page.locator('#font-size-select').selectOption('large');
+      await expect(popout).toBeVisible();
+      await page.mouse.click(700, 600);
+      await expect(popout).toBeHidden();
+      await expect(popout).not.toHaveClass(/options-floating/);
+      expect(await popout.evaluate(el => el.parentElement!.classList.contains('density-wrap'))).toBe(true);
+    });
+  }
+
+  test('Help opens the help modal; What\'s new opens the changelog and clears both dots', async ({ page }) => {
+    await open117(page);
+    await expect(page.locator('#account-menu-btn-dot')).toBeVisible();
+    await openAccountMenu(page);
+    await expect(page.locator('#account-menu-new-dot')).toBeVisible();
+    await page.locator('#account-menu-help').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#help-modal')).toBeVisible();
+    await expect(page.locator('#help-modal')).toContainText('Today chip');
+    await page.locator('#help-modal-close').click();
+
+    await openAccountMenu(page);
+    await page.locator('#account-menu-whatsnew').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expect(page.locator('#changelog-body')).toContainText('Account menu');
+    await page.locator('#changelog-modal-dismiss').click();
+    await expect(page.locator('#account-menu-btn-dot')).toBeHidden();
+    await openAccountMenu(page);
+    await expect(page.locator('#account-menu-new-dot')).toBeHidden();
+  });
+
+  test('Export and Import open inline, keep the menu open, and choosing an option closes it', async ({ page }) => {
+    await open117(page);
+    await openAccountMenu(page);
+    await page.locator('#export-btn').click();
+    await expect(page.locator('#export-menu')).toBeVisible();
+    await expect(menu(page)).toBeVisible();
+    const exp = (await page.locator('#export-menu').boundingBox())!;
+    const m = (await menu(page).boundingBox())!;
+    expect(exp.y + exp.height).toBeLessThanOrEqual(m.y + m.height);
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#export-all-opt').click()]);
+    expect(download.suggestedFilename()).toMatch(/\.json$/);
+    await expect(menu(page)).toBeHidden();
+
+    await openAccountMenu(page);
+    await page.locator('#import-btn').click();
+    await expect(page.locator('#import-menu')).toBeVisible();
+    await expect(page.locator('#export-menu')).toBeHidden();
+    await expect(menu(page)).toBeVisible();
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#import-desk-opt').click()]);
+    expect(chooser).toBeTruthy();
+    await expect(menu(page)).toBeHidden();
+
+    // Reopening starts with the dropdowns closed
+    await openAccountMenu(page);
+    await expect(page.locator('#import-menu')).toBeHidden();
+  });
+
+  test('Repair and Sign in close the menu and do their job', async ({ page }) => {
+    await open117(page);
+    await openAccountMenu(page);
+    await page.locator('#repair-btn').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#toast')).toBeVisible();
+    await openAccountMenu(page);
+    await expect(page.locator('#sb-signin-btn')).toHaveText('Sign in to sync');
+    await page.locator('#sb-signin-btn').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#auth-modal')).toBeVisible();
+  });
+
+  test('the button shows who you are and sync status in words', async ({ page }) => {
+    await open117(page);
+    await expect(page.locator('#account-email')).toHaveText('Offline Mode');
+    await expect(page.locator('#account-sync-text')).toHaveText('This browser only');
+    await page.evaluate(() => (window as any).updateAccountChrome('signed-in', 'keith@example.com'));
+    await expect(page.locator('#account-email')).toHaveText('keith@example.com');
+    for (const [status, text] of [['syncing', 'Syncing…'], ['ok', 'Synced'], ['error', 'Sync error']]) {
+      await page.evaluate((s) => (window as any).sbSetStatus(s), status);
+      await expect(page.locator('#account-sync-text')).toHaveText(text);
+    }
+    await openAccountMenu(page);
+    await expect(page.locator('#sb-signout-btn')).toBeVisible();
+    await expect(page.locator('#sb-signin-btn')).toBeHidden();
+  });
+
+  test('collapsed sidebar hides the button; expanding brings it back working', async ({ page }) => {
+    await open117(page);
+    await page.locator('#sidebar-toggle').click();
+    await expect(btn(page)).not.toBeInViewport();
+    await page.locator('#sidebar-toggle').click();
+    await expect(btn(page)).toBeInViewport();
+    await openAccountMenu(page);
+    await expect(page.locator('#version-btn')).toBeInViewport();
+  });
+
+  test('phone: the sheet shows the account and sign in inline, without the desktop menu items', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open117(page);
+    await expect(btn(page)).toBeHidden();
+    await page.locator('#mobile-menu-btn').click();
+    const sheet = page.locator('#mobile-menu-sheet');
+    await expect(sheet.locator('#account-email')).toBeVisible();
+    await expect(sheet.locator('#sb-signin-btn')).toBeVisible();
+    await expect(sheet.locator('#export-btn')).toBeVisible();
+    await expect(sheet.locator('#account-menu-options')).toBeHidden();
+    await expect(sheet.locator('#version-btn')).toBeHidden();
+    await page.locator('#mobile-menu-close').click();
+    await expect(page.locator('#account-menu .sidebar-backup')).toHaveCount(1);
+  });
+});
+
+test.describe('Calendar 1.17.0', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const cal = (page: Page) => page.locator('#sidebar-calendar');
+  const chip = (page: Page) => page.locator('#cal-today-chip');
+  const next = (page: Page) => cal(page).locator('.cal-nav-btn[aria-label="Next month"]');
+  const prev = (page: Page) => cal(page).locator('.cal-nav-btn[aria-label="Previous month"]');
+  const colorOf = (loc: ReturnType<Page['locator']>) => loc.evaluate(el => getComputedStyle(el).color);
+
+  test('Today chip appears away from this month and jumps back (DOM replaced on click)', async ({ page }) => {
+    await open117(page);
+    await expect(chip(page)).toHaveCount(0);
+    for (let i = 0; i < 14; i++) await next(page).click();
+    await expect(cal(page).locator('.cal-title')).toHaveText('December 2027');
+    await expect(chip(page)).toBeVisible();
+    await expect(chip(page)).toHaveText('Today');
+    await chip(page).click();
+    await expect(cal(page).locator('.cal-title')).toHaveText('October 2026');
+    await expect(chip(page)).toHaveCount(0);
+    await expect(cal(page).locator('.cal-day.selected')).toHaveText('13');
+    await expect(cal(page)).toBeVisible();
+
+    await prev(page).click();
+    await expect(chip(page)).toBeVisible();
+    await next(page).click();
+    await expect(chip(page)).toHaveCount(0);
+  });
+
+  test('the legend explains the marks and the calendar stays compact', async ({ page }) => {
+    await open117(page);
+    const legend = cal(page).locator('.cal-legend');
+    await expect(legend).toBeVisible();
+    await expect(legend.locator('.cal-legend-item')).toHaveText([/Has items/, /Left open/, /Holiday/]);
+    const h = (await cal(page).boundingBox())!.height;
+    expect(h).toBeLessThan(300);
+  });
+
+  test('selected day is a solid theme fill with readable text on light and amber themes', async ({ page }) => {
+    await open117(page);
+    const sel = cal(page).locator('.cal-day.selected');
+    // Relative colors compute to color(srgb …) / lch(…), so resolve them to RGBA through a canvas pixel
+    const read = () => sel.evaluate(el => {
+      const cs = getComputedStyle(el);
+      const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+      const rgba = (c: string) => {
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = c;
+        ctx.fillRect(0, 0, 1, 1);
+        return [...ctx.getImageData(0, 0, 1, 1).data];
+      };
+      const lum = (c: string) => {
+        const [r, g, b] = rgba(c).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const [a, b] = [lum(cs.backgroundColor), lum(cs.color)].sort((x, y) => y - x);
+      return { alpha: rgba(cs.backgroundColor)[3] / 255, contrast: (a + 0.05) / (b + 0.05) };
+    });
+    const light = await read();
+    expect(light.alpha).toBe(1);
+    expect(light.contrast).toBeGreaterThanOrEqual(3);
+
+    await page.evaluate(() => localStorage.setItem('work-desk-theme', 'flint'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'flint');
+    await expect.poll(async () => (await read()).contrast).toBeGreaterThanOrEqual(3);
+    expect((await read()).alpha).toBe(1);
+  });
+
+  test('left-open badges are amber by default and rose on amber-accent themes', async ({ page }) => {
+    await open117(page);
+    const badge = cal(page).locator('.cal-day-badge').first();
+    await expect(badge).toHaveText('2');
+    expect(await colorOf(badge)).toBe('rgb(251, 191, 36)');
+    await page.evaluate(() => localStorage.setItem('work-desk-theme', 'flint'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect.poll(() => colorOf(cal(page).locator('.cal-day-badge').first())).toBe('rgb(253, 164, 175)');
+  });
+
+  test('quieter weekends: Off, Work desk only, and Both desks across Work and Personal', async ({ page }) => {
+    await open117(page);
+    const sat = () => cal(page).locator('.cal-day.weekend:not(.other-month):not(.selected)').first();
+    const weekday = () => cal(page).locator('.cal-day:not(.weekend):not(.other-month):not(.selected):not(.today):not(.holiday)').first();
+    const quiet = async () => (await colorOf(sat())) !== (await colorOf(weekday()));
+    expect(await quiet()).toBe(false);
+
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('[data-options-open="general"]').click();
+    await page.locator('#quiet-weekends-select').selectOption('work');
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect.poll(quiet).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-options-value="general"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await page.locator('#tab-personal').click();
+    await expect.poll(quiet).toBe(false);
+    await page.locator('#tab-work').click();
+    await expect.poll(quiet).toBe(true);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect.poll(quiet).toBe(true);
+
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('[data-options-open="general"]').click();
+    await page.locator('#quiet-weekends-select').selectOption('both');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await page.locator('#tab-personal').click();
+    await expect.poll(quiet).toBe(true);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-quiet-weekends'))).toBe('both');
+
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('[data-options-open="general"]').click();
+    await page.locator('#quiet-weekends-select').selectOption('off');
+    await expect.poll(quiet).toBe(false);
   });
 });
