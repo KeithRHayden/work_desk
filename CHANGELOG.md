@@ -6,6 +6,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.17.0] — 2026-10-14
+
+### Added
+- **Summary-list Options** — the Appearance and Behavior tabs open on a short list of sections, each row showing its current value (e.g. *Typography: Default · System font*, *Tasks: 3 of 6 on*). Appearance: Card layout, Typography, Layout, Effects, Background, Tags. Behavior: General, Tasks, Projects, Insights, Holidays. Clicking a row opens that section with a *‹ Appearance* / *‹ Behavior* back button; Esc goes back first and closes the panel second. Switching tabs or reopening Options returns to the list. The panes keep a fixed minimum height so the panel doesn't jump. Settings introduced in the current minor release show a small *New* tag (computed from `APP_VERSION`, so the tags disappear on the next minor release). The Themes tab and the *Reset … to defaults* buttons are unchanged
+- **Account menu** — the bottom of the sidebar is one button: avatar, email (or Offline Mode / Not signed in), sync status text (*Synced*, *Syncing…*, *Sync error*, *Not syncing*, *This browser only*), and a ⋯. It opens a menu with Options, Help & shortcuts, What's new (with the new-version dot, also mirrored on the button), Export and Import (the Work Desk / All Desks choices open inline), Repair duplicates, Sign in / Sign out, and the version. Click outside or press Esc to close. Choosing Options from Insights or Projects opens the panel in the top-right corner. With the sidebar at the top or bottom the button sits at the right end of the bar and the menu opens downward / upward. The phone menu sheet keeps its existing layout. The logo's `?` button and the Desk/Insights and Work/Personal/Projects tabs are unchanged
+- **Calendar Today chip** — browsing the sidebar calendar to another month shows a *Today* chip beside the month title; clicking it jumps back to today
+- **Calendar legend** — a one-line key under the sidebar calendar: *Has items · Left open · Holiday*
+- **Quieter weekends** — Options → Behavior → General: *Off* (default), *Work desk only*, or *Both desks*. When active, Saturday and Sunday numbers on the sidebar calendar turn gray (selected days and holidays keep their colors). Synced like the other preferences; *Reset Behavior to defaults* turns it off
+
+### Improved
+- **Switches** — Options on/off settings are pill switches instead of checkboxes (same controls underneath)
+- **Background pattern picker** — tiles are three across and swatch-only, with *Selected: [name]* under the grid. Arrow keys still move between patterns
+- **Selected calendar day** — a solid fill in the theme's calendar color (including themes with custom calendar hues), with text that flips between dark and light for contrast
+- **Left-open color** — calendar badges and Insights *carried over* share one `--carried` color: amber by default, rose (`#fb7185`) on the amber-accent themes Clay, Flint, Denim, Warm, Noir, and Mocha
+
+---
+
+## [1.16.2] — 2026-10-14
+
+### Improved
+- **Simpler tag color names** — the Tag colors options are now *Single color (accent)*, *Shades of accent* (was *Analogous (shades of accent)*), and *Multi-color* (was *Multi-color (from theme)*). All three modes derive from the theme's accent — Multi-color keeps the accent's lightness and saturation and rotates the hue — so "(from theme)" didn't distinguish anything, and "Analogous" was design jargon. The hint and Help text match, and Help now notes that each mode has 8 colors, so with more tags some share one (pin a color to change it). Stored values (`theme` / `analogous` / `palette`) are unchanged, so saved and synced settings carry over
+
+---
+
 ## [1.16.1] — 2026-10-13
 
 ### Added
