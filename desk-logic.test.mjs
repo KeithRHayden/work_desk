@@ -3534,8 +3534,8 @@ describe('v1.16.2 tag color labels', () => {
 describe('v1.16.0 tag pills do not narrow card text', () => {
   it('chips render inside the top row, before the content, and never while editing', () => {
     const src = fnSource('renderItem');
-    assert.match(src, /tags\.length && !isEditing \? ' has-tags' : ''/);
-    const chipAt = src.indexOf('row.appendChild(buildTagChipRow(item, tags))');
+    assert.match(src, /tags\.length && !isEditing && !tagsInBar \? ' has-tags' : ''/);
+    const chipAt = src.indexOf('if (!isEditing && tags.length && !tagsInBar) row.appendChild(buildTagChipRow(item, tags))');
     assert.ok(chipAt > 0, 'chip row is appended to the .item row');
     assert.ok(chipAt < src.indexOf("content.className = 'item-content rich-content'"), 'chip row comes before the content');
     assert.doesNotMatch(src, /card\.appendChild\(buildTagChipRow/);
@@ -3547,7 +3547,7 @@ describe('v1.16.0 tag pills do not narrow card text', () => {
     assert.match(block, /\.tag-chip-row \{\s*grid-area: tags;[^}]*flex-wrap: wrap;/);
     assert.doesNotMatch(block, /\.tag-chip-row \{[^}]*position: absolute/);
     assert.match(block, /\.board-column \.item\.has-tags \{\s*grid-template-columns: auto minmax\(0, 1fr\);\s*grid-template-areas:\s*"check tags"\s*"content content";/);
-    assert.match(block, /\.item\.note\.has-tags \{[^}]*"icon tags"\s*"icon content";/);
+    assert.match(block, /\.item\.note\.has-tags \{[^}]*"tags"\s*"content";/);
     assert.match(block, /data-density="compact"\] \.board-column \.item\.has-tags \.tag-chip-row \{\s*order: -1;\s*flex: 0 0 100%;/);
     assert.match(html, /\.item-card\.menu-open \.item\.has-tags:not\(:has\(\.edit-wrap\)\) \{\s*grid-template-areas:\s*"check tags"\s*"content content"\s*"actions actions";/);
   });
@@ -4343,7 +4343,7 @@ describe('Phone menu (1.13.0)', () => {
 // v1.17.0 Options summary list, account menu, calendar polish, quieter weekends
 // ═══════════════════════════════════════════════════════════════════════
 describe('v1.17.0 Options summary list', () => {
-  const labelConsts = ['OPTIONS_FONT_LABELS', 'OPTIONS_TAG_MODE_LABELS']
+  const labelConsts = ['OPTIONS_FONT_LABELS', 'OPTIONS_TAG_MODE_LABELS', 'OPTIONS_COMPLETE_STYLE_LABELS', 'OPTIONS_TAG_POSITION_LABELS']
     .map(n => mainScript.match(new RegExp(`const ${n} = \\{[\\s\\S]*?\\};`))[0]).join('\n');
   const summary = new Function(`${labelConsts}
     const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
@@ -4353,8 +4353,8 @@ describe('v1.17.0 Options summary list', () => {
   const behavior = html.slice(html.indexOf('id="options-pane-behavior"'), html.indexOf('id="options-pane-behavior"') + 40000);
 
   it('summarizes every Appearance row', () => {
-    assert.equal(summary('card-layout', { density: 'compact' }), 'Compact');
-    assert.equal(summary('card-layout', {}), 'Comfortable');
+    assert.equal(summary('card-layout', { density: 'compact', completeStyle: 'bar', tagPosition: 'slim' }), 'Compact · Bar · Slim tags');
+    assert.equal(summary('card-layout', {}), 'Comfortable · Done label');
     assert.equal(summary('typography', { fontSize: 'large', fontFamily: 'jetbrains' }), 'Large · JetBrains Mono');
     assert.equal(summary('typography', { fontFamily: 'nope' }), 'Default · System font');
     assert.equal(summary('layout', { sidebarPosition: 'top' }), 'Sidebar top');
@@ -4367,8 +4367,8 @@ describe('v1.17.0 Options summary list', () => {
   });
 
   it('summarizes every Behavior row', () => {
-    assert.equal(summary('general', { startupView: 'today', weekStart: 'monday' }), 'Open Today · Monday');
-    assert.equal(summary('general', {}), 'Remember last · Sunday');
+    assert.equal(summary('general', { startupView: 'today', weekStart: 'monday' }), 'Today · Mon');
+    assert.equal(summary('general', {}), 'Last viewed · Sun');
     assert.equal(summary('tasks', { tasksOn: 3, tasksTotal: 6 }), '3 of 6 on');
     assert.equal(summary('projects', { truncateNotes: true }), 'Truncate long notes');
     assert.equal(summary('projects', {}), 'Full notes');
@@ -4410,7 +4410,7 @@ describe('v1.17.0 Options summary list', () => {
     assert.equal(isNew('1.16.2'), false);
     assert.equal(isNew(''), false);
     assert.equal(isNew(undefined), false);
-    assert.ok((html.match(/class="options-new-tag" data-new-in="1\.17\.0"/g) || []).length >= 2);
+    assert.ok((html.match(/class="options-new-tag" data-new-in="1\.17\.\d"/g) || []).length >= 2);
   });
 
   it('switches replace checkboxes; patterns are 3 wide with the selected name below', () => {
@@ -4515,11 +4515,9 @@ describe('v1.17.0 calendar', () => {
 });
 
 describe('v1.17.0 docs', () => {
-  it('1.17.0 is the latest version and documented everywhere', () => {
-    assert.match(html, /const APP_VERSION = '1\.17\.0'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.17\.0'/);
-    assert.match(latest, /tag: 'latest'/);
+  it('1.17.0 is documented everywhere', () => {
+    const latest = html.match(/version: '1\.17\.0'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(latest, /tag: 'latest'/);
     for (const s of ['Simpler Options', 'Account menu', 'Calendar Today chip', 'Calendar legend', 'Quieter weekends', 'switches']) assert.ok(latest.includes(s), s);
     assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
     const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
@@ -4530,5 +4528,237 @@ describe('v1.17.0 docs', () => {
     assert.match(html, /<li><strong>Today chip<\/strong>/);
     assert.match(html, /<li><strong>Account menu<\/strong>/);
     assert.match(html, /<li><strong>Summary list<\/strong>/);
+  });
+
+  it('1.17.1: Options panes size to their list and lock that height only while a section is open', () => {
+    const entry = html.match(/version: '1\.17\.1'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(entry, /tag: 'latest'/);
+    assert.ok(entry.includes('Options fits its list'));
+    assert.doesNotMatch(html, /#options-pane-appearance, #options-pane-behavior \{ min-height/);
+    assert.match(fnSource('openOptionsSection'), /pane\.style\.minHeight = `\$\{pane\.offsetHeight\}px`;\s*pane\.querySelectorAll/);
+    assert.match(fnSource('closeOptionsSection'), /pane\.style\.minHeight = '';/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.17\.1\] — 2026-10-14\n\n### Improved\n- \*\*Options fits its list\*\*/);
+  });
+});
+
+describe('v1.17.2 Options polish', () => {
+  const labelConsts = ['OPTIONS_FONT_LABELS', 'OPTIONS_TAG_MODE_LABELS', 'OPTIONS_COMPLETE_STYLE_LABELS', 'OPTIONS_TAG_POSITION_LABELS']
+    .map(n => mainScript.match(new RegExp(`const ${n} = \\{[\\s\\S]*?\\};`))[0]).join('\n');
+  const summary = new Function(`${labelConsts}
+    const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+    ${fnSource('optionsSummaryText')}
+    return optionsSummaryText;`)();
+
+  it('summaries are short and include the new settings', () => {
+    assert.equal(summary('layout', { sidebarPosition: 'left', showCalLegend: true, showTodayProgress: true }), 'Sidebar left');
+    assert.equal(summary('layout', { sidebarPosition: 'top', showCalLegend: false, showTodayProgress: false }), 'Sidebar top · No legend · No progress');
+    assert.equal(summary('general', { launchDesk: 'personal', startupView: 'today', weekStart: 'monday' }), 'Personal · Today · Mon');
+    assert.equal(summary('general', { launchDesk: 'last' }), 'Last viewed · Sun');
+    assert.equal(summary('insights', { streakSkipWeekends: true }), 'Weekends skipped');
+    assert.match(html, /\.options-row-value \{[^}]*-webkit-line-clamp: 3;/);
+    assert.doesNotMatch(html.match(/\.options-row-value \{[^}]*\}/)[0], /white-space: nowrap/);
+  });
+
+  it('opens the chosen desk, or the last one used', () => {
+    const fns = new Function(`const LAUNCH_DESK_VALUES = ['last', 'work', 'personal'];
+      ${fnSource('normalizeLaunchDesk')}\n${fnSource('resolveLaunchContext')}
+      return { normalizeLaunchDesk, resolveLaunchContext };`)();
+    assert.equal(fns.normalizeLaunchDesk(null), 'last');
+    assert.equal(fns.normalizeLaunchDesk('bogus'), 'last');
+    assert.equal(fns.resolveLaunchContext('last', 'personal'), 'personal');
+    assert.equal(fns.resolveLaunchContext(null, 'projects'), 'projects');
+    assert.equal(fns.resolveLaunchContext('work', 'personal'), 'work');
+    assert.equal(fns.resolveLaunchContext('personal', 'projects'), 'personal');
+    assert.match(mainScript, /const launchContext = resolveLaunchContext\(localStorage\.getItem\(LAUNCH_DESK_KEY\), getListContext\(\)\);/);
+    assert.ok(mainScript.indexOf('const launchContext') < mainScript.indexOf('const state = {'), 'runs before state reads the desk');
+    assert.match(html, /<select id="launch-desk-select" aria-label="Open desk">/);
+    assert.match(mainScript, /'launch-desk-select': 'last'/);
+    assert.match(fnSource('readLocalPrefs'), /launchDesk: normalizeLaunchDesk/);
+    assert.match(fnSource('applyCloudPrefs'), /prefs\.launchDesk/);
+  });
+
+  it('calendar legend and Today\'s Progress can be hidden, synced, and reset', () => {
+    for (const [id, key, pref, fn] of [
+      ['show-cal-legend-toggle', 'SHOW_CAL_LEGEND_KEY', 'showCalLegend', 'applyShowCalLegend'],
+      ['show-today-progress-toggle', 'SHOW_TODAY_PROGRESS_KEY', 'showTodayProgress', 'applyShowTodayProgress'],
+    ]) {
+      assert.match(html, new RegExp(`<input id="${id}" type="checkbox" checked />`));
+      assert.match(mainScript, new RegExp(`'${id}': true`));
+      assert.match(fnSource('readLocalPrefs'), new RegExp(`${pref}: localStorage\\.getItem\\(${key}\\) !== 'false'`));
+      assert.match(fnSource('applyCloudPrefs'), new RegExp(`${fn}\\(prefs\\.${pref}, \\{ fromSync: true \\}\\)`));
+    }
+    assert.match(html, /\[data-cal-legend="hide"\] \.cal-legend,\s*\[data-today-progress="hide"\] #sidebar-today-glance \{ display: none !important; \}/);
+    const layout = html.slice(html.indexOf('data-options-section="layout"'), html.indexOf('data-options-section="effects"'));
+    assert.match(layout, /show-cal-legend-toggle/);
+    assert.match(layout, /show-today-progress-toggle/);
+  });
+
+  it('New tags hide once their section is opened, per section and version', () => {
+    const store = {};
+    const localStorage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); } };
+    const tag = (newIn, section, row) => ({
+      dataset: { newIn }, hidden: false,
+      closest: (sel) => (sel === '[data-options-section]' && section ? { dataset: { optionsSection: section } }
+        : sel === '[data-options-open]' && row ? { dataset: { optionsOpen: row } } : null),
+    });
+    const tags = [tag('1.17.2', null, 'general'), tag('1.17.0', 'general'), tag('1.17.2', 'layout'), tag('1.16.0', 'tasks')];
+    const document = { querySelectorAll: () => tags };
+    const api = new Function('localStorage', 'document', `const APP_VERSION = '1.17.2'; const SEEN_NEW_TAGS_KEY = 'seen';
+      ${fnSource('isNewInCurrentRelease')}\n${fnSource('newTagKey')}\n${fnSource('readSeenNewTags')}\n${fnSource('markNewTagsSeen')}\n${fnSource('syncNewTags')}
+      return { markNewTagsSeen, syncNewTags };`)(localStorage, document);
+    api.syncNewTags();
+    assert.deepEqual(tags.map(t => t.hidden), [false, false, false, true]);
+    api.markNewTagsSeen('general');
+    assert.deepEqual(tags.map(t => t.hidden), [false, false, false, true], 'stays up during the visit');
+    api.syncNewTags();
+    assert.deepEqual(tags.map(t => t.hidden), [true, true, false, true]);
+    assert.deepEqual(JSON.parse(store.seen).sort(), ['general@1.17.0', 'general@1.17.2']);
+    store.seen = 'not json';
+    api.syncNewTags();
+    assert.equal(tags[0].hidden, false, 'bad storage shows tags again');
+    assert.match(fnSource('openOptionsSection'), /markNewTagsSeen\(id\);/);
+    assert.match(fnSource('closeOptionsSection'), /syncNewTags\(\);/);
+  });
+
+  it('Quieter weekends keeps its New tag inline with a one-line hint', () => {
+    assert.match(html, /\.customize-select-row-sub label > span:first-child \{ display: block; \}/);
+    assert.match(html, /<span class="customize-toggle-sub">Gray Sat\/Sun on the calendar<\/span>/);
+  });
+
+  it('notes no longer carry the 📝 icon', () => {
+    assert.doesNotMatch(html, /note-icon/);
+    assert.doesNotMatch(html, /"icon (tags|content)"/);
+    assert.match(html, /\.item\.note \{ grid-template-areas: "content"; \}/);
+  });
+
+  it('1.17.2 is documented everywhere', () => {
+    const latest = html.match(/version: '1\.17\.2'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(latest, /tag: 'latest'/);
+    for (const s of ['Open desk', 'calendar legend', 'New tags go away', 'Shorter Options summaries', 'Quieter weekends label', '📝']) assert.ok(latest.includes(s), s);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.17\.2\] — 2026-10-14\n\n### Added\n- \*\*Open desk\*\*/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /Open desk/);
+    assert.match(readme, /Calendar legend/);
+    const help = html.slice(html.indexOf('id="help-modal"'), html.indexOf('id="help-modal"') + 60000);
+    assert.match(help, /<strong>Open desk<\/strong>/);
+    assert.match(help, /hide the calendar legend/i);
+    assert.match(help, /New tag/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// v1.18.0 complete edge + tag position
+// ═══════════════════════════════════════════════════════════════════════
+describe('v1.18.0 complete edge and tag position', () => {
+  const fns = new Function(`
+    const COMPLETE_STYLES = ['label', 'bar', 'raised', 'switch', 'circle', 'square', 'diamond', 'check', 'none', 'checkbox'];
+    const TAG_POSITIONS = ['row', 'slim', 'actions'];
+    ${fnSource('normalizeCompleteStyle')}\n${fnSource('normalizeTagPosition')}
+    return { normalizeCompleteStyle, normalizeTagPosition };`)();
+  const appearance = html.slice(html.indexOf('id="options-pane-appearance"'), html.indexOf('id="options-pane-behavior"'));
+
+  it('defaults to the "Done" label and tags on their own row; junk falls back', () => {
+    assert.equal(fns.normalizeCompleteStyle(null), 'label');
+    assert.equal(fns.normalizeCompleteStyle('bogus'), 'label');
+    assert.equal(fns.normalizeCompleteStyle('checkbox'), 'checkbox');
+    assert.equal(fns.normalizeCompleteStyle('switch'), 'switch');
+    assert.equal(fns.normalizeTagPosition(undefined), 'row');
+    assert.equal(fns.normalizeTagPosition('top'), 'row');
+    assert.equal(fns.normalizeTagPosition('slim'), 'slim');
+    assert.equal(fns.normalizeTagPosition('actions'), 'actions');
+    assert.match(mainScript, /const COMPLETE_STYLES = \['label', 'bar', 'raised', 'switch', 'circle', 'square', 'diamond', 'check', 'none', 'checkbox'\];/);
+    assert.match(mainScript, /const TAG_POSITIONS = \['row', 'slim', 'actions'\];/);
+  });
+
+  it('both selects live in Card layout with every option, a New tag, and reset defaults', () => {
+    const section = appearance.slice(appearance.indexOf('data-options-section="card-layout"'), appearance.indexOf('data-options-section="typography"'));
+    const styles = [...section.matchAll(/<select id="complete-style-select"[\s\S]*?<\/select>/g)][0][0];
+    assert.deepEqual([...styles.matchAll(/value="(\w+)"/g)].map(m => m[1]), ['label', 'bar', 'raised', 'switch', 'circle', 'square', 'diamond', 'check', 'none', 'checkbox']);
+    assert.match(styles, />Checkbox</);
+    const tags = [...section.matchAll(/<select id="tag-position-select"[\s\S]*?<\/select>/g)][0][0];
+    assert.deepEqual([...tags.matchAll(/value="(\w+)"/g)].map(m => m[1]), ['row', 'slim', 'actions']);
+    assert.equal((section.match(/data-new-in="1\.18\.0"/g) || []).length, 2);
+    assert.match(appearance, /Card layout<span class="options-new-tag" data-new-in="1\.18\.0">New<\/span>/);
+    assert.match(mainScript, /'complete-style-select': 'label',\s*'tag-position-select': 'row',/);
+  });
+
+  it('apply sets html attributes, saves, and syncs; only the action-bar switch re-renders', () => {
+    const style = fnSource('applyCompleteStyle');
+    assert.match(style, /dataset\.completeStyle = next/);
+    assert.match(style, /dataset\.completeEdge = next === 'checkbox' \? 'off' : 'on'/);
+    assert.match(style, /localStorage\.setItem\(COMPLETE_STYLE_KEY, next\)/);
+    assert.match(style, /if \(!fromSync\) schedulePrefsPush\(\)/);
+    const pos = fnSource('applyTagPosition');
+    assert.match(pos, /dataset\.tagPosition = next/);
+    assert.match(pos, /const movedBar = \(state\.tagPosition === 'actions'\) !== \(next === 'actions'\)/);
+    assert.match(pos, /if \(movedBar && rerender\) render\(\)/);
+    assert.match(mainScript, /applyTagPosition\(state\.tagPosition, \{ fromSync: true, rerender: false \}\)/);
+    assert.match(fnSource('readLocalPrefs'), /completeStyle: normalizeCompleteStyle\(localStorage\.getItem\(COMPLETE_STYLE_KEY\)\)/);
+    assert.match(fnSource('readLocalPrefs'), /tagPosition: normalizeTagPosition\(localStorage\.getItem\(TAG_POSITION_KEY\)\)/);
+    assert.match(fnSource('applyCloudPrefs'), /COMPLETE_STYLES\.includes\(prefs\.completeStyle\)/);
+    assert.match(fnSource('applyCloudPrefs'), /TAG_POSITIONS\.includes\(prefs\.tagPosition\)/);
+  });
+
+  it('cards wrap the row and action bar so the edge stops above comments; the edge comes first', () => {
+    const src = fnSource('renderItem');
+    assert.match(src, /main\.className = 'card-main';\s*if \(item\.type === 'task'\) main\.appendChild\(buildCompleteEdge\(item\)\);\s*main\.appendChild\(row\);\s*card\.appendChild\(main\);/);
+    assert.match(src, /main\.appendChild\(actionBar\);/);
+    assert.ok(src.indexOf('card.appendChild(renderCommentsPanel(item))') > src.indexOf('main.appendChild(actionBar)'), 'comments stay outside .card-main');
+    assert.match(src, /const tagsInBar = state\.tagPosition === 'actions' && tags\.length > 0 && !isEditing;/);
+    assert.match(src, /actionEnd\.className = 'card-action-end';\s*if \(tagsInBar\) actionEnd\.appendChild\(buildTagChipRow\(item, tags\)\);/);
+    assert.match(src, /actionEnd\.appendChild\(overflowWrap\);\s*actionBar\.appendChild\(actionEnd\);/);
+    assert.match(html, /\.card-main \{ position: relative; \}/);
+    assert.match(html, /html\[data-complete-edge="on"\] \.task-card:has\(\.comments-panel\) \.complete-edge \{ border-bottom-left-radius: 0; \}/);
+  });
+
+  it('the edge toggles the task, labels itself, and ignores a press that turned into a drag', () => {
+    const src = fnSource('buildCompleteEdge');
+    assert.match(src, /edge\.className = `complete-edge\$\{item\.completed \? ' is-done' : ''\}`/);
+    assert.match(src, /const label = item\.completed \? 'Mark incomplete' : 'Mark complete';/);
+    assert.match(src, /edge\.setAttribute\('aria-label', label\)/);
+    assert.match(src, /e\.detail > 0 && Math\.hypot\(e\.clientX - start\.x, e\.clientY - start\.y\) > 4/);
+    assert.match(src, /if \(!moved\) toggleItem\(item\.id\)/);
+  });
+
+  it('CSS: classic hides the edge, the label states, wider edge on touch, slim chips sized to the row', () => {
+    assert.match(html, /\.complete-edge \{ display: none; \}/);
+    assert.match(html, /html\[data-complete-edge="on"\] \.item\.task > \.checkbox \{ display: none; \}/);
+    for (const s of ["content: 'done';", "content: 'done\\200A?';", "content: 'done\\200A!';", "content: 'undo\\200A?';", "content: 'doing';"]) assert.ok(html.includes(s), s);
+    assert.match(html, /html\[data-complete-style="label"\] \.item-card\.dragging \.complete-edge::before/);
+    assert.match(html, /html\[data-complete-style="label"\] \.complete-edge\.is-done::before \{ content: 'done\\200A!'; transform: rotate\(180deg\);/);
+    assert.match(html, /@media \(hover: none\), \(pointer: coarse\) \{\s*html\[data-complete-edge="on"\] \.task-card \.complete-edge \{ width: 40px; \}/);
+    assert.match(html, /grid-template-areas: "tags" "content"; grid-template-rows: 14px auto;/);
+    assert.match(html, /\.item\.task \.tag-chip \{\s*box-sizing: border-box; height: 14px; padding-block: 0;/);
+    assert.match(html, /height: 14px; flex-wrap: nowrap; overflow-x: clip; overflow-y: visible;/);
+    assert.match(html, /\.card-action-end \{ margin-left: auto; display: flex;/);
+  });
+
+  it('summary and docs', () => {
+    const labelConsts = ['OPTIONS_COMPLETE_STYLE_LABELS', 'OPTIONS_TAG_POSITION_LABELS']
+      .map(n => mainScript.match(new RegExp(`const ${n} = \\{[\\s\\S]*?\\};`))[0]).join('\n');
+    const summary = new Function(`${labelConsts}
+      const OPTIONS_FONT_LABELS = {}; const OPTIONS_TAG_MODE_LABELS = {};
+      const capitalize = (s) => s;
+      ${fnSource('optionsSummaryText')}
+      return optionsSummaryText;`)();
+    assert.equal(summary('card-layout', { completeStyle: 'checkbox', tagPosition: 'actions' }), 'Comfortable · Checkbox · Tags in bar');
+    assert.match(html, /const APP_VERSION = '1\.18\.0'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.18\.0'/);
+    assert.match(latest, /tag: 'latest'/);
+    for (const s of ['Complete button on the card edge', 'DONE?', 'DOING', 'DONE!', 'UNDO?', 'Checkbox', 'Slim headroom', 'Action bar']) assert.ok(latest.includes(s), s);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.18\.0\] — 2026-10-14\n\n### Added\n- \*\*Complete button on the card edge\*\*/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /- \*\*Complete button on the card edge\*\*/);
+    assert.match(readme, /- \*\*Tag position\*\*/);
+    const help = html.slice(html.indexOf('id="help-modal"'), html.indexOf('id="help-modal"') + 60000);
+    assert.match(help, /<li><strong>Complete button<\/strong>/);
+    assert.match(help, /<li><strong>Tag position<\/strong>/);
+    assert.match(help, /Tap a task's <strong>left edge<\/strong> to complete it/);
+    assert.doesNotMatch(help, /Tap the <strong>checkbox<\/strong> to complete a task/);
   });
 });
