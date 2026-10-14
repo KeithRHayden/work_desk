@@ -6,6 +6,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.18.0] — 2026-10-14
+
+### Added
+- **Complete button on the card edge** — a task card's left edge (18px; 40px on touch screens) is now its complete button: click to finish, click again to reopen. It covers the task text and action links only, stopping above an open comments panel. A press that moves more than 4px counts as an attempted drag, not a click; keyboard users get a focus ring and the same *Mark complete / Mark incomplete* label as before
+- **Complete button styles** — Options → Appearance → Card layout → *Complete button*: *"Done" label* (default; reads DONE → DONE? on hover/focus → DOING while the card is dragged → DONE! when finished → UNDO? on hover of a finished card), *Bar*, *Raised bar*, *Switch*, *Circle*, *Square*, *Diamond*, *Faint ✓*, *Plain edge*, or *Checkbox* to bring back the old checkbox. Compact cards show a bar instead of the label. Synced and reset with Appearance
+- **Tag position** — Options → Appearance → Card layout → *Tag position*: *Own row* (default, as before), *Slim headroom* (every task reserves a 14px tag row with smaller chips, so text starts at the same height with or without tags; long tags shorten with …), or *Action bar* (chips sit next to ⋮; on narrow cards, such as phones, chips and ⋮ move to a second line together, right-aligned). Slim headroom needs the edge button; compact cards always keep chips on their own line. Synced and reset with Appearance
+
+### Improved
+- **More room for task text** — without the checkbox row above it, task text starts at the top of the card
+- **Card layout summary** — the Options row reads e.g. *Comfortable · Done label*, adding *Slim tags* or *Tags in bar* when you move tags
+
+## [1.17.2] — 2026-10-14
+
+### Added
+- **Open desk** — Options → Behavior → General → *Open desk* chooses the desk the app starts on: *Last used* (default, the old behavior), *Work*, or *Personal*. It works alongside *On launch* (last viewed day vs. Today), syncs, and resets with Behavior
+- **Calendar legend and Today's Progress switches** — Options → Appearance → Layout can hide the key under the sidebar calendar and the sidebar's Today's Progress card. Both default on, sync, and reset with Appearance; the Layout summary notes *No legend* / *No progress* when either is off
+
+### Improved
+- **New tags go away once seen** — opening a section remembers its *New* tags (stored per section and version in `work-desk-seen-new-tags`); they stay up for that visit and are gone when you go back, including the tag on the section's row. Tags still expire on their own at the next minor version
+- **Shorter Options summaries** — e.g. *Last viewed · Sun* and *Weekends skipped*. The gray value now wraps to a second line instead of being cut off with an ellipsis
+- **Quieter weekends label** — the *New* tag sits inline after the name instead of pushing it onto three lines, the hint is shorter (*Gray Sat/Sun on the calendar*), and the *Work desk only* choice is now *Work only* so the select leaves room for the name
+- **No more 📝 on notes** — the note icon and its grid column are gone (desktop, compact, phone, with or without tags), so note text starts at the card's left edge
+
+## [1.17.1] — 2026-10-14
+
+### Improved
+- **Options fits its list** — the Appearance and Behavior panes dropped their fixed minimum height (up to 400px), which left empty space under the shorter summary lists. The panel now sizes to each tab's list; opening a section sets the pane's minimum height to the list's height, so a short section (e.g. Layout) doesn't shrink the panel, and returning to the list clears it
+
+---
+
 ## [1.17.0] — 2026-10-14
 
 ### Added
