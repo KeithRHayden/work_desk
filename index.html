@@ -157,8 +157,13 @@
       --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 35%, transparent);
       --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 25%, transparent);
       --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 65%, transparent);
+      --carried: #f59e0b;
+      --carried-ink: #fbbf24;
       color-scheme: light;
     }
+    /* Amber "left open / carried over" would blend into these themes' amber-gold accents */
+    [data-theme="clay"], [data-theme="flint"], [data-theme="denim"],
+    [data-theme="warm"], [data-theme="noir"], [data-theme="mocha"] { --carried: #fb7185; --carried-ink: #fda4af; }
 
     /* ── Medium themes ──────────────────────────────────────────────── */
     /* Blue / Cool */
@@ -2212,16 +2217,17 @@
     /* Background pattern controls; .main draws the tile from --desk-pattern */
     .bg-pattern-controls { margin: 2px 0 6px; }
     .bg-pattern-controls[hidden] { display: none; }
-    .bg-pattern-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 10px; }
+    .bg-pattern-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 4px 0 6px; }
+    .bg-pattern-picked { margin: 0 2px 8px; font-size: 0.78rem; color: var(--text-muted); }
+    .bg-pattern-picked strong { color: var(--accent); font-weight: 600; }
     .bg-pattern-tile {
       display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-width: 0; padding: 3px 3px 4px;
       border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-muted);
       font: inherit; font-size: 0.66rem; line-height: 1.15; cursor: pointer; text-align: center;
     }
     .bg-pattern-tile:hover { border-color: var(--accent); }
-    .bg-pattern-tile.active { border: 2px solid var(--accent); padding: 2px 2px 3px; color: var(--accent); font-weight: 600; }
-    .bg-pattern-tile-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .bg-pattern-swatch { display: block; height: 34px; border-radius: 5px; background-color: var(--bg); }
+    .bg-pattern-tile.active { border: 2px solid var(--accent); padding: 2px; }
+    .bg-pattern-swatch { display: block; height: 44px; border-radius: 5px; background-color: var(--bg); }
     .bg-pattern-strength-row { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text); }
     .bg-pattern-strength-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
     .bg-pattern-strength-val { width: 34px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -2303,37 +2309,17 @@
       [data-sidebar-bar] .project-list-item { padding: 6px 10px; flex-shrink: 0; max-width: 200px; }
       [data-sidebar-bar] .project-list-meta { display: none; }
 
-      [data-sidebar-bar] .sidebar-backup {
-        margin-top: 0;
-        padding-top: 0;
-        border-top: none;
-        flex-direction: row;
-        align-items: center;
-        gap: 6px;
-      }
-      [data-sidebar-bar] .sidebar-backup .nav-label { display: none; }
-      [data-sidebar-bar] .sidebar-backup-btns { width: auto; grid-template-columns: auto auto; }
-      [data-sidebar-bar] .sidebar-repair-link { width: auto; font-size: 0; padding: 4px 6px; }
-      [data-sidebar-bar] .sidebar-repair-link::before { content: '\1F527'; font-size: 0.85rem; }
-      [data-sidebar-bar] .backup-dropdown { right: auto; min-width: 130px; white-space: nowrap; }
-      [data-sidebar-position="top"] .backup-dropdown { bottom: auto; top: calc(100% + 4px); }
-
       [data-sidebar-bar] .sidebar-account {
         margin-left: auto;
         margin-top: 0;
-        padding-top: 0;
-        border-top: none;
-        flex-direction: row;
-        align-items: center;
-        gap: 10px;
         min-height: 0;
       }
-      [data-sidebar-bar] .sidebar-account-email { max-width: 180px; }
-      [data-sidebar-bar] .sidebar-account-actions { width: auto; }
-      [data-sidebar-bar] .sidebar-version { padding-top: 0; }
+      [data-sidebar-bar] .account-menu-btn { width: auto; max-width: 240px; padding: 5px 8px; }
+      [data-sidebar-bar] .sidebar-account-email { max-width: 170px; }
+      [data-sidebar-bar] .account-menu { left: auto; right: 0; width: 240px; }
+      [data-sidebar-position="top"] .account-menu { bottom: auto; top: calc(100% + 6px); }
 
       [data-sidebar-position="bottom"] .toast { bottom: calc(var(--sidebar-bar-h, 0px) + 16px); }
-      [data-sidebar-bar] .sidebar-version { flex-shrink: 0; }
       [data-sidebar-bar] .density-popout { max-height: calc(100vh - 112px - var(--sidebar-bar-h, 0px)); }
     }
 
@@ -2707,8 +2693,6 @@
 
     .sidebar-account {
       margin-top: auto;
-      padding-top: 10px;
-      border-top: 1px solid color-mix(in srgb, var(--sidebar-muted) 25%, transparent);
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -2820,7 +2804,53 @@
     }
     .whats-new-link:hover { text-decoration: underline; text-underline-offset: 2px; }
     .whats-new-link.hidden { display: none; }
-    .sidebar-version { display: flex; padding-top: 10px; }
+    /* ── Account button + menu (holds backup, repair, sign in/out, version) ── */
+    .sidebar-account { position: relative; }
+    .account-menu-btn {
+      position: relative; display: flex; align-items: center; gap: 9px; width: 100%; min-width: 0;
+      padding: 7px 8px; border: 1px solid var(--sidebar-btn-border); border-radius: 9px;
+      background: transparent; font: inherit; color: var(--sidebar-text); text-align: left; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .account-menu-btn:hover, .account-menu-btn[aria-expanded="true"] { background: var(--sidebar-hover); border-color: color-mix(in srgb, var(--sidebar-muted) 45%, transparent); }
+    .account-menu-who { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+    .account-menu-status { display: flex; align-items: center; gap: 5px; font-size: 0.66rem; color: var(--sidebar-muted); min-width: 0; }
+    .account-menu-status .sb-sync-status { font-size: 0.7rem; }
+    .account-menu-dots { color: var(--sidebar-muted); font-size: 1rem; line-height: 1; flex-shrink: 0; }
+    #account-menu-btn-dot { position: absolute; top: 5px; right: 5px; }
+    .account-menu {
+      position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 130;
+      display: flex; flex-direction: column; gap: 2px; padding: 5px;
+      background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+    .account-menu.hidden { display: none; }
+    .account-menu-app, .account-menu .sidebar-backup, .account-menu .sidebar-account-actions {
+      display: flex; flex-direction: column; gap: 1px; margin: 0; padding: 0 0 4px; border: none;
+    }
+    .account-menu .sidebar-backup, .account-menu .sidebar-account-actions { padding-top: 4px; border-top: 1px solid var(--border); }
+    .account-menu .sidebar-backup .nav-label { display: none; }
+    .account-menu-item, #account-menu .backup-btn, #account-menu .sidebar-repair-link, .account-menu .sb-account-btn {
+      display: flex; align-items: center; gap: 9px; width: 100%; padding: 6px 8px; border: none; border-radius: 6px;
+      background: transparent; font: inherit; font-size: 0.8rem; font-weight: 400; color: var(--text); text-align: left; cursor: pointer;
+    }
+    .account-menu-item:hover, #account-menu .backup-btn:hover, #account-menu .sidebar-repair-link:hover, .account-menu .sb-account-btn:hover {
+      background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); border-color: transparent;
+    }
+    .account-menu-ic { width: 16px; text-align: center; color: var(--text-muted); font-size: 0.8rem; }
+    .account-menu-item .version-new-dot { margin-left: auto; }
+    .account-menu .sidebar-backup-btns { display: flex; flex-direction: column; gap: 1px; width: 100%; }
+    .account-menu .backup-btn::after { content: '›'; margin-left: auto; color: var(--text-muted); }
+    .account-menu .backup-dropdown { position: static; margin: 1px 0 3px 26px; border-radius: 6px; box-shadow: none; }
+    .account-menu .sb-account-btn.hidden { display: none; }
+    .account-menu #sb-signout-btn, .account-menu #sb-signout-btn:hover { border: none; color: var(--text); }
+    .account-menu #sb-signin-btn { color: var(--accent); font-weight: 600; }
+    .account-menu .sidebar-version {
+      display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 3px;
+      border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--text-muted);
+    }
+    .account-menu .version-btn { color: var(--text-muted); border-color: var(--border); opacity: 1; }
+    .account-menu .version-btn:hover { color: var(--accent); border-color: var(--accent); }
     @keyframes version-pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.35; }
@@ -2970,12 +3000,21 @@
     .cal-day:hover { background: var(--sidebar-hover); color: var(--sidebar-active); }
     .cal-day.other-month { color: var(--sidebar-muted); opacity: 0.45; }
     .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--sidebar-muted); }
+    /* Solid version of the theme's selection hue; text flips black/white by its lightness */
     .cal-day.selected {
-      background: var(--sidebar-cal-selected-bg);
-      color: var(--sidebar-active);
-      font-weight: 600;
+      --cal-sel: var(--accent);
+      --cal-sel: rgb(from var(--sidebar-cal-selected-bg) r g b / 1);
+      --cal-on-sel: #fff;
+      --cal-on-sel: lch(from var(--cal-sel) calc((58 - l) * 1000) 0 0 / 1);
+      background: var(--cal-sel);
+      color: var(--cal-on-sel);
+      font-weight: 700;
     }
-    .cal-day.selected.today { box-shadow: inset 0 0 0 1.5px var(--sidebar-cal-today-ring); }
+    .cal-day.selected:hover { background: var(--cal-sel); color: var(--cal-on-sel); filter: brightness(1.08); }
+    .cal-day.selected.today { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cal-on-sel) 45%, transparent); }
+    .cal-day.selected.holiday { color: var(--cal-on-sel); }
+    .cal-day.selected .cal-holiday-dot { background: var(--cal-on-sel); opacity: 0.75; }
+    .sidebar-calendar.quiet-weekends .cal-day.weekend:not(.selected):not(.holiday):not(.other-month) { color: var(--sidebar-muted); }
     .cal-day.has-data:not(.selected)::after {
       content: '';
       position: absolute;
@@ -2999,8 +3038,47 @@
       font-weight: 700;
       line-height: 13px;
       text-align: center;
-      background: rgba(245, 158, 11, 0.2);
-      color: #fbbf24;
+      background: color-mix(in srgb, var(--carried) 20%, transparent);
+      color: var(--carried-ink);
+    }
+    .cal-today-chip {
+      flex-shrink: 0;
+      padding: 1px 8px;
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--accent);
+      font: inherit;
+      font-size: 0.66rem;
+      font-weight: 600;
+      line-height: 1.5;
+      cursor: pointer;
+    }
+    .cal-today-chip:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+    .cal-legend {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      margin-top: 2px;
+      font-size: 0.6rem;
+      color: var(--sidebar-muted);
+    }
+    .cal-legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .cal-legend-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sidebar-muted); }
+    .cal-legend-dot.holiday { background: var(--accent); }
+    .cal-legend-badge {
+      min-width: 12px;
+      height: 12px;
+      padding: 0 3px;
+      border-radius: 6px;
+      font-size: 0.52rem;
+      font-weight: 700;
+      line-height: 12px;
+      text-align: center;
+      background: color-mix(in srgb, var(--carried) 20%, transparent);
+      color: var(--carried-ink);
     }
 
     .cal-day.holiday { color: var(--accent); font-weight: 600; }
@@ -4486,7 +4564,7 @@
     .legend-swatch.completed { background: var(--accent); }
     .legend-swatch.shelved { background: var(--shelved-label); }
     .legend-swatch.unfinished { background: #94a3b8; }
-    .legend-swatch.carried { background: #f59e0b; }
+    .legend-swatch.carried { background: var(--carried); }
     .legend-swatch.created { background: #22c55e; }
 
     .insight-bars { display: flex; flex-direction: column; gap: 10px; }
@@ -4526,7 +4604,7 @@
     .insight-bar-seg.completed { background: var(--accent); }
     .insight-bar-seg.shelved { background: var(--shelved-label); }
     .insight-bar-seg.unfinished { background: #94a3b8; }
-    .insight-bar-seg.carried { background: #f59e0b; }
+    .insight-bar-seg.carried { background: var(--carried); }
 
     .insight-table-wrap { overflow-x: auto; }
 
@@ -5311,6 +5389,10 @@
       box-sizing: border-box;
     }
     .density-popout.hidden { display: none; }
+    @media (min-width: 769px) {
+      .density-popout.options-floating { position: fixed; top: 64px; right: 28px; }
+      [data-sidebar-position="top"] .density-popout.options-floating { top: calc(var(--sidebar-bar-h, 0px) + 16px); }
+    }
 
     .options-nav {
       display: flex;
@@ -5347,6 +5429,50 @@
       box-shadow: 0 1px 3px var(--shadow);
     }
     .options-pane.hidden { display: none; }
+    #options-pane-appearance, #options-pane-behavior { min-height: min(400px, calc(100vh - 190px)); }
+
+    .options-summary { display: flex; flex-direction: column; margin: -2px -4px 0; }
+    .options-row {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      padding: 9px 8px; border: none; border-radius: 8px; background: transparent;
+      font: inherit; font-size: 0.84rem; color: var(--text); text-align: left; cursor: pointer;
+    }
+    .options-row:hover, .options-row:focus-visible { background: color-mix(in srgb, var(--accent) 8%, var(--panel-bg)); }
+    .options-row-icon {
+      width: 26px; height: 26px; flex-shrink: 0; border-radius: 7px;
+      display: grid; place-items: center; background: var(--panel-bg); border: 1px solid var(--border);
+      font-size: 0.74rem; font-weight: 700; color: var(--text-muted);
+    }
+    .options-row-name { font-weight: 500; white-space: nowrap; display: inline-flex; align-items: center; }
+    .options-row-value {
+      margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 0.75rem; color: var(--text-muted);
+    }
+    .options-row-chev { color: var(--text-muted); flex-shrink: 0; }
+    .options-pane.in-section .options-summary,
+    .options-pane.in-section > .options-reset-btn { display: none; }
+    .options-section[hidden] { display: none; }
+    .options-section { animation: options-section-in 0.18s ease-out; }
+    @keyframes options-section-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .options-section { animation: none; } }
+    .options-section-head {
+      position: relative; display: flex; align-items: center; min-height: 28px;
+      margin: -4px -2px 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .options-back-btn {
+      position: relative; z-index: 1; padding: 2px 4px; border: none; border-radius: 5px; background: none;
+      font: inherit; font-size: 0.8rem; font-weight: 500; color: var(--accent); cursor: pointer;
+    }
+    .options-back-btn:hover { text-decoration: underline; }
+    .options-section-title {
+      position: absolute; left: 0; right: 0; margin: 0; text-align: center; pointer-events: none;
+      font-size: 0.86rem; font-weight: 700; color: var(--text);
+    }
+    .options-new-tag {
+      display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px solid var(--accent); border-radius: 6px;
+      font-size: 0.58rem; font-weight: 700; line-height: 1.5; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent);
+    }
+    .options-new-tag[hidden] { display: none; }
 
     .theme-filter-row {
       display: flex;
@@ -5487,15 +5613,39 @@
       line-height: 1.35;
     }
     .customize-toggle:hover { background: color-mix(in srgb, var(--accent) 8%, var(--panel-bg)); }
+    /* Pill switch drawn on the real checkbox so its handlers, state, and label clicks are unchanged */
     .customize-toggle input {
-      width: 14px;
-      height: 14px;
-      accent-color: var(--accent);
+      order: 2;
+      appearance: none;
+      -webkit-appearance: none;
+      position: relative;
+      width: 32px;
+      height: 18px;
+      margin: 1px 0 0 auto;
+      border-radius: 9px;
+      background: color-mix(in srgb, var(--text-muted) 45%, var(--panel-bg));
       flex-shrink: 0;
       cursor: pointer;
-      margin-top: 2px;
+      transition: background 0.15s;
     }
+    .customize-toggle input::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+      transition: transform 0.15s;
+    }
+    .customize-toggle input:checked { background: var(--accent); }
+    .customize-toggle input:checked::after { transform: translateX(14px); }
+    .customize-toggle input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .customize-toggle-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .customize-select-row-sub label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .customize-select-row-sub label > span:first-child { display: inline-flex; align-items: center; }
     .customize-toggle-sub {
       font-size: 0.7rem;
       color: var(--text-muted);
@@ -7578,10 +7728,22 @@
       }
       .mobile-menu-moved { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
       .mobile-menu-sheet .sidebar-account { margin-top: 0; padding-top: 0; border-top: none; }
-      .mobile-menu-sheet .sidebar-account-top { padding-right: 40px; }
+      /* The sheet already lists Options / What's new, so only the identity row and sign in/out show here */
+      .mobile-menu-sheet .account-menu-btn { pointer-events: none; border: none; padding: 0 40px 0 0; background: none; }
+      .mobile-menu-sheet .account-menu-dots, .mobile-menu-sheet #account-menu-btn-dot { display: none; }
+      .mobile-menu-sheet .account-menu,
+      .mobile-menu-sheet .account-menu.hidden { display: flex; position: static; padding: 0; background: none; border: none; box-shadow: none; color: inherit; }
+      .mobile-menu-sheet .account-menu-app,
+      .mobile-menu-sheet .account-menu .sidebar-version { display: none; }
+      .mobile-menu-sheet .account-menu .sidebar-account-actions { border-top: none; padding: 0; }
+      .mobile-menu-sheet .account-menu .sb-account-btn {
+        justify-content: center; min-height: 40px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+        background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--sidebar-active);
+      }
       .mobile-menu-sheet .sidebar-backup { padding-top: 14px; border-top: 1px solid var(--sidebar-border); }
       .mobile-menu-sheet .sidebar-backup .nav-label { display: none; }
       .mobile-menu-sheet .backup-btn { min-height: 40px; }
+      .mobile-menu-sheet .sidebar-backup .account-menu-ic { margin-right: 5px; }
       .mobile-menu-sheet .backup-dropdown { position: static; margin-top: 6px; box-shadow: none; }
       .mobile-menu-sheet .backup-dropdown-item { min-height: 40px; }
       .mobile-menu-sheet .sidebar-repair-link { padding: 10px 6px; font-size: 0.8rem; }
@@ -7715,46 +7877,55 @@
           <ul id="projects-list" class="projects-list"></ul>
         </div>
 
+      </div>
+
+      <div class="sidebar-account" id="sidebar-account">
+        <button id="account-menu-btn" class="account-menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu" title="Account, backup, and app menu">
+          <span class="sidebar-account-icon" id="account-avatar">?</span>
+          <span class="account-menu-who">
+            <span class="sidebar-account-email" id="account-email" title="Not signed in">Not signed in</span>
+            <span class="account-menu-status"><span id="sb-sync-status" class="sb-sync-status" title="Cloud sync status" data-status="idle">☁️</span><span id="account-sync-text">Not syncing</span></span>
+          </span>
+          <span class="account-menu-dots" aria-hidden="true">⋯</span>
+          <span id="account-menu-btn-dot" class="version-new-dot hidden" aria-hidden="true"></span>
+        </button>
+        <div id="account-menu" class="account-menu hidden" role="menu" aria-label="Account menu">
+          <div class="account-menu-app">
+            <button id="account-menu-options" class="account-menu-item" type="button" role="menuitem"><span class="account-menu-ic" aria-hidden="true">⚙</span>Options</button>
+            <button id="account-menu-help" class="account-menu-item" type="button" role="menuitem"><span class="account-menu-ic" aria-hidden="true">?</span>Help &amp; shortcuts</button>
+            <button id="account-menu-whatsnew" class="account-menu-item" type="button" role="menuitem"><span class="account-menu-ic" aria-hidden="true">✦</span>What's new<span id="account-menu-new-dot" class="version-new-dot hidden"></span></button>
+          </div>
         <div class="sidebar-backup">
           <p class="nav-label" style="margin-bottom:0;">Backup</p>
           <div class="sidebar-backup-btns">
             <div class="backup-btn-wrap">
-              <button id="export-btn" class="backup-btn" type="button" title="Export data as JSON backup">⬇ Export</button>
+              <button id="export-btn" class="backup-btn" type="button" title="Export data as JSON backup"><span class="account-menu-ic" aria-hidden="true">⬇</span>Export</button>
               <div id="export-menu" class="backup-dropdown hidden">
                 <button id="export-desk-opt" class="backup-dropdown-item" type="button">Work Desk</button>
                 <button id="export-all-opt" class="backup-dropdown-item" type="button">All Desks</button>
               </div>
             </div>
             <div class="backup-btn-wrap">
-              <button id="import-btn" class="backup-btn" type="button" title="Import from a JSON backup">⬆ Import…</button>
+              <button id="import-btn" class="backup-btn" type="button" title="Import from a JSON backup"><span class="account-menu-ic" aria-hidden="true">⬆</span>Import…</button>
               <div id="import-menu" class="backup-dropdown hidden">
                 <button id="import-desk-opt" class="backup-dropdown-item" type="button">Work Desk…</button>
                 <button id="import-all-opt" class="backup-dropdown-item" type="button">All Desks…</button>
               </div>
             </div>
           </div>
-          <button id="repair-btn" class="sidebar-repair-link" type="button" title="Scan for and remove duplicate tasks (same ID or recurring template)">🔧 Repair duplicates</button>
+          <button id="repair-btn" class="sidebar-repair-link" type="button" title="Scan for and remove duplicate tasks (same ID or recurring template)"><span class="account-menu-ic" aria-hidden="true">🔧</span>Repair duplicates</button>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
           <input id="import-all-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
-      </div>
-
-      <div class="sidebar-account" id="sidebar-account">
-        <div class="sidebar-account-top">
-          <div class="sidebar-account-identity" id="sidebar-account-identity">
-            <span class="sidebar-account-icon" id="account-avatar">?</span>
-            <span class="sidebar-account-email" id="account-email" title="Not signed in">Not signed in</span>
+          <div class="sidebar-account-actions">
+            <button id="sb-signin-btn" class="sb-account-btn hidden" type="button" role="menuitem" title="Sign in to sync your desk">Sign in to sync</button>
+            <button id="sb-signout-btn" class="sb-account-btn hidden" type="button" role="menuitem" title="Sign out">Sign out</button>
           </div>
-          <span id="sb-sync-status" class="sb-sync-status" title="Cloud sync status" data-status="idle">☁️</span>
+          <div class="sidebar-version">
+            <span>Version</span>
+            <button id="version-btn" class="version-btn" type="button" role="menuitem" title="What's new"></button>
+          </div>
         </div>
-        <div class="sidebar-account-actions">
-          <button id="sb-signin-btn" class="sb-account-btn hidden" type="button" title="Sign in to sync your desk">Sign in to sync</button>
-          <button id="sb-signout-btn" class="sb-account-btn hidden" type="button" title="Sign out">Sign out</button>
-        </div>
-      </div>
-
-      <div class="sidebar-version">
-        <button id="version-btn" class="version-btn" type="button" title="What's new"></button>
       </div>
     </aside>
 
@@ -7823,7 +7994,17 @@
 
                   <!-- Appearance Tab Pane -->
                   <div class="options-pane hidden" id="options-pane-appearance">
-                    <p class="density-popout-label">Card layout</p>
+                    <div class="options-summary">
+                      <button type="button" class="options-row" data-options-open="card-layout"><span class="options-row-icon" aria-hidden="true">≡</span><span class="options-row-name">Card layout</span><span class="options-row-value" data-options-value="card-layout"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="typography"><span class="options-row-icon" aria-hidden="true">Aa</span><span class="options-row-name">Typography</span><span class="options-row-value" data-options-value="typography"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="layout"><span class="options-row-icon" aria-hidden="true">▤</span><span class="options-row-name">Layout</span><span class="options-row-value" data-options-value="layout"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="effects"><span class="options-row-icon" aria-hidden="true">✦</span><span class="options-row-name">Effects</span><span class="options-row-value" data-options-value="effects"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="background"><span class="options-row-icon" aria-hidden="true">▦</span><span class="options-row-name">Background</span><span class="options-row-value" data-options-value="background"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="tags"><span class="options-row-icon" aria-hidden="true">#</span><span class="options-row-name">Tags</span><span class="options-row-value" data-options-value="tags"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                    </div>
+
+                    <section class="options-section" data-options-section="card-layout" aria-label="Card layout" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Card layout</h3></div>
                     <div class="density-option-group">
                       <button class="density-option" data-density="comfortable" type="button">
                         <span class="density-preview">
@@ -7849,8 +8030,10 @@
                       </button>
                     </div>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Typography</p>
+                    </section>
+
+                    <section class="options-section" data-options-section="typography" aria-label="Typography" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Typography</h3></div>
                     <div class="customize-select-row">
                       <label for="font-size-select">Text size</label>
                       <select id="font-size-select" aria-label="Font size">
@@ -7874,8 +8057,10 @@
                       </select>
                     </div>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Layout</p>
+                    </section>
+
+                    <section class="options-section" data-options-section="layout" aria-label="Layout" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Layout</h3></div>
                     <div class="customize-select-row">
                       <label for="sidebar-position-select">Sidebar position</label>
                       <select id="sidebar-position-select" aria-label="Sidebar position">
@@ -7886,8 +8071,10 @@
                       </select>
                     </div>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Effects</p>
+                    </section>
+
+                    <section class="options-section" data-options-section="effects" aria-label="Effects" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Effects</h3></div>
                     <label class="customize-toggle" title="Accent-colored glow around task cards on hover">
                       <input id="card-glow-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -7903,8 +8090,10 @@
                       </span>
                     </label>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Background</p>
+                    </section>
+
+                    <section class="options-section" data-options-section="background" aria-label="Background" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Background</h3></div>
                     <label class="customize-toggle" title="Add a subtle pattern behind the board">
                       <input id="bg-pattern-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -7914,6 +8103,7 @@
                     </label>
                     <div id="bg-pattern-controls" class="bg-pattern-controls" hidden>
                       <div id="bg-pattern-grid" class="bg-pattern-grid" role="radiogroup" aria-label="Background pattern"></div>
+                      <p class="bg-pattern-picked">Selected: <strong id="bg-pattern-name"></strong></p>
                       <div class="bg-pattern-strength-row">
                         <label for="bg-pattern-strength">Strength</label>
                         <input id="bg-pattern-strength" type="range" min="2" max="45" step="1" value="10" />
@@ -7921,26 +8111,37 @@
                       </div>
                     </div>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Tags</p>
+                    </section>
+
+                    <section class="options-section" data-options-section="tags" aria-label="Tags" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Tags</h3></div>
                     <div class="customize-select-row">
                       <label for="tag-color-mode-select">Tag colors</label>
                       <select id="tag-color-mode-select" aria-label="Tag colors">
                         <option value="theme">Single color (accent)</option>
-                        <option value="analogous">Analogous (shades of accent)</option>
-                        <option value="palette">Multi-color (from theme)</option>
+                        <option value="analogous">Shades of accent</option>
+                        <option value="palette">Multi-color</option>
                       </select>
                     </div>
-                    <p class="tag-color-hint">Analogous and Multi-color give each tag its own color that follows the theme when you switch. Pick a color below (or click a tag on a card) to pin a custom color that overrides any mode.</p>
+                    <p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color that follows the theme when you switch. Pick a color below (or click a tag on a card) to pin a custom color that overrides any mode.</p>
                     <div id="tag-color-list" class="tag-color-list"></div>
+                    </section>
 
                     <button type="button" class="options-reset-btn" data-options-reset="appearance" title="Pinned tag colors are kept">Reset Appearance to defaults</button>
                   </div>
 
                   <!-- Behavior Tab Pane -->
-                                    <div class="options-pane hidden" id="options-pane-behavior">
+                  <div class="options-pane hidden" id="options-pane-behavior">
+                    <div class="options-summary">
+                      <button type="button" class="options-row" data-options-open="general"><span class="options-row-icon" aria-hidden="true">⚑</span><span class="options-row-name">General<span class="options-new-tag" data-new-in="1.17.0">New</span></span><span class="options-row-value" data-options-value="general"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="tasks"><span class="options-row-icon" aria-hidden="true">☑</span><span class="options-row-name">Tasks</span><span class="options-row-value" data-options-value="tasks"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="projects"><span class="options-row-icon" aria-hidden="true">▣</span><span class="options-row-name">Projects</span><span class="options-row-value" data-options-value="projects"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="insights"><span class="options-row-icon" aria-hidden="true">↗</span><span class="options-row-name">Insights</span><span class="options-row-value" data-options-value="insights"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="holidays"><span class="options-row-icon" aria-hidden="true">✶</span><span class="options-row-name">Holidays</span><span class="options-row-value" data-options-value="holidays"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                    </div>
 
-                    <p class="density-popout-label">General</p>
+                    <section class="options-section" data-options-section="general" aria-label="General" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">General</h3></div>
                     <div class="customize-select-row">
                       <label for="startup-view-select">On launch</label>
                       <select id="startup-view-select" aria-label="Startup view">
@@ -7955,9 +8156,18 @@
                         <option value="monday">Monday</option>
                       </select>
                     </div>
+                    <div class="customize-select-row customize-select-row-sub">
+                      <label for="quiet-weekends-select"><span>Quieter weekends<span class="options-new-tag" data-new-in="1.17.0">New</span></span><span class="customize-toggle-sub">Gray Sat/Sun numbers on the sidebar calendar</span></label>
+                      <select id="quiet-weekends-select" aria-label="Quieter weekends">
+                        <option value="off">Off</option>
+                        <option value="work">Work desk only</option>
+                        <option value="both">Both desks</option>
+                      </select>
+                    </div>
+                    </section>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Tasks</p>
+                    <section class="options-section" data-options-section="tasks" aria-label="Tasks" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">Tasks</h3></div>
                     <label class="customize-toggle" title="Ask for confirmation before permanently deleting a task">
                       <input id="confirm-delete-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8012,8 +8222,10 @@
                       </span>
                     </label>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Projects</p>
+                    </section>
+
+                    <section class="options-section" data-options-section="projects" aria-label="Projects" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">Projects</h3></div>
                     <label class="customize-toggle" title="Truncate long project notes to a few lines with a show-more toggle">
                       <input id="truncate-notes-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8022,8 +8234,10 @@
                       </span>
                     </label>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Insights</p>
+                    </section>
+
+                    <section class="options-section" data-options-section="insights" aria-label="Insights" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">Insights</h3></div>
                     <label class="customize-toggle" title="Weekends don't break your streak — active weekend days still count">
                       <input id="streak-skip-weekends-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8032,8 +8246,10 @@
                       </span>
                     </label>
 
-                    <hr class="theme-section-divider" style="margin: 10px 0 8px;">
-                    <p class="density-popout-label">Holidays</p>
+                    </section>
+
+                    <section class="options-section" data-options-section="holidays" aria-label="Holidays" hidden>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">Holidays</h3></div>
                     <label class="customize-toggle" title="Skip recurring tasks on US federal holidays">
                       <input id="us-federal-holidays-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8050,6 +8266,7 @@
                         <button id="custom-holiday-add-btn" type="button" class="custom-holiday-add-btn">Add</button>
                       </div>
                     </div>
+                    </section>
 
                     <button type="button" class="options-reset-btn" data-options-reset="behavior" title="Custom holidays are kept">Reset Behavior to defaults</button>
                   </div>
@@ -8219,7 +8436,7 @@
           <li><strong>Or use the button</strong> — click <em>tag</em> in the action bar to add one without touching the card's text</li>
           <li><strong>Case-insensitive</strong> — <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
           <li><strong>Chips</strong> — shown in the top-right corner of the card; click the <strong>×</strong> on a chip to remove that tag</li>
-          <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Single color (accent)</strong> (default) keeps every tag in the accent color; <strong>Analogous (shades of accent)</strong> gives each tag a lighter, darker, or neighboring shade of the accent (e.g. rose, dark rose, light rose); <strong>Multi-color (from theme)</strong> gives each tag a distinct hue at the theme's brightness. Analogous and Multi-color follow the theme when you switch, and each tag keeps the same slot on every device</li>
+          <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Single color (accent)</strong> (default) keeps every tag in the accent color; <strong>Shades of accent</strong> gives each tag a lighter, darker, or neighboring shade of the accent (e.g. rose, dark rose, light rose); <strong>Multi-color</strong> spreads tags around the color wheel at the accent's brightness. Both follow the theme when you switch, and each tag keeps the same color on every device. There are 8 colors per mode, so with more tags some share a color — pin one to change it</li>
           <li><strong>Custom tag color</strong> — click any tag chip on a card to pick a preset swatch or a custom color, or set colors from the tag list in Options → Appearance; a custom color overrides either mode, and <em>Reset to auto</em> / <em>auto</em> removes it</li>
           <li><strong>Find by tag</strong> — search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
         </ul>
@@ -8259,19 +8476,22 @@
 
         <h3>Options menu</h3>
         <ul>
-          <li>Open with the customize button (⊟) near the date; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
+          <li>Open with the customize button (⚙) near the date, or <strong>Options</strong> in the account menu at the bottom of the sidebar; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
+          <li><strong>Summary list</strong> — Appearance and Behavior open on a short list, each row showing what it's set to. Click a row to open that section; <strong>‹ Appearance</strong> / <strong>‹ Behavior</strong> or <strong>Esc</strong> goes back, and Esc again closes Options. On/off settings are switches, and a <em>New</em> tag marks settings added in this release</li>
           <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
-          <li><strong>Appearance</strong> — Comfortable/Compact card layout, text size (Small/Default/Large), font family (8 options), sidebar position (left, right, top, or bottom), card glow on hover, gradient header effect, patterned background, and tag colors. The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
-          <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, week start day (Sunday/Monday), Startup view, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
-          <li><strong>Patterned background</strong> — Options → Appearance → Background. Turn on <em>Patterned background</em>, pick one of 12 patterns (Graph paper, Isometric, Herringbone, Greek key, and more), and drag <em>Strength</em> from 2% (barely there) to 45%. The pattern follows your theme's colors and only shows behind the board; cards stay solid. Arrow keys move between patterns. Turning it off remembers your choice</li>
-          <li><strong>Sidebar at the top or bottom</strong> — Options → Appearance → Sidebar position. The sidebar becomes a bar across the screen: tabs, search, Today's Progress, Export / Import, and your account in one row (it wraps to two on narrower windows). The calendar is replaced by the week strip above the board, Repair duplicates becomes the 🔧 button, and the collapse button is hidden. With the bar at the bottom, search results and toasts open above it. Phones keep their usual layout</li>
+          <li><strong>Appearance</strong> — Card layout (Comfortable/Compact), Typography (text size Small/Default/Large, 8 font families), Layout (sidebar left, right, top, or bottom), Effects (card glow on hover, gradient header), Background (patterned background), and Tags (tag colors). The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
+          <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Startup view, week start day (Sunday/Monday), Quieter weekends, Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
+          <li><strong>Patterned background</strong> — Options → Appearance → Background. Turn on <em>Patterned background</em>, pick one of 12 patterns (Graph paper, Isometric, Herringbone, Greek key, and more; the name of the one you picked shows under the grid), and drag <em>Strength</em> from 2% (barely there) to 45%. The pattern follows your theme's colors and only shows behind the board; cards stay solid. Arrow keys move between patterns. Turning it off remembers your choice</li>
+          <li><strong>Sidebar at the top or bottom</strong> — Options → Appearance → Sidebar position. The sidebar becomes a bar across the screen: tabs, search, Today's Progress, and the account button in one row (it wraps to two on narrower windows). The calendar is replaced by the week strip above the board, the account menu opens downward from a top bar, and the collapse button is hidden. With the bar at the bottom, search results and toasts open above it. Phones keep their usual layout</li>
           <li><strong>Custom holidays</strong> — upcoming holidays are listed with their weekday; past ones are tucked away behind <strong>Show past</strong></li>
           <li><strong>Reset to defaults</strong> — the link at the bottom of Appearance or Behavior puts that tab's settings back to how a new install starts. Your theme, pinned tag colors, and custom holidays are kept</li>
         </ul>
 
         <h3>Navigation</h3>
         <ul>
-          <li><strong>Calendar</strong> — pick any day; dots mean data exists; red badges on past days show open tasks left behind</li>
+          <li><strong>Calendar</strong> — pick any day (it fills with your theme color); dots mean data exists; yellow number badges on past days count open tasks left behind (rose on amber-accent themes, the same color as Insights <em>carried over</em>). The legend underneath spells this out</li>
+          <li><strong>Today chip</strong> — after browsing the calendar to another month, click <strong>Today</strong> beside the month name to jump back</li>
+          <li><strong>Quieter weekends</strong> — Options → Behavior → General grays the Saturday and Sunday numbers on the calendar: Off, Work desk only, or Both desks</li>
           <li><strong>Arrow buttons</strong> — step day by day at the top of the desk</li>
           <li><strong>Today</strong> — click <strong>Back to today</strong> beside the date to return instantly</li>
           <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board; use <strong>&lt;</strong> / <strong>&gt;</strong> to jump week by week (start day follows your Options → Behavior setting)</li>
@@ -8319,10 +8539,10 @@
         <h3>Cloud sync &amp; data</h3>
         <ul>
           <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
-          <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in</strong> at the bottom of the sidebar when you’re ready to create an account or sync</li>
-          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, confetti, confirm before delete, weekends don't break streaks, font size, font family, sidebar position, card glow, gradient header, tag colors, and holiday settings all follow your account across devices</li>
-          <li>The sync status icon (☁️ / 🔄 / ✓ / !) appears at the bottom of the sidebar next to your account email</li>
-          <li>Use <strong>Sign out</strong> at the bottom of the sidebar to switch accounts</li>
+          <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in to sync</strong> in the account menu at the bottom of the sidebar when you’re ready to create an account or sync</li>
+          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, quieter weekends, confetti, confirm before delete, weekends don't break streaks, font size, font family, sidebar position, card glow, gradient header, tag colors, and holiday settings all follow your account across devices</li>
+          <li><strong>Account menu</strong> — the button at the bottom of the sidebar shows your email and sync status (☁️ / 🔄 / ✓ / ! with <em>Synced</em>, <em>Syncing…</em>, or <em>Sync error</em>). Click it for Options, Help, What's new, Export, Import, Repair duplicates, Sign in / Sign out, and the version</li>
+          <li>Use <strong>Sign out</strong> in the account menu to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
           <li>Opening on a new device: sign in and your history loads automatically (devices merge rather than overwrite)</li>
           <li><strong>Backup / restore</strong> — <em>Export/Import Desk</em> saves or restores the current tab (Work, Personal, or Projects) individually; <em>Export/Import All</em> bundles every desk into a single file for a complete backup; importing a file from a different desk shows a confirmation warning before proceeding</li>
@@ -8435,6 +8655,8 @@
     const INSIGHTS_ANCHOR_KEY = 'work-desk-insights-anchor';
     const CONFETTI_KEY = 'work-desk-confetti';
     const WEEK_START_KEY = 'work-desk-week-start';
+    const QUIET_WEEKENDS_KEY = 'work-desk-quiet-weekends';
+    const QUIET_WEEKENDS_VALUES = ['off', 'work', 'both'];
     const STARTUP_VIEW_KEY = 'work-desk-startup-view';
     const STRIKE_COMPLETED_KEY = 'work-desk-strike-completed';
     const TRUNCATE_NOTES_KEY = 'work-desk-truncate-notes';
@@ -8459,12 +8681,40 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.16.1';
+    const APP_VERSION = '1.17.0';
     const CHANGELOG = [
+      {
+        version: '1.17.0',
+        date: 'Oct 14, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Simpler Options: Appearance and Behavior now open as a short list (Card layout, Typography, Layout, Effects, Background, Tags; General, Tasks, Projects, Insights, Holidays), each showing what it\'s set to. Click a row to open that page, and use ‹ Back (or Esc) to return. The panel no longer changes height as you move around, and settings added in this release carry a New tag',
+            'Account menu: the bottom of the sidebar is now one button with your name and sync status. Click it for Options, Help & shortcuts, What\'s new, Export, Import, Repair duplicates, Sign in / out, and the version. It also works with the sidebar at the top or bottom; on phones the menu sheet is unchanged',
+            'Calendar Today chip: when you browse to another month, a Today chip appears next to the month name and jumps straight back',
+            'Calendar legend under the sidebar calendar: Has items · Left open · Holiday',
+            'Quieter weekends (Options → Behavior → General): grays the Saturday and Sunday numbers on the sidebar calendar. Choose Off, Work desk only, or Both desks. Default Off; synced',
+          ] },
+          { label: 'Improved', items: [
+            'On/off settings in Options are now switches instead of checkboxes',
+            'Background patterns show three across as larger swatches, with the selected pattern\'s name underneath',
+            'The selected calendar day is a solid fill in your theme color, with text that stays readable on light and dark themes',
+            '"Left open" calendar numbers and Insights "carried over" now share one color: amber, or rose on the amber-accent themes (Clay, Flint, Denim, Warm, Noir, Mocha) so they don\'t blend into the accent',
+          ] },
+        ],
+      },
+      {
+        version: '1.16.2',
+        date: 'Oct 14, 2026',
+        sections: [
+          { label: 'Improved', items: [
+            'Simpler tag color names: Options → Appearance → Tag colors now reads Single color (accent), Shades of accent, and Multi-color. All three already follow your theme, so "(from theme)" and the design term "Analogous" are gone. Your saved choice carries over',
+          ]},
+        ],
+      },
       {
         version: '1.16.1',
         date: 'Oct 13, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Patterned backgrounds: Options → Appearance → Background adds a subtle texture behind the board. Pick from 12 patterns (Graph paper, Plus grid, Isometric, Diagonal, Pinstripe, Crosshatch, Hexagon, Herringbone, Basketweave, Chevron, Greek key, Dot grid) and set the strength from 2% to 45%. The pattern takes its color from your theme, cards stay solid, and it syncs with your other settings',
@@ -9207,6 +9457,7 @@
       autoCarryForward: localStorage.getItem(AUTO_CARRY_FORWARD_KEY) === 'true',
       confetti: localStorage.getItem(CONFETTI_KEY) !== 'false',
       weekStart: localStorage.getItem(WEEK_START_KEY) || 'sunday',
+      quietWeekends: normalizeQuietWeekends(localStorage.getItem(QUIET_WEEKENDS_KEY)),
       startupView: localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed',
       strikeCompleted: localStorage.getItem(STRIKE_COMPLETED_KEY) !== 'false',
       truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
@@ -9696,6 +9947,7 @@
         autoCarryForward: localStorage.getItem(AUTO_CARRY_FORWARD_KEY) === 'true',
         confetti: localStorage.getItem(CONFETTI_KEY) !== 'false',
         weekStart: localStorage.getItem(WEEK_START_KEY) || 'sunday',
+        quietWeekends: normalizeQuietWeekends(localStorage.getItem(QUIET_WEEKENDS_KEY)),
         startupView: localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed',
         strikeCompleted: localStorage.getItem(STRIKE_COMPLETED_KEY) !== 'false',
         truncateNotes: localStorage.getItem(TRUNCATE_NOTES_KEY) !== 'false',
@@ -9883,6 +10135,15 @@
           renderWeekStrip();
           changed = true;
         }
+      }
+
+      if (QUIET_WEEKENDS_VALUES.includes(prefs.quietWeekends) && state.quietWeekends !== prefs.quietWeekends) {
+        state.quietWeekends = prefs.quietWeekends;
+        localStorage.setItem(QUIET_WEEKENDS_KEY, state.quietWeekends);
+        const el = document.getElementById('quiet-weekends-select');
+        if (el) el.value = state.quietWeekends;
+        renderCalendar();
+        changed = true;
       }
 
       if (prefs.startupView === 'last_viewed' || prefs.startupView === 'today') {
@@ -11423,6 +11684,7 @@
     const BG_PATTERN_STRENGTH_MIN = 2;
     const BG_PATTERN_STRENGTH_MAX = 45;
     const BG_PATTERN_SWATCH_OPACITY = 0.35;
+    const BG_PATTERN_COLUMNS = 3;
     let bgPatternObserver = null;
 
     function normalizeBgPattern(id) {
@@ -11467,6 +11729,8 @@
       if (slider) slider.value = String(bg.strength);
       const val = document.getElementById('bg-pattern-strength-val');
       if (val) val.textContent = `${bg.strength}%`;
+      const nameEl = document.getElementById('bg-pattern-name');
+      if (nameEl) nameEl.textContent = BG_PATTERNS.find(p => p.id === bg.pattern)?.name || '';
       document.querySelectorAll('#bg-pattern-grid .bg-pattern-tile').forEach(tile => {
         const active = tile.dataset.bgPattern === bg.pattern;
         tile.classList.toggle('active', active);
@@ -11495,14 +11759,12 @@
           tile.className = 'bg-pattern-tile';
           tile.dataset.bgPattern = p.id;
           tile.setAttribute('role', 'radio');
+          tile.setAttribute('aria-label', p.name);
           tile.title = p.name;
           const swatch = document.createElement('span');
           swatch.className = 'bg-pattern-swatch';
           swatch.setAttribute('aria-hidden', 'true');
-          const name = document.createElement('span');
-          name.className = 'bg-pattern-tile-name';
-          name.textContent = p.name;
-          tile.append(swatch, name);
+          tile.append(swatch);
           grid.appendChild(tile);
         }
         grid.addEventListener('click', (e) => {
@@ -11510,7 +11772,7 @@
           if (tile) applyBgPattern({ pattern: tile.dataset.bgPattern });
         });
         grid.addEventListener('keydown', (e) => {
-          const step = { ArrowRight: 1, ArrowDown: 4, ArrowLeft: -1, ArrowUp: -4 }[e.key];
+          const step = { ArrowRight: 1, ArrowDown: BG_PATTERN_COLUMNS, ArrowLeft: -1, ArrowUp: -BG_PATTERN_COLUMNS }[e.key];
           if (!step) return;
           e.preventDefault();
           const i = BG_PATTERNS.findIndex(p => p.id === readBgPatternState().pattern);
@@ -11539,14 +11801,111 @@
       renderTagColorList();
       const btn    = document.getElementById('density-toggle');
       const popout = document.getElementById('density-popout');
+      resetOptionsNavigation();
+      renderOptionsSummaries();
       popout.classList.remove('hidden');
       btn.setAttribute('aria-expanded', 'true');
+    }
+
+    const OPTIONS_FONT_LABELS = {
+      system: 'System font', inter: 'Inter', roboto: 'Roboto', 'source-sans': 'Source Sans 3', 'open-sans': 'Open Sans',
+      lato: 'Lato', nunito: 'Nunito', jetbrains: 'JetBrains Mono', merriweather: 'Merriweather',
+    };
+    const OPTIONS_TAG_MODE_LABELS = { theme: 'Single color', analogous: 'Shades of accent', palette: 'Multi-color' };
+    const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+
+    // Pure: the one-line value shown on each Options summary row
+    function optionsSummaryText(id, p) {
+      switch (id) {
+        case 'card-layout': return p.density === 'compact' ? 'Compact' : 'Comfortable';
+        case 'typography': return `${capitalize(p.fontSize || 'default')} · ${OPTIONS_FONT_LABELS[p.fontFamily] || OPTIONS_FONT_LABELS.system}`;
+        case 'layout': return `Sidebar ${p.sidebarPosition || 'left'}`;
+        case 'effects': return [p.cardGlow && 'Glow', p.gradientHeader && 'Gradient'].filter(Boolean).join(' · ') || 'Off';
+        case 'background': return p.bgOn ? `${p.bgPatternName} · ${p.bgStrength}%` : 'Off';
+        case 'tags': return (OPTIONS_TAG_MODE_LABELS[p.tagMode] || OPTIONS_TAG_MODE_LABELS.theme) + (p.pinnedTags ? ` · ${p.pinnedTags} pinned` : '');
+        case 'general': return `${p.startupView === 'today' ? 'Open Today' : 'Remember last'} · ${p.weekStart === 'monday' ? 'Monday' : 'Sunday'}`;
+        case 'tasks': return `${p.tasksOn} of ${p.tasksTotal} on`;
+        case 'projects': return p.truncateNotes ? 'Truncate long notes' : 'Full notes';
+        case 'insights': return p.streakSkipWeekends ? "Weekends don't break streaks" : 'Strict streaks';
+        case 'holidays': return (p.federalHolidays ? 'US federal' : 'No federal') + (p.customHolidays ? ` · ${p.customHolidays} custom` : '');
+        default: return '';
+      }
+    }
+
+    const OPTIONS_TASK_TOGGLES = ['confirm-delete-toggle', 'auto-carry-toggle-popout', 'auto-collapse-completed-toggle', 'keep-comments-open-toggle', 'confetti-toggle', 'strike-completed-toggle'];
+    function readOptionsSummaryPrefs() {
+      const on = (id) => !!document.getElementById(id)?.checked;
+      const val = (id, fallback) => document.getElementById(id)?.value || fallback;
+      const bg = readBgPatternState();
+      return {
+        density: localStorage.getItem(DENSITY_KEY) || 'comfortable',
+        fontSize: val('font-size-select', 'default'),
+        fontFamily: val('font-family-select', 'system'),
+        sidebarPosition: val('sidebar-position-select', 'left'),
+        cardGlow: on('card-glow-toggle'),
+        gradientHeader: on('gradient-header-toggle'),
+        bgOn: bg.on,
+        bgPatternName: BG_PATTERNS.find(p => p.id === bg.pattern)?.name || '',
+        bgStrength: bg.strength,
+        tagMode: state.tagColorMode,
+        pinnedTags: Object.keys(state.tagColors || {}).length,
+        startupView: val('startup-view-select', 'last_viewed'),
+        weekStart: val('week-start-select', 'sunday'),
+        tasksOn: OPTIONS_TASK_TOGGLES.filter(on).length,
+        tasksTotal: OPTIONS_TASK_TOGGLES.length,
+        truncateNotes: on('truncate-notes-toggle'),
+        streakSkipWeekends: on('streak-skip-weekends-toggle'),
+        federalHolidays: on('us-federal-holidays-toggle'),
+        customHolidays: (state.customHolidays || []).length,
+      };
+    }
+
+    function renderOptionsSummaries() {
+      const prefs = readOptionsSummaryPrefs();
+      document.querySelectorAll('#density-popout [data-options-value]').forEach(el => {
+        el.textContent = optionsSummaryText(el.dataset.optionsValue, prefs);
+      });
+    }
+
+    function openOptionsSection(pane, id) {
+      if (!pane) return;
+      const section = pane.querySelector(`[data-options-section="${id}"]`);
+      if (!section) return;
+      pane.querySelectorAll('.options-section').forEach(s => { s.hidden = s !== section; });
+      pane.classList.add('in-section');
+      if (id === 'tags') renderTagColorList();
+      document.getElementById('density-popout').scrollTop = 0;
+      section.querySelector('.options-back-btn')?.focus({ preventScroll: true });
+    }
+
+    function closeOptionsSection(pane, { focus = true } = {}) {
+      if (!pane) return;
+      const open = pane.querySelector('.options-section:not([hidden])');
+      pane.querySelectorAll('.options-section').forEach(s => { s.hidden = true; });
+      pane.classList.remove('in-section');
+      renderOptionsSummaries();
+      if (focus && open) pane.querySelector(`[data-options-open="${open.dataset.optionsSection}"]`)?.focus({ preventScroll: true });
+    }
+
+    function resetOptionsNavigation() {
+      document.querySelectorAll('#density-popout .options-pane.in-section').forEach(pane => closeOptionsSection(pane, { focus: false }));
+    }
+
+    // "New" tags expire on their own once the app moves to the next minor version
+    function isNewInCurrentRelease(version, appVersion = APP_VERSION) {
+      const minor = (v) => String(v || '').split('.').slice(0, 2).join('.');
+      return !!version && minor(version) === minor(appVersion);
+    }
+
+    function syncNewTags() {
+      document.querySelectorAll('[data-new-in]').forEach(el => { el.hidden = !isNewInCurrentRelease(el.dataset.newIn); });
     }
 
     function closeDensityPopout() {
       const btn    = document.getElementById('density-toggle');
       const popout = document.getElementById('density-popout');
       popout.classList.add('hidden');
+      popout.classList.remove('options-floating');
       btn.setAttribute('aria-expanded', 'false');
       // Always return the popout to its original home (desk-view density-wrap)
       const mainWrap = btn.closest('.density-wrap');
@@ -11603,6 +11962,7 @@
         selects: {
           'startup-view-select': 'last_viewed',
           'week-start-select': 'sunday',
+          'quiet-weekends-select': 'off',
           'auto-collapse-completed-at': '5',
         },
       },
@@ -11708,6 +12068,7 @@
           popout.querySelectorAll('.options-nav-btn').forEach(b => b.classList.remove('active'));
           tabBtn.classList.add('active');
           const targetTab = tabBtn.dataset.optionsTab;
+          resetOptionsNavigation();
           ['themes', 'appearance', 'behavior'].forEach(p => {
             const el = document.getElementById('options-pane-' + p);
             if (el) el.classList.toggle('hidden', p !== targetTab);
@@ -11747,9 +12108,19 @@
       popout.querySelectorAll('.density-option').forEach(opt => {
         opt.addEventListener('click', () => {
           applyDensity(opt.dataset.density);
-          closeDensityPopout();
+          renderOptionsSummaries();
         });
       });
+
+      popout.addEventListener('click', (e) => {
+        const row = e.target.closest('[data-options-open]');
+        if (row) { openOptionsSection(row.closest('.options-pane'), row.dataset.optionsOpen); return; }
+        const back = e.target.closest('[data-options-back]');
+        if (back) closeOptionsSection(back.closest('.options-pane'));
+      });
+      popout.addEventListener('change', renderOptionsSummaries);
+      popout.addEventListener('input', renderOptionsSummaries);
+      syncNewTags();
 
       const strikeCompletedToggle = document.getElementById('strike-completed-toggle');
       if (strikeCompletedToggle) {
@@ -11831,6 +12202,17 @@
           renderCalendar();
           renderWeekStrip();
           if (state.moveCalendarView && !els.moveModal.classList.contains('hidden')) renderMoveCalendar();
+        });
+      }
+
+      const quietWeekendsSelect = document.getElementById('quiet-weekends-select');
+      if (quietWeekendsSelect) {
+        quietWeekendsSelect.value = state.quietWeekends;
+        quietWeekendsSelect.addEventListener('change', () => {
+          state.quietWeekends = normalizeQuietWeekends(quietWeekendsSelect.value);
+          localStorage.setItem(QUIET_WEEKENDS_KEY, state.quietWeekends);
+          schedulePrefsPush();
+          renderCalendar();
         });
       }
 
@@ -11934,7 +12316,10 @@
       });
 
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !popout.classList.contains('hidden')) closeDensityPopout();
+        if (e.key !== 'Escape' || popout.classList.contains('hidden')) return;
+        const pane = popout.querySelector('.options-pane.in-section:not(.hidden)');
+        if (pane) closeOptionsSection(pane);
+        else closeDensityPopout();
       });
     }
 
@@ -13491,6 +13876,19 @@
       el.textContent = icons[status] ?? '☁️';
       el.title = tips[status] ?? '';
       el.dataset.status = status;
+      syncAccountStatusText();
+    }
+
+    let accountMode = 'guest';
+    function accountStatusText(mode, status) {
+      if (mode === 'offline') return 'This browser only';
+      if (mode !== 'signed-in') return 'Not syncing';
+      return { syncing: 'Syncing…', ok: 'Synced', error: 'Sync error' }[status] || 'Signed in';
+    }
+    function syncAccountStatusText() {
+      const textEl = document.getElementById('account-sync-text');
+      const statusEl = document.getElementById('sb-sync-status');
+      if (textEl) textEl.textContent = accountStatusText(accountMode, statusEl?.dataset.status);
     }
 
     async function sbInit() {
@@ -13523,6 +13921,8 @@
       const signInBtn = document.getElementById('sb-signin-btn');
       const signOutBtn = document.getElementById('sb-signout-btn');
       if (!avatar || !emailEl || !signInBtn || !signOutBtn) return;
+      accountMode = mode;
+      syncAccountStatusText();
 
       if (mode === 'signed-in') {
         if (email) {
@@ -15935,8 +16335,20 @@
       nextBtn.textContent = '›';
       nextBtn.addEventListener('click', () => shiftCalendarMonth(1));
 
-      header.append(prevBtn, title, nextBtn);
+      header.append(prevBtn, title);
+      if (calendarNeedsTodayChip(view, today)) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.id = 'cal-today-chip';
+        chip.className = 'cal-today-chip';
+        chip.textContent = 'Today';
+        chip.title = 'Back to this month and today';
+        chip.addEventListener('click', () => selectCalendarDate(today));
+        header.appendChild(chip);
+      }
+      header.appendChild(nextBtn);
       host.appendChild(header);
+      host.classList.toggle('quiet-weekends', quietWeekendsActive(state.quietWeekends, state.listContext));
 
       const isMondayStart = state.weekStart === 'monday';
       const weekdaysList = isMondayStart
@@ -15996,6 +16408,8 @@
         btn.textContent = String(dayNum);
 
         if (isOtherMonth) btn.classList.add('other-month');
+        const dow = new Date(cellYear, cellMonth, dayNum).getDay();
+        if (dow === 0 || dow === 6) btn.classList.add('weekend');
         if (dateKey === today) btn.classList.add('today');
         if (dateKey === state.selectedDate) btn.classList.add('selected');
         if (day && day.items.length > 0) btn.classList.add('has-data');
@@ -16027,6 +16441,27 @@
       }
 
       host.appendChild(grid);
+
+      const legend = document.createElement('div');
+      legend.className = 'cal-legend';
+      legend.setAttribute('aria-hidden', 'true');
+      legend.innerHTML = '<span class="cal-legend-item"><span class="cal-legend-dot"></span>Has items</span>'
+        + '<span class="cal-legend-item" title="Open tasks left on a past day"><span class="cal-legend-badge">2</span>Left open</span>'
+        + '<span class="cal-legend-item"><span class="cal-legend-dot holiday"></span>Holiday</span>';
+      host.appendChild(legend);
+    }
+
+    function calendarNeedsTodayChip(view, todayDateKey) {
+      if (!view || !todayDateKey) return false;
+      const [y, m] = todayDateKey.split('-').map(Number);
+      return view.year !== y || view.month !== m - 1;
+    }
+
+    function normalizeQuietWeekends(value) {
+      return value === 'work' || value === 'both' ? value : 'off';
+    }
+    function quietWeekendsActive(mode, listContext) {
+      return mode === 'both' || (mode === 'work' && listContext === 'work');
     }
 
     function formatSidebarLabel(dateKey) {
@@ -20613,14 +21048,72 @@
     function closeChangelog() {
       changelogModal.classList.add('hidden');
       whatsNewLink.classList.add('hidden');
+      syncAccountNewDots();
     }
+
+    /* ── Account menu ── */
+    const accountMenuBtn = document.getElementById('account-menu-btn');
+    const accountMenu = document.getElementById('account-menu');
+
+    function syncAccountNewDots() {
+      const unseen = !whatsNewLink.classList.contains('hidden');
+      document.getElementById('account-menu-new-dot').classList.toggle('hidden', !unseen);
+      document.getElementById('account-menu-btn-dot').classList.toggle('hidden', !unseen);
+    }
+
+    function openAccountMenu() {
+      syncAccountNewDots();
+      accountMenu.classList.remove('hidden');
+      accountMenuBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeAccountMenu() {
+      if (accountMenu.classList.contains('hidden')) return;
+      closeBackupMenus();
+      accountMenu.classList.add('hidden');
+      accountMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    // The gear lives in the Desk header; elsewhere Options floats in the corner instead
+    function openOptionsFromMenu() {
+      const popout = document.getElementById('density-popout');
+      const gear = document.getElementById('density-toggle');
+      openDensityPopout();
+      if (!gear.offsetParent) {
+        popout.classList.add('options-floating');
+        document.body.appendChild(popout);
+      }
+    }
+
+    accountMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      accountMenu.classList.contains('hidden') ? openAccountMenu() : closeAccountMenu();
+    });
+    document.getElementById('account-menu-options').addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAccountMenu();
+      openOptionsFromMenu();
+    });
+    document.getElementById('account-menu-help').addEventListener('click', () => { closeAccountMenu(); openHelpModal(); });
+    document.getElementById('account-menu-whatsnew').addEventListener('click', () => { closeAccountMenu(); openChangelog(); });
+    ['export-desk-opt', 'export-all-opt', 'import-desk-opt', 'import-all-opt', 'repair-btn', 'sb-signin-btn', 'sb-signout-btn']
+      .forEach(id => document.getElementById(id).addEventListener('click', closeAccountMenu));
+    document.addEventListener('click', (e) => {
+      if (!accountMenu.classList.contains('hidden') && !e.target.closest?.('#sidebar-account')) closeAccountMenu();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || accountMenu.classList.contains('hidden')) return;
+      closeAccountMenu();
+      accountMenuBtn.focus({ preventScroll: true });
+    });
 
     versionBtn.textContent = `v${APP_VERSION}`;
     if (localStorage.getItem(LAST_SEEN_VERSION_KEY) !== APP_VERSION) {
       whatsNewLink.classList.remove('hidden');
     }
+    syncAccountNewDots();
 
-    versionBtn.addEventListener('click', openChangelog);
+    versionBtn.addEventListener('click', () => { closeAccountMenu(); openChangelog(); });
     whatsNewLink.addEventListener('click', openChangelog);
     changelogClose.addEventListener('click', closeChangelog);
     changelogDismiss.addEventListener('click', closeChangelog);
