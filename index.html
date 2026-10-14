@@ -3055,6 +3055,8 @@
       cursor: pointer;
     }
     .cal-today-chip:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+    [data-cal-legend="hide"] .cal-legend,
+    [data-today-progress="hide"] #sidebar-today-glance { display: none !important; }
     .cal-legend {
       display: flex;
       justify-content: center;
@@ -5429,8 +5431,6 @@
       box-shadow: 0 1px 3px var(--shadow);
     }
     .options-pane.hidden { display: none; }
-    #options-pane-appearance, #options-pane-behavior { min-height: min(400px, calc(100vh - 190px)); }
-
     .options-summary { display: flex; flex-direction: column; margin: -2px -4px 0; }
     .options-row {
       display: flex; align-items: center; gap: 10px; width: 100%;
@@ -5445,7 +5445,8 @@
     }
     .options-row-name { font-weight: 500; white-space: nowrap; display: inline-flex; align-items: center; }
     .options-row-value {
-      margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      margin-left: auto; min-width: 0; overflow: hidden; text-align: right; line-height: 1.3;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow-wrap: anywhere;
       font-size: 0.75rem; color: var(--text-muted);
     }
     .options-row-chev { color: var(--text-muted); flex-shrink: 0; }
@@ -5469,7 +5470,7 @@
       font-size: 0.86rem; font-weight: 700; color: var(--text);
     }
     .options-new-tag {
-      display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px solid var(--accent); border-radius: 6px;
+      display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px solid var(--accent); border-radius: 6px; white-space: nowrap;
       font-size: 0.58rem; font-weight: 700; line-height: 1.5; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent);
     }
     .options-new-tag[hidden] { display: none; }
@@ -5644,8 +5645,9 @@
     .customize-toggle input:checked::after { transform: translateX(14px); }
     .customize-toggle input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .customize-toggle-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .customize-select-row-sub label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .customize-select-row-sub label > span:first-child { display: inline-flex; align-items: center; }
+    .customize-select-row-sub label { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+    .customize-select-row-sub label > span:first-child { display: block; }
+    .customize-select-row-sub label > span:first-child .options-new-tag { vertical-align: 1px; }
     .customize-toggle-sub {
       font-size: 0.7rem;
       color: var(--text-muted);
@@ -5854,8 +5856,6 @@
     #desk-view[data-density="compact"] .board-column .item-card:hover .item-actions .shelf-btn,
     #desk-view[data-density="compact"] .board-column .item-card:hover .item-actions .convert-btn,
     #desk-view[data-density="compact"] .board-column .item-card:hover .item-actions .comments-toggle { opacity: 1; }
-    #desk-view[data-density="compact"] .board-column .note-icon { font-size: 0.85rem; grid-area: unset; }
-
     .nav-arrow {
       width: 36px; height: 36px; border-radius: 8px;
       border: 1px solid var(--border); background: var(--surface);
@@ -6588,6 +6588,12 @@
         "content"
         "actions";
     }
+    .board-column .item.note { grid-template-areas: "content"; }
+    .board-column .item-card.menu-open .item.note:not(:has(.edit-wrap)) {
+      grid-template-areas:
+        "content"
+        "actions";
+    }
     .board-column .item-card.menu-open .item > .item-actions { display: flex; }
 
     /* Non-board items (notes section etc.): actions float as a popout above the trigger */
@@ -6744,7 +6750,6 @@
     .item.completed .checkbox { background: var(--accent); border-color: var(--accent); }
     .check-mark { color: white; font-size: 0.75rem; font-weight: 700; }
 
-    .note-icon { font-size: 1rem; min-width: 22px; text-align: center; }
     .item-content {
       display: block;
       flex: 1;
@@ -6947,15 +6952,20 @@
     }
     .item.note.has-tags {
       display: grid;
-      grid-template-columns: 22px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       grid-template-areas:
-        "icon tags"
-        "icon content";
+        "tags"
+        "content";
       align-items: start;
       row-gap: 6px;
     }
-    .item.note.has-tags .note-icon { grid-area: icon; align-self: center; }
     .item.note.has-tags .item-content { grid-area: content; }
+    .board-column .item-card.menu-open .item.note.has-tags:not(:has(.edit-wrap)) {
+      grid-template-areas:
+        "tags"
+        "content"
+        "actions";
+    }
     .item-section .item.note.has-tags > .item-actions { grid-area: auto; } /* abspos popout: anchor to the whole row */
     /* Compact board rows are a single flex line, so chips take their own line above it */
     #desk-view[data-density="compact"] .board-column .item.has-tags:not(:has(.edit-wrap)) { flex-wrap: wrap; }
@@ -6963,6 +6973,111 @@
       order: -1;
       flex: 0 0 100%;
       margin: 0 0 1px;
+    }
+
+    /* ── Complete edge: the task card's left edge is its complete button ── */
+    .card-main { position: relative; }
+    .card-action-end { margin-left: auto; display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; max-width: 100%; }
+    .card-action-end > .tag-chip-row { margin: 0; flex-wrap: wrap; justify-content: flex-end; }
+    .complete-edge { display: none; }
+    html[data-complete-edge="on"] .task-card .complete-edge {
+      display: grid;
+      position: absolute; left: 0; top: 0; bottom: 0; z-index: 3;
+      width: 18px; place-items: center; padding: 0; border: 0;
+      border-radius: 7px 0 0 7px;
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      color: var(--surface); cursor: pointer;
+      transition: background .15s;
+    }
+    html[data-complete-edge="on"] .task-card:has(.comments-panel) .complete-edge { border-bottom-left-radius: 0; }
+    html[data-complete-edge="on"] .item.task > .checkbox { display: none; }
+    html[data-complete-edge="on"] .item-card.task-card .item.task { padding-left: 28px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "content"; }
+    html[data-complete-edge="on"] .item-card.task-card .item.task.has-tags:not(:has(.edit-wrap)) { grid-template-areas: "tags" "content"; }
+    html[data-complete-edge="on"] .item-card.task-card .card-action-bar { padding-left: 24px; }
+    .complete-edge::before {
+      content: ''; box-sizing: border-box; width: 10px; height: 10px; border-radius: 50%;
+      border: 1.5px solid color-mix(in srgb, var(--text) 45%, transparent);
+    }
+    .complete-edge:hover { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+    .complete-edge:hover::before { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 25%, transparent); }
+    .complete-edge:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .complete-edge:active { filter: brightness(1.25); }
+    html[data-complete-edge="on"] .task-card .complete-edge.is-done { background: var(--accent); }
+    .complete-edge.is-done::before {
+      content: '✓'; width: auto; height: auto; border: 0; background: none !important; box-shadow: none !important; transform: none;
+      font-size: 11px; font-weight: 700; color: var(--surface);
+    }
+    /* Marker shapes for open tasks (finished tasks show ✓, or DONE! for the label) */
+    html[data-complete-style="square"] .complete-edge::before { border-radius: 3px; }
+    html[data-complete-style="diamond"] .complete-edge:not(.is-done)::before { width: 8px; height: 8px; border-radius: 1px; transform: rotate(45deg); }
+    html[data-complete-style="bar"] .complete-edge::before { width: 4px; height: 16px; border: 0; border-radius: 2px; background: color-mix(in srgb, var(--text) 30%, transparent); }
+    html[data-complete-style="bar"] .complete-edge:hover::before { background: var(--accent); }
+    html[data-complete-style="check"] .complete-edge::before { content: '✓'; width: auto; height: auto; border: 0; background: none; font-size: 11px; font-weight: 700; color: color-mix(in srgb, var(--text) 35%, transparent); }
+    html[data-complete-style="check"] .complete-edge:hover::before { color: var(--accent); }
+    html[data-complete-style="none"] .complete-edge:not(.is-done)::before { content: none; }
+    html[data-complete-style="switch"] .complete-edge::before { width: 9px; height: 18px; border-radius: 5px; }
+    html[data-complete-style="switch"] .complete-edge:not(.is-done)::after {
+      content: ''; position: absolute; left: 50%; top: calc(50% + 4px); width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%;
+      background: color-mix(in srgb, var(--text) 55%, transparent); transition: top .15s, background .15s;
+    }
+    html[data-complete-style="switch"] .complete-edge:hover::after { top: calc(50% - 4px); background: var(--accent); }
+    html[data-complete-style="switch"] .complete-edge:hover::before { background: none; }
+    html[data-complete-style="raised"] .complete-edge:not(.is-done) {
+      background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
+      box-shadow: inset -1px 0 0 rgba(0,0,0,.35), inset 1px 1px 0 rgba(255,255,255,.07);
+    }
+    html[data-complete-style="raised"] .complete-edge::before {
+      width: 6px; height: 20px; border: 0; border-radius: 3px; background: color-mix(in srgb, var(--text) 50%, transparent);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 2px rgba(0,0,0,.55);
+    }
+    html[data-complete-style="raised"] .complete-edge:hover::before { background: var(--accent); }
+    html[data-complete-style="raised"] .complete-edge:not(.is-done):active { box-shadow: inset 2px 0 4px rgba(0,0,0,.45); }
+    html[data-complete-style="raised"] .complete-edge:not(.is-done):active::before { transform: translateY(1px); box-shadow: none; }
+    /* "Done" label: DONE → DONE? on hover/focus → DOING while dragged → DONE! → UNDO? */
+    html[data-complete-style="label"] .complete-edge::before {
+      content: 'done'; width: auto; height: auto; border: 0; background: none; writing-mode: vertical-rl; transform: rotate(180deg);
+      font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: color-mix(in srgb, var(--text) 45%, transparent);
+    }
+    html[data-complete-style="label"] :is(.complete-edge:hover, .complete-edge:focus-visible)::before { content: 'done\200A?'; color: var(--accent); background: none; }
+    html[data-complete-style="label"] .complete-edge.is-done::before { content: 'done\200A!'; transform: rotate(180deg); font-size: 9px; color: var(--surface); }
+    html[data-complete-style="label"] :is(.complete-edge.is-done:hover, .complete-edge.is-done:focus-visible)::before { content: 'undo\200A?'; color: var(--surface); }
+    html[data-complete-style="label"] .item-card.dragging .complete-edge::before { content: 'doing'; color: var(--accent); }
+    /* Compact rows are too short for the vertical label, so it shows a bar */
+    html[data-complete-style="label"] #desk-view[data-density="compact"] .complete-edge:not(.is-done)::before {
+      content: ''; writing-mode: horizontal-tb; transform: none; width: 4px; height: 12px; border-radius: 2px; background: color-mix(in srgb, var(--text) 30%, transparent);
+    }
+    html[data-complete-style="label"] #desk-view[data-density="compact"] .complete-edge:not(.is-done):hover::before { background: var(--accent); }
+    html[data-complete-style="label"] #desk-view[data-density="compact"] .complete-edge.is-done::before { content: '✓'; writing-mode: horizontal-tb; transform: none; letter-spacing: 0; font-size: 11px; }
+    html[data-complete-edge="on"] #desk-view[data-density="compact"] .board-column .item-card.task-card .item.task:not(:has(.edit-wrap)) { padding-left: 26px; }
+    html[data-complete-edge="on"] #desk-view[data-density="compact"] .item-card.task-card .card-action-bar { padding-left: 22px; }
+
+    /* Slim headroom: every task reserves a short tag row, so text starts at the same height with or without tags */
+    html[data-complete-edge="on"][data-tag-position="slim"] #desk-view:not([data-density="compact"]) .item-card.task-card .item.task:not(:has(.edit-wrap)) {
+      grid-template-areas: "tags" "content"; grid-template-rows: 14px auto; row-gap: 4px; padding-top: 7px;
+    }
+    html[data-complete-edge="on"][data-tag-position="slim"] #desk-view:not([data-density="compact"]) .item.task .tag-chip-row {
+      height: 14px; flex-wrap: nowrap; overflow-x: clip; overflow-y: visible; align-self: start; gap: 3px;
+    }
+    /* Chips are sized to the row, so no font or browser can make them taller than it */
+    html[data-complete-edge="on"][data-tag-position="slim"] #desk-view:not([data-density="compact"]) .item.task .tag-chip {
+      box-sizing: border-box; height: 14px; padding-block: 0; padding-inline: .6em; gap: 3px; font-size: .54rem; flex-shrink: 1; min-width: 0;
+    }
+    html[data-complete-edge="on"][data-tag-position="slim"] #desk-view:not([data-density="compact"]) .item.task .tag-chip-remove { line-height: 1; }
+
+    @media (hover: none), (pointer: coarse) {
+      html[data-complete-edge="on"] .task-card .complete-edge { width: 40px; }
+      html[data-complete-edge="on"] .item-card.task-card .item.task { padding-left: 52px; }
+      html[data-complete-edge="on"] .item-card.task-card .card-action-bar { padding-left: 48px; }
+      .complete-edge::before { width: 16px; height: 16px; border-width: 2px; }
+      .complete-edge.is-done::before { font-size: 16px; }
+      html[data-complete-style="diamond"] .complete-edge:not(.is-done)::before { width: 12px; height: 12px; }
+      html[data-complete-style="bar"] .complete-edge::before { width: 5px; height: 22px; }
+      html[data-complete-style="check"] .complete-edge::before { font-size: 16px; }
+      html[data-complete-style="switch"] .complete-edge::before { width: 14px; height: 28px; border-radius: 7px; }
+      html[data-complete-style="switch"] .complete-edge:not(.is-done)::after { width: 8px; height: 8px; margin: -4px 0 0 -4px; top: calc(50% + 6px); }
+      html[data-complete-style="raised"] .complete-edge::before { width: 8px; height: 28px; border-radius: 4px; }
+      html[data-complete-style="label"] .complete-edge::before,
+      html[data-complete-style="label"] .complete-edge.is-done::before { font-size: 11px; }
     }
     .tag-chip {
       --tag-fg: var(--accent);
@@ -7324,10 +7439,7 @@
         position: relative;
       }
 
-      .item.note {
-        grid-template-columns: 24px minmax(0, 1fr);
-        grid-template-areas: "icon content";
-      }
+      .item.note { grid-template-areas: "content"; }
       .item.has-tags {
         grid-template-columns: auto minmax(0, 1fr);
         grid-template-areas:
@@ -7335,10 +7447,10 @@
           "content content";
       }
       .item.note.has-tags {
-        grid-template-columns: 24px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
-          "icon tags"
-          "icon content";
+          "tags"
+          "content";
       }
 
       .board-column .item:has(.edit-wrap),
@@ -7350,7 +7462,6 @@
       }
 
       .checkbox { grid-area: check; align-self: start; margin-top: 1px; }
-      .note-icon { grid-area: icon; align-self: start; }
 
       .item-content,
       .edit-wrap {
@@ -7382,10 +7493,9 @@
           "actions";
       }
       .item-card.menu-open .item.note:not(:has(.edit-wrap)) {
-        grid-template-columns: 24px minmax(0, 1fr);
         grid-template-areas:
-          "icon content"
-          "actions actions";
+          "content"
+          "actions";
       }
       .item-card.menu-open .item.has-tags:not(:has(.edit-wrap)) {
         grid-template-areas:
@@ -7395,9 +7505,9 @@
       }
       .item-card.menu-open .item.note.has-tags:not(:has(.edit-wrap)) {
         grid-template-areas:
-          "icon tags"
-          "icon content"
-          "actions actions";
+          "tags"
+          "content"
+          "actions";
       }
       .item-card.menu-open .item > .item-actions { display: flex; }
 
@@ -7995,9 +8105,9 @@
                   <!-- Appearance Tab Pane -->
                   <div class="options-pane hidden" id="options-pane-appearance">
                     <div class="options-summary">
-                      <button type="button" class="options-row" data-options-open="card-layout"><span class="options-row-icon" aria-hidden="true">≡</span><span class="options-row-name">Card layout</span><span class="options-row-value" data-options-value="card-layout"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="card-layout"><span class="options-row-icon" aria-hidden="true">≡</span><span class="options-row-name">Card layout<span class="options-new-tag" data-new-in="1.18.0">New</span></span><span class="options-row-value" data-options-value="card-layout"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="typography"><span class="options-row-icon" aria-hidden="true">Aa</span><span class="options-row-name">Typography</span><span class="options-row-value" data-options-value="typography"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="layout"><span class="options-row-icon" aria-hidden="true">▤</span><span class="options-row-name">Layout</span><span class="options-row-value" data-options-value="layout"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="layout"><span class="options-row-icon" aria-hidden="true">▤</span><span class="options-row-name">Layout<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-value" data-options-value="layout"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="effects"><span class="options-row-icon" aria-hidden="true">✦</span><span class="options-row-name">Effects</span><span class="options-row-value" data-options-value="effects"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="background"><span class="options-row-icon" aria-hidden="true">▦</span><span class="options-row-name">Background</span><span class="options-row-value" data-options-value="background"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="tags"><span class="options-row-icon" aria-hidden="true">#</span><span class="options-row-name">Tags</span><span class="options-row-value" data-options-value="tags"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
@@ -8028,6 +8138,29 @@
                         </span>
                         <span class="density-option-label">Compact</span>
                       </button>
+                    </div>
+                    <div class="customize-select-row customize-select-row-sub">
+                      <label for="complete-style-select"><span>Complete button<span class="options-new-tag" data-new-in="1.18.0">New</span></span><span class="customize-toggle-sub">Click a task's left edge to finish it</span></label>
+                      <select id="complete-style-select" aria-label="Complete button">
+                        <option value="label">"Done" label</option>
+                        <option value="bar">Bar</option>
+                        <option value="raised">Raised bar</option>
+                        <option value="switch">Switch</option>
+                        <option value="circle">Circle</option>
+                        <option value="square">Square</option>
+                        <option value="diamond">Diamond</option>
+                        <option value="check">Faint ✓</option>
+                        <option value="none">Plain edge</option>
+                        <option value="checkbox">Checkbox</option>
+                      </select>
+                    </div>
+                    <div class="customize-select-row customize-select-row-sub">
+                      <label for="tag-position-select"><span>Tag position<span class="options-new-tag" data-new-in="1.18.0">New</span></span><span class="customize-toggle-sub">Where tags sit on task cards</span></label>
+                      <select id="tag-position-select" aria-label="Tag position">
+                        <option value="row">Own row</option>
+                        <option value="slim">Slim headroom</option>
+                        <option value="actions">Action bar</option>
+                      </select>
                     </div>
 
                     </section>
@@ -8070,6 +8203,20 @@
                         <option value="bottom">Bottom</option>
                       </select>
                     </div>
+                    <label class="customize-toggle" title="The key under the sidebar calendar">
+                      <input id="show-cal-legend-toggle" type="checkbox" checked />
+                      <span class="customize-toggle-text">
+                        <span>Calendar legend<span class="options-new-tag" data-new-in="1.17.2">New</span></span>
+                        <span class="customize-toggle-sub">Key under the sidebar calendar</span>
+                      </span>
+                    </label>
+                    <label class="customize-toggle" title="The progress card in the sidebar">
+                      <input id="show-today-progress-toggle" type="checkbox" checked />
+                      <span class="customize-toggle-text">
+                        <span>Today's Progress<span class="options-new-tag" data-new-in="1.17.2">New</span></span>
+                        <span class="customize-toggle-sub">Progress card in the sidebar</span>
+                      </span>
+                    </label>
 
                     </section>
 
@@ -8133,7 +8280,7 @@
                   <!-- Behavior Tab Pane -->
                   <div class="options-pane hidden" id="options-pane-behavior">
                     <div class="options-summary">
-                      <button type="button" class="options-row" data-options-open="general"><span class="options-row-icon" aria-hidden="true">⚑</span><span class="options-row-name">General<span class="options-new-tag" data-new-in="1.17.0">New</span></span><span class="options-row-value" data-options-value="general"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="general"><span class="options-row-icon" aria-hidden="true">⚑</span><span class="options-row-name">General<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-value" data-options-value="general"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="tasks"><span class="options-row-icon" aria-hidden="true">☑</span><span class="options-row-name">Tasks</span><span class="options-row-value" data-options-value="tasks"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="projects"><span class="options-row-icon" aria-hidden="true">▣</span><span class="options-row-name">Projects</span><span class="options-row-value" data-options-value="projects"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="insights"><span class="options-row-icon" aria-hidden="true">↗</span><span class="options-row-name">Insights</span><span class="options-row-value" data-options-value="insights"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
@@ -8142,6 +8289,14 @@
 
                     <section class="options-section" data-options-section="general" aria-label="General" hidden>
                     <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">General</h3></div>
+                    <div class="customize-select-row customize-select-row-sub">
+                      <label for="launch-desk-select"><span>Open desk<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="customize-toggle-sub">Which desk the app starts on</span></label>
+                      <select id="launch-desk-select" aria-label="Open desk">
+                        <option value="last">Last used</option>
+                        <option value="work">Work</option>
+                        <option value="personal">Personal</option>
+                      </select>
+                    </div>
                     <div class="customize-select-row">
                       <label for="startup-view-select">On launch</label>
                       <select id="startup-view-select" aria-label="Startup view">
@@ -8157,10 +8312,10 @@
                       </select>
                     </div>
                     <div class="customize-select-row customize-select-row-sub">
-                      <label for="quiet-weekends-select"><span>Quieter weekends<span class="options-new-tag" data-new-in="1.17.0">New</span></span><span class="customize-toggle-sub">Gray Sat/Sun numbers on the sidebar calendar</span></label>
+                      <label for="quiet-weekends-select"><span>Quieter weekends<span class="options-new-tag" data-new-in="1.17.0">New</span></span><span class="customize-toggle-sub">Gray Sat/Sun on the calendar</span></label>
                       <select id="quiet-weekends-select" aria-label="Quieter weekends">
                         <option value="off">Off</option>
-                        <option value="work">Work desk only</option>
+                        <option value="work">Work only</option>
                         <option value="both">Both desks</option>
                       </select>
                     </div>
@@ -8421,6 +8576,8 @@
 
         <h3>Task &amp; note cards</h3>
         <ul>
+          <li><strong>Complete button</strong> — click (or tap) a task's left edge to finish it; click it again to reopen. Dragging that starts on the edge doesn't count as a click</li>
+          <li><strong>Edge styles</strong> — Options → Appearance → Card layout → <em>Complete button</em>. The <strong>"Done" label</strong> (default) reads DONE, then DONE? on hover, DOING while you drag the card, DONE! once finished, and UNDO? when you hover a finished card. Other choices are Bar, Raised bar, Switch, Circle, Square, Diamond, Faint ✓, and Plain edge; <strong>Checkbox</strong> brings back the checkbox. Compact cards are too short for the label, so it shows a bar there</li>
           <li><strong>Action bar</strong> — common actions sit along the bottom of each card: <em>edit</em>, <em>move</em>, <em>comment</em> / <em>add update</em>, and <em>tag</em></li>
           <li><strong>Overflow menu (⋮)</strong> — less common actions live here: delete, convert, send to Work/Personal, shelve/unshelve, and start (move to Active)</li>
           <li><strong>Convert</strong> — switch a task into a note or vice versa from the overflow menu</li>
@@ -8436,6 +8593,7 @@
           <li><strong>Or use the button</strong> — click <em>tag</em> in the action bar to add one without touching the card's text</li>
           <li><strong>Case-insensitive</strong> — <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
           <li><strong>Chips</strong> — shown in the top-right corner of the card; click the <strong>×</strong> on a chip to remove that tag</li>
+          <li><strong>Tag position</strong> — Options → Appearance → Card layout: <strong>Own row</strong> (default) puts chips on a row above the text; <strong>Slim headroom</strong> gives every task a short tag row with smaller chips, so text starts at the same height whether or not it has tags (long tags shorten with …; needs the edge complete button, so with Checkbox it works like Own row); <strong>Action bar</strong> puts chips next to <strong>⋮</strong>, and on narrow cards they move to a second line together with ⋮, right-aligned. Compact cards always keep chips on their own line</li>
           <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Single color (accent)</strong> (default) keeps every tag in the accent color; <strong>Shades of accent</strong> gives each tag a lighter, darker, or neighboring shade of the accent (e.g. rose, dark rose, light rose); <strong>Multi-color</strong> spreads tags around the color wheel at the accent's brightness. Both follow the theme when you switch, and each tag keeps the same color on every device. There are 8 colors per mode, so with more tags some share a color — pin one to change it</li>
           <li><strong>Custom tag color</strong> — click any tag chip on a card to pick a preset swatch or a custom color, or set colors from the tag list in Options → Appearance; a custom color overrides either mode, and <em>Reset to auto</em> / <em>auto</em> removes it</li>
           <li><strong>Find by tag</strong> — search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
@@ -8477,9 +8635,9 @@
         <h3>Options menu</h3>
         <ul>
           <li>Open with the customize button (⚙) near the date, or <strong>Options</strong> in the account menu at the bottom of the sidebar; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
-          <li><strong>Summary list</strong> — Appearance and Behavior open on a short list, each row showing what it's set to. Click a row to open that section; <strong>‹ Appearance</strong> / <strong>‹ Behavior</strong> or <strong>Esc</strong> goes back, and Esc again closes Options. On/off settings are switches, and a <em>New</em> tag marks settings added in this release</li>
+          <li><strong>Summary list</strong> — Appearance and Behavior open on a short list, each row showing what it's set to. Click a row to open that section; <strong>‹ Appearance</strong> / <strong>‹ Behavior</strong> or <strong>Esc</strong> goes back, and Esc again closes Options. On/off settings are switches, and a <em>New</em> tag marks settings added in this release until you open that section</li>
           <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
-          <li><strong>Appearance</strong> — Card layout (Comfortable/Compact), Typography (text size Small/Default/Large, 8 font families), Layout (sidebar left, right, top, or bottom), Effects (card glow on hover, gradient header), Background (patterned background), and Tags (tag colors). The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
+          <li><strong>Appearance</strong> — Card layout (Comfortable/Compact, Complete button style, Tag position), Typography (text size Small/Default/Large, 8 font families), Layout (sidebar left, right, top, or bottom), Effects (card glow on hover, gradient header), Background (patterned background), and Tags (tag colors). The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
           <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Startup view, week start day (Sunday/Monday), Quieter weekends, Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
           <li><strong>Patterned background</strong> — Options → Appearance → Background. Turn on <em>Patterned background</em>, pick one of 12 patterns (Graph paper, Isometric, Herringbone, Greek key, and more; the name of the one you picked shows under the grid), and drag <em>Strength</em> from 2% (barely there) to 45%. The pattern follows your theme's colors and only shows behind the board; cards stay solid. Arrow keys move between patterns. Turning it off remembers your choice</li>
           <li><strong>Sidebar at the top or bottom</strong> — Options → Appearance → Sidebar position. The sidebar becomes a bar across the screen: tabs, search, Today's Progress, and the account button in one row (it wraps to two on narrower windows). The calendar is replaced by the week strip above the board, the account menu opens downward from a top bar, and the collapse button is hidden. With the bar at the bottom, search results and toasts open above it. Phones keep their usual layout</li>
@@ -8491,7 +8649,9 @@
         <ul>
           <li><strong>Calendar</strong> — pick any day (it fills with your theme color); dots mean data exists; yellow number badges on past days count open tasks left behind (rose on amber-accent themes, the same color as Insights <em>carried over</em>). The legend underneath spells this out</li>
           <li><strong>Today chip</strong> — after browsing the calendar to another month, click <strong>Today</strong> beside the month name to jump back</li>
-          <li><strong>Quieter weekends</strong> — Options → Behavior → General grays the Saturday and Sunday numbers on the calendar: Off, Work desk only, or Both desks</li>
+          <li><strong>Quieter weekends</strong> — Options → Behavior → General grays the Saturday and Sunday numbers on the calendar: Off, Work only, or Both desks</li>
+          <li><strong>Open desk</strong> — Options → Behavior → General chooses the desk the app starts on: Last used, Work, or Personal. <em>On launch</em> separately picks the day (last viewed or Today)</li>
+          <li><strong>Calendar legend and Today's Progress</strong> — Options → Appearance → Layout has switches to hide the calendar legend and the sidebar's Today's Progress card</li>
           <li><strong>Arrow buttons</strong> — step day by day at the top of the desk</li>
           <li><strong>Today</strong> — click <strong>Back to today</strong> beside the date to return instantly</li>
           <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board; use <strong>&lt;</strong> / <strong>&gt;</strong> to jump week by week (start day follows your Options → Behavior setting)</li>
@@ -8556,7 +8716,7 @@
           <li>On iPhone/Safari: tap <strong>Share → Add to Home Screen</strong></li>
           <li>Once installed, opens in its own window without browser chrome and works offline</li>
           <li>Use the action links under each card (edit / move / comment) and the <strong>⋮</strong> overflow menu for the rest</li>
-          <li>Tap the <strong>checkbox</strong> to complete a task</li>
+          <li>Tap a task's <strong>left edge</strong> to complete it (it's wider on touch screens), or the checkbox if you picked Checkbox</li>
           <li>The add bar sticks to the bottom of the screen so you can capture a task without scrolling up</li>
           <li>The week strip above the board replaces the sidebar calendar on smaller screens</li>
           <li><strong>Phone menu</strong> — the top bar keeps your tabs, search, and Help. Tap the <strong>menu button</strong> (three lines, top right) for your account and Sign in / Sign out, Export / Import, Repair duplicates, <strong>Options</strong>, and <strong>What's new</strong>. Close it with ×, a tap outside, Esc, or a swipe down on the handle</li>
@@ -8657,6 +8817,7 @@
     const WEEK_START_KEY = 'work-desk-week-start';
     const QUIET_WEEKENDS_KEY = 'work-desk-quiet-weekends';
     const QUIET_WEEKENDS_VALUES = ['off', 'work', 'both'];
+    const SEEN_NEW_TAGS_KEY = 'work-desk-seen-new-tags';
     const STARTUP_VIEW_KEY = 'work-desk-startup-view';
     const STRIKE_COMPLETED_KEY = 'work-desk-strike-completed';
     const TRUNCATE_NOTES_KEY = 'work-desk-truncate-notes';
@@ -8666,6 +8827,10 @@
     const SIDEBAR_POSITION_KEY = 'work-desk-sidebar-position';
     const CARD_GLOW_KEY = 'work-desk-card-glow';
     const GRADIENT_HEADER_KEY = 'work-desk-gradient-header';
+    const SHOW_CAL_LEGEND_KEY = 'work-desk-show-cal-legend';
+    const SHOW_TODAY_PROGRESS_KEY = 'work-desk-show-today-progress';
+    const LAUNCH_DESK_KEY = 'work-desk-launch-desk';
+    const LAUNCH_DESK_VALUES = ['last', 'work', 'personal'];
     const BG_PATTERN_ON_KEY = 'work-desk-bg-pattern-on';
     const BG_PATTERN_KEY = 'work-desk-bg-pattern';
     const BG_PATTERN_STRENGTH_KEY = 'work-desk-bg-pattern-strength';
@@ -8674,6 +8839,10 @@
     const TAG_COLOR_MODE_KEY = 'work-desk-tag-color-mode';
     const TAG_COLOR_MODES = ['theme', 'analogous', 'palette'];
     const TAG_COLORS_KEY = 'work-desk-tag-colors';
+    const COMPLETE_STYLE_KEY = 'work-desk-complete-style';
+    const COMPLETE_STYLES = ['label', 'bar', 'raised', 'switch', 'circle', 'square', 'diamond', 'check', 'none', 'checkbox'];
+    const TAG_POSITION_KEY = 'work-desk-tag-position';
+    const TAG_POSITIONS = ['row', 'slim', 'actions'];
     const TAG_PALETTE_SIZE = 8;
     const TAG_PRESET_COLORS = [
       '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
@@ -8681,12 +8850,51 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.17.0';
+    const APP_VERSION = '1.18.0';
     const CHANGELOG = [
+      {
+        version: '1.18.0',
+        date: 'Oct 14, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Complete button on the card edge: click the left edge of a task to finish it, and click it again to reopen. The edge covers the task and its action links, not the comments below',
+            'Pick the edge\'s look in Options → Appearance → Card layout → Complete button: a "Done" label (the default) that reads DONE? on hover, DOING while you drag the card, DONE! once finished, and UNDO? on a finished card, or a bar, raised bar, switch, circle, square, diamond, faint ✓, or a plain edge. Checkbox brings back the old checkbox',
+            'Tag position in Options → Appearance → Card layout: Own row (as before), Slim headroom (every task keeps a short tag row, so text starts at the same height with or without tags), or Action bar (tags sit next to ⋮; on narrow cards they move to a second line together with ⋮, right-aligned)',
+          ] },
+          { label: 'Improved', items: [
+            'Without the checkbox row, task text starts higher on the card and gets more room',
+          ] },
+        ],
+      },
+      {
+        version: '1.17.2',
+        date: 'Oct 14, 2026',
+        sections: [
+          { label: 'Added', items: [
+            'Open desk: Options → Behavior → General picks the desk the app starts on: the one you last used, always Work, or always Personal',
+            'Hide the calendar legend or Today\'s Progress: two new switches in Options → Appearance → Layout. Both stay on unless you turn them off',
+          ] },
+          { label: 'Improved', items: [
+            'New tags go away once seen: opening a section clears its New tag (and the one on its row) for good',
+            'Shorter Options summaries: the gray value on each row is shorter and wraps instead of getting cut off',
+            'Quieter weekends label: the New tag sits right after the name and the hint fits on one line. "Work desk only" is now "Work only"',
+            'Notes drop the 📝 icon, so the text starts at the left edge of the card',
+          ] },
+        ],
+      },
+      {
+        version: '1.17.1',
+        date: 'Oct 14, 2026',
+        sections: [
+          { label: 'Improved', items: [
+            'Options fits its list: the Appearance and Behavior lists no longer leave empty space at the bottom of the panel. Opening a short section keeps the same height, so nothing jumps',
+          ] },
+        ],
+      },
       {
         version: '1.17.0',
         date: 'Oct 14, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Simpler Options: Appearance and Behavior now open as a short list (Card layout, Typography, Layout, Effects, Background, Tags; General, Tasks, Projects, Insights, Holidays), each showing what it\'s set to. Click a row to open that page, and use ‹ Back (or Esc) to return. The panel no longer changes height as you move around, and settings added in this release carry a New tag',
@@ -9374,6 +9582,21 @@
       return 'work';
     }
 
+    function normalizeLaunchDesk(value) {
+      return LAUNCH_DESK_VALUES.includes(value) ? value : 'last';
+    }
+
+    // Pure: which desk the app opens on, given the last one used
+    function resolveLaunchContext(launchDesk, lastContext) {
+      const mode = normalizeLaunchDesk(launchDesk);
+      return mode === 'last' ? lastContext : mode;
+    }
+
+    {
+      const launchContext = resolveLaunchContext(localStorage.getItem(LAUNCH_DESK_KEY), getListContext());
+      if (launchContext !== getListContext()) localStorage.setItem(LIST_CONTEXT_KEY, launchContext);
+    }
+
     function getStorageKey(context = state.listContext) {
       return context === 'personal' ? 'work-desk-data-personal' : 'work-desk-data-work';
     }
@@ -9466,6 +9689,8 @@
       streakSkipWeekends: localStorage.getItem(STREAK_SKIP_WEEKENDS_KEY) !== 'false',
       tagColorMode: normalizeTagColorMode(localStorage.getItem(TAG_COLOR_MODE_KEY)),
       tagColors: loadTagColors(),
+      completeStyle: normalizeCompleteStyle(localStorage.getItem(COMPLETE_STYLE_KEY)),
+      tagPosition: normalizeTagPosition(localStorage.getItem(TAG_POSITION_KEY)),
       customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
       highlightItemId: null,
       activeTab: (() => {
@@ -9934,6 +10159,9 @@
         sidebarPosition: localStorage.getItem(SIDEBAR_POSITION_KEY) || 'left',
         cardGlow: localStorage.getItem(CARD_GLOW_KEY) === 'true',
         gradientHeader: localStorage.getItem(GRADIENT_HEADER_KEY) === 'true',
+        showCalLegend: localStorage.getItem(SHOW_CAL_LEGEND_KEY) !== 'false',
+        showTodayProgress: localStorage.getItem(SHOW_TODAY_PROGRESS_KEY) !== 'false',
+        launchDesk: normalizeLaunchDesk(localStorage.getItem(LAUNCH_DESK_KEY)),
         ...(() => {
           const bg = readBgPatternState();
           return { bgPatternOn: bg.on, bgPattern: bg.pattern, bgPatternStrength: bg.strength };
@@ -9956,6 +10184,8 @@
         streakSkipWeekends: localStorage.getItem(STREAK_SKIP_WEEKENDS_KEY) !== 'false',
         tagColorMode: normalizeTagColorMode(localStorage.getItem(TAG_COLOR_MODE_KEY)),
         tagColors: loadTagColors(),
+        completeStyle: normalizeCompleteStyle(localStorage.getItem(COMPLETE_STYLE_KEY)),
+        tagPosition: normalizeTagPosition(localStorage.getItem(TAG_POSITION_KEY)),
         customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
         customThemes: loadCustomThemes(),
         updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
@@ -10057,6 +10287,23 @@
           applyBgPattern(next, { fromSync: true });
           changed = true;
         }
+      }
+
+      if (typeof prefs.showCalLegend === 'boolean' && (localStorage.getItem(SHOW_CAL_LEGEND_KEY) !== 'false') !== prefs.showCalLegend) {
+        applyShowCalLegend(prefs.showCalLegend, { fromSync: true });
+        changed = true;
+      }
+
+      if (typeof prefs.showTodayProgress === 'boolean' && (localStorage.getItem(SHOW_TODAY_PROGRESS_KEY) !== 'false') !== prefs.showTodayProgress) {
+        applyShowTodayProgress(prefs.showTodayProgress, { fromSync: true });
+        changed = true;
+      }
+
+      if (LAUNCH_DESK_VALUES.includes(prefs.launchDesk) && normalizeLaunchDesk(localStorage.getItem(LAUNCH_DESK_KEY)) !== prefs.launchDesk) {
+        localStorage.setItem(LAUNCH_DESK_KEY, prefs.launchDesk);
+        const el = document.getElementById('launch-desk-select');
+        if (el) el.value = prefs.launchDesk;
+        changed = true;
       }
 
       if (typeof prefs.gradientHeader === 'boolean') {
@@ -10219,6 +10466,16 @@
           applyTagColorMode(next, { fromSync: true });
           changed = true;
         }
+      }
+
+      if (COMPLETE_STYLES.includes(prefs.completeStyle) && state.completeStyle !== prefs.completeStyle) {
+        applyCompleteStyle(prefs.completeStyle, { fromSync: true });
+        changed = true;
+      }
+
+      if (TAG_POSITIONS.includes(prefs.tagPosition) && state.tagPosition !== prefs.tagPosition) {
+        applyTagPosition(prefs.tagPosition, { fromSync: true });
+        changed = true;
       }
 
       if (prefs.tagColors && typeof prefs.tagColors === 'object') {
@@ -11646,6 +11903,24 @@
       if (!fromSync) schedulePrefsPush();
     }
 
+    function applyShowCalLegend(on, options = {}) {
+      const { fromSync = false } = options;
+      document.documentElement.dataset.calLegend = on ? 'show' : 'hide';
+      const el = document.getElementById('show-cal-legend-toggle');
+      if (el) el.checked = on;
+      localStorage.setItem(SHOW_CAL_LEGEND_KEY, on ? 'true' : 'false');
+      if (!fromSync) schedulePrefsPush();
+    }
+
+    function applyShowTodayProgress(on, options = {}) {
+      const { fromSync = false } = options;
+      document.documentElement.dataset.todayProgress = on ? 'show' : 'hide';
+      const el = document.getElementById('show-today-progress-toggle');
+      if (el) el.checked = on;
+      localStorage.setItem(SHOW_TODAY_PROGRESS_KEY, on ? 'true' : 'false');
+      if (!fromSync) schedulePrefsPush();
+    }
+
     function applyCardGlow(on, options = {}) {
       const { fromSync = false } = options;
       document.documentElement.dataset.cardGlow = on ? 'true' : 'false';
@@ -11812,21 +12087,34 @@
       lato: 'Lato', nunito: 'Nunito', jetbrains: 'JetBrains Mono', merriweather: 'Merriweather',
     };
     const OPTIONS_TAG_MODE_LABELS = { theme: 'Single color', analogous: 'Shades of accent', palette: 'Multi-color' };
+    const OPTIONS_COMPLETE_STYLE_LABELS = {
+      label: 'Done label', bar: 'Bar', raised: 'Raised bar', switch: 'Switch', circle: 'Circle',
+      square: 'Square', diamond: 'Diamond', check: 'Faint ✓', none: 'Plain edge', checkbox: 'Checkbox',
+    };
+    const OPTIONS_TAG_POSITION_LABELS = { slim: 'Slim tags', actions: 'Tags in bar' };
     const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
     // Pure: the one-line value shown on each Options summary row
     function optionsSummaryText(id, p) {
       switch (id) {
-        case 'card-layout': return p.density === 'compact' ? 'Compact' : 'Comfortable';
+        case 'card-layout': return [
+          p.density === 'compact' ? 'Compact' : 'Comfortable',
+          OPTIONS_COMPLETE_STYLE_LABELS[p.completeStyle] || OPTIONS_COMPLETE_STYLE_LABELS.label,
+          OPTIONS_TAG_POSITION_LABELS[p.tagPosition],
+        ].filter(Boolean).join(' · ');
         case 'typography': return `${capitalize(p.fontSize || 'default')} · ${OPTIONS_FONT_LABELS[p.fontFamily] || OPTIONS_FONT_LABELS.system}`;
-        case 'layout': return `Sidebar ${p.sidebarPosition || 'left'}`;
+        case 'layout': return [`Sidebar ${p.sidebarPosition || 'left'}`, p.showCalLegend === false && 'No legend', p.showTodayProgress === false && 'No progress'].filter(Boolean).join(' · ');
         case 'effects': return [p.cardGlow && 'Glow', p.gradientHeader && 'Gradient'].filter(Boolean).join(' · ') || 'Off';
         case 'background': return p.bgOn ? `${p.bgPatternName} · ${p.bgStrength}%` : 'Off';
         case 'tags': return (OPTIONS_TAG_MODE_LABELS[p.tagMode] || OPTIONS_TAG_MODE_LABELS.theme) + (p.pinnedTags ? ` · ${p.pinnedTags} pinned` : '');
-        case 'general': return `${p.startupView === 'today' ? 'Open Today' : 'Remember last'} · ${p.weekStart === 'monday' ? 'Monday' : 'Sunday'}`;
+        case 'general': return [
+          { work: 'Work', personal: 'Personal' }[p.launchDesk],
+          p.startupView === 'today' ? 'Today' : 'Last viewed',
+          p.weekStart === 'monday' ? 'Mon' : 'Sun',
+        ].filter(Boolean).join(' · ');
         case 'tasks': return `${p.tasksOn} of ${p.tasksTotal} on`;
         case 'projects': return p.truncateNotes ? 'Truncate long notes' : 'Full notes';
-        case 'insights': return p.streakSkipWeekends ? "Weekends don't break streaks" : 'Strict streaks';
+        case 'insights': return p.streakSkipWeekends ? 'Weekends skipped' : 'Strict streaks';
         case 'holidays': return (p.federalHolidays ? 'US federal' : 'No federal') + (p.customHolidays ? ` · ${p.customHolidays} custom` : '');
         default: return '';
       }
@@ -11839,9 +12127,13 @@
       const bg = readBgPatternState();
       return {
         density: localStorage.getItem(DENSITY_KEY) || 'comfortable',
+        completeStyle: state.completeStyle,
+        tagPosition: state.tagPosition,
         fontSize: val('font-size-select', 'default'),
         fontFamily: val('font-family-select', 'system'),
         sidebarPosition: val('sidebar-position-select', 'left'),
+        showCalLegend: on('show-cal-legend-toggle'),
+        showTodayProgress: on('show-today-progress-toggle'),
         cardGlow: on('card-glow-toggle'),
         gradientHeader: on('gradient-header-toggle'),
         bgOn: bg.on,
@@ -11850,6 +12142,7 @@
         tagMode: state.tagColorMode,
         pinnedTags: Object.keys(state.tagColors || {}).length,
         startupView: val('startup-view-select', 'last_viewed'),
+        launchDesk: val('launch-desk-select', 'last'),
         weekStart: val('week-start-select', 'sunday'),
         tasksOn: OPTIONS_TASK_TOGGLES.filter(on).length,
         tasksTotal: OPTIONS_TASK_TOGGLES.length,
@@ -11871,8 +12164,12 @@
       if (!pane) return;
       const section = pane.querySelector(`[data-options-section="${id}"]`);
       if (!section) return;
+      // A short section keeps the list's height so the panel doesn't jump
+      pane.style.minHeight = `${pane.offsetHeight}px`;
       pane.querySelectorAll('.options-section').forEach(s => { s.hidden = s !== section; });
       pane.classList.add('in-section');
+      // Tags inside stay up for this visit and are gone on the way back
+      markNewTagsSeen(id);
       if (id === 'tags') renderTagColorList();
       document.getElementById('density-popout').scrollTop = 0;
       section.querySelector('.options-back-btn')?.focus({ preventScroll: true });
@@ -11883,6 +12180,8 @@
       const open = pane.querySelector('.options-section:not([hidden])');
       pane.querySelectorAll('.options-section').forEach(s => { s.hidden = true; });
       pane.classList.remove('in-section');
+      pane.style.minHeight = '';
+      syncNewTags();
       renderOptionsSummaries();
       if (focus && open) pane.querySelector(`[data-options-open="${open.dataset.optionsSection}"]`)?.focus({ preventScroll: true });
     }
@@ -11897,8 +12196,34 @@
       return !!version && minor(version) === minor(appVersion);
     }
 
+    // A tag belongs to the Options section it sits in, or the one its summary row opens
+    function newTagKey(el) {
+      const id = el.closest('[data-options-section]')?.dataset.optionsSection || el.closest('[data-options-open]')?.dataset.optionsOpen || '';
+      return `${id}@${el.dataset.newIn}`;
+    }
+
+    function readSeenNewTags() {
+      try {
+        const list = JSON.parse(localStorage.getItem(SEEN_NEW_TAGS_KEY) || '[]');
+        return Array.isArray(list) ? list.filter(k => typeof k === 'string') : [];
+      } catch { return []; }
+    }
+
+    function markNewTagsSeen(sectionId) {
+      const seen = new Set(readSeenNewTags());
+      const before = seen.size;
+      document.querySelectorAll('#density-popout [data-new-in]').forEach(el => {
+        const key = newTagKey(el);
+        if (key.startsWith(`${sectionId}@`) && isNewInCurrentRelease(el.dataset.newIn)) seen.add(key);
+      });
+      if (seen.size !== before) localStorage.setItem(SEEN_NEW_TAGS_KEY, JSON.stringify([...seen]));
+    }
+
     function syncNewTags() {
-      document.querySelectorAll('[data-new-in]').forEach(el => { el.hidden = !isNewInCurrentRelease(el.dataset.newIn); });
+      const seen = new Set(readSeenNewTags());
+      document.querySelectorAll('[data-new-in]').forEach(el => {
+        el.hidden = !isNewInCurrentRelease(el.dataset.newIn) || seen.has(newTagKey(el));
+      });
     }
 
     function closeDensityPopout() {
@@ -11939,12 +12264,17 @@
     // Must match the first-launch defaults in `state` and the init* readers
     const OPTIONS_DEFAULTS = {
       appearance: {
-        toggles: { 'card-glow-toggle': false, 'gradient-header-toggle': false, 'bg-pattern-toggle': false },
+        toggles: {
+          'card-glow-toggle': false, 'gradient-header-toggle': false, 'bg-pattern-toggle': false,
+          'show-cal-legend-toggle': true, 'show-today-progress-toggle': true,
+        },
         selects: {
           'font-size-select': 'default',
           'font-family-select': 'system',
           'sidebar-position-select': 'left',
           'tag-color-mode-select': 'theme',
+          'complete-style-select': 'label',
+          'tag-position-select': 'row',
         },
       },
       behavior: {
@@ -11961,6 +12291,7 @@
         },
         selects: {
           'startup-view-select': 'last_viewed',
+          'launch-desk-select': 'last',
           'week-start-select': 'sunday',
           'quiet-weekends-select': 'off',
           'auto-collapse-completed-at': '5',
@@ -12048,6 +12379,11 @@
         gradientHeaderToggle.addEventListener('change', () => applyGradientHeader(gradientHeaderToggle.checked));
       }
 
+      applyShowCalLegend(localStorage.getItem(SHOW_CAL_LEGEND_KEY) !== 'false', { fromSync: true });
+      document.getElementById('show-cal-legend-toggle')?.addEventListener('change', (e) => applyShowCalLegend(e.target.checked));
+      applyShowTodayProgress(localStorage.getItem(SHOW_TODAY_PROGRESS_KEY) !== 'false', { fromSync: true });
+      document.getElementById('show-today-progress-toggle')?.addEventListener('change', (e) => applyShowTodayProgress(e.target.checked));
+
       initBgPattern();
 
       // Tag colors
@@ -12057,6 +12393,11 @@
         tagColorModeSelect.value = state.tagColorMode;
         tagColorModeSelect.addEventListener('change', () => applyTagColorMode(tagColorModeSelect.value));
       }
+
+      applyCompleteStyle(state.completeStyle, { fromSync: true });
+      document.getElementById('complete-style-select')?.addEventListener('change', (e) => applyCompleteStyle(e.target.value));
+      applyTagPosition(state.tagPosition, { fromSync: true, rerender: false });
+      document.getElementById('tag-position-select')?.addEventListener('change', (e) => applyTagPosition(e.target.value));
 
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -12101,6 +12442,7 @@
           const kept = tab === 'appearance' ? 'Pinned tag colors are kept.' : 'Custom holidays are kept.';
           if (!confirm(`Reset ${label} settings to their defaults? ${kept}`)) return;
           const changed = resetOptionsTab(tab);
+          renderOptionsSummaries();
           showToast(changed ? `${label} reset to defaults` : `${label} is already on the defaults`);
         });
       });
@@ -12213,6 +12555,15 @@
           localStorage.setItem(QUIET_WEEKENDS_KEY, state.quietWeekends);
           schedulePrefsPush();
           renderCalendar();
+        });
+      }
+
+      const launchDeskSelect = document.getElementById('launch-desk-select');
+      if (launchDeskSelect) {
+        launchDeskSelect.value = normalizeLaunchDesk(localStorage.getItem(LAUNCH_DESK_KEY));
+        launchDeskSelect.addEventListener('change', () => {
+          localStorage.setItem(LAUNCH_DESK_KEY, normalizeLaunchDesk(launchDeskSelect.value));
+          schedulePrefsPush();
         });
       }
 
@@ -12842,6 +13193,14 @@
       return TAG_COLOR_MODES.includes(mode) ? mode : 'theme';
     }
 
+    function normalizeCompleteStyle(style) {
+      return COMPLETE_STYLES.includes(style) ? style : 'label';
+    }
+
+    function normalizeTagPosition(position) {
+      return TAG_POSITIONS.includes(position) ? position : 'row';
+    }
+
     // Resolve any CSS color (oklch, color-mix, …) to #rrggbb for <input type="color">
     let tagColorCanvasCtx = null;
     function cssColorToHex(color) {
@@ -12919,6 +13278,32 @@
       if (el) el.value = next;
       localStorage.setItem(TAG_COLOR_MODE_KEY, next);
       syncTagColorListRows();
+      if (!fromSync) schedulePrefsPush();
+    }
+
+    function applyCompleteStyle(style, options = {}) {
+      const { fromSync = false } = options;
+      const next = normalizeCompleteStyle(style);
+      state.completeStyle = next;
+      document.documentElement.dataset.completeStyle = next;
+      document.documentElement.dataset.completeEdge = next === 'checkbox' ? 'off' : 'on';
+      const el = document.getElementById('complete-style-select');
+      if (el) el.value = next;
+      localStorage.setItem(COMPLETE_STYLE_KEY, next);
+      if (!fromSync) schedulePrefsPush();
+    }
+
+    // Action-bar tags are placed at render time; the other positions are pure CSS
+    function applyTagPosition(position, options = {}) {
+      const { fromSync = false, rerender = true } = options;
+      const next = normalizeTagPosition(position);
+      const movedBar = (state.tagPosition === 'actions') !== (next === 'actions');
+      state.tagPosition = next;
+      document.documentElement.dataset.tagPosition = next;
+      const el = document.getElementById('tag-position-select');
+      if (el) el.value = next;
+      localStorage.setItem(TAG_POSITION_KEY, next);
+      if (movedBar && rerender) render();
       if (!fromSync) schedulePrefsPush();
     }
 
@@ -17525,6 +17910,26 @@
       return wrap;
     }
 
+    // Hidden by CSS when Options → Card layout → Complete button is "Checkbox"
+    function buildCompleteEdge(item) {
+      const edge = document.createElement('button');
+      edge.type = 'button';
+      edge.className = `complete-edge${item.completed ? ' is-done' : ''}`;
+      const label = item.completed ? 'Mark incomplete' : 'Mark complete';
+      edge.title = label;
+      edge.setAttribute('aria-label', label);
+      // A press that travels is an attempted drag, not a click
+      let start = null;
+      edge.addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY }; });
+      edge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const moved = start && e.detail > 0 && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4;
+        start = null;
+        if (!moved) toggleItem(item.id);
+      });
+      return edge;
+    }
+
     function renderItem(item) {
       const isEditing = state.editingId === item.id;
       const isExpanded = isCommentsExpanded(item.id);
@@ -17532,6 +17937,7 @@
       const tags = normalizeTagList(item.tags);
 
       const isShelved = item.type === 'task' && item.shelved && !item.completed;
+      const tagsInBar = state.tagPosition === 'actions' && tags.length > 0 && !isEditing;
 
       const card = document.createElement('li');
       card.id = `item-${item.id}`;
@@ -17545,7 +17951,7 @@
       }
 
       const row = document.createElement('div');
-      row.className = `item ${item.type}${item.completed ? ' completed' : ''}${isShelved ? ' shelved' : ''}${tags.length && !isEditing ? ' has-tags' : ''}`;
+      row.className = `item ${item.type}${item.completed ? ' completed' : ''}${isShelved ? ' shelved' : ''}${tags.length && !isEditing && !tagsInBar ? ' has-tags' : ''}`;
 
       if (item.type === 'task') {
         const check = document.createElement('button');
@@ -17559,13 +17965,8 @@
         }
         check.addEventListener('click', () => toggleItem(item.id));
         row.appendChild(check);
-      } else {
-        const icon = document.createElement('span');
-        icon.className = 'note-icon';
-        icon.textContent = '📝';
-        row.appendChild(icon);
       }
-      if (!isEditing && tags.length) row.appendChild(buildTagChipRow(item, tags));
+      if (!isEditing && tags.length && !tagsInBar) row.appendChild(buildTagChipRow(item, tags));
 
       if (isEditing) {
         const editWrap = document.createElement('div');
@@ -17611,7 +18012,12 @@
         row.appendChild(content);
       }
 
-      card.appendChild(row);
+      // Row + action bar share a box so the complete edge stops above the comments panel
+      const main = document.createElement('div');
+      main.className = 'card-main';
+      if (item.type === 'task') main.appendChild(buildCompleteEdge(item));
+      main.appendChild(row);
+      card.appendChild(main);
 
       // ── Inline action bar at bottom of card ───────────────────────────────
       if (!isEditing) {
@@ -17716,9 +18122,14 @@
           });
         }
 
+        // Tags (action-bar position) and ⋮ wrap together so they stay right-aligned on narrow cards
+        const actionEnd = document.createElement('div');
+        actionEnd.className = 'card-action-end';
+        if (tagsInBar) actionEnd.appendChild(buildTagChipRow(item, tags));
+
         // Overflow menu (⋮) for less common actions
         const overflowWrap = document.createElement('div');
-        overflowWrap.style.cssText = 'position: relative; margin-left: auto;';
+        overflowWrap.style.cssText = 'position: relative;';
 
         const overflowBtn = document.createElement('button');
         overflowBtn.type = 'button';
@@ -17779,9 +18190,10 @@
 
         overflowWrap.appendChild(overflowBtn);
         overflowWrap.appendChild(overflowMenu);
-        actionBar.appendChild(overflowWrap);
+        actionEnd.appendChild(overflowWrap);
+        actionBar.appendChild(actionEnd);
 
-        card.appendChild(actionBar);
+        main.appendChild(actionBar);
       }
 
       if (isExpanded) {
