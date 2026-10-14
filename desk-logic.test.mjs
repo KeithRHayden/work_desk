@@ -803,7 +803,7 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
     assert.match(html, /id="glance-stats-text"/);
     assert.match(html, /class="sidebar-backup-btns"/);
     assert.match(html, /class="sidebar-repair-link"/);
-    assert.match(html, /class="sidebar-account-top"/);
+    assert.match(html, /id="account-menu-btn"/);
     assert.match(html, /class="sidebar-account-actions"/);
     assert.match(html, /function renderSidebarTodayGlance\s*\(/);
   });
@@ -3251,9 +3251,9 @@ describe('v1.15.1 Options menu polish', () => {
 
   it('Confirm before delete sits in the Tasks section', () => {
     const body = pane('behavior');
-    const tasksAt = body.indexOf('<p class="density-popout-label">Tasks</p>');
+    const tasksAt = body.indexOf('data-options-section="tasks"');
     const confirmAt = body.indexOf('id="confirm-delete-toggle"');
-    const projectsAt = body.indexOf('<p class="density-popout-label">Projects</p>');
+    const projectsAt = body.indexOf('data-options-section="projects"');
     assert.ok(tasksAt > 0 && confirmAt > tasksAt && confirmAt < projectsAt);
   });
 
@@ -3282,12 +3282,9 @@ describe('v1.15.1 Options menu polish', () => {
     assert.doesNotMatch(html, /\.tag-color-list \{[^}]*max-height/);
   });
 
-  it('1.15.1 is the latest version and is documented', () => {
-    assert.match(html, /const APP_VERSION = '1\.15\.1'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
-    assert.match(latest, /version: '1\.15\.1'/);
-    assert.match(latest, /tag: 'latest'/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+  it('1.15.1 is documented', () => {
+    const latest = html.match(/version: '1\.15\.1'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(latest, /tag: 'latest'/);
     for (const s of ['current theme', 'Show all', 'Confirm before delete', 'Show past', 'Reset Appearance / Behavior to defaults', 'plain text']) {
       assert.ok(latest.includes(s), `changelog missing ${s}`);
     }
@@ -3297,6 +3294,270 @@ describe('v1.15.1 Options menu polish', () => {
     assert.match(md, /## \[1\.15\.1\] — 2026-10-13/);
     const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
     assert.match(readme, /\*Reset to defaults\* at the bottom of Appearance and Behavior/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// v1.16.0 Board lanes: drop below a column
+// ═══════════════════════════════════════════════════════════════════════
+describe('v1.16.0 board lanes', () => {
+  const findBoardLane = new Function(`${fnSource('findBoardLane')}; return findBoardLane;`)();
+  const col = (target, left, right, bottom, top = 100) => ({ target, rect: { left, right, top, bottom } });
+  const side = [col('new', 40, 300, 1500), col('active', 314, 614, 400), col('completed', 628, 878, 500)];
+  const page = { left: 10, right: 910, bottom: 2000 };
+
+  it('below a shorter column maps to that column, all the way down the page', () => {
+    assert.equal(findBoardLane(side, page, 400, 900).target, 'active');
+    assert.equal(findBoardLane(side, page, 700, 600).target, 'completed');
+    assert.equal(findBoardLane(side, page, 314, 401).target, 'active');
+    assert.equal(findBoardLane(side, page, 400, 1990).target, 'active', 'far below the tallest column still counts');
+  });
+
+  it('the outer margins belong to the first and last columns', () => {
+    assert.equal(findBoardLane(side, page, 900, 300).target, 'completed', 'right margin beside Completed');
+    assert.equal(findBoardLane(side, page, 900, 1800).target, 'completed');
+    assert.equal(findBoardLane(side, page, 20, 300).target, 'new', 'left margin beside New');
+  });
+
+  it('over the box itself, in a gutter, above the columns, or outside the page area is not a lane', () => {
+    assert.equal(findBoardLane(side, page, 400, 300), null);
+    assert.equal(findBoardLane(side, page, 400, 400), null);
+    assert.equal(findBoardLane(side, page, 307, 900), null);
+    assert.equal(findBoardLane(side, page, 400, 99), null);
+    assert.equal(findBoardLane(side, page, 400, 2001), null);
+    assert.equal(findBoardLane(side, page, 920, 900), null);
+    assert.equal(findBoardLane(side, page, 5, 900), null);
+    assert.equal(findBoardLane(side, page, 100, 900), null);
+  });
+
+  it('stacked columns (tablet/phone) have no lanes', () => {
+    const stacked = [col('new', 0, 600, 400, 100), col('active', 0, 600, 700, 412), col('completed', 0, 600, 900, 712)];
+    assert.equal(findBoardLane(stacked, page, 300, 920), null);
+    assert.equal(findBoardLane([], page, 300, 920), null);
+    assert.equal(findBoardLane(null, page, 300, 920), null);
+    assert.equal(findBoardLane(side, null, 400, 900), null);
+  });
+
+  it('lanes are desktop-only, task-drag-only, and leave real drop zones alone', () => {
+    const at = fnSource('boardLaneAt');
+    assert.match(at, /isTouchLikePointer\(\) \|\| state\.activeTab !== 'desk'/);
+    assert.match(at, /includes\('text\/task-id'\)/);
+    assert.match(at, /closest\?\.\('\[data-drop-target\], \.item-card'\)/);
+    const layout = fnSource('boardLaneLayout');
+    assert.match(layout, /col\.classList\.contains\('done'\) \? 'completed'/);
+    assert.doesNotMatch(mainScript, /BOARD_LANE_BOTTOM_SLACK/);
+    assert.match(layout, /const after = board\.nextElementSibling;/, 'lanes stop at the Notes section');
+    assert.match(layout, /Math\.min\(mainRect\.bottom, window\.innerHeight,/);
+    const init = fnSource('initBoardLanes');
+    assert.match(init, /moveTaskToColumn\(taskId, lane\.target\)/);
+    assert.match(init, /document\.addEventListener\('dragend', clearBoardLane\)/);
+    assert.match(mainScript, /\n    initBoardLanes\(\);\n/);
+    assert.match(html, /\.board-lane-ghost \{[^}]*pointer-events: none;/);
+    assert.match(html, /\.board-lane-ghost\[hidden\] \{ display: none; \}/);
+  });
+
+  it('the Completed lane highlights the Completed section, not Shelved', () => {
+    assert.match(fnSource('showBoardLane'), /lane\.col\.querySelector\('\.col-subsection\[data-drop-target="completed"\]'\)/);
+  });
+
+  it('sidebar position accepts left, right, top, and bottom; anything else falls back to left', () => {
+    const normalize = new Function(`${mainScript.match(/const SIDEBAR_POSITIONS = \[[^\]]*\];/)[0]}; ${fnSource('normalizeSidebarPosition')}; return normalizeSidebarPosition;`)();
+    for (const p of ['left', 'right', 'top', 'bottom']) assert.equal(normalize(p), p);
+    assert.equal(normalize('middle'), 'left');
+    assert.equal(normalize(undefined), 'left');
+    const select = html.match(/<select id="sidebar-position-select"[\s\S]*?<\/select>/)[0];
+    assert.deepEqual([...select.matchAll(/value="(\w+)"/g)].map(m => m[1]), ['left', 'right', 'top', 'bottom']);
+    assert.match(mainScript, /prefs\.sidebarPosition && SIDEBAR_POSITIONS\.includes\(prefs\.sidebarPosition\)/);
+  });
+
+  it('top/bottom set data-sidebar-bar and track the bar height on <body>', () => {
+    const fn = fnSource('applySidebarPosition');
+    assert.match(fn, /if \(next === 'top' \|\| next === 'bottom'\) root\.dataset\.sidebarBar = 'true';/);
+    assert.match(fn, /else delete root\.dataset\.sidebarBar;/);
+    assert.match(fn, /new ResizeObserver\(syncSidebarBarHeight\)/);
+    assert.match(fn, /sidebarEl\.style\.transition = 'none';/, 'switching layouts must not animate the sidebar width');
+    assert.match(fnSource('syncSidebarBarHeight'), /document\.body\.style\.setProperty\('--sidebar-bar-h'/);
+  });
+
+  it('bar layout CSS only applies above phone width, and wide screens stay on one row', () => {
+    const block = html.match(/@media \(min-width: 769px\) \{\s*\[data-sidebar-position="top"\] \.app \{ flex-direction: column; \}[\s\S]*?\n    \}\n/)[0];
+    assert.match(block, /\[data-sidebar-position="bottom"\] \.app \{ flex-direction: column-reverse; \}/);
+    assert.match(block, /\[data-sidebar-bar\] \.sidebar-collapse-btn \{ display: none; \}/);
+    assert.match(block, /\[data-sidebar-bar\] \.date-nav \{ display: none; \}/);
+    assert.match(block, /\[data-sidebar-bar\] \.week-strip-row \{ display: flex; \}/);
+    assert.match(block, /\[data-sidebar-position="top"\] \.account-menu \{ bottom: auto; top: calc\(100% \+ 6px\); \}/);
+    assert.match(block, /\[data-sidebar-position="bottom"\] \.toast \{ bottom: calc\(var\(--sidebar-bar-h, 0px\) \+ 16px\); \}/);
+    const wide = html.indexOf('@media (min-width: 1280px) {\n      [data-sidebar-bar] .sidebar,');
+    assert.ok(wide > html.indexOf(block), 'one-row rules must come after the bar block to win');
+    assert.match(html.slice(wide, wide + 300), /flex-wrap: nowrap;/);
+  });
+
+  it('search results open above a bottom bar', () => {
+    const fn = fnSource('positionSearchOverlay');
+    assert.match(fn, /sidebarPosition === 'bottom' && window\.innerWidth > 768/);
+    assert.match(fn, /overlay\.style\.bottom = `\$\{window\.innerHeight - rect\.top \+ 8\}px`/);
+  });
+
+  it('1.16.0 is documented', () => {
+    const latest = html.match(/version: '1\.16\.0'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(latest, /tag: 'latest'/);
+    assert.ok(latest.includes('Drop below a column'));
+    assert.ok(latest.includes('Sidebar at the top or bottom'));
+    assert.match(html, /<li><strong>Sidebar at the top or bottom<\/strong>/);
+    assert.match(html, /Layout \(sidebar left, right, top, or bottom\)/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /<li><strong>Drop below a column<\/strong>/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.16\.0\] — 2026-10-13\n\n### Added\n- \*\*Drop below a column\*\*/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /\*\*Column lanes when dragging\*\*/);
+    assert.match(readme, /## Future ideas\n\n- \*\*Faster edge scrolling while dragging\*\*/);
+    assert.match(readme, /- \*\*Suggested colors for custom themes\*\*/);
+    assert.match(readme, /- \*\*Sidebar at the top or bottom\*\*/);
+    assert.match(md, /- \*\*Sidebar at the top or bottom\*\*/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// v1.16.1 Patterned backgrounds
+// ═══════════════════════════════════════════════════════════════════════
+describe('v1.16.1 patterned backgrounds', () => {
+  const store = () => {
+    const m = new Map();
+    return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), _m: m };
+  };
+  const consts = ['BG_PATTERN_ON_KEY', 'BG_PATTERN_KEY', 'BG_PATTERN_STRENGTH_KEY']
+    .map(n => mainScript.match(new RegExp(`const ${n} = '[^']+';`))[0]).join('\n');
+  const block = mainScript.slice(mainScript.indexOf('    const BG_PATTERNS = ['), mainScript.indexOf('    let bgPatternObserver = null;'));
+  const build = (ls) => new Function('localStorage', `${consts}\n${block}\n${fnSource('normalizeBgPattern')}\n${fnSource('normalizeBgPatternStrength')}\n${fnSource('readBgPatternState')}\n${fnSource('bgPatternTileUrl')}
+    return { BG_PATTERNS, normalizeBgPattern, normalizeBgPatternStrength, readBgPatternState, bgPatternTileUrl };`)(ls);
+
+  it('ships the 12 chosen patterns with unique ids, each a single SVG using the INK placeholder', () => {
+    const { BG_PATTERNS } = build(store());
+    assert.deepEqual(BG_PATTERNS.map(p => p.name), ['Graph paper', 'Plus grid', 'Isometric', 'Diagonal', 'Pinstripe', 'Crosshatch',
+      'Hexagon', 'Herringbone', 'Basketweave', 'Chevron', 'Greek key', 'Dot grid']);
+    assert.equal(new Set(BG_PATTERNS.map(p => p.id)).size, 12);
+    for (const p of BG_PATTERNS) {
+      assert.match(p.svg, /^<svg xmlns='http:\/\/www\.w3\.org\/2000\/svg' width='[\d.]+' height='[\d.]+'>[\s\S]*<\/svg>$/, p.id);
+      assert.ok(p.svg.includes('INK'), `${p.id} uses INK`);
+      assert.ok(!p.svg.includes('"'), `${p.id} has no double quotes (it goes inside url("..."))`);
+    }
+    assert.doesNotMatch(block, /paisley|scallop|contour/i);
+  });
+
+  it('defaults to off, Graph paper, 10%; bad stored values fall back; strength is clamped to 2–45', () => {
+    const ls = store();
+    const api = build(ls);
+    assert.deepEqual(api.readBgPatternState(), { on: false, pattern: 'graph', strength: 10 });
+    ls.setItem('work-desk-bg-pattern-on', 'true');
+    ls.setItem('work-desk-bg-pattern', 'paisley');
+    ls.setItem('work-desk-bg-pattern-strength', '99');
+    assert.deepEqual(api.readBgPatternState(), { on: true, pattern: 'graph', strength: 45 });
+    assert.equal(api.normalizeBgPatternStrength(0), 2);
+    assert.equal(api.normalizeBgPatternStrength('12.6'), 13);
+    assert.equal(api.normalizeBgPatternStrength('abc'), 10);
+    assert.equal(api.normalizeBgPattern('greek-key'), 'greek-key');
+  });
+
+  it('tile URLs are tinted with the theme color and wrapped at the chosen opacity', () => {
+    const { bgPatternTileUrl } = build(store());
+    const url = bgPatternTileUrl('pinstripe', '#e6e3d8', 0.12);
+    assert.match(url, /^url\("data:image\/svg\+xml,/);
+    const svg = decodeURIComponent(url.slice('url("data:image/svg+xml,'.length, -2));
+    assert.match(svg, /^<svg[^>]*><g opacity='0\.12'><path d='M5 0V10' stroke='#e6e3d8'/);
+    assert.match(svg, /<\/g><\/svg>$/);
+    assert.equal(bgPatternTileUrl('nope', '#000', 0.1), 'none');
+  });
+
+  it('wired like the other appearance settings: synced, reset, set on <body>, recolored on theme change', () => {
+    assert.match(mainScript, /return \{ bgPatternOn: bg\.on, bgPattern: bg\.pattern, bgPatternStrength: bg\.strength \};/);
+    assert.match(fnSource('applyCloudPrefs'), /applyBgPattern\(next, \{ fromSync: true \}\)/);
+    assert.match(mainScript, /'bg-pattern-toggle': false/);
+    assert.match(fnSource('resetOptionsTab'), /applyBgPattern\(\{ pattern: BG_PATTERN_DEFAULT, strength: BG_PATTERN_STRENGTH_DEFAULT \}\)/);
+    assert.match(fnSource('renderBgPattern'), /document\.body\.style\.setProperty\('--desk-pattern'/);
+    assert.match(fnSource('initBgPattern'), /attributeFilter: \['class', 'style', 'data-theme'\]/);
+    assert.match(fnSource('initDensityToggle'), /initBgPattern\(\);/);
+    assert.match(html.match(/\n    \.main \{[^}]*\}/)[0], /background-image: var\(--desk-pattern, none\);/);
+    assert.match(html, /<input id="bg-pattern-strength" type="range" min="2" max="45" step="1" value="10" \/>/);
+    const pane = html.slice(html.indexOf('id="options-pane-appearance"'), html.indexOf('id="options-pane-behavior"'));
+    const at = id => pane.indexOf(`data-options-section="${id}"`);
+    assert.ok(at('background') > at('effects') && at('effects') > 0 && at('background') < at('tags'),
+      'Background sits between Effects and Tags');
+  });
+
+  it('pattern clicks only toggle classes, so the Options popout never loses its click target', () => {
+    const render = fnSource('renderBgPattern');
+    assert.doesNotMatch(render, /innerHTML/);
+    assert.match(fnSource('initBgPattern'), /if \(grid && !grid\.children\.length\)/);
+  });
+
+  it('1.16.1 is documented everywhere', () => {
+    const latest = html.match(/version: '1\.16\.1'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(latest, /tag: 'latest'/);
+    assert.ok(latest.includes('Patterned backgrounds'));
+    assert.ok(latest.includes('Drop anywhere below a column'));
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /<li><strong>Patterned background<\/strong> — Options → Appearance → Background/);
+    assert.match(html, /Effects \(card glow on hover, gradient header\), Background \(patterned background\), and Tags \(tag colors\)/);
+    assert.match(html, /all the way down the page\. The far left margin counts as New and the far right as Completed/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.16\.1\] — 2026-10-13\n\n### Added\n- \*\*Patterned backgrounds\*\*/);
+    assert.match(md, /### Improved\n- \*\*Drop anywhere below a column\*\*/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /- \*\*Patterned background\*\* — Options → Appearance → Background/);
+    assert.doesNotMatch(readme, /- \*\*Patterned backgrounds\*\* — optional subtle patterns/, 'moved out of Future ideas');
+    assert.match(readme, /all the way down the page belongs to that column/);
+  });
+});
+
+describe('v1.16.2 tag color labels', () => {
+  it('uses plain labels everywhere, with stored values unchanged', () => {
+    assert.match(mainScript, /const TAG_COLOR_MODES = \['theme', 'analogous', 'palette'\];/);
+    assert.doesNotMatch(html, /Analogous \(shades of accent\)<\/option>|Multi-color \(from theme\)<\/option>/);
+    assert.match(html, /<p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color/);
+    assert.match(html, /There are 8 colors per mode, so with more tags some share a color — pin one to change it/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /\*Shades of accent\* \(lighter\/darker\/neighboring shades of the accent\), or \*Multi-color\*/);
+    assert.doesNotMatch(readme, /Multi-color \(from theme\)/);
+  });
+
+  it('1.16.2 is documented', () => {
+    const entry = html.match(/version: '1\.16\.2'[\s\S]*?\n      \},/)[0];
+    assert.doesNotMatch(entry, /tag: 'latest'/);
+    assert.ok(entry.includes('Simpler tag color names'));
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.16\.2\] — 2026-10-14\n\n### Improved\n- \*\*Simpler tag color names\*\*/);
+  });
+});
+
+describe('v1.16.0 tag pills do not narrow card text', () => {
+  it('chips render inside the top row, before the content, and never while editing', () => {
+    const src = fnSource('renderItem');
+    assert.match(src, /tags\.length && !isEditing \? ' has-tags' : ''/);
+    const chipAt = src.indexOf('row.appendChild(buildTagChipRow(item, tags))');
+    assert.ok(chipAt > 0, 'chip row is appended to the .item row');
+    assert.ok(chipAt < src.indexOf("content.className = 'item-content rich-content'"), 'chip row comes before the content');
+    assert.doesNotMatch(src, /card\.appendChild\(buildTagChipRow/);
+  });
+
+  it('CSS gives chips a grid area instead of padding the content', () => {
+    assert.doesNotMatch(html, /\.has-tags \.item-content \{[^}]*padding-right/);
+    const block = html.slice(html.indexOf('    .tag-chip-row {'), html.indexOf('    .tag-chip {'));
+    assert.match(block, /\.tag-chip-row \{\s*grid-area: tags;[^}]*flex-wrap: wrap;/);
+    assert.doesNotMatch(block, /\.tag-chip-row \{[^}]*position: absolute/);
+    assert.match(block, /\.board-column \.item\.has-tags \{\s*grid-template-columns: auto minmax\(0, 1fr\);\s*grid-template-areas:\s*"check tags"\s*"content content";/);
+    assert.match(block, /\.item\.note\.has-tags \{[^}]*"icon tags"\s*"icon content";/);
+    assert.match(block, /data-density="compact"\] \.board-column \.item\.has-tags \.tag-chip-row \{\s*order: -1;\s*flex: 0 0 100%;/);
+    assert.match(html, /\.item-card\.menu-open \.item\.has-tags:not\(:has\(\.edit-wrap\)\) \{\s*grid-template-areas:\s*"check tags"\s*"content content"\s*"actions actions";/);
+  });
+
+  it('is listed under 1.16.0 Fixed in both changelogs', () => {
+    const entry = html.slice(html.indexOf("version: '1.16.0'"), html.indexOf("version: '1.15.1'"));
+    assert.match(entry, /label: 'Fixed', items: \[\s*'Adding a tag no longer squeezes/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    const block = md.slice(md.indexOf('## [1.16.0]'), md.indexOf('## [1.15.1]'));
+    assert.match(block, /### Fixed\n- \*\*Tags narrowing card text\*\*/);
   });
 });
 
@@ -3468,7 +3729,7 @@ describe('Tag colors', () => {
 
   it('defaults to Theme color mode', () => {
     assert.equal(tagColorFns().state.tagColorMode, 'theme');
-    assert.match(html, /<option value="theme">Single color \(accent\)<\/option>\s*<option value="analogous">Analogous \(shades of accent\)<\/option>\s*<option value="palette">Multi-color \(from theme\)<\/option>/);
+    assert.match(html, /<option value="theme">Single color \(accent\)<\/option>\s*<option value="analogous">Shades of accent<\/option>\s*<option value="palette">Multi-color<\/option>/);
   });
 
   it('CSS: chips read --tag-fg/--tag-bg, palette is gated by @supports, custom beats palette', () => {
@@ -3523,7 +3784,7 @@ describe('Tag colors', () => {
   it('1.10.0 documents analogous tag colors', () => {
     const entry = html.match(/version: '1\.10\.0'[\s\S]*?\n      \},/)[0];
     assert.match(entry, /Analogous/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Analogous \(shades of accent\)<\/strong>/);
+    assert.match(html, /id="help-modal"[\s\S]*<strong>Shades of accent<\/strong> gives each tag a lighter, darker, or neighboring shade/);
   });
 
   it('every tag chip wraps its text in a label so it can be centered', () => {
@@ -3666,7 +3927,7 @@ describe('Tag colors', () => {
     const sub = html.match(/<p id="logo-sub" class="logo-sub">[\s\S]*?<\/p>/)[0];
     assert.doesNotMatch(sub, /version-btn|version-new-dot/);
     assert.match(html, /<\/p>\s*<button id="whats-new-link" class="whats-new-link hidden" type="button">What's new<span id="version-new-dot" class="version-new-dot"><\/span><\/button>/);
-    assert.match(html, /<div class="sidebar-version">\s*<button id="version-btn" class="version-btn" type="button" title="What's new"><\/button>\s*<\/div>\s*<\/aside>/);
+    assert.match(html, /<div id="account-menu"[\s\S]*?<div class="sidebar-version">\s*<span>Version<\/span>\s*<button id="version-btn" class="version-btn" type="button" role="menuitem" title="What's new"><\/button>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/aside>/);
     assert.equal((html.match(/id="version-btn"/g) || []).length, 1);
     assert.equal((html.match(/id="whats-new-link"/g) || []).length, 1);
     const close = html.match(/function closeChangelog\(\) \{[\s\S]*?\n    \}/)[0];
@@ -3834,7 +4095,7 @@ describe('UI audit fixes (1.12.1)', () => {
   });
 
   it('calendar badges are amber, the recurring icon follows the theme, and the week strip snaps', () => {
-    assert.match(html, /\.cal-day-badge \{[^}]*background: rgba\(245, 158, 11, 0\.2\);[^}]*color: #fbbf24;/);
+    assert.match(html, /\.cal-day-badge \{[^}]*background: color-mix\(in srgb, var\(--carried\) 20%, transparent\);[^}]*color: var\(--carried-ink\);/);
     assert.doesNotMatch(html, /\u{1F501}/u, 'the always-blue emoji is gone');
     assert.match(html, /id="recurring-btn"[^>]*><svg class="icon-repeat"/);
     assert.match(mainScript, /badge\.innerHTML = REPEAT_ICON_SVG;/);
@@ -4075,5 +4336,199 @@ describe('Phone menu (1.13.0)', () => {
     for (const id of ['mobile-menu-btn', 'mobile-menu-sheet', 'mobile-menu-backdrop', 'mobile-menu-close', 'mobile-menu-options', 'mobile-menu-whatsnew']) {
       assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, id);
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// v1.17.0 Options summary list, account menu, calendar polish, quieter weekends
+// ═══════════════════════════════════════════════════════════════════════
+describe('v1.17.0 Options summary list', () => {
+  const labelConsts = ['OPTIONS_FONT_LABELS', 'OPTIONS_TAG_MODE_LABELS']
+    .map(n => mainScript.match(new RegExp(`const ${n} = \\{[\\s\\S]*?\\};`))[0]).join('\n');
+  const summary = new Function(`${labelConsts}
+    const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+    ${fnSource('optionsSummaryText')}
+    return optionsSummaryText;`)();
+  const appearance = html.slice(html.indexOf('id="options-pane-appearance"'), html.indexOf('id="options-pane-behavior"'));
+  const behavior = html.slice(html.indexOf('id="options-pane-behavior"'), html.indexOf('id="options-pane-behavior"') + 40000);
+
+  it('summarizes every Appearance row', () => {
+    assert.equal(summary('card-layout', { density: 'compact' }), 'Compact');
+    assert.equal(summary('card-layout', {}), 'Comfortable');
+    assert.equal(summary('typography', { fontSize: 'large', fontFamily: 'jetbrains' }), 'Large · JetBrains Mono');
+    assert.equal(summary('typography', { fontFamily: 'nope' }), 'Default · System font');
+    assert.equal(summary('layout', { sidebarPosition: 'top' }), 'Sidebar top');
+    assert.equal(summary('effects', {}), 'Off');
+    assert.equal(summary('effects', { cardGlow: true, gradientHeader: true }), 'Glow · Gradient');
+    assert.equal(summary('background', { bgOn: false }), 'Off');
+    assert.equal(summary('background', { bgOn: true, bgPatternName: 'Greek key', bgStrength: 12 }), 'Greek key · 12%');
+    assert.equal(summary('tags', { tagMode: 'palette', pinnedTags: 2 }), 'Multi-color · 2 pinned');
+    assert.equal(summary('tags', {}), 'Single color');
+  });
+
+  it('summarizes every Behavior row', () => {
+    assert.equal(summary('general', { startupView: 'today', weekStart: 'monday' }), 'Open Today · Monday');
+    assert.equal(summary('general', {}), 'Remember last · Sunday');
+    assert.equal(summary('tasks', { tasksOn: 3, tasksTotal: 6 }), '3 of 6 on');
+    assert.equal(summary('projects', { truncateNotes: true }), 'Truncate long notes');
+    assert.equal(summary('projects', {}), 'Full notes');
+    assert.equal(summary('insights', { streakSkipWeekends: false }), 'Strict streaks');
+    assert.equal(summary('holidays', { federalHolidays: true, customHolidays: 3 }), 'US federal · 3 custom');
+    assert.equal(summary('holidays', {}), 'No federal');
+    assert.equal(summary('unknown', {}), '');
+  });
+
+  it('each row opens a matching section with a back button, and Reset stays on the list', () => {
+    const rows = (pane) => [...pane.matchAll(/data-options-open="([\w-]+)"/g)].map(m => m[1]);
+    assert.deepEqual(rows(appearance), ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags']);
+    assert.deepEqual(rows(behavior), ['general', 'tasks', 'projects', 'insights', 'holidays']);
+    for (const [pane, label] of [[appearance, 'Appearance'], [behavior, 'Behavior']]) {
+      for (const id of rows(pane)) {
+        const at = pane.indexOf(`data-options-section="${id}"`);
+        assert.ok(at > 0, `${id} section exists`);
+        assert.match(pane.slice(at, at + 400), new RegExp(`data-options-back>‹ ${label}</button>`));
+        assert.match(pane, new RegExp(`data-options-value="${id}"`));
+      }
+    }
+    assert.doesNotMatch(appearance + behavior, /<p class="density-popout-label">/);
+    assert.match(html, /\.options-pane\.in-section \.options-summary,\s*\.options-pane\.in-section > \.options-reset-btn \{ display: none; \}/);
+  });
+
+  it('Esc closes an open section before the popout, and tabs / reopening return to the list', () => {
+    const init = fnSource('initDensityToggle');
+    assert.match(init, /\.options-pane\.in-section:not\(\.hidden\)/);
+    assert.match(fnSource('openDensityPopout'), /resetOptionsNavigation\(\);/);
+    assert.match(fnSource('closeOptionsSection'), /renderOptionsSummaries\(\);/);
+    assert.match(fnSource('openOptionsSection'), /if \(id === 'tags'\) renderTagColorList\(\);/);
+  });
+
+  it('New tags show only during the release that added them', () => {
+    const isNew = new Function(`const APP_VERSION = '1.17.0'; ${fnSource('isNewInCurrentRelease')} return isNewInCurrentRelease;`)();
+    assert.equal(isNew('1.17.0'), true);
+    assert.equal(isNew('1.17.0', '1.17.3'), true);
+    assert.equal(isNew('1.17.0', '1.18.0'), false);
+    assert.equal(isNew('1.16.2'), false);
+    assert.equal(isNew(''), false);
+    assert.equal(isNew(undefined), false);
+    assert.ok((html.match(/class="options-new-tag" data-new-in="1\.17\.0"/g) || []).length >= 2);
+  });
+
+  it('switches replace checkboxes; patterns are 3 wide with the selected name below', () => {
+    assert.match(html, /\.customize-toggle input \{[^}]*appearance: none;/);
+    assert.match(mainScript, /const BG_PATTERN_COLUMNS = 3;/);
+    assert.match(html, /<p class="bg-pattern-picked">Selected: <strong id="bg-pattern-name"><\/strong><\/p>/);
+    assert.match(fnSource('renderBgPattern'), /bg-pattern-name/);
+    assert.doesNotMatch(html, /bg-pattern-tile-name/);
+  });
+});
+
+describe('v1.17.0 account menu', () => {
+  it('holds the app links, backup, sign in/out, and version; the old footer controls live only here', () => {
+    const menu = html.slice(html.indexOf('<div id="account-menu"'), html.indexOf('</aside>'));
+    for (const id of ['account-menu-options', 'account-menu-help', 'account-menu-whatsnew', 'account-menu-new-dot', 'export-btn', 'import-btn', 'repair-btn', 'sb-signin-btn', 'sb-signout-btn', 'version-btn']) {
+      assert.match(menu, new RegExp(`id="${id}"`), id);
+      assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} is unique`);
+    }
+    assert.match(html, /id="account-menu-btn"[^>]*aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu"/);
+    assert.match(html, /<button id="help-btn" class="logo-help-btn"/, 'the ? next to the logo stays');
+  });
+
+  it('opens and closes like a menu and hands off to Options, Help, and What\'s new', () => {
+    const block = mainScript.slice(mainScript.indexOf('/* ── Account menu ── */'), mainScript.indexOf("versionBtn.textContent = `v${APP_VERSION}`;"));
+    assert.match(block, /accountMenuBtn\.setAttribute\('aria-expanded', 'true'\)/);
+    assert.match(block, /e\.key !== 'Escape'/);
+    assert.match(block, /!e\.target\.closest\?\.\('#sidebar-account'\)/);
+    assert.match(block, /account-menu-help'\)\.addEventListener\('click', \(\) => \{ closeAccountMenu\(\); openHelpModal\(\); \}\)/);
+    assert.match(block, /account-menu-whatsnew'\)\.addEventListener\('click', \(\) => \{ closeAccountMenu\(\); openChangelog\(\); \}\)/);
+    assert.match(block, /popout\.classList\.add\('options-floating'\);\s*document\.body\.appendChild\(popout\);/);
+    assert.match(fnSource('closeDensityPopout'), /popout\.classList\.remove\('options-floating'\);/);
+    assert.match(fnSource('closeChangelog'), /syncAccountNewDots\(\);/);
+  });
+
+  it('describes sync status in words', () => {
+    const text = new Function(`${fnSource('accountStatusText')} return accountStatusText;`)();
+    assert.equal(text('guest'), 'Not syncing');
+    assert.equal(text('offline'), 'This browser only');
+    assert.equal(text('signed-in', 'ok'), 'Synced');
+    assert.equal(text('signed-in', 'syncing'), 'Syncing…');
+    assert.equal(text('signed-in', 'error'), 'Sync error');
+    assert.equal(text('signed-in', undefined), 'Signed in');
+    assert.match(fnSource('updateAccountChrome'), /accountMode = mode;\s*syncAccountStatusText\(\);/);
+  });
+
+  it('bar layouts anchor the menu to the right, opening down from a top bar; the phone sheet shows it inline', () => {
+    assert.match(html, /\[data-sidebar-bar\] \.account-menu \{ left: auto; right: 0; width: 240px; \}/);
+    assert.match(html, /\.mobile-menu-sheet \.account-menu\.hidden \{ display: flex; position: static;/);
+    assert.match(html, /\.mobile-menu-sheet \.account-menu-app,\s*\.mobile-menu-sheet \.account-menu \.sidebar-version \{ display: none; \}/);
+    assert.doesNotMatch(html, /\[data-sidebar-bar\] \.sidebar-repair-link::before/);
+  });
+});
+
+describe('v1.17.0 calendar', () => {
+  const chip = new Function(`${fnSource('calendarNeedsTodayChip')} return calendarNeedsTodayChip;`)();
+  const weekends = new Function(`${fnSource('normalizeQuietWeekends')}\n${fnSource('quietWeekendsActive')} return { normalizeQuietWeekends, quietWeekendsActive };`)();
+
+  it('shows the Today chip only away from the current month', () => {
+    assert.equal(chip({ year: 2026, month: 9 }, '2026-10-14'), false);
+    assert.equal(chip({ year: 2026, month: 10 }, '2026-10-14'), true);
+    assert.equal(chip({ year: 2027, month: 9 }, '2026-10-14'), true);
+    assert.equal(chip(null, '2026-10-14'), false);
+    assert.equal(chip({ year: 2026, month: 9 }, ''), false);
+  });
+
+  it('quieter weekends: off by default, work-only follows the desk, both always', () => {
+    assert.equal(weekends.normalizeQuietWeekends(null), 'off');
+    assert.equal(weekends.normalizeQuietWeekends('bogus'), 'off');
+    assert.equal(weekends.normalizeQuietWeekends('work'), 'work');
+    assert.equal(weekends.normalizeQuietWeekends('both'), 'both');
+    assert.equal(weekends.quietWeekendsActive('off', 'work'), false);
+    assert.equal(weekends.quietWeekendsActive('work', 'work'), true);
+    assert.equal(weekends.quietWeekendsActive('work', 'personal'), false);
+    assert.equal(weekends.quietWeekendsActive('both', 'personal'), true);
+  });
+
+  it('quieter weekends is synced, reset, and redraws the calendar', () => {
+    assert.match(mainScript, /const QUIET_WEEKENDS_KEY = 'work-desk-quiet-weekends';/);
+    assert.match(mainScript, /quietWeekends: normalizeQuietWeekends\(localStorage\.getItem\(QUIET_WEEKENDS_KEY\)\)/);
+    assert.match(fnSource('applyCloudPrefs'), /prefs\.quietWeekends/);
+    assert.match(mainScript, /'quiet-weekends-select': 'off'/);
+    const render = fnSource('renderCalendar');
+    assert.match(render, /host\.classList\.toggle\('quiet-weekends', quietWeekendsActive\(state\.quietWeekends, state\.listContext\)\)/);
+    assert.match(html, /\.sidebar-calendar\.quiet-weekends \.cal-day\.weekend:not\(\.selected\):not\(\.holiday\):not\(\.other-month\) \{ color: var\(--sidebar-muted\); \}/);
+  });
+
+  it('renders the Today chip and the legend, and fills the selected day with the theme color', () => {
+    const render = fnSource('renderCalendar');
+    assert.match(render, /calendarNeedsTodayChip\(/);
+    assert.match(render, /cal-legend/);
+    for (const label of ['Has items', 'Left open', 'Holiday']) assert.ok(render.includes(label), label);
+    assert.match(html, /rgb\(from var\(--sidebar-cal-selected-bg\) r g b \/ 1\)/);
+  });
+
+  it('left open and carried over share --carried: amber, rose on the six amber-accent themes', () => {
+    assert.match(html, /--carried: #f59e0b;/);
+    assert.match(html, /\[data-theme="clay"\], \[data-theme="flint"\], \[data-theme="denim"\],\s*\[data-theme="warm"\], \[data-theme="noir"\], \[data-theme="mocha"\] \{ --carried: #fb7185; --carried-ink: #fda4af; \}/);
+    assert.match(html, /--carried-ink: #fbbf24;/);
+    assert.match(html, /\.legend-swatch\.carried \{[^}]*var\(--carried\)/);
+    assert.match(html, /\.insight-bar-seg\.carried \{[^}]*var\(--carried\)/);
+  });
+});
+
+describe('v1.17.0 docs', () => {
+  it('1.17.0 is the latest version and documented everywhere', () => {
+    assert.match(html, /const APP_VERSION = '1\.17\.0'/);
+    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    assert.match(latest, /version: '1\.17\.0'/);
+    assert.match(latest, /tag: 'latest'/);
+    for (const s of ['Simpler Options', 'Account menu', 'Calendar Today chip', 'Calendar legend', 'Quieter weekends', 'switches']) assert.ok(latest.includes(s), s);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.17\.0\] — 2026-10-14\n\n### Added\n- \*\*Summary-list Options\*\*/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /- \*\*Account menu\*\*/);
+    assert.match(readme, /- \*\*Quieter weekends\*\*/);
+    assert.match(html, /<li><strong>Today chip<\/strong>/);
+    assert.match(html, /<li><strong>Account menu<\/strong>/);
+    assert.match(html, /<li><strong>Summary list<\/strong>/);
   });
 });
