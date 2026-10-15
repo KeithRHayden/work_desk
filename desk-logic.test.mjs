@@ -4382,12 +4382,11 @@ describe('v1.17.0 Options summary list', () => {
     const rows = (pane) => [...pane.matchAll(/data-options-open="([\w-]+)"/g)].map(m => m[1]);
     assert.deepEqual(rows(appearance), ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags']);
     assert.deepEqual(rows(behavior), ['general', 'tasks', 'projects', 'insights', 'holidays']);
-    for (const [pane, label] of [[appearance, 'Appearance'], [behavior, 'Behavior']]) {
+    for (const pane of [appearance, behavior]) {
       for (const id of rows(pane)) {
         const at = pane.indexOf(`data-options-section="${id}"`);
         assert.ok(at > 0, `${id} section exists`);
-        assert.match(pane.slice(at, at + 400), new RegExp(`data-options-back>‹ ${label}</button>`));
-        assert.match(pane, new RegExp(`data-options-value="${id}"`));
+        assert.match(pane.slice(at, at + 400), /data-options-back>‹ Back<\/button>/);
       }
     }
     assert.doesNotMatch(appearance + behavior, /<p class="density-popout-label">/);
@@ -4535,7 +4534,7 @@ describe('v1.17.0 docs', () => {
     assert.doesNotMatch(entry, /tag: 'latest'/);
     assert.ok(entry.includes('Options fits its list'));
     assert.doesNotMatch(html, /#options-pane-appearance, #options-pane-behavior \{ min-height/);
-    assert.match(fnSource('openOptionsSection'), /pane\.style\.minHeight = `\$\{pane\.offsetHeight\}px`;\s*pane\.querySelectorAll/);
+    assert.match(fnSource('openOptionsSection'), /pane\.style\.minHeight = `\$\{pane\.getBoundingClientRect\(\)\.height\}px`;\s*pane\.querySelectorAll/);
     assert.match(fnSource('closeOptionsSection'), /pane\.style\.minHeight = '';/);
     const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
     assert.match(md, /## \[1\.17\.1\] — 2026-10-14\n\n### Improved\n- \*\*Options fits its list\*\*/);
@@ -4556,8 +4555,6 @@ describe('v1.17.2 Options polish', () => {
     assert.equal(summary('general', { launchDesk: 'personal', startupView: 'today', weekStart: 'monday' }), 'Personal · Today · Mon');
     assert.equal(summary('general', { launchDesk: 'last' }), 'Last viewed · Sun');
     assert.equal(summary('insights', { streakSkipWeekends: true }), 'Weekends skipped');
-    assert.match(html, /\.options-row-value \{[^}]*-webkit-line-clamp: 3;/);
-    assert.doesNotMatch(html.match(/\.options-row-value \{[^}]*\}/)[0], /white-space: nowrap/);
   });
 
   it('opens the chosen desk, or the last one used', () => {
@@ -4744,10 +4741,8 @@ describe('v1.18.0 complete edge and tag position', () => {
       ${fnSource('optionsSummaryText')}
       return optionsSummaryText;`)();
     assert.equal(summary('card-layout', { completeStyle: 'checkbox', tagPosition: 'actions' }), 'Comfortable · Checkbox · Tags in bar');
-    assert.match(html, /const APP_VERSION = '1\.18\.0'/);
-    const latest = html.match(/const CHANGELOG = \[\s*\{[\s\S]*?\n      \},/)[0];
+    const latest = html.slice(html.indexOf("version: '1.18.0'"), html.indexOf("version: '1.17.2'"));
     assert.match(latest, /version: '1\.18\.0'/);
-    assert.match(latest, /tag: 'latest'/);
     for (const s of ['Complete button on the card edge', 'DONE?', 'DOING', 'DONE!', 'UNDO?', 'Checkbox', 'Slim headroom', 'Action bar']) assert.ok(latest.includes(s), s);
     assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
     const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
@@ -4760,5 +4755,65 @@ describe('v1.18.0 complete edge and tag position', () => {
     assert.match(help, /<li><strong>Tag position<\/strong>/);
     assert.match(help, /Tap a task's <strong>left edge<\/strong> to complete it/);
     assert.doesNotMatch(help, /Tap the <strong>checkbox<\/strong> to complete a task/);
+  });
+});
+
+describe('v1.18.1 calendar legend sample', () => {
+  it('the Left open sample is an empty swatch, not a hard-coded count', () => {
+    assert.match(html, /<span class="cal-legend-badge" aria-hidden="true"><\/span>Left open/);
+    assert.doesNotMatch(html, /<span class="cal-legend-badge">\d+<\/span>/);
+  });
+  it('real per-day badges still count open tasks on past days', () => {
+    assert.match(html, /badge\.className = 'cal-day-badge';\s*badge\.textContent = openCount > 9 \? '9\+' : String\(openCount\);/);
+  });
+  it('1.18.1 has a Fixed note', () => {
+    const entry = html.slice(html.indexOf("version: '1.18.1'"), html.indexOf("version: '1.18.0'"));
+    assert.match(entry, /label: 'Fixed'/);
+    assert.match(entry, /Left open/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.1\]/);
+  });
+});
+
+describe('v1.18.2 Options list descriptions, Back, and spacing', () => {
+  const popout = html.slice(html.indexOf('id="density-popout"'), html.indexOf('<!-- Behavior Tab Pane -->') + 20000);
+  const DESC = {
+    'card-layout': 'Density, complete button, tag spot', typography: 'Text size and font',
+    layout: 'Sidebar side, calendar legend, progress', effects: 'Card glow, gradient header',
+    background: 'Board pattern and strength', tags: 'Tag colors',
+    general: 'Start desk, launch view, week start, weekends', tasks: 'Delete, carry-forward, collapse, confetti',
+    projects: 'Long project notes', insights: 'Streak rules', holidays: 'US and custom holidays',
+  };
+  it('every summary row has a description instead of a value', () => {
+    for (const [id, desc] of Object.entries(DESC)) {
+      const row = popout.match(new RegExp(`<button type="button" class="options-row" data-options-open="${id}">[\\s\\S]*?</button>`))[0];
+      assert.match(row, /<span class="options-row-text"><span class="options-row-name">/, id);
+      assert.ok(row.includes(`<span class="options-row-desc">${desc}</span>`), id);
+      assert.doesNotMatch(row, /options-row-value/, id);
+    }
+    assert.doesNotMatch(html, /data-options-value=/);
+  });
+  it('current settings move to the row tooltip', () => {
+    const fn = fnSource('renderOptionsSummaries');
+    assert.match(fn, /\.options-row\[data-options-open\]/);
+    assert.match(fn, /row\.title = `Current: \$\{text\}`/);
+  });
+  it('every back link reads ‹ Back', () => {
+    assert.equal((html.match(/data-options-back>‹ Back<\/button>/g) || []).length, 11);
+    assert.doesNotMatch(html, /data-options-back>‹ (Appearance|Behavior)</);
+  });
+  it('settings after the first get a little space and a faint divider', () => {
+    assert.match(html, /\.options-section > :is\(\.customize-select-row, \.customize-toggle, \.bg-pattern-controls, \.custom-holidays-section\):not\(\.options-section-head \+ \*\) \{\s*position: relative; margin-top: 9px;/);
+    assert.match(html, /:not\(\.options-section-head \+ \*\)::before \{[^}]*top: -5px; height: 1px;/);
+  });
+  it('1.18.2 is the latest release, documented everywhere', () => {
+    assert.match(html, /const APP_VERSION = '1\.18\.2';/);
+    const entry = html.slice(html.indexOf("version: '1.18.2'"), html.indexOf("version: '1.18.1'"));
+    assert.match(entry, /tag: 'latest'/);
+    assert.match(entry, /‹ Back/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /<strong>‹ Back<\/strong> or <strong>Esc<\/strong> goes back/);
+    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.2\]/);
+    assert.match(readFileSync(join(__dirname, '../README.md'), 'utf8'), /hover it for the current settings/);
   });
 });
