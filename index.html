@@ -3070,18 +3070,8 @@
     .cal-legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
     .cal-legend-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sidebar-muted); }
     .cal-legend-dot.holiday { background: var(--accent); }
-    .cal-legend-badge {
-      min-width: 12px;
-      height: 12px;
-      padding: 0 3px;
-      border-radius: 6px;
-      font-size: 0.52rem;
-      font-weight: 700;
-      line-height: 12px;
-      text-align: center;
-      background: color-mix(in srgb, var(--carried) 20%, transparent);
-      color: var(--carried-ink);
-    }
+    /* Same color as the numbers on .cal-day-badge, the part of the badge you actually see */
+    .cal-legend-badge { width: 5px; height: 5px; border-radius: 50%; background: var(--carried-ink); }
 
     .cal-day.holiday { color: var(--accent); font-weight: 600; }
     .cal-day.holiday.has-data:not(.selected)::after { display: none; }
@@ -8865,6 +8855,7 @@
             'Options lists say what is inside each row, e.g. Card layout: Density, complete button, tag spot. Hover a row to see its current settings',
             'Back is now just ‹ Back, so long section titles no longer run into it',
             'A little more space and a faint line between settings inside each Options section',
+            'Calendar legend: the Left open dot is now the same size as the other two, in the same amber as the numbers on the calendar',
           ] },
         ],
       },
