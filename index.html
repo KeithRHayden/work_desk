@@ -5444,12 +5444,16 @@
       font-size: 0.74rem; font-weight: 700; color: var(--text-muted);
     }
     .options-row-name { font-weight: 500; white-space: nowrap; display: inline-flex; align-items: center; }
-    .options-row-value {
-      margin-left: auto; min-width: 0; overflow: hidden; text-align: right; line-height: 1.3;
-      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow-wrap: anywhere;
-      font-size: 0.75rem; color: var(--text-muted);
+    .options-row-text { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+    .options-row-desc { font-size: 0.72rem; line-height: 1.3; color: var(--text-muted); }
+    .options-row-chev { color: var(--text-muted); flex-shrink: 0; margin-left: auto; }
+    .options-section > :is(.customize-select-row, .customize-toggle, .bg-pattern-controls, .custom-holidays-section):not(.options-section-head + *) {
+      position: relative; margin-top: 9px;
     }
-    .options-row-chev { color: var(--text-muted); flex-shrink: 0; }
+    .options-section > :is(.customize-select-row, .customize-toggle, .bg-pattern-controls, .custom-holidays-section):not(.options-section-head + *)::before {
+      content: ''; position: absolute; left: 6px; right: 6px; top: -5px; height: 1px;
+      background: color-mix(in srgb, var(--border) 70%, transparent); pointer-events: none;
+    }
     .options-pane.in-section .options-summary,
     .options-pane.in-section > .options-reset-btn { display: none; }
     .options-section[hidden] { display: none; }
@@ -8105,16 +8109,16 @@
                   <!-- Appearance Tab Pane -->
                   <div class="options-pane hidden" id="options-pane-appearance">
                     <div class="options-summary">
-                      <button type="button" class="options-row" data-options-open="card-layout"><span class="options-row-icon" aria-hidden="true">≡</span><span class="options-row-name">Card layout<span class="options-new-tag" data-new-in="1.18.0">New</span></span><span class="options-row-value" data-options-value="card-layout"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="typography"><span class="options-row-icon" aria-hidden="true">Aa</span><span class="options-row-name">Typography</span><span class="options-row-value" data-options-value="typography"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="layout"><span class="options-row-icon" aria-hidden="true">▤</span><span class="options-row-name">Layout<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-value" data-options-value="layout"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="effects"><span class="options-row-icon" aria-hidden="true">✦</span><span class="options-row-name">Effects</span><span class="options-row-value" data-options-value="effects"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="background"><span class="options-row-icon" aria-hidden="true">▦</span><span class="options-row-name">Background</span><span class="options-row-value" data-options-value="background"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="tags"><span class="options-row-icon" aria-hidden="true">#</span><span class="options-row-name">Tags</span><span class="options-row-value" data-options-value="tags"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="card-layout"><span class="options-row-icon" aria-hidden="true">≡</span><span class="options-row-text"><span class="options-row-name">Card layout<span class="options-new-tag" data-new-in="1.18.0">New</span></span><span class="options-row-desc">Density, complete button, tag spot</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="typography"><span class="options-row-icon" aria-hidden="true">Aa</span><span class="options-row-text"><span class="options-row-name">Typography</span><span class="options-row-desc">Text size and font</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="layout"><span class="options-row-icon" aria-hidden="true">▤</span><span class="options-row-text"><span class="options-row-name">Layout<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-desc">Sidebar side, calendar legend, progress</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="effects"><span class="options-row-icon" aria-hidden="true">✦</span><span class="options-row-text"><span class="options-row-name">Effects</span><span class="options-row-desc">Card glow, gradient header</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="background"><span class="options-row-icon" aria-hidden="true">▦</span><span class="options-row-text"><span class="options-row-name">Background</span><span class="options-row-desc">Board pattern and strength</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="tags"><span class="options-row-icon" aria-hidden="true">#</span><span class="options-row-text"><span class="options-row-name">Tags</span><span class="options-row-desc">Tag colors</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                     </div>
 
                     <section class="options-section" data-options-section="card-layout" aria-label="Card layout" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Card layout</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Card layout</h3></div>
                     <div class="density-option-group">
                       <button class="density-option" data-density="comfortable" type="button">
                         <span class="density-preview">
@@ -8166,7 +8170,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="typography" aria-label="Typography" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Typography</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Typography</h3></div>
                     <div class="customize-select-row">
                       <label for="font-size-select">Text size</label>
                       <select id="font-size-select" aria-label="Font size">
@@ -8193,7 +8197,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="layout" aria-label="Layout" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Layout</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Layout</h3></div>
                     <div class="customize-select-row">
                       <label for="sidebar-position-select">Sidebar position</label>
                       <select id="sidebar-position-select" aria-label="Sidebar position">
@@ -8221,7 +8225,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="effects" aria-label="Effects" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Effects</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Effects</h3></div>
                     <label class="customize-toggle" title="Accent-colored glow around task cards on hover">
                       <input id="card-glow-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8240,7 +8244,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="background" aria-label="Background" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Background</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Background</h3></div>
                     <label class="customize-toggle" title="Add a subtle pattern behind the board">
                       <input id="bg-pattern-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8261,7 +8265,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="tags" aria-label="Tags" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Appearance</button><h3 class="options-section-title">Tags</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Tags</h3></div>
                     <div class="customize-select-row">
                       <label for="tag-color-mode-select">Tag colors</label>
                       <select id="tag-color-mode-select" aria-label="Tag colors">
@@ -8280,15 +8284,15 @@
                   <!-- Behavior Tab Pane -->
                   <div class="options-pane hidden" id="options-pane-behavior">
                     <div class="options-summary">
-                      <button type="button" class="options-row" data-options-open="general"><span class="options-row-icon" aria-hidden="true">⚑</span><span class="options-row-name">General<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-value" data-options-value="general"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="tasks"><span class="options-row-icon" aria-hidden="true">☑</span><span class="options-row-name">Tasks</span><span class="options-row-value" data-options-value="tasks"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="projects"><span class="options-row-icon" aria-hidden="true">▣</span><span class="options-row-name">Projects</span><span class="options-row-value" data-options-value="projects"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="insights"><span class="options-row-icon" aria-hidden="true">↗</span><span class="options-row-name">Insights</span><span class="options-row-value" data-options-value="insights"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="holidays"><span class="options-row-icon" aria-hidden="true">✶</span><span class="options-row-name">Holidays</span><span class="options-row-value" data-options-value="holidays"></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="general"><span class="options-row-icon" aria-hidden="true">⚑</span><span class="options-row-text"><span class="options-row-name">General<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-desc">Start desk, launch view, week start, weekends</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="tasks"><span class="options-row-icon" aria-hidden="true">☑</span><span class="options-row-text"><span class="options-row-name">Tasks</span><span class="options-row-desc">Delete, carry-forward, collapse, confetti</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="projects"><span class="options-row-icon" aria-hidden="true">▣</span><span class="options-row-text"><span class="options-row-name">Projects</span><span class="options-row-desc">Long project notes</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="insights"><span class="options-row-icon" aria-hidden="true">↗</span><span class="options-row-text"><span class="options-row-name">Insights</span><span class="options-row-desc">Streak rules</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="holidays"><span class="options-row-icon" aria-hidden="true">✶</span><span class="options-row-text"><span class="options-row-name">Holidays</span><span class="options-row-desc">US and custom holidays</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                     </div>
 
                     <section class="options-section" data-options-section="general" aria-label="General" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">General</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">General</h3></div>
                     <div class="customize-select-row customize-select-row-sub">
                       <label for="launch-desk-select"><span>Open desk<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="customize-toggle-sub">Which desk the app starts on</span></label>
                       <select id="launch-desk-select" aria-label="Open desk">
@@ -8322,7 +8326,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="tasks" aria-label="Tasks" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">Tasks</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Tasks</h3></div>
                     <label class="customize-toggle" title="Ask for confirmation before permanently deleting a task">
                       <input id="confirm-delete-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8380,7 +8384,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="projects" aria-label="Projects" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">Projects</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Projects</h3></div>
                     <label class="customize-toggle" title="Truncate long project notes to a few lines with a show-more toggle">
                       <input id="truncate-notes-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8392,7 +8396,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="insights" aria-label="Insights" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">Insights</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Insights</h3></div>
                     <label class="customize-toggle" title="Weekends don't break your streak — active weekend days still count">
                       <input id="streak-skip-weekends-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8404,7 +8408,7 @@
                     </section>
 
                     <section class="options-section" data-options-section="holidays" aria-label="Holidays" hidden>
-                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Behavior</button><h3 class="options-section-title">Holidays</h3></div>
+                    <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Holidays</h3></div>
                     <label class="customize-toggle" title="Skip recurring tasks on US federal holidays">
                       <input id="us-federal-holidays-toggle" type="checkbox" />
                       <span class="customize-toggle-text">
@@ -8635,7 +8639,7 @@
         <h3>Options menu</h3>
         <ul>
           <li>Open with the customize button (⚙) near the date, or <strong>Options</strong> in the account menu at the bottom of the sidebar; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
-          <li><strong>Summary list</strong> — Appearance and Behavior open on a short list, each row showing what it's set to. Click a row to open that section; <strong>‹ Appearance</strong> / <strong>‹ Behavior</strong> or <strong>Esc</strong> goes back, and Esc again closes Options. On/off settings are switches, and a <em>New</em> tag marks settings added in this release until you open that section</li>
+          <li><strong>Summary list</strong> — Appearance and Behavior open on a short list, each row with a one-line note of what's inside (e.g. <em>Card layout: Density, complete button, tag spot</em>); hover a row to see its current settings. Click a row to open that section; <strong>‹ Back</strong> or <strong>Esc</strong> goes back, and Esc again closes Options. On/off settings are switches, and a <em>New</em> tag marks settings added in this release until you open that section</li>
           <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
           <li><strong>Appearance</strong> — Card layout (Comfortable/Compact, Complete button style, Tag position), Typography (text size Small/Default/Large, 8 font families), Layout (sidebar left, right, top, or bottom), Effects (card glow on hover, gradient header), Background (patterned background), and Tags (tag colors). The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
           <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Startup view, week start day (Sunday/Monday), Quieter weekends, Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
@@ -8647,7 +8651,7 @@
 
         <h3>Navigation</h3>
         <ul>
-          <li><strong>Calendar</strong> — pick any day (it fills with your theme color); dots mean data exists; yellow number badges on past days count open tasks left behind (rose on amber-accent themes, the same color as Insights <em>carried over</em>). The legend underneath spells this out</li>
+          <li><strong>Calendar</strong> — pick any day (it fills with your theme color); dots mean data exists; yellow number badges on past days count open tasks left behind (rose on amber-accent themes, the same color as Insights <em>carried over</em>). The legend underneath spells this out; its Left open sample is just the color, not a count</li>
           <li><strong>Today chip</strong> — after browsing the calendar to another month, click <strong>Today</strong> beside the month name to jump back</li>
           <li><strong>Quieter weekends</strong> — Options → Behavior → General grays the Saturday and Sunday numbers on the calendar: Off, Work only, or Both desks</li>
           <li><strong>Open desk</strong> — Options → Behavior → General chooses the desk the app starts on: Last used, Work, or Personal. <em>On launch</em> separately picks the day (last viewed or Today)</li>
@@ -8850,12 +8854,32 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.18.0';
+    const APP_VERSION = '1.18.2';
     const CHANGELOG = [
+      {
+        version: '1.18.2',
+        date: 'Oct 15, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'Options lists say what is inside each row, e.g. Card layout: Density, complete button, tag spot. Hover a row to see its current settings',
+            'Back is now just ‹ Back, so long section titles no longer run into it',
+            'A little more space and a faint line between settings inside each Options section',
+          ] },
+        ],
+      },
+      {
+        version: '1.18.1',
+        date: 'Oct 15, 2026',
+        sections: [
+          { label: 'Fixed', items: [
+            'Calendar legend: the Left open sample is now an empty color swatch. It used to show a fixed 2, which read like a count of your open tasks even when none were left open',
+          ] },
+        ],
+      },
       {
         version: '1.18.0',
         date: 'Oct 14, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Complete button on the card edge: click the left edge of a task to finish it, and click it again to reopen. The edge covers the task and its action links, not the comments below',
@@ -12094,7 +12118,7 @@
     const OPTIONS_TAG_POSITION_LABELS = { slim: 'Slim tags', actions: 'Tags in bar' };
     const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
-    // Pure: the one-line value shown on each Options summary row
+    // Pure: the current settings shown in each Options summary row's tooltip
     function optionsSummaryText(id, p) {
       switch (id) {
         case 'card-layout': return [
@@ -12155,8 +12179,9 @@
 
     function renderOptionsSummaries() {
       const prefs = readOptionsSummaryPrefs();
-      document.querySelectorAll('#density-popout [data-options-value]').forEach(el => {
-        el.textContent = optionsSummaryText(el.dataset.optionsValue, prefs);
+      document.querySelectorAll('#density-popout .options-row[data-options-open]').forEach(row => {
+        const text = optionsSummaryText(row.dataset.optionsOpen, prefs);
+        if (text) row.title = `Current: ${text}`;
       });
     }
 
@@ -12165,7 +12190,7 @@
       const section = pane.querySelector(`[data-options-section="${id}"]`);
       if (!section) return;
       // A short section keeps the list's height so the panel doesn't jump
-      pane.style.minHeight = `${pane.offsetHeight}px`;
+      pane.style.minHeight = `${pane.getBoundingClientRect().height}px`;
       pane.querySelectorAll('.options-section').forEach(s => { s.hidden = s !== section; });
       pane.classList.add('in-section');
       // Tags inside stay up for this visit and are gone on the way back
@@ -16831,7 +16856,7 @@
       legend.className = 'cal-legend';
       legend.setAttribute('aria-hidden', 'true');
       legend.innerHTML = '<span class="cal-legend-item"><span class="cal-legend-dot"></span>Has items</span>'
-        + '<span class="cal-legend-item" title="Open tasks left on a past day"><span class="cal-legend-badge">2</span>Left open</span>'
+        + '<span class="cal-legend-item" title="Past days with open tasks show how many in this color"><span class="cal-legend-badge" aria-hidden="true"></span>Left open</span>'
         + '<span class="cal-legend-item"><span class="cal-legend-dot holiday"></span>Holiday</span>';
       host.appendChild(legend);
     }
