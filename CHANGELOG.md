@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.18.2] — 2026-10-15
+
+### Improved
+- **Options lists say what's inside** — each row on the Appearance and Behavior lists now has a short note of the settings it holds (e.g. *Card layout: Density, complete button, tag spot*) instead of the gray current value. Hover a row to see its current settings
+- **‹ Back** — the back link in every Options section reads *‹ Back* instead of *‹ Appearance* / *‹ Behavior*, so longer section titles no longer run into it
+- **Settings spacing** — a little more room and a faint divider between settings inside each Options section
+
+## [1.18.1] — 2026-10-15
+
+### Fixed
+- **Calendar legend Left open sample** — the sample badge is now an empty color swatch. It used to show a fixed *2*, which read like a count of your open tasks even when nothing was left open. The real per-day numbers on past days are unchanged
+
 ## [1.18.0] — 2026-10-14
 
 ### Added
