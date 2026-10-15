@@ -2948,8 +2948,8 @@ test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await expect(page.locator('#changelog-body')).toContainText('—');
-    await expect(page.locator('#changelog-body')).toContainText('Options → Themes');
-    await expect(page.locator('#changelog-body')).toContainText('Reset (formerly "auto")');
+    await expect(page.locator('#changelog-body')).toContainText('Options → Behavior → General');
+    await expect(page.locator('#changelog-body')).toContainText('"Work desk only" is now "Work only"');
     await expectClean(page, '#changelog-body');
     await page.locator('#changelog-modal-dismiss').click();
 
@@ -3984,7 +3984,7 @@ test.describe('Patterned background 1.16.1', { tag: ['@options'] }, () => {
     expect(await mainTile(page)).toContain("<g opacity='0.18'>");
     await page.locator('#density-toggle').click();
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
-    await expect(page.locator('#options-pane-appearance [data-options-value="background"]')).toHaveText('Herringbone · 18%');
+    await expect(page.locator('#options-pane-appearance [data-options-open="background"]')).toHaveAttribute('title', 'Current: Herringbone · 18%');
     await page.locator('#options-pane-appearance [data-options-open="background"]').click();
     await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'herringbone');
 
@@ -4398,7 +4398,8 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
       const pane = page.locator(`#options-pane-${tab}`);
       await expect(pane.locator('[data-options-open]')).toHaveCount(ROWS[tab].length);
       for (const id of ROWS[tab]) {
-        await expect(pane.locator(`[data-options-value="${id}"]`)).not.toHaveText('');
+        await expect(pane.locator(`[data-options-open="${id}"] .options-row-desc`)).toBeVisible();
+        await expect(pane.locator(`[data-options-open="${id}"]`)).toHaveAttribute('title', /^Current: .+/);
         await pane.locator(`[data-options-open="${id}"]`).click();
         // The clicked row is hidden by the click; Options must stay open
         await expect(popout(page)).toBeVisible();
@@ -4408,7 +4409,7 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
         await expect(pane.locator('.options-summary')).toBeHidden();
         await expect(pane.locator(`[data-options-reset="${tab}"]`)).toBeHidden();
         const back = section.locator('[data-options-back]');
-        await expect(back).toHaveText(tab === 'appearance' ? '‹ Appearance' : '‹ Behavior');
+        await expect(back).toHaveText('‹ Back');
         await expect(back).toBeFocused();
         await back.click();
         await expect(popout(page)).toBeVisible();
@@ -4477,41 +4478,41 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
   test('summary values follow changes made inside a section (round trip)', async ({ page }) => {
     await open117(page);
     await openTab(page, 'appearance');
-    const value = (id: string) => page.locator(`[data-options-value="${id}"]`);
-    await expect(value('typography')).toHaveText('Default · System font');
+    const value = (id: string) => page.locator(`.options-row[data-options-open="${id}"]`);
+    await expect(value('typography')).toHaveAttribute('title', 'Current: Default · System font');
     await page.locator('[data-options-open="typography"]').click();
     await page.locator('#font-size-select').selectOption('large');
     await page.locator('#font-family-select').selectOption('jetbrains');
     await page.locator('[data-options-section="typography"] [data-options-back]').click();
-    await expect(value('typography')).toHaveText('Large · JetBrains Mono');
+    await expect(value('typography')).toHaveAttribute('title', 'Current: Large · JetBrains Mono');
 
-    await expect(value('card-layout')).toHaveText('Comfortable · Done label');
+    await expect(value('card-layout')).toHaveAttribute('title', 'Current: Comfortable · Done label');
     await page.locator('[data-options-open="card-layout"]').click();
     await page.locator('.density-option[data-density="compact"]').click();
     await expect(popout(page)).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(value('card-layout')).toHaveText('Compact · Done label');
+    await expect(value('card-layout')).toHaveAttribute('title', 'Current: Compact · Done label');
 
-    await expect(value('effects')).toHaveText('Off');
+    await expect(value('effects')).toHaveAttribute('title', 'Current: Off');
     await page.locator('[data-options-open="effects"]').click();
     await page.locator('label:has(#card-glow-toggle)').click();
     await page.keyboard.press('Escape');
-    await expect(value('effects')).toHaveText('Glow');
+    await expect(value('effects')).toHaveAttribute('title', 'Current: Glow');
 
     await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
-    const before = (await value('tasks').textContent())!;
-    const on = Number(before.split(' ')[0]);
+    const before = (await value('tasks').getAttribute('title'))!;
+    const on = Number(before.split(' ')[1]);
     await page.locator('[data-options-open="tasks"]').click();
     await page.locator('label:has(#confetti-toggle)').click();
     await page.keyboard.press('Escape');
-    await expect(value('tasks')).not.toHaveText(before);
-    expect(Math.abs(Number((await value('tasks').textContent())!.split(' ')[0]) - on)).toBe(1);
+    await expect(value('tasks')).not.toHaveAttribute('title', before);
+    expect(Math.abs(Number((await value('tasks').getAttribute('title'))!.split(' ')[1]) - on)).toBe(1);
 
     await page.locator('[data-options-open="general"]').click();
     await page.locator('#startup-view-select').selectOption('today');
     await page.locator('#week-start-select').selectOption('monday');
     await page.keyboard.press('Escape');
-    await expect(value('general')).toHaveText('Today · Mon');
+    await expect(value('general')).toHaveAttribute('title', 'Current: Today · Mon');
   });
 
   test('settings switches flip on click and persist', async ({ page }) => {
@@ -4570,7 +4571,7 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
 test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
   test.use({ viewport: { width: 1440, height: 900 } });
   const popout = (page: Page) => page.locator('#density-popout');
-  const value = (page: Page, id: string) => page.locator(`[data-options-value="${id}"]`);
+  const value = (page: Page, id: string) => page.locator(`.options-row[data-options-open="${id}"]`);
 
   async function openSection(page: Page, tab: 'appearance' | 'behavior', id: string) {
     if (!(await popout(page).isVisible())) await page.locator('#density-toggle').click();
@@ -4617,19 +4618,19 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
     expect(tagBox.y).toBeGreaterThanOrEqual(nameBox.y - 1);
     await expect(page.locator('label[for="complete-style-select"] .customize-toggle-sub')).toHaveText("Click a task's left edge to finish it");
   });
-  test('summary values wrap instead of being cut off', async ({ page }) => {
+  test('row descriptions wrap instead of being cut off, and tooltips carry the current settings', async ({ page }) => {
     await open117(page, { 'work-desk-launch-desk': 'work', 'work-desk-startup-view': 'today', 'work-desk-show-cal-legend': 'false', 'work-desk-show-today-progress': 'false' });
     await page.locator('#density-toggle').click();
     for (const tab of ['appearance', 'behavior'] as const) {
       await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
-      for (const el of await page.locator(`#options-pane-${tab} [data-options-value]`).all()) {
-        const clipped = await el.evaluate(e => e.scrollHeight > e.clientHeight + 1 || getComputedStyle(e).textOverflow === 'ellipsis');
-        expect(clipped, await el.getAttribute('data-options-value') ?? '').toBe(false);
+      for (const el of await page.locator(`#options-pane-${tab} .options-row-desc`).all()) {
+        const clipped = await el.evaluate(e => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === 'ellipsis');
+        expect(clipped, (await el.textContent()) ?? '').toBe(false);
       }
     }
-    await expect(value(page, 'general')).toHaveText('Work · Today · Sun');
+    await expect(value(page, 'general')).toHaveAttribute('title', 'Current: Work · Today · Sun');
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
-    await expect(value(page, 'layout')).toHaveText('Sidebar left · No legend · No progress');
+    await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left · No legend · No progress');
   });
 
   test('calendar legend switch hides and restores the legend (round trip + reset)', async ({ page }) => {
@@ -4647,7 +4648,7 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
     await page.locator('.sidebar-calendar .cal-nav-btn').last().click();
     await expect(page.locator('.sidebar-calendar .cal-legend')).toBeHidden();
     await page.keyboard.press('Escape');
-    await expect(value(page, 'layout')).toHaveText('Sidebar left · No legend');
+    await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left · No legend');
 
     await page.reload();
     await dismissAuthModal(page);
@@ -4658,7 +4659,7 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
     await page.locator('[data-options-reset="appearance"]').click();
     await expect(page.locator('.sidebar-calendar .cal-legend')).toBeVisible();
     await expect(page.locator('#show-cal-legend-toggle')).toBeChecked();
-    await expect(value(page, 'layout')).toHaveText('Sidebar left');
+    await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left');
   });
 
   test("Today's Progress switch hides and restores the sidebar card (round trip)", async ({ page }) => {
@@ -4671,7 +4672,7 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
     await expect(popout(page)).toBeVisible();
     await expect(card).toBeHidden();
     await page.keyboard.press('Escape');
-    await expect(value(page, 'layout')).toHaveText('Sidebar left · No progress');
+    await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left · No progress');
 
     await page.reload();
     await dismissAuthModal(page);
@@ -4691,7 +4692,7 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
     await select.selectOption('personal');
     await expect(popout(page)).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(value(page, 'general')).toHaveText('Personal · Last viewed · Sun');
+    await expect(value(page, 'general')).toHaveAttribute('title', 'Current: Personal · Last viewed · Sun');
     await page.keyboard.press('Escape');
 
     // Still on Work now; next launch opens Personal even after using Work last
@@ -4952,8 +4953,22 @@ test.describe('Calendar 1.17.0', { tag: ['@calendar'] }, () => {
     const legend = cal(page).locator('.cal-legend');
     await expect(legend).toBeVisible();
     await expect(legend.locator('.cal-legend-item')).toHaveText([/Has items/, /Left open/, /Holiday/]);
+    // The sample is a swatch, not a count; real counts only sit on past days with open tasks
+    await expect(legend.locator('.cal-legend-badge')).toHaveText('');
+    await expect(cal(page).locator('.cal-day-badge')).toHaveText(['2']);
+    await expect(cal(page).locator('.cal-day', { has: page.locator('.cal-day-badge') })).toContainText('5');
     const h = (await cal(page).boundingBox())!.height;
     expect(h).toBeLessThan(300);
+  });
+
+  test('with nothing left open the calendar shows no counts, only the legend swatch', async ({ page }) => {
+    await open117(page, { 'work-desk-data-work': JSON.stringify({ deletedIds: {}, days: {
+      '2026-10-05': { date: '2026-10-05', items: [{ id: 'd1', type: 'task', content: 'Finished Monday', completed: true, completedAt: '2026-10-05T12:00:00', shelved: false, boardColumn: 'done', comments: [], tags: [], createdAt: '2026-10-05T09:00:00' }] },
+      '2026-10-13': { date: '2026-10-13', items: [{ id: 't1', type: 'task', content: 'Today task', completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: '2026-10-13T09:00:00' }] },
+    } }) });
+    await expect(cal(page).locator('.cal-legend')).toBeVisible();
+    await expect(cal(page).locator('.cal-day-badge')).toHaveCount(0);
+    await expect(cal(page).locator('.cal-legend-badge')).toHaveText('');
   });
 
   test('selected day is a solid theme fill with readable text on light and amber themes', async ({ page }) => {
@@ -5013,7 +5028,7 @@ test.describe('Calendar 1.17.0', { tag: ['@calendar'] }, () => {
     await expect(page.locator('#density-popout')).toBeVisible();
     await expect.poll(quiet).toBe(true);
     await page.keyboard.press('Escape');
-    await expect(page.locator('[data-options-value="general"]')).toBeVisible();
+    await expect(page.locator('.options-row[data-options-open="general"]')).toBeVisible();
     await page.keyboard.press('Escape');
 
     await page.locator('#tab-personal').click();
@@ -5215,8 +5230,8 @@ test.describe('Card layout options 1.18.0', { tag: ['@options'] }, () => {
     await sel.selectOption('checkbox');
     await expect(html(page)).toHaveAttribute('data-complete-edge', 'off');
     await page.keyboard.press('Escape');
-    await expect(page.locator('[data-options-value="card-layout"]')).toBeVisible();
-    await expect(page.locator('[data-options-value="card-layout"]')).toHaveText('Comfortable · Checkbox');
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toBeVisible();
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toHaveAttribute('title', 'Current: Comfortable · Checkbox');
     await page.keyboard.press('Escape');
     await expect(popout(page)).toBeHidden();
     const card = taskCard(page, 'Plain task');
@@ -5253,8 +5268,8 @@ test.describe('Card layout options 1.18.0', { tag: ['@options'] }, () => {
     await expect(taskCard(page, 'Tagged task').locator('.item .tag-chip')).toHaveCount(0);
     expect(await textTop('Plain task')).toBe(await textTop('Tagged task'));
     await page.keyboard.press('Escape');
-    await expect(page.locator('[data-options-value="card-layout"]')).toBeVisible();
-    await expect(page.locator('[data-options-value="card-layout"]')).toHaveText('Comfortable · Done label · Tags in bar');
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toBeVisible();
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toHaveAttribute('title', 'Current: Comfortable · Done label · Tags in bar');
     await page.locator('#options-pane-appearance [data-options-open="card-layout"]').click();
 
     await page.locator('#tag-position-select').selectOption('row');
@@ -5286,6 +5301,97 @@ test.describe('Card layout options 1.18.0', { tag: ['@options'] }, () => {
     await expect(html(page)).toHaveAttribute('data-complete-style', 'label');
     await expect(html(page)).toHaveAttribute('data-tag-position', 'row');
     await expect(taskCard(page, 'Tagged task').locator('.item .tag-chip')).toHaveCount(2);
-    await expect(page.locator('[data-options-value="card-layout"]')).toHaveText('Comfortable · Done label');
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toHaveAttribute('title', 'Current: Comfortable · Done label');
+  });
+});
+
+test.describe('Options list 1.18.2', { tag: ['@options'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const popout = (page: Page) => page.locator('#density-popout');
+  const SECTIONS = {
+    appearance: ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags'],
+    behavior: ['general', 'tasks', 'projects', 'insights', 'holidays'],
+  } as const;
+
+  test('every section says ‹ Back and the title never runs into it', async ({ page }) => {
+    await open117(page);
+    await page.locator('#density-toggle').click();
+    for (const tab of ['appearance', 'behavior'] as const) {
+      await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+      for (const id of SECTIONS[tab]) {
+        await page.locator(`#options-pane-${tab} [data-options-open="${id}"]`).click();
+        const section = page.locator(`[data-options-section="${id}"]`);
+        const back = section.locator('[data-options-back]');
+        await expect(back).toHaveText('‹ Back');
+        const backRight = (await back.boundingBox())!.x + (await back.boundingBox())!.width;
+        const titleLeft = await section.locator('.options-section-title').evaluate(el => {
+          const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().left;
+        });
+        expect(titleLeft - backRight, id).toBeGreaterThanOrEqual(8);
+        await back.click();
+        await expect(popout(page)).toBeVisible();
+        await expect(page.locator(`#options-pane-${tab} .options-summary`)).toBeVisible();
+      }
+    }
+  });
+
+  test('settings inside a section get space and a faint divider, except the first one', async ({ page }) => {
+    await open117(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await page.locator('[data-options-open="card-layout"]').click();
+    const rows = page.locator('[data-options-section="card-layout"] > .customize-select-row');
+    await expect(rows).toHaveCount(2);
+    expect(await rows.nth(0).evaluate(el => getComputedStyle(el, '::before').height)).toBe('1px');
+    expect(await rows.nth(1).evaluate(el => getComputedStyle(el, '::before').height)).toBe('1px');
+    const group = (await page.locator('[data-options-section="card-layout"] .density-option-group').boundingBox())!;
+    const first = (await rows.nth(0).boundingBox())!;
+    expect(first.y - (group.y + group.height)).toBeGreaterThanOrEqual(8);
+
+    await page.keyboard.press('Escape');
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('[data-options-open="tasks"]').click();
+    const toggles = page.locator('[data-options-section="tasks"] > .customize-toggle');
+    expect(await toggles.nth(0).evaluate(el => getComputedStyle(el, '::before').content)).toBe('none');
+    expect(await toggles.nth(1).evaluate(el => getComputedStyle(el, '::before').height)).toBe('1px');
+    // Collapse after belongs to Auto-collapse, so no divider splits them
+    expect(await page.locator('[data-options-section="tasks"] > .customize-threshold-row').evaluate(el => getComputedStyle(el, '::before').content)).toBe('none');
+  });
+
+  test('rows describe what is inside; the tooltip follows a change (round trip)', async ({ page }) => {
+    await open117(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    const row = page.locator('.options-row[data-options-open="card-layout"]');
+    await expect(row.locator('.options-row-desc')).toHaveText('Density, complete button, tag spot');
+    await expect(row.locator('.options-row-value')).toHaveCount(0);
+    await expect(row).toHaveAttribute('title', 'Current: Comfortable · Done label');
+    await row.click();
+    await page.locator('#tag-position-select').selectOption('slim');
+    await page.locator('[data-options-section="card-layout"] [data-options-back]').click();
+    await expect(row).toHaveAttribute('title', 'Current: Comfortable · Done label · Slim tags');
+    await row.click();
+    await page.locator('#tag-position-select').selectOption('row');
+    await page.locator('[data-options-section="card-layout"] [data-options-back]').click();
+    await expect(row).toHaveAttribute('title', 'Current: Comfortable · Done label');
+
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await expect(page.locator('.options-row[data-options-open="tasks"] .options-row-desc')).toHaveText('Delete, carry-forward, collapse, confetti');
+  });
+
+  test('phone: descriptions and ‹ Back fit the Options sheet', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open117(page);
+    await page.locator('#mobile-menu-btn').click();
+    await page.locator('#mobile-menu-options').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    const desc = page.locator('.options-row[data-options-open="general"] .options-row-desc');
+    await expect(desc).toBeVisible();
+    expect((await desc.boundingBox())!.x + (await desc.boundingBox())!.width).toBeLessThanOrEqual(390);
+    await page.locator('[data-options-open="general"]').click();
+    await expect(page.locator('[data-options-section="general"] [data-options-back]')).toHaveText('‹ Back');
+    await page.locator('[data-options-section="general"] [data-options-back]').click();
+    await expect(page.locator('#options-pane-behavior .options-summary')).toBeVisible();
+    await expect(popout(page)).toBeVisible();
   });
 });
