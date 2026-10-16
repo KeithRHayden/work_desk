@@ -2947,9 +2947,9 @@ test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
     await expectClean(page, '#account-menu');
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
-    await expect(page.locator('#changelog-body')).toContainText('—');
-    await expect(page.locator('#changelog-body')).toContainText('Options → Behavior → General');
-    await expect(page.locator('#changelog-body')).toContainText('"Work desk only" is now "Work only"');
+    await expect(page.locator('#changelog-body')).toContainText('faint ✓');
+    await expect(page.locator('#changelog-body')).toContainText('Options → Appearance → Card layout');
+    await expect(page.locator('#changelog-body')).toContainText('Back is now just ‹ Back');
     await expectClean(page, '#changelog-body');
     await page.locator('#changelog-modal-dismiss').click();
 
@@ -4955,6 +4955,12 @@ test.describe('Calendar 1.17.0', { tag: ['@calendar'] }, () => {
     await expect(legend.locator('.cal-legend-item')).toHaveText([/Has items/, /Left open/, /Holiday/]);
     // The sample is a swatch, not a count; real counts only sit on past days with open tasks
     await expect(legend.locator('.cal-legend-badge')).toHaveText('');
+    const dot = await legend.locator('.cal-legend-dot').first().boundingBox();
+    const sample = await legend.locator('.cal-legend-badge').boundingBox();
+    expect(sample!.width).toBeCloseTo(dot!.width, 0);
+    expect(sample!.height).toBeCloseTo(dot!.height, 0);
+    const realInk = await cal(page).locator('.cal-day-badge').first().evaluate(el => getComputedStyle(el).color);
+    expect(await legend.locator('.cal-legend-badge').evaluate(el => getComputedStyle(el).backgroundColor)).toBe(realInk);
     await expect(cal(page).locator('.cal-day-badge')).toHaveText(['2']);
     await expect(cal(page).locator('.cal-day', { has: page.locator('.cal-day-badge') })).toContainText('5');
     const h = (await cal(page).boundingBox())!.height;
@@ -5393,5 +5399,54 @@ test.describe('Options list 1.18.2', { tag: ['@options'] }, () => {
     await page.locator('[data-options-section="general"] [data-options-back]').click();
     await expect(page.locator('#options-pane-behavior .options-summary')).toBeVisible();
     await expect(popout(page)).toBeVisible();
+  });
+});
+
+test.describe('Expanded Completed list scrolling 1.18.2', { tag: ['@board'] }, () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('the board scrolls on its own layer and expanded completed cards stay in place', async ({ page }) => {
+    const today = '2026-10-15';
+    const task = (id: string, content: string, extra: Record<string, unknown> = {}) => ({ id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: `${today}T09:00:00`, ...extra });
+    const items = [
+      ...Array.from({ length: 6 }, (_, i) => task(`n${i}`, `New task ${i}`)),
+      ...Array.from({ length: 7 }, (_, i) => task(`d${i}`, i % 2 ? `Done task ${i} with a longer title that wraps to two lines` : `Done task ${i}`, { completed: true, completedAt: `${today}T1${i}:00:00`, boardColumn: 'done' })),
+    ];
+    await page.clock.setFixedTime(new Date(`${today}T12:00:00`));
+    await page.addInitScript((d) => {
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-bg-pattern-on', 'true');
+      localStorage.setItem('work-desk-bg-pattern', 'basketweave');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ deletedIds: {}, days: { [d.today]: { date: d.today, items: d.items } } }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    }, { today, items });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('main.main')).toHaveCSS('will-change', 'scroll-position');
+
+    const label = page.locator('.board-column.done .col-subsection-label.collapsible');
+    await expect(label).toHaveAttribute('aria-expanded', 'false');
+    await label.click();
+    await expect(label).toHaveAttribute('aria-expanded', 'true');
+    const cards = page.locator('.board-column.done .item-card');
+    await expect(cards).toHaveCount(7);
+
+    const read = () => page.evaluate(() => ({
+      st: document.querySelector('main.main')!.scrollTop,
+      tops: [...document.querySelectorAll('.board-column.done .item-card')].map(el => { const r = el.getBoundingClientRect(); return [r.top, r.bottom]; }),
+    }));
+    let prev = await read();
+    await page.mouse.move(1100, 400);
+    for (let i = 0; i < 12; i++) {
+      await page.mouse.wheel(0, 40);
+      await page.waitForTimeout(30);
+      const now = await read();
+      const d = now.st - prev.st;
+      now.tops.forEach(([top], k) => expect(Math.abs(prev.tops[k][0] - top - d)).toBeLessThan(0.6));
+      now.tops.slice(1).forEach(([top], k) => expect(top).toBeGreaterThanOrEqual(now.tops[k][1] - 0.5));
+      prev = now;
+    }
+    expect(prev.st).toBeGreaterThan(0);
   });
 });
