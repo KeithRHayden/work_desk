@@ -1,4819 +1,5452 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
-import {
-  normalizeItem,
-  deduplicateDayItems,
-  deduplicateRecurringSameDay,
-  deduplicateAcrossDays,
-  planRecurringInject,
-  applyCarryThenInject,
-  advanceLastInjectedDate,
-  mergeRecurringTemplates,
-  scoreItemForMerge,
-  pickMergedItem,
-  dayHasRecurringInstance,
-  isDueOnDate,
-  recurringContentKey,
-  toggleTaskCompleted,
-  resolveBoardColumn,
-  mergeImportDaysData,
-  mergeDeletedIds,
-  moveItemInDays,
-  carryUnfinishedFromPastDays,
-  mergeDaysData,
-  pickBestIdPlacement,
-  AUTO_COLLAPSE_AT_OPTIONS,
-  normalizeAutoCollapseAt,
-  shouldAutoCollapseCompleted,
-  normalizeTag,
-  normalizeTagList,
-  mergeTags,
-  extractHashtags,
-  mergeItemComments,
-  mergeProjectsData,
-  nthWeekdayOfMonth,
-  lastWeekdayOfMonth,
-  getUSFederalHolidays,
-  checkHoliday,
-} from '../lib/desk-logic.mjs';
+import { test, expect, type Page } from '@playwright/test';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const html = readFileSync(join(__dirname, '../work-desk.html'), 'utf8');
-const indexHtml = readFileSync(join(__dirname, '../index.html'), 'utf8');
+const DESK_URL = '/work-desk.html';
+const WORK_KEY = 'work-desk-data-work';
 
-function extractMainScript(source) {
-  const blocks = [...source.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map((m) => m[1]);
-  assert.ok(blocks.length, 'expected at least one script block');
-  return blocks.sort((a, b) => b.length - a.length)[0];
+/** Prefer Continue offline; fall back to hiding the modal for older builds. */
+async function dismissAuthModal(page: Page) {
+  const modal = page.locator('#auth-modal');
+  if (!(await modal.isVisible().catch(() => false))) return;
+  const offline = page.locator('#auth-offline-btn');
+  if (await offline.isVisible().catch(() => false)) {
+    await offline.click();
+  } else {
+    await page.evaluate(() => {
+      document.getElementById('auth-modal')?.classList.add('hidden');
+    });
+  }
+  await expect(modal).toBeHidden();
 }
 
-function task(partial) {
-  return {
-    type: 'task',
-    completed: false,
-    shelved: false,
-    boardColumn: 'active',
-    comments: [],
-    createdAt: '2026-08-11T12:00:00.000Z',
-    content: 'Task',
-    ...partial,
-  };
+/** Options settings sit behind summary rows; open the section holding `selector` (Options must already be open). */
+async function openOptionsSectionFor(page: Page, selector: string) {
+  const info = await page.locator(selector).first().evaluate(el => {
+    const s = el.closest('.options-section');
+    return s ? { id: s.getAttribute('data-options-section')!, pane: s.closest('.options-pane')!.id, open: !s.hasAttribute('hidden') } : null;
+  });
+  if (!info || info.open) return;
+  const pane = page.locator(`#${info.pane}`);
+  if (!(await pane.isVisible())) await page.locator(`.options-nav-btn[data-options-tab="${info.pane.replace('options-pane-', '')}"]`).click();
+  const back = pane.locator('.options-section:not([hidden]) [data-options-back]');
+  if (await back.count()) await back.click();
+  await pane.locator(`[data-options-open="${info.id}"]`).click();
+  await expect(page.locator(selector).first()).toBeAttached();
+  await expect(pane.locator(`[data-options-section="${info.id}"]`)).toBeVisible();
 }
 
-describe('normalizeItem', () => {
-  it('preserves recurringTemplateId through normalize (regression)', () => {
-    const n = normalizeItem(task({
-      id: 'a',
-      content: 'Update the ACE Dashboard',
-      recurringTemplateId: 'tmpl-1',
-      completed: true,
-    }));
-    assert.equal(n.recurringTemplateId, 'tmpl-1');
-    assert.equal(n.completed, true);
+async function openAccountMenu(page: Page) {
+  if (await page.locator('#account-menu').isVisible()) return;
+  await page.locator('#account-menu-btn').click();
+  await expect(page.locator('#account-menu')).toBeVisible();
+}
+
+async function openDesk(page: Page) {
+  // Seed only once per browser context — init scripts also run on reload,
+  // so never clear localStorage here or persistence tests will fail.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('work-desk-list-context')) {
+      localStorage.setItem('work-desk-list-context', 'work');
+    }
+    if (!localStorage.getItem('work-desk-data-work')) {
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {}, deletedIds: {} }));
+    }
+    if (!localStorage.getItem('work-desk-data-personal')) {
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    }
+  });
+  await page.goto(DESK_URL);
+  await dismissAuthModal(page);
+  await expect(page.locator('#add-form')).toBeVisible();
+}
+
+// ── App updates & search matching ───────────────────────────────────────
+test.describe('App update prompt', { tag: ['@app'] }, () => {
+  const serveIndexVersion = (page: Page, version: string) =>
+    page.route('**/work_desk/index.html', (route) =>
+      route.fulfill({ contentType: 'text/html', body: `<script>const APP_VERSION = '${version}';</script>` }));
+  const returnToApp = (page: Page) =>
+    page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+
+  test('offers a Reload when a newer version is deployed', async ({ page }) => {
+    await serveIndexVersion(page, '99.0.0');
+    await openDesk(page);
+    await returnToApp(page);
+    const toast = page.locator('#toast');
+    await expect(toast).toContainText('Work Desk 99.0.0 is available');
+    const reload = toast.locator('button', { hasText: 'Reload' });
+    await expect(reload).toBeVisible();
+    await Promise.all([page.waitForEvent('load'), reload.click()]);
+    await dismissAuthModal(page);
+    await expect(page.locator('#add-form')).toBeVisible();
   });
 
-  it('does not invent recurringTemplateId', () => {
-    assert.equal(normalizeItem(task({ id: 'a' })).recurringTemplateId, undefined);
-  });
-});
-
-describe('recurring inject', () => {
-  const template = {
-    id: 'tmpl-ace',
-    content: '<p>Update the ACE Dashboard</p>',
-    rule: 'daily',
-    lastInjectedDate: null,
-  };
-
-  it('does not inject when a completed instance already exists today', () => {
-    const result = planRecurringInject({
-      templates: [template],
-      today: '2026-08-12',
-      todayItems: [
-        task({
-          id: 'done',
-          content: '<p>Update the ACE Dashboard</p>',
-          recurringTemplateId: 'tmpl-ace',
-          completed: true,
-        }),
-      ],
-      newId: () => 'should-not-create',
-    });
-    assert.equal(result.injectedCount, 0);
-    assert.equal(result.items.length, 1);
-    assert.equal(result.updatedTemplates[0].lastInjectedDate, '2026-08-12');
-  });
-
-  it('does not inject when orphan content matches (stripped template id)', () => {
-    const result = planRecurringInject({
-      templates: [template],
-      today: '2026-08-12',
-      todayItems: [
-        task({
-          id: 'orphan',
-          content: '<p>Update the ACE Dashboard</p>',
-          completed: true,
-        }),
-      ],
-      newId: () => 'should-not-create',
-    });
-    assert.equal(result.injectedCount, 0);
-    assert.equal(dayHasRecurringInstance({ items: result.items }, template), true);
-  });
-
-  it('injects once when today is empty and due', () => {
-    let n = 0;
-    const result = planRecurringInject({
-      templates: [template],
-      today: '2026-08-12',
-      todayItems: [],
-      newId: () => `new-${++n}`,
-    });
-    assert.equal(result.injectedCount, 1);
-    assert.equal(result.items[0].recurringTemplateId, 'tmpl-ace');
-  });
-
-  it('collapses two same-template copies preferring completed', () => {
-    const { items, removed } = deduplicateRecurringSameDay([
-      task({ id: 'open', content: 'ACE', recurringTemplateId: 'tmpl-ace' }),
-      task({ id: 'done', content: 'ACE', recurringTemplateId: 'tmpl-ace', completed: true }),
-    ], [template]);
-    assert.equal(removed, 1);
-    assert.equal(items.length, 1);
-    assert.equal(items[0].id, 'done');
-    assert.equal(items[0].completed, true);
-  });
-
-  it('collapses same content even when template ids differ', () => {
-    const { items, removed } = deduplicateRecurringSameDay([
-      task({ id: 'a', content: '<p>Update the ACE Dashboard</p>', recurringTemplateId: 'tmpl-a' }),
-      task({ id: 'b', content: '<p>Update the ACE Dashboard</p>', recurringTemplateId: 'tmpl-b' }),
-    ], [
-      { id: 'tmpl-a', content: '<p>Update the ACE Dashboard</p>', rule: 'weekdays' },
-      { id: 'tmpl-b', content: '<p>Update the ACE Dashboard</p>', rule: 'weekdays' },
-    ]);
-    assert.equal(removed, 1);
-    assert.equal(items.length, 1);
-    assert.ok(items[0].recurringTemplateId);
-  });
-
-  it('does not collapse two manual tasks with identical text and no template link', () => {
-    const { items, removed } = deduplicateRecurringSameDay([
-      task({ id: 'a', content: 'Buy milk' }),
-      task({ id: 'b', content: 'Buy milk' }),
-    ], []);
-    assert.equal(removed, 0);
-    assert.equal(items.length, 2);
-  });
-
-  it('injects only once when two templates share the same content', () => {
-    let n = 0;
-    const result = planRecurringInject({
-      templates: [
-        { id: 'tmpl-a', content: '<p>Update the ACE Dashboard</p>', rule: 'weekdays', lastInjectedDate: null },
-        { id: 'tmpl-b', content: '<p>Update the ACE Dashboard</p>', rule: 'weekdays', lastInjectedDate: null },
-      ],
-      today: '2026-08-17',
-      todayItems: [],
-      newId: () => `new-${++n}`,
-    });
-    assert.equal(result.injectedCount, 1);
-    assert.equal(result.items.filter(i => recurringContentKey(i.content) === 'update the ace dashboard').length, 1);
+  test('stays quiet when already on the latest version', async ({ page }) => {
+    await openDesk(page);
+    const current = await page.evaluate(() => (window as any).eval('APP_VERSION'));
+    await serveIndexVersion(page, current);
+    await returnToApp(page);
+    await page.waitForTimeout(500);
+    await expect(page.locator('#toast')).not.toContainText('is available');
   });
 });
 
-describe('carry then inject order', () => {
-  const template = {
-    id: 'tmpl-ace',
-    content: 'Update ACE',
-    rule: 'daily',
-    lastInjectedDate: null,
-  };
-
-  it('carry-then-inject does not duplicate an open recurring task from yesterday', () => {
-    let n = 0;
-    const { days } = applyCarryThenInject({
-      yesterday: '2026-08-11',
-      today: '2026-08-12',
-      templates: [template],
-      newId: () => `inj-${++n}`,
-      days: {
-        '2026-08-11': {
-          date: '2026-08-11',
-          items: [
-            task({
-              id: 'yest',
-              content: 'Update ACE',
-              recurringTemplateId: 'tmpl-ace',
-            }),
-          ],
-        },
-      },
-    });
-    const todayItems = days['2026-08-12'].items.filter(i => i.recurringTemplateId === 'tmpl-ace');
-    assert.equal(todayItems.length, 1);
-    assert.equal(todayItems[0].id, 'yest');
-  });
-
-  it('auto-carry pulls unfinished open tasks from all past days with ID dedupe', () => {
-    const { days, carriedCount } = carryUnfinishedFromPastDays({
-      '2026-08-09': {
-        date: '2026-08-09',
-        items: [
-          task({ id: 'old', content: 'Parked older', boardColumn: 'new' }),
-          task({ id: 'done-old', content: 'Done', completed: true }),
-          task({ id: 'shelved-old', content: 'Shelved', shelved: true }),
-        ],
-      },
-      '2026-08-11': {
-        date: '2026-08-11',
-        items: [
-          task({ id: 'yest', content: 'From yesterday' }),
-          task({ id: 'old', content: 'Same id newer copy' }),
-        ],
-      },
-      '2026-08-12': {
-        date: '2026-08-12',
-        items: [task({ id: 'today-only', content: 'Already today' })],
-      },
-    }, '2026-08-12');
-
-    assert.equal(carriedCount, 2);
-    // Completed/shelved stay on the old day; only open unfinished moved
-    assert.deepEqual(
-      days['2026-08-09'].items.map(i => i.id).sort(),
-      ['done-old', 'shelved-old'],
-    );
-    assert.equal(days['2026-08-11'], undefined);
-    const ids = days['2026-08-12'].items.map(i => i.id).sort();
-    assert.deepEqual(ids, ['old', 'today-only', 'yest']);
-    assert.equal(days['2026-08-12'].items.find(i => i.id === 'old').content, 'Same id newer copy');
-  });
-});
-
-describe('toggleTaskCompleted / boardColumn', () => {
-  it('uncomplete preserves New column', () => {
-    const done = task({ id: 'a', boardColumn: 'new', completed: true });
-    const open = toggleTaskCompleted(done);
-    assert.equal(open.completed, false);
-    assert.equal(open.boardColumn, 'new');
-  });
-
-  it('defaults unknown boardColumn to active', () => {
-    assert.equal(resolveBoardColumn({}), 'active');
-    assert.equal(toggleTaskCompleted(task({ id: 'a', boardColumn: 'weird', completed: true })).boardColumn, 'active');
-  });
-});
-
-describe('import/export tombstones', () => {
-  it('mergeImportDaysData keeps deletedIds and strips resurrected items', () => {
-    const ts = '2026-08-12T10:00:00.000Z';
-    const merged = mergeImportDaysData(
-      {
-        days: {
-          '2026-08-12': { date: '2026-08-12', items: [task({ id: 'keep' }), task({ id: 'gone' })] },
-        },
-        deletedIds: { gone: ts },
-      },
-      {
-        days: {
-          '2026-08-12': { date: '2026-08-12', items: [task({ id: 'gone' }), task({ id: 'imported' })] },
-        },
+test.describe('Search matching', { tag: ['@search'] }, () => {
+  test('matches across non-breaking spaces and line breaks', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (localStorage.getItem('work-desk-data-work')) return;
+      const d = new Date();
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      localStorage.setItem('work-desk-data-work', JSON.stringify({
+        days: { [key]: { date: key, items: [{
+          id: 'nbsp-1', type: 'task', completed: true, createdAt: d.toISOString(),
+          content: 'Call&nbsp;vendor<div>about the renewal</div>',
+        }] } },
         deletedIds: {},
-      },
-    );
-    assert.ok(merged.deletedIds.gone);
-    const ids = merged.days['2026-08-12'].items.map(i => i.id).sort();
-    assert.deepEqual(ids, ['imported', 'keep']);
-  });
-
-  it('mergeDeletedIds prefers later tombstone', () => {
-    const merged = mergeDeletedIds(
-      { a: '2026-08-10T00:00:00.000Z' },
-      { a: '2026-08-12T00:00:00.000Z', b: '2026-08-12T00:00:00.000Z' },
-    );
-    assert.equal(merged.a, '2026-08-12T00:00:00.000Z');
-    assert.equal(merged.b, '2026-08-12T00:00:00.000Z');
-  });
-});
-
-describe('moveItemInDays', () => {
-  it('removes the ID from every day before placing on target', () => {
-    const { days, moved } = moveItemInDays({
-      '2026-08-10': { date: '2026-08-10', items: [task({ id: 'x', content: 'Older' })] },
-      '2026-08-11': { date: '2026-08-11', items: [task({ id: 'x', content: 'Newer' }), task({ id: 'y' })] },
-    }, 'x', '2026-08-13');
-    assert.equal(moved, true);
-    assert.equal(days['2026-08-10'], undefined);
-    assert.equal(days['2026-08-11'].items.map(i => i.id).join(), 'y');
-    assert.equal(days['2026-08-13'].items.length, 1);
-    assert.equal(days['2026-08-13'].items[0].content, 'Newer');
-  });
-});
-
-describe('lastInjectedDate advancement', () => {
-  it('completing a past-day instance must not stamp today', () => {
-    const templates = [{ id: 't1', lastInjectedDate: '2026-08-10', content: 'x', rule: 'daily' }];
-    const next = advanceLastInjectedDate(templates, 't1', '2026-08-11');
-    assert.equal(next[0].lastInjectedDate, '2026-08-11');
-    assert.equal(isDueOnDate(next[0], '2026-08-12'), true);
-  });
-
-  it('deleting today instance stamps today and blocks re-inject', () => {
-    const templates = [{ id: 't1', lastInjectedDate: null, content: 'x', rule: 'daily' }];
-    const next = advanceLastInjectedDate(templates, 't1', '2026-08-12');
-    assert.equal(isDueOnDate(next[0], '2026-08-12'), false);
-  });
-});
-
-describe('sync merge scoring', () => {
-  it('shelved local beats remote open task with one comment', () => {
-    const local = task({ id: 'a', shelved: true, comments: [] });
-    const remote = task({
-      id: 'a',
-      comments: [{ id: 'c1', content: 'hi', createdAt: '2026-08-12T00:00:00.000Z' }],
+      }));
     });
-    assert.ok(scoreItemForMerge(local) > scoreItemForMerge(remote));
-    const picked = pickMergedItem(local, remote);
-    assert.equal(picked.shelved, true);
-    assert.equal(picked.comments.length, 1);
-  });
+    await openDesk(page);
+    const search = page.locator('#search-input');
+    const count = page.locator('#search-overlay-count');
 
-  it('completed local beats remote open with comments', () => {
-    const local = task({ id: 'a', completed: true });
-    const remote = task({
-      id: 'a',
-      comments: [
-        { id: 'c1', content: 'a', createdAt: 'x' },
-        { id: 'c2', content: 'b', createdAt: 'x' },
-      ],
+    await search.fill('call vendor');
+    await expect(count).toHaveText('1 result');
+    await search.fill('vendor about');
+    await expect(count).toHaveText('1 result');
+    await search.fill('vendorabout');
+    await expect(count).toHaveText('No matches');
+  });
+});
+
+// ── Desktop must not change when phone layouts do ─────────────────────────────
+async function seedLayout(page: Page, extra: Record<string, string> = {}) {
+  await page.clock.setFixedTime(new Date('2026-09-30T10:00:00'));
+  await page.addInitScript((extraKeys) => {
+    if (localStorage.getItem('layout-seeded')) return;
+    localStorage.setItem('layout-seeded', '1');
+    const t = (id: string, content: string, more = {}) => ({
+      id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+      comments: [], tags: ['ace'], createdAt: '2026-09-28T09:00:00Z', ...more,
     });
-    const picked = pickMergedItem(local, remote);
-    assert.equal(picked.completed, true);
-    assert.equal(picked.comments.length, 2);
-  });
-});
-
-describe('mergeDaysData (cross-device / stale local)', () => {
-  it('remote completed on an older day beats local open carried to today', () => {
-    // Device B: stale open copy auto-carried to today before sync
-    const local = {
-      days: {
-        '2026-08-15': {
-          date: '2026-08-15',
-          items: [task({ id: 'task-1', content: 'Finish report', boardColumn: 'active' })],
-        },
-      },
-      deletedIds: {},
-    };
-    // Device A (cloud): same ID completed on a previous day
-    const remote = {
-      days: {
-        '2026-08-12': {
-          date: '2026-08-12',
-          items: [task({ id: 'task-1', content: 'Finish report', completed: true })],
-        },
-      },
-      deletedIds: {},
-    };
-
-    const merged = mergeDaysData(local, remote);
-    const all = Object.values(merged.days).flatMap(d => d.items);
-    assert.equal(all.length, 1);
-    assert.equal(all[0].completed, true);
-    assert.equal(merged.days['2026-08-12']?.items?.[0]?.id, 'task-1');
-    assert.equal(merged.days['2026-08-15'], undefined);
-  });
-
-  it('remote shelved on an older day beats local open on today', () => {
-    const local = {
-      days: {
-        '2026-08-15': {
-          date: '2026-08-15',
-          items: [task({ id: 'task-2', content: 'Parked work' })],
-        },
-      },
-      deletedIds: {},
-    };
-    const remote = {
-      days: {
-        '2026-08-10': {
-          date: '2026-08-10',
-          items: [task({ id: 'task-2', content: 'Parked work', shelved: true })],
-        },
-      },
-      deletedIds: {},
-    };
-
-    const merged = mergeDaysData(local, remote);
-    const all = Object.values(merged.days).flatMap(d => d.items);
-    assert.equal(all.length, 1);
-    assert.equal(all[0].shelved, true);
-    assert.equal(merged.days['2026-08-10']?.items?.[0]?.id, 'task-2');
-  });
-
-  it('pickBestIdPlacement prefers completed over newer open day', () => {
-    const openToday = {
-      date: '2026-08-15',
-      item: task({ id: 'x', content: 'X' }),
-    };
-    const doneEarlier = {
-      date: '2026-08-12',
-      item: task({ id: 'x', content: 'X', completed: true }),
-    };
-    const best = pickBestIdPlacement(openToday, doneEarlier);
-    assert.equal(best.date, '2026-08-12');
-    assert.equal(best.item.completed, true);
-  });
-});
-
-describe('same-id day dedupe', () => {
-  it('merges comments and keeps completed state', () => {
-    const items = deduplicateDayItems([
-      task({ id: 'a', comments: [{ id: 'c1', content: 'one', createdAt: 'x' }] }),
-      task({ id: 'a', completed: true, comments: [{ id: 'c2', content: 'two', createdAt: 'x' }] }),
-    ]);
-    assert.equal(items.length, 1);
-    assert.equal(items[0].completed, true);
-    assert.equal(items[0].comments.length, 2);
-  });
-});
-
-describe('mergeRecurringTemplates', () => {
-  it('keeps later lastInjectedDate and local content', () => {
-    const merged = mergeRecurringTemplates(
-      [{ id: 't1', content: 'Local', rule: 'daily', lastInjectedDate: '2026-08-11' }],
-      [{ id: 't1', content: 'Remote', rule: 'weekdays', lastInjectedDate: '2026-08-12' }],
-    );
-    assert.equal(merged.length, 1);
-    assert.equal(merged[0].lastInjectedDate, '2026-08-12');
-    assert.equal(merged[0].content, 'Local');
-  });
-});
-
-describe('mergeProjectsData (project task/note deletion tombstones)', () => {
-  it('a task deleted locally does not get resurrected by a stale remote copy', () => {
-    const local = {
-      projects: [
-        {
-          id: 'proj-1',
-          name: 'Test Project',
-          notes: [],
-          tasks: [task({ id: 'keep-task', content: 'Still here' })],
-        },
-      ],
-      deletedIds: { 'gone-task': '2026-08-26T09:00:00.000Z' },
-    };
-    // Remote hasn't received the deletion yet — still has the deleted task.
-    const remote = {
-      projects: [
-        {
-          id: 'proj-1',
-          name: 'Test Project',
-          notes: [],
-          tasks: [
-            task({ id: 'keep-task', content: 'Still here' }),
-            task({ id: 'gone-task', content: 'Should stay deleted' }),
-          ],
-        },
-      ],
-      deletedIds: {},
-    };
-
-    const merged = mergeProjectsData(local, remote);
-    const ids = merged.projects[0].tasks.map(t => t.id).sort();
-    assert.deepEqual(ids, ['keep-task']);
-    assert.ok(merged.deletedIds['gone-task']);
-  });
-
-  it('a note deleted remotely does not get resurrected by a stale local copy', () => {
-    const local = {
-      projects: [
-        {
-          id: 'proj-1',
-          name: 'Test Project',
-          notes: [task({ id: 'gone-note', content: 'Deleted on other device' })],
-          tasks: [],
-        },
-      ],
-      deletedIds: {},
-    };
-    const remote = {
-      projects: [
-        {
-          id: 'proj-1',
-          name: 'Test Project',
-          notes: [],
-          tasks: [],
-        },
-      ],
-      deletedIds: { 'gone-note': '2026-08-26T09:05:00.000Z' },
-    };
-
-    const merged = mergeProjectsData(local, remote);
-    assert.deepEqual(merged.projects[0].notes, []);
-    assert.ok(merged.deletedIds['gone-note']);
-  });
-
-  it('a brand-new remote-only project has its tombstoned items stripped on adoption', () => {
-    const local = { projects: [], deletedIds: { 'gone-task': '2026-08-26T09:00:00.000Z' } };
-    const remote = {
-      projects: [
-        {
-          id: 'proj-2',
-          name: 'Remote-only Project',
-          notes: [],
-          tasks: [
-            task({ id: 'gone-task', content: 'Deleted elsewhere' }),
-            task({ id: 'keep-task', content: 'Fine' }),
-          ],
-        },
-      ],
-      deletedIds: {},
-    };
-
-    const merged = mergeProjectsData(local, remote);
-    const ids = merged.projects[0].tasks.map(t => t.id);
-    assert.deepEqual(ids, ['keep-task']);
-  });
-
-  it('still unions non-deleted tasks/notes and keeps the higher-comment-count version on conflict', () => {
-    const local = {
-      projects: [
-        {
-          id: 'proj-1',
-          name: 'Test Project',
-          notes: [],
-          tasks: [task({ id: 'shared', content: 'v1', comments: [] })],
-        },
-      ],
-      deletedIds: {},
-    };
-    const remote = {
-      projects: [
-        {
-          id: 'proj-1',
-          name: 'Test Project',
-          notes: [],
-          tasks: [task({ id: 'shared', content: 'v2', comments: [{ id: 'c1', text: 'update' }] })],
-        },
-      ],
-      deletedIds: {},
-    };
-
-    const merged = mergeProjectsData(local, remote);
-    assert.equal(merged.projects[0].tasks.length, 1);
-    assert.equal(merged.projects[0].tasks[0].content, 'v2');
-  });
-});
-
-describe('HTML invariants (work-desk.html stays aligned)', () => {
-  it('normalizeItem preserves recurringTemplateId', () => {
-    assert.match(html, /normalized\.recurringTemplateId\s*=\s*item\.recurringTemplateId/);
-  });
-
-  it('startup runs carry before inject', () => {
-    const sync = html.slice(html.indexOf('async function sbPostAuthSync'));
-    const carryAt = sync.indexOf('carryForwardUnfinished(');
-    const injectAt = sync.indexOf('injectDueTemplates()');
-    assert.ok(carryAt > -1);
-    assert.ok(injectAt > -1);
-    assert.ok(carryAt < injectAt, 'carry must run before inject after sync');
-  });
-
-  it('sync merge resolves IDs globally (stale open cannot hide remote completed)', () => {
-    assert.match(html, /pickBestPlacement/);
-    assert.doesNotMatch(html, /localDates && !localDates\.has\(date\) return false/);
-    assert.match(html, /stale open/);
-  });
-
-  it('sync merge score prefers completed over comment weight', () => {
-    assert.match(html, /item\.completed\s*\?\s*100/);
-    assert.match(html, /item\.shelved\s*\?\s*50/);
-  });
-
-  it('markTemplateInjected uses the item date, not always todayKey()', () => {
-    assert.match(html, /markTemplateInjectedForDate\s*\(/);
-    assert.match(html, /markTemplateInjectedForDate\(\s*items\[idx\]\.recurringTemplateId\s*,\s*date\s*\)/);
-  });
-
-  it('export includes deletedIds tombstones', () => {
-    assert.match(html, /deletedIds:\s*pruneDeletedIds\(state\.data\.deletedIds/);
-  });
-
-  it('auto-carry uses allPastDays', () => {
-    assert.match(html, /allPastDays:\s*true/);
-  });
-
-  it('every automatic carry-forward call is gated on the Auto carry toggle', () => {
-    const script = extractMainScript(html);
-    const calls = [...script.matchAll(/carryForwardUnfinished\([^;]*?\{\s*auto:\s*true/g)];
-    assert.ok(calls.length >= 3, 'expected sync, no-remote, and maybeAutoCarryForward call sites');
-    for (const m of calls) {
-      const before = script.slice(Math.max(0, m.index - 400), m.index);
-      assert.match(before, /if \(!?state\.autoCarryForward\)/,
-        `auto carry at offset ${m.index} is not guarded by state.autoCarryForward`);
-    }
-  });
-
-  it('sync still injects recurring templates when Auto carry is off', () => {
-    const sync = html.slice(html.indexOf('async function sbPostAuthSync'), html.indexOf('async function sbPull'));
-    const blocks = [...sync.matchAll(/if \(state\.autoCarryForward\) \{[\s\S]*?\n\s*\}\n\s*injectDueTemplates\(\);/g)];
-    assert.equal(blocks.length, 2, 'both sync branches inject outside the auto-carry guard');
-  });
-
-  it('uncomplete preserves New boardColumn', () => {
-    assert.match(html, /boardColumn === 'new' \? 'new' : 'active'/);
-    assert.doesNotMatch(html, /boardColumn:\s*wasCompleted \? 'active'/);
-  });
-
-  it('auto-collapse helpers are declared before state init (TDZ regression)', () => {
-    const script = extractMainScript(html);
-    const optionsAt = script.indexOf('const AUTO_COLLAPSE_AT_OPTIONS');
-    const normalizeAt = script.indexOf('function normalizeAutoCollapseAt');
-    const stateAt = script.indexOf('const state =');
-    assert.ok(optionsAt > -1, 'AUTO_COLLAPSE_AT_OPTIONS missing');
-    assert.ok(normalizeAt > -1, 'normalizeAutoCollapseAt missing');
-    assert.ok(stateAt > -1, 'const state missing');
-    assert.ok(
-      optionsAt < stateAt,
-      'AUTO_COLLAPSE_AT_OPTIONS must be initialized before const state (avoids TDZ crash on boot)',
-    );
-    assert.ok(
-      normalizeAt < stateAt,
-      'normalizeAutoCollapseAt must be declared before const state',
-    );
-    assert.match(script.slice(stateAt, stateAt + 1500), /normalizeAutoCollapseAt\s*\(/);
-  });
-
-  it('auto-collapse threshold helpers extracted from HTML are executable', () => {
-    const script = extractMainScript(html);
-    const optionsDecl = script.match(/const AUTO_COLLAPSE_AT_OPTIONS = \[[^\]]+\];/);
-    const fnDecl = script.match(/function normalizeAutoCollapseAt\(n\) \{[\s\S]*?\n    \}\n/);
-    assert.ok(optionsDecl, 'could not extract AUTO_COLLAPSE_AT_OPTIONS');
-    assert.ok(fnDecl, 'could not extract normalizeAutoCollapseAt');
-    const run = new Function(
-      `${optionsDecl[0]}\n${fnDecl[0]}\nreturn [normalizeAutoCollapseAt(5), normalizeAutoCollapseAt(7), normalizeAutoCollapseAt('x')];`,
-    );
-    assert.deepEqual(run(), [5, 8, 5]);
-  });
-
-  it('documents TDZ crash when options const is after the call site', () => {
-    assert.throws(() => {
-      new Function(`
-        function normalizeAutoCollapseAt(n) {
-          return AUTO_COLLAPSE_AT_OPTIONS.includes(n) ? n : 5;
-        }
-        normalizeAutoCollapseAt(5);
-        const AUTO_COLLAPSE_AT_OPTIONS = [3, 5, 8];
-      `)();
-    }, /before initialization/);
-  });
-
-  it('Completed column uses preference threshold, not a hardcoded 5', () => {
-    assert.doesNotMatch(html, /const COMPLETED_COLLAPSE_AT\s*=\s*5/);
-    assert.match(html, /completed\.length\s*>=\s*collapseAt/);
-    assert.match(html, /normalizeAutoCollapseAt\(state\.autoCollapseCompletedAt\)/);
-  });
-
-  it('Customize select options match AUTO_COLLAPSE_AT_OPTIONS', () => {
-    const select = html.match(
-      /<select id="auto-collapse-completed-at"[^>]*>([\s\S]*?)<\/select>/,
-    );
-    assert.ok(select, 'threshold select missing');
-    const values = [...select[1].matchAll(/<option value="(\d+)">/g)].map((m) => Number(m[1]));
-    assert.deepEqual(values, AUTO_COLLAPSE_AT_OPTIONS);
-  });
-
-  it('prefs payload includes autoCollapseCompletedAt', () => {
-    assert.match(html, /autoCollapseCompletedAt:/);
-    assert.match(html, /prefs\.autoCollapseCompletedAt/);
-    assert.match(html, /work-desk-auto-collapse-completed-at/);
-  });
-
-  it('offline users can reopen auth from the sidebar account footer', () => {
-    assert.match(html, /id="sb-signin-btn"/);
-    assert.match(html, /function openSignInFromDesk\s*\(/);
-    assert.match(html, /updateAccountChrome\s*\(\s*['"]offline['"]/);
-    assert.doesNotMatch(
-      html,
-      /sidebar-account-identity[\s\S]{0,200}addEventListener\(\s*['"]click['"]/,
-    );
-  });
-
-  it('auto-carry stamps carriedFrom on moved tasks', () => {
-    assert.match(html, /carriedFrom\s*=\s*sourceDate/);
-    assert.match(html, /carriedFrom\s*=\s*sourceDateKey/);
-  });
-
-  it('manual move clears carriedFrom', () => {
-    const moveItemFn = html.match(/function moveItem\(itemId, targetDate\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(moveItemFn, 'moveItem function not found');
-    assert.match(moveItemFn[0], /delete item\.carriedFrom/);
-  });
-
-  it('send to other context clears carriedFrom', () => {
-    const sendFn = html.match(/function sendItemToOtherContext\(itemId\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(sendFn, 'sendItemToOtherContext function not found');
-    assert.match(sendFn[0], /delete item\.carriedFrom/);
-  });
-
-  it('analyzeDayItems uses carriedFrom for accurate counting', () => {
-    const analyzeFunction = html.match(
-      /function analyzeDayItems\(dayKey, items\)\s*\{[\s\S]*?\n    \}/,
-    );
-    assert.ok(analyzeFunction, 'analyzeDayItems function not found');
-    assert.match(analyzeFunction[0], /task\.carriedFrom/);
-    assert.match(analyzeFunction[0], /carriedOver\+\+/);
-  });
-
-  it('persists expanded comments state across refreshes', () => {
-    assert.match(html, /expandedTaskIds:\s*loadExpandedComments\(/);
-    assert.match(html, /function saveExpandedComments\s*\(/);
-    assert.match(html, /function loadExpandedComments\s*\(/);
-    assert.match(html, /work-desk-expanded-comments-/);
-  });
-
-  it('jumpToToday respects keepCommentsOpen via clearExpandedComments', () => {
-    const jumpFn = html.match(/function jumpToToday\(\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(jumpFn, 'jumpToToday function not found');
-    assert.match(jumpFn[0], /clearExpandedComments\(\)/);
-    assert.doesNotMatch(jumpFn[0], /state\.expandedTaskIds\.clear\(\)/);
-  });
-
-  it('THEMES contains 96 themes (32 light, 32 medium, 32 dark) with complete wireframe properties', () => {
-    const themesMatch = html.match(/const THEMES = (\[[\s\S]*?\n    \]);/);
-    assert.ok(themesMatch, 'THEMES array not found in work-desk.html');
-    const themes = new Function(`return ${themesMatch[1]}`)();
-    assert.equal(themes.length, 96);
-    assert.equal(new Set(themes.map((t) => t.id)).size, 96, 'theme ids must be unique');
-    const light  = themes.filter((t) => !t.dark && !t.medium);
-    const medium = themes.filter((t) => t.medium);
-    const dark   = themes.filter((t) => t.dark);
-    assert.equal(light.length, 32, 'expected 32 light themes');
-    assert.equal(medium.length, 32, 'expected 32 medium themes');
-    assert.equal(dark.length, 32, 'expected 32 dark themes');
-    for (const t of themes) {
-      assert.equal(typeof t.id, 'string');
-      assert.equal(typeof t.name, 'string');
-      assert.match(t.sidebar, /^#[0-9a-fA-F]{6}$/);
-      assert.match(t.bg, /^#[0-9a-fA-F]{6}$/);
-      assert.match(t.surface, /^#[0-9a-fA-F]{6}$/);
-      assert.match(t.accent, /^#[0-9a-fA-F]{6}$/);
-    }
-    for (const t of medium) {
-      assert.strictEqual(t.medium, true, `medium theme ${t.id} should have medium: true`);
-      assert.strictEqual(t.dark, false, `medium theme ${t.id} should have dark: false`);
-    }
-  });
-
-  it('options popup includes three tabbed submenus (Themes, Appearance, Behavior)', () => {
-    assert.match(html, /data-options-tab="themes"/);
-    assert.match(html, /data-options-tab="appearance"/);
-    assert.match(html, /data-options-tab="behavior"/);
-    assert.match(html, /id="options-pane-themes"/);
-    assert.match(html, /id="options-pane-appearance"/);
-    assert.match(html, /id="options-pane-behavior"/);
-    assert.match(html, /data-theme-filter="light"/);
-    assert.match(html, /data-theme-filter="medium"/);
-    assert.match(html, /data-theme-filter="dark"/);
-    assert.match(html, /id="strike-completed-toggle"/);
-    assert.match(html, /id="confetti-toggle"/);
-    assert.match(html, /id="week-start-select"/);
-    assert.match(html, /id="startup-view-select"/);
-  });
-
-  it('theme swatches render mini app wireframe elements', () => {
-    assert.match(html, /class="theme-swatch-preview"/);
-    assert.match(html, /class="theme-swatch-sidebar"/);
-    assert.match(html, /class="theme-swatch-sidebar-pill"/);
-    assert.match(html, /class="theme-swatch-content"/);
-    assert.match(html, /class="theme-swatch-card"/);
-    assert.match(html, /class="theme-swatch-card-line"/);
-  });
-
-  it('sidebar includes today at a glance widget, streamlined backup, and polished account footer', () => {
-    assert.match(html, /id="sidebar-today-glance"/);
-    assert.match(html, /id="glance-pct"/);
-    assert.match(html, /id="glance-progress-bar"/);
-    assert.match(html, /id="glance-stats-text"/);
-    assert.match(html, /class="sidebar-backup-btns"/);
-    assert.match(html, /class="sidebar-repair-link"/);
-    assert.match(html, /id="account-menu-btn"/);
-    assert.match(html, /class="sidebar-account-actions"/);
-    assert.match(html, /function renderSidebarTodayGlance\s*\(/);
-  });
-
-  it('main panel includes in-column quick add', () => {
-    assert.match(html, /col-add-btn/);
-    assert.match(html, /col-inline-add/);
-    assert.match(html, /addingInColumn/);
-    assert.match(html, /addItem\(content,\s*options\s*=\s*\{\}\)/);
-  });
-
-  it('desktop desk scrolls like a normal page: .main scrolls, the top card is not pinned, the board has no own scroll', () => {
-    assert.match(html, /id="desk-view"/);
-    assert.doesNotMatch(html, /id="desk-view"[^>]*class="[^"]*desk-view/);
-    const main = html.match(/\n    \.main \{[^}]*\}/)[0];
-    assert.match(main, /overflow-y: auto;/);
-    assert.match(main, /scrollbar-gutter: stable;/);
-    assert.doesNotMatch(main, /overflow: hidden/);
-    assert.match(html, /\n    \.density-popout \{[^}]*max-height: calc\(100vh - 112px\);/);
-    const desk = html.match(/\n    #desk-view \{[^}]*\}/)[0];
-    assert.match(desk, /flex: none;/);
-    assert.doesNotMatch(desk, /overflow/);
-    const board = html.match(/\n    \.desk-board-area \{[^}]*\}/)[0];
-    assert.doesNotMatch(board, /overflow/);
-    const sticky = html.match(/\n    \.desk-sticky \{[^}]*\}/)[0];
-    assert.doesNotMatch(sticky, /position: (sticky|fixed)/);
-  });
-
-  it('mobile CSS keeps help/version and full-width backup buttons', () => {
-    // Regression: .logo-sub { display: none } hid ? and version on mobile
-    assert.doesNotMatch(html, /\.logo-sub\s*\{\s*display:\s*none\s*;?\s*\}/);
-    // Compact mobile still hides only the subtitle text, not the controls
-    assert.match(html, /#logo-sub-text\s*\{\s*display:\s*none/);
-    // Backup row stays a 2-col grid (flex-on-buttons-only caused the squish)
-    assert.match(html, /\.sidebar-backup-btns\s*\{[^}]*grid-template-columns:\s*1fr\s+1fr/s);
-  });
-
-  it('main script parses and boots without runtime exceptions', () => {
-    const script = extractMainScript(html);
-    const idMatches = [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
-    const elementsById = {};
-
-    class MockElement {
-      constructor(id = '', tagName = 'div') {
-        this.id = id;
-        this.tagName = tagName.toUpperCase();
-        this.children = [];
-        this.classList = {
-          _classes: new Set(),
-          add(...c) { c.forEach((x) => this._classes.add(x)); },
-          remove(...c) { c.forEach((x) => this._classes.delete(x)); },
-          toggle(c, force) {
-            if (force === undefined) {
-              if (this._classes.has(c)) { this._classes.delete(c); return false; }
-              this._classes.add(c);
-              return true;
-            }
-            if (force) { this._classes.add(c); return true; }
-            this._classes.delete(c);
-            return false;
-          },
-          contains(c) { return this._classes.has(c); },
-        };
-        this.dataset = {};
-        this.style = { setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; } };
-        this.innerHTML = '';
-        this.textContent = '';
-        this.disabled = false;
-        this.checked = false;
-        this.value = '';
-        this.type = '';
-        this.attributes = {};
-      }
-      setAttribute(k, v) { this.attributes[k] = v; }
-      getAttribute(k) { return this.attributes[k] || null; }
-      removeAttribute(k) { delete this.attributes[k]; }
-      appendChild(child) { this.children.push(child); return child; }
-      append(...children) { this.children.push(...children); }
-      before() {}
-      after() {}
-      removeChild(child) {
-        const idx = this.children.indexOf(child);
-        if (idx >= 0) this.children.splice(idx, 1);
-        return child;
-      }
-      addEventListener() {}
-      removeEventListener() {}
-      querySelector() { return new MockElement(); }
-      querySelectorAll() { return [new MockElement()]; }
-      getBoundingClientRect() { return { left: 0, top: 0, width: 100, height: 100 }; }
-      focus() {}
-      click() {}
-      scrollIntoView() {}
-      getContext() {
-        return {
-          clearRect() {},
-          fillRect() {},
-          strokeRect() {},
-          beginPath() {},
-          closePath() {},
-          moveTo() {},
-          lineTo() {},
-          arc() {},
-          fill() {},
-          stroke() {},
-          measureText() { return { width: 50 }; },
-          fillText() {},
-          strokeText() {},
-          save() {},
-          restore() {},
-          translate() {},
-          rotate() {},
-          scale() {},
-          setLineDash() {},
-          createLinearGradient() { return { addColorStop() {} }; },
-        };
-      }
-    }
-
-    idMatches.forEach((id) => {
-      elementsById[id] = new MockElement(id);
-    });
-
-    const mockStorage = {
-      _store: {},
-      getItem(k) { return this._store[k] !== undefined ? this._store[k] : null; },
-      setItem(k, v) { this._store[k] = String(v); },
-      removeItem(k) { delete this._store[k]; },
-      clear() { this._store = {}; },
-      key(i) { return Object.keys(this._store)[i] || null; },
-      get length() { return Object.keys(this._store).length; },
-    };
-
-    const mockDoc = {
-      documentElement: new MockElement('html', 'html'),
-      body: new MockElement('body', 'body'),
-      getElementById(id) {
-        return elementsById[id] || new MockElement(id);
-      },
-      querySelector(sel) {
-        if (sel.startsWith('#')) return mockDoc.getElementById(sel.slice(1));
-        return new MockElement('', 'div');
-      },
-      querySelectorAll() {
-        return [new MockElement('', 'div')];
-      },
-      createElement(tag) {
-        return new MockElement('', tag);
-      },
-      createTextNode(text) {
-        return { textContent: text };
-      },
-      createComment() {
-        return new MockElement('', '#comment');
-      },
-      addEventListener() {},
-      removeEventListener() {},
-    };
-
-    const context = {
-      document: mockDoc,
-      window: {
-        innerWidth: 1200,
-        innerHeight: 800,
-        addEventListener() {},
-        location: { reload() {}, search: '', origin: 'http://localhost' },
-        requestAnimationFrame(cb) { cb(); },
-        cancelAnimationFrame() {},
-        localStorage: mockStorage,
-        sessionStorage: mockStorage,
-        navigator: { userAgent: 'test', clipboard: { writeText() {} } },
-        document: mockDoc,
-        getSelection() { return { toString() { return ''; } }; },
-        matchMedia() { return { matches: false, addEventListener() {} }; },
-      },
-      MutationObserver: class { observe() {} disconnect() {} },
-      localStorage: mockStorage,
-      sessionStorage: mockStorage,
-      navigator: { userAgent: 'test', clipboard: { writeText() {} } },
-      console: { log() {}, warn() {}, error() {} },
-      setTimeout: (fn) => fn(),
-      clearTimeout: () => {},
-      setInterval: () => {},
-      clearInterval: () => {},
-      requestAnimationFrame: (cb) => cb(),
-      cancelAnimationFrame: () => {},
-      location: { reload() {}, search: '', origin: 'http://localhost' },
-      Intl,
-      Date,
-      Math,
-      JSON,
-      Array,
-      Object,
-      String,
-      Number,
-      Boolean,
-      RegExp,
-      Set,
-      Map,
-      Error,
-      TypeError,
-      RangeError,
-      SyntaxError,
-      parseInt,
-      parseFloat,
-      isNaN,
-      isFinite,
-    };
-    context.window.window = context.window;
-
-    assert.doesNotThrow(() => {
-      vm.createContext(context);
-      vm.runInContext(script, context);
-    }, 'work-desk.html script must parse and execute without errors');
-  });
-
-  it('search results render in a floating overlay, not the sidebar-clipped list', () => {
-    assert.match(html, /id="search-overlay"/);
-    assert.match(html, /id="search-overlay-count"/);
-    assert.match(html, /id="search-overlay-close"/);
-    assert.match(html, /function positionSearchOverlay\s*\(/);
-    assert.match(html, /\.search-overlay\s*\{[\s\S]{0,40}position:\s*fixed;/);
-  });
-
-  it('search overlay closes on Escape, close button, and outside click', () => {
-    assert.match(html, /function closeSearchOverlay\s*\(/);
-    assert.match(html, /searchOverlayClose\.addEventListener\(\s*['"]click['"]/);
-    assert.match(html, /searchWrap\.contains\(e\.target\)[\s\S]{0,40}searchOverlay\.contains\(e\.target\)/);
-  });
-
-  it('search supports #tagname filtering in addition to full-text', () => {
-    assert.match(html, /isTagQuery/);
-    assert.match(html, /tags\.some\(t => t\.includes\(tagQuery\)\)/);
-  });
-
-  it('#tagname search finds the tag token anywhere in the query and treats the rest as an order-independent text filter', () => {
-    // Regression: "#ace set up" used to search for a literal tag named
-    // "ace set up" (tags can't contain spaces) and always returned "No items
-    // with that tag". Worse, "set up #ace" (tag not first) skipped tag mode
-    // entirely and ran a plain-text search for the literal string "set up
-    // #ace", which never matches because the "#ace" text is stripped out of
-    // the content when the tag is extracted. The tag token can now appear
-    // anywhere in the query, and remaining words just need to appear
-    // somewhere in the item — not contiguous, not in a particular order.
-    assert.match(html, /const tokens = q\.split\(\/\\s\+\/\)\.filter\(Boolean\);/);
-    assert.match(html, /const tagTokenIdx = tokens\.findIndex\(t => t\.length > 1 && t\.startsWith\('#'\)\);/);
-    assert.match(html, /const isTagQuery = tagTokenIdx !== -1;/);
-    assert.match(html, /if \(!tagQuery \|\| !tags\.some\(t => t\.includes\(tagQuery\)\)\) continue;/);
-    assert.match(html, /if \(!textWords\.every\(w => haystack\.includes\(w\)\)\) continue;/);
-  });
-
-  it('tags: data model, extraction, and card UI are wired up', () => {
-    assert.match(html, /function normalizeTag\s*\(/);
-    assert.match(html, /function normalizeTagList\s*\(/);
-    assert.match(html, /function mergeTags\s*\(/);
-    assert.match(html, /function extractHashtags\s*\(/);
-    assert.match(html, /function addTagToItem\s*\(/);
-    assert.match(html, /function removeTagFromItem\s*\(/);
-    assert.match(html, /wrap\.className = 'tag-chip-row'/);
-    assert.match(html, /chip\.className = 'tag-chip'/);
-    assert.match(html, /\.tag-chip\s*\{/);
-    assert.match(html, /taggingId/);
-  });
-
-  it('addItem and updateItem both run hashtag extraction', () => {
-    const addItemFn = html.match(/function addItem\(content, options = \{\}\)\s*\{[\s\S]*?\n    \}/);
-    const updateItemFn = html.match(/function updateItem\(id, content\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(addItemFn, 'addItem function not found');
-    assert.ok(updateItemFn, 'updateItem function not found');
-    assert.match(addItemFn[0], /extractHashtags\(/);
-    assert.match(updateItemFn[0], /extractHashtags\(/);
-  });
-
-  it('tag merges are threaded through every same-ID merge site (sync/dedupe)', () => {
-    const mergeSiteCount = [...html.matchAll(/mergeTags\(/g)].length;
-    assert.ok(mergeSiteCount >= 8, `expected tags to be merged at 8+ call sites, found ${mergeSiteCount}`);
-  });
-
-  it('deleteProjectItem tombstones the id so cloud sync cannot resurrect it', () => {
-    const fn = html.match(/function deleteProjectItem\([\s\S]*?\n    \}/);
-    assert.ok(fn, 'deleteProjectItem function not found');
-    assert.match(fn[0], /markProjectItemDeleted\(itemId\)/);
-  });
-
-  it('mergeProjectsData filters tombstoned tasks/notes before unioning', () => {
-    const fn = html.match(/function mergeProjectsData\([\s\S]*?\n    \}/);
-    assert.ok(fn, 'mergeProjectsData function not found');
-    assert.match(fn[0], /deletedIds\[note\.id\]/);
-    assert.match(fn[0], /deletedIds\[task\.id\]/);
-  });
-
-  it('index.html stays byte-identical to work-desk.html', () => {
-    assert.equal(indexHtml, html, 'Copy work-desk.html → index.html before shipping');
-  });
-});
-
-describe('Character encoding (mojibake guard)', () => {
-  const SHIPPED_FILES = ['work-desk.html', 'index.html', 'sw.js', 'manifest.json', 'CHANGELOG.md', 'README.md'];
-  // UTF-8 bytes misread as Windows-1252: — → "â€”", → → "â†’", é → "Ã©", emoji → "ðŸ…", nbsp → "Â "
-  const MOJIBAKE = /â€|â†|Ã[\u0080-\u00BF\u0152-\u2122]|Â[\u00A0-\u00BF]|ðŸ|ï¸/;
-  const findMojibake = (text) => {
-    const m = text.match(MOJIBAKE);
-    if (!m) return null;
-    const line = text.slice(0, m.index).split('\n').length;
-    return `line ${line}: ${JSON.stringify(text.slice(Math.max(0, m.index - 30), m.index + 30))}`;
-  };
-
-  for (const name of SHIPPED_FILES) {
-    it(`${name} is valid UTF-8 with no BOM, replacement chars, or mojibake`, () => {
-      const bytes = readFileSync(join(__dirname, '..', name));
-      assert.ok(!(bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF), `${name} must not start with a UTF-8 BOM`);
-      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-      assert.ok(!text.includes('\uFFFD'), `${name} contains U+FFFD replacement characters`);
-      assert.equal(findMojibake(text), null, `${name} contains double-encoded text`);
-    });
-  }
-
-  it('HTML declares <meta charset="UTF-8"> within the first 1024 bytes', () => {
-    const head = readFileSync(join(__dirname, '../work-desk.html')).subarray(0, 1024).toString('latin1');
-    assert.match(head, /<meta charset="UTF-8"\s*\/?>/i);
-  });
-
-  it('every in-app What\'s New entry is free of mojibake and control characters', () => {
-    const src = html.match(/const CHANGELOG = (\[[\s\S]*?\n    \]);/)[1];
-    const entries = new Function(`return ${src}`)();
-    assert.ok(entries.length > 0);
-    for (const e of entries) {
-      for (const s of e.sections) {
-        for (const item of s.items) {
-          assert.equal(findMojibake(item), null, `v${e.version} ${s.label}: ${item.slice(0, 60)}`);
-          assert.doesNotMatch(item, /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/, `v${e.version} has a control character`);
-        }
-      }
-    }
-  });
-
-  it('help modal text is free of mojibake', () => {
-    const start = html.indexOf('id="help-modal"');
-    assert.ok(start > 0, 'help modal not found');
-    const help = html.slice(start, html.indexOf('<script', start));
-    assert.ok(help.includes('Themes'), 'help modal slice looks wrong');
-    assert.equal(findMojibake(help), null);
-  });
-
-  it('detector catches a simulated Windows-1252 double-encode of the app', () => {
-    const bytes = readFileSync(join(__dirname, '../work-desk.html'));
-    const corrupted = new TextDecoder('windows-1252').decode(bytes);
-    assert.notEqual(findMojibake(corrupted), null, 'guard failed to detect double-encoded HTML');
-    assert.notEqual(findMojibake('12 new themes — Retro, Rosé Pine'.replace(/—/, 'â€"')), null);
-  });
-});
-
-describe('normalizeAutoCollapseAt', () => {
-  it('keeps valid options and defaults invalid input to 5', () => {
-    for (const n of AUTO_COLLAPSE_AT_OPTIONS) {
-      assert.equal(normalizeAutoCollapseAt(n), n);
-    }
-    assert.equal(normalizeAutoCollapseAt('10'), 10);
-    assert.equal(normalizeAutoCollapseAt(0), 5);
-    assert.equal(normalizeAutoCollapseAt(-3), 5);
-    assert.equal(normalizeAutoCollapseAt(NaN), 5);
-    assert.equal(normalizeAutoCollapseAt('nope'), 5);
-  });
-
-  it('snaps unknown values to the nearest option', () => {
-    assert.equal(normalizeAutoCollapseAt(7), 8);
-    assert.equal(normalizeAutoCollapseAt(4), 3);
-    assert.equal(normalizeAutoCollapseAt(12), 10);
-    assert.equal(normalizeAutoCollapseAt(100), 20);
-  });
-});
-
-describe('shouldAutoCollapseCompleted', () => {
-  it('respects enabled flag and threshold', () => {
-    assert.equal(shouldAutoCollapseCompleted(true, 5, 5), true);
-    assert.equal(shouldAutoCollapseCompleted(true, 4, 5), false);
-    assert.equal(shouldAutoCollapseCompleted(false, 20, 5), false);
-    assert.equal(shouldAutoCollapseCompleted(true, 8, 8), true);
-  });
-});
-
-describe('carriedFrom field tracking', () => {
-  it('normalizeItem preserves carriedFrom for tasks', () => {
-    const task = {
-      id: 't1',
-      type: 'task',
-      content: 'Test task',
-      completed: false,
-      shelved: false,
-      boardColumn: 'new',
-      createdAt: '2026-08-18T10:00:00Z',
-      carriedFrom: '2026-08-17',
-    };
-    const normalized = normalizeItem(task);
-    assert.equal(normalized.carriedFrom, '2026-08-17');
-  });
-
-  it('normalizeItem does not add carriedFrom if not present', () => {
-    const task = {
-      id: 't1',
-      type: 'task',
-      content: 'Test task',
-      completed: false,
-      shelved: false,
-      boardColumn: 'new',
-      createdAt: '2026-08-18T10:00:00Z',
-    };
-    const normalized = normalizeItem(task);
-    assert.equal(normalized.carriedFrom, undefined);
-  });
-
-  it('normalizeItem ignores carriedFrom on notes', () => {
-    const note = {
-      id: 'n1',
-      type: 'note',
-      content: 'Test note',
-      completed: false,
-      createdAt: '2026-08-18T10:00:00Z',
-      carriedFrom: '2026-08-17', // Should be ignored
-    };
-    const normalized = normalizeItem(note);
-    assert.equal(normalized.carriedFrom, undefined);
-  });
-
-  it('normalizeItem filters out invalid carriedFrom values', () => {
-    const task1 = {
-      id: 't1',
-      type: 'task',
-      content: 'Task 1',
-      completed: false,
-      shelved: false,
-      boardColumn: 'new',
-      createdAt: '2026-08-18T10:00:00Z',
-      carriedFrom: 123, // Not a string
-    };
-    const task2 = {
-      id: 't2',
-      type: 'task',
-      content: 'Task 2',
-      completed: false,
-      shelved: false,
-      boardColumn: 'new',
-      createdAt: '2026-08-18T10:00:00Z',
-      carriedFrom: null,
-    };
-    assert.equal(normalizeItem(task1).carriedFrom, undefined);
-    assert.equal(normalizeItem(task2).carriedFrom, undefined);
-  });
-
-  it('carriedFrom survives deduplication within a day', () => {
-    const items = [
-      {
-        id: 't1',
-        type: 'task',
-        content: 'Task',
-        completed: false,
-        shelved: false,
-        boardColumn: 'new',
-        createdAt: '2026-08-18T10:00:00Z',
-        carriedFrom: '2026-08-17',
-        comments: [],
-      },
-      {
-        id: 't1',
-        type: 'task',
-        content: 'Task',
-        completed: true,
-        shelved: false,
-        boardColumn: 'active',
-        createdAt: '2026-08-18T10:00:00Z',
-        comments: [{ id: 'c1', content: 'Comment' }],
-      },
-    ];
-    const deduped = deduplicateDayItems(items);
-    assert.equal(deduped.length, 1);
-    assert.equal(deduped[0].completed, true);
-    // carriedFrom should be preserved from either copy
-    assert.equal(deduped[0].carriedFrom, '2026-08-17');
-  });
-
-  it('carriedFrom survives cross-day deduplication', () => {
     const days = {
-      '2026-08-17': {
-        date: '2026-08-17',
-        items: [
-          {
-            id: 't1',
-            type: 'task',
-            content: 'Old task',
-            completed: false,
-            shelved: false,
-            boardColumn: 'new',
-            createdAt: '2026-08-16T10:00:00Z',
-            carriedFrom: '2026-08-16',
-          },
-        ],
-      },
-      '2026-08-18': {
-        date: '2026-08-18',
-        items: [
-          {
-            id: 't1',
-            type: 'task',
-            content: 'Same task completed',
-            completed: true,
-            shelved: false,
-            boardColumn: 'active',
-            createdAt: '2026-08-16T10:00:00Z',
-            carriedFrom: '2026-08-17', // Updated on re-carry
-          },
-        ],
-      },
+      '2026-09-28': { date: '2026-09-28', items: [t('done1', 'Renew vendor contract', { completed: true })] },
+      '2026-09-30': { date: '2026-09-30', items: [
+        t('open1', 'Review PR for IDS batching'),
+        t('open2', 'Call vendor about the renewal', { boardColumn: 'active' }),
+        t('done2', 'Send sprint notes', { completed: true }),
+      ] },
     };
-    const result = deduplicateAcrossDays(days);
-    assert.equal(Object.keys(result.days).length, 1);
-    assert.ok(result.days['2026-08-18'], 'Should keep completed on 2026-08-18');
-    assert.equal(result.days['2026-08-18'].items[0].carriedFrom, '2026-08-17');
-  });
-});
-
-describe('normalizeTag / normalizeTagList', () => {
-  it('lowercases, trims, and strips leading #', () => {
-    assert.equal(normalizeTag('#ACE'), 'ace');
-    assert.equal(normalizeTag('#ace'), 'ace');
-    assert.equal(normalizeTag('  Ace  '), 'ace');
-    assert.equal(normalizeTag('##ace'), 'ace');
-  });
-
-  it('strips characters outside a-z0-9_- so #ACE and #ace never diverge', () => {
-    assert.equal(normalizeTag('a c e!'), 'ace');
-    assert.equal(normalizeTag('vendor-follow_up'), 'vendor-follow_up');
-  });
-
-  it('returns empty string for garbage input', () => {
-    assert.equal(normalizeTag(''), '');
-    assert.equal(normalizeTag('   '), '');
-    assert.equal(normalizeTag(null), '');
-    assert.equal(normalizeTag(undefined), '');
-    assert.equal(normalizeTag('###'), '');
-  });
-
-  it('normalizeTagList dedupes case-insensitively and drops invalid entries', () => {
-    assert.deepEqual(normalizeTagList(['ACE', 'ace', '#Ace', 'vendor', '', null]), ['ace', 'vendor']);
-  });
-
-  it('normalizeTagList tolerates non-array input', () => {
-    assert.deepEqual(normalizeTagList(undefined), []);
-    assert.deepEqual(normalizeTagList(null), []);
-    assert.deepEqual(normalizeTagList('ace'), []);
-  });
-});
-
-describe('mergeTags', () => {
-  it('unions two tag lists without duplicates', () => {
-    assert.deepEqual(mergeTags(['ace'], ['vendor', 'ace']), ['ace', 'vendor']);
-  });
-
-  it('is case-insensitive across both sides', () => {
-    assert.deepEqual(mergeTags(['ACE'], ['ace', 'Vendor']), ['ace', 'vendor']);
-  });
-
-  it('returns undefined when both sides are empty (avoids stamping empty tags:[])', () => {
-    assert.equal(mergeTags(undefined, undefined), undefined);
-    assert.equal(mergeTags([], []), undefined);
-  });
-
-  it('returns tagsA unchanged (as an array) when the other side has nothing new', () => {
-    assert.deepEqual(mergeTags(['ace'], []), ['ace']);
-    assert.deepEqual(mergeTags(['ace'], undefined), ['ace']);
-  });
-
-  it('returns the other side tags when only one side has any', () => {
-    assert.deepEqual(mergeTags(undefined, ['ace']), ['ace']);
-    assert.deepEqual(mergeTags([], ['ace', 'vendor']), ['ace', 'vendor']);
-  });
-});
-
-describe('extractHashtags', () => {
-  it('extracts a single hashtag and strips it from the content', () => {
-    const result = extractHashtags('Follow up with vendor #ace before Friday');
-    assert.deepEqual(result.tags, ['ace']);
-    assert.equal(result.content, 'Follow up with vendor before Friday');
-  });
-
-  it('is case-insensitive and dedupes repeated tags', () => {
-    const result = extractHashtags('Ping #ACE about #ace again #Ace');
-    assert.deepEqual(result.tags, ['ace']);
-  });
-
-  it('extracts multiple distinct tags in order of first appearance', () => {
-    const result = extractHashtags('#urgent Call the #vendor about the invoice');
-    assert.deepEqual(result.tags, ['urgent', 'vendor']);
-    assert.equal(result.content, 'Call the about the invoice');
-  });
-
-  it('leaves content untouched when there are no hashtags', () => {
-    const result = extractHashtags('Just a plain task with no tags');
-    assert.deepEqual(result.tags, []);
-    assert.equal(result.content, 'Just a plain task with no tags');
-  });
-
-  it('does not strip a lone hashtag that would leave content empty (caller falls back to original)', () => {
-    const result = extractHashtags('#ace');
-    assert.deepEqual(result.tags, ['ace']);
-    assert.equal(result.content, '', 'extraction empties the content — caller must detect and fall back');
-  });
-
-  it('ignores a bare # with no word characters after it', () => {
-    const result = extractHashtags('Price is #3 per unit, see # for details');
-    assert.deepEqual(result.tags, ['3']);
-  });
-});
-
-describe('normalizeItem tags', () => {
-  it('preserves and cleans tags for tasks', () => {
-    const n = normalizeItem({
-      id: 't1', type: 'task', content: 'Task', completed: false,
-      tags: ['ACE', 'ace', '#vendor', ''],
-    });
-    assert.deepEqual(n.tags, ['ace', 'vendor']);
-  });
-
-  it('preserves tags for notes too (not gated behind type === task)', () => {
-    const n = normalizeItem({
-      id: 'n1', type: 'note', content: 'Note', completed: false, tags: ['idea'],
-    });
-    assert.deepEqual(n.tags, ['idea']);
-  });
-
-  it('omits the tags key entirely when there are none (no empty array noise)', () => {
-    const n = normalizeItem({ id: 't1', type: 'task', content: 'Task', completed: false });
-    assert.equal('tags' in n, false);
-    const n2 = normalizeItem({ id: 't1', type: 'task', content: 'Task', completed: false, tags: [] });
-    assert.equal('tags' in n2, false);
-  });
-});
-
-describe('tags survive merges (sync/dedupe never drops a tag)', () => {
-  it('mergeItemComments unions tags from both copies', () => {
-    const winner = { id: 't1', content: 'Task', comments: [], tags: ['ace'] };
-    const loser = { id: 't1', content: 'Task', comments: [], tags: ['vendor'] };
-    const merged = mergeItemComments(winner, loser);
-    assert.deepEqual(merged.tags, ['ace', 'vendor']);
-  });
-
-  it('deduplicateDayItems unions tags when the same ID appears twice in one day', () => {
-    const items = [
-      { id: 't1', type: 'task', content: 'Task', completed: false, shelved: false, tags: ['ace'] },
-      { id: 't1', type: 'task', content: 'Task', completed: true, shelved: false, tags: ['vendor'] },
-    ];
-    const deduped = deduplicateDayItems(items);
-    assert.equal(deduped.length, 1);
-    assert.deepEqual([...deduped[0].tags].sort(), ['ace', 'vendor']);
-  });
-
-  it('deduplicateAcrossDays keeps the union of tags when collapsing the same ID onto one day', () => {
-    const days = {
-      '2026-08-17': {
-        date: '2026-08-17',
-        items: [{ id: 't1', type: 'task', content: 'Task', completed: false, shelved: false, tags: ['ace'] }],
-      },
-      '2026-08-18': {
-        date: '2026-08-18',
-        items: [{ id: 't1', type: 'task', content: 'Task', completed: true, shelved: false, tags: ['vendor'] }],
-      },
-    };
-    const result = deduplicateAcrossDays(days);
-    assert.equal(Object.keys(result.days).length, 1);
-    assert.deepEqual([...result.days['2026-08-18'].items[0].tags].sort(), ['ace', 'vendor']);
-  });
-
-  it('mergeDaysData (cross-device sync) unions tags instead of letting one device win outright', () => {
-    const local = {
-      days: {
-        '2026-08-18': {
-          date: '2026-08-18',
-          items: [{ id: 't1', type: 'task', content: 'Task', completed: false, shelved: false, tags: ['ace'] }],
-        },
-      },
-    };
-    const remote = {
-      days: {
-        '2026-08-18': {
-          date: '2026-08-18',
-          items: [{ id: 't1', type: 'task', content: 'Task', completed: true, shelved: false, tags: ['vendor'] }],
-        },
-      },
-    };
-    const merged = mergeDaysData(local, remote);
-    const item = merged.days['2026-08-18'].items.find(i => i.id === 't1');
-    assert.ok(item, 'merged item missing');
-    assert.equal(item.completed, true, 'completed copy should still win the placement');
-    assert.deepEqual([...item.tags].sort(), ['ace', 'vendor']);
-  });
-
-  it('pickMergedItem unions tags alongside comments', () => {
-    const a = { id: 't1', content: 'Task', completed: false, comments: [], tags: ['ace'] };
-    const b = { id: 't1', content: 'Task', completed: true, comments: [], tags: ['vendor'] };
-    const merged = pickMergedItem(a, b);
-    assert.deepEqual([...merged.tags].sort(), ['ace', 'vendor']);
-  });
-});
-
-// ── Holiday computation tests ───────────────────────────────────────
-
-describe('nthWeekdayOfMonth', () => {
-  it('3rd Monday in January 2026 → MLK Day (Jan 19)', () => {
-    const d = nthWeekdayOfMonth(2026, 0, 1, 3);
-    assert.equal(d.getMonth(), 0);
-    assert.equal(d.getDate(), 19);
-    assert.equal(d.getDay(), 1);
-  });
-
-  it('3rd Monday in February 2026 → Presidents Day (Feb 16)', () => {
-    const d = nthWeekdayOfMonth(2026, 1, 1, 3);
-    assert.equal(d.getMonth(), 1);
-    assert.equal(d.getDate(), 16);
-    assert.equal(d.getDay(), 1);
-  });
-
-  it('1st Monday in September 2026 → Labor Day (Sep 7)', () => {
-    const d = nthWeekdayOfMonth(2026, 8, 1, 1);
-    assert.equal(d.getMonth(), 8);
-    assert.equal(d.getDate(), 7);
-    assert.equal(d.getDay(), 1);
-  });
-
-  it('2nd Monday in October 2026 → Columbus Day (Oct 12)', () => {
-    const d = nthWeekdayOfMonth(2026, 9, 1, 2);
-    assert.equal(d.getMonth(), 9);
-    assert.equal(d.getDate(), 12);
-    assert.equal(d.getDay(), 1);
-  });
-
-  it('4th Thursday in November 2026 → Thanksgiving (Nov 26)', () => {
-    const d = nthWeekdayOfMonth(2026, 10, 4, 4);
-    assert.equal(d.getMonth(), 10);
-    assert.equal(d.getDate(), 26);
-    assert.equal(d.getDay(), 4);
-  });
-});
-
-describe('lastWeekdayOfMonth', () => {
-  it('last Monday in May 2026 → Memorial Day (May 25)', () => {
-    const d = lastWeekdayOfMonth(2026, 4, 1);
-    assert.equal(d.getMonth(), 4);
-    assert.equal(d.getDate(), 25);
-    assert.equal(d.getDay(), 1);
-  });
-
-  it('last Monday in May 2025 → May 26', () => {
-    const d = lastWeekdayOfMonth(2025, 4, 1);
-    assert.equal(d.getDate(), 26);
-  });
-});
-
-describe('getUSFederalHolidays', () => {
-  it('always includes the 11 named federal holidays (actual dates)', () => {
-    for (const year of [2025, 2026, 2027]) {
-      const holidays = getUSFederalHolidays(year);
-      const labels = [...holidays.values()].map(l => l.replace(/ \(observed\)$/, ''));
-      const unique = new Set(labels);
-      assert.equal(unique.size, 11, `expected 11 unique holiday names for ${year}, got ${unique.size}`);
-    }
-  });
-
-  it('2026 holidays include known dates', () => {
-    const h = getUSFederalHolidays(2026);
-    assert.equal(h.get('2026-01-01'), 'New Year\'s Day');
-    assert.equal(h.get('2026-01-19'), 'MLK Day');
-    assert.equal(h.get('2026-02-16'), 'Presidents\' Day');
-    assert.equal(h.get('2026-05-25'), 'Memorial Day');
-    assert.equal(h.get('2026-06-19'), 'Juneteenth');
-    // Jul 4 is Saturday → actual on the 4th, federal observance on Friday the 3rd
-    assert.equal(h.get('2026-07-04'), 'Independence Day');
-    assert.equal(h.get('2026-07-03'), 'Independence Day (observed)');
-    assert.equal(h.get('2026-09-07'), 'Labor Day');
-    assert.equal(h.get('2026-10-12'), 'Columbus Day');
-    assert.equal(h.get('2026-11-11'), 'Veterans Day');
-    assert.equal(h.get('2026-11-26'), 'Thanksgiving');
-    assert.equal(h.get('2026-12-25'), 'Christmas Day');
-  });
-
-  it('observed-date: 2027 Jul 4 falls on Sunday → actual Jul 4 + observed Monday Jul 5', () => {
-    const h = getUSFederalHolidays(2027);
-    assert.equal(h.get('2027-07-04'), 'Independence Day');
-    assert.equal(h.get('2027-07-05'), 'Independence Day (observed)');
-  });
-
-  it('observed-date: 2025 Jul 4 falls on Friday → no adjustment, single entry', () => {
-    const h = getUSFederalHolidays(2025);
-    assert.equal(h.get('2025-07-04'), 'Independence Day');
-    assert.equal(h.has('2025-07-03'), false);
-    assert.equal(h.has('2025-07-05'), false);
-  });
-
-  it('Christmas 2027 (Saturday) → actual Dec 25 + observed Friday Dec 24', () => {
-    const h = getUSFederalHolidays(2027);
-    assert.equal(h.get('2027-12-25'), 'Christmas Day');
-    assert.equal(h.get('2027-12-24'), 'Christmas Day (observed)');
-  });
-});
-
-describe('checkHoliday', () => {
-  it('recognizes a US federal holiday when federal is enabled', () => {
-    const result = checkHoliday('2026-01-01', { useFederal: true, customHolidays: [] });
-    assert.equal(result.isHoliday, true);
-    assert.equal(result.label, 'New Year\'s Day');
-  });
-
-  it('does not recognize a federal holiday when federal is disabled', () => {
-    const result = checkHoliday('2026-01-01', { useFederal: false, customHolidays: [] });
-    assert.equal(result.isHoliday, false);
-  });
-
-  it('recognizes a custom holiday even when federal is disabled', () => {
-    const result = checkHoliday('2026-03-15', {
-      useFederal: false,
-      customHolidays: [{ date: '2026-03-15', label: 'Company Day' }],
-    });
-    assert.equal(result.isHoliday, true);
-    assert.equal(result.label, 'Company Day');
-  });
-
-  it('custom holiday with empty label falls back to "Holiday"', () => {
-    const result = checkHoliday('2026-06-01', {
-      useFederal: false,
-      customHolidays: [{ date: '2026-06-01', label: '' }],
-    });
-    assert.equal(result.isHoliday, true);
-    assert.equal(result.label, 'Holiday');
-  });
-
-  it('non-holiday date returns false', () => {
-    const result = checkHoliday('2026-08-12', { useFederal: true, customHolidays: [] });
-    assert.equal(result.isHoliday, false);
-    assert.equal(result.label, null);
-  });
-});
-
-describe('isDueOnDate skips holidays', () => {
-  it('weekdays template is normally due on a weekday', () => {
-    const t = { id: 't1', content: 'x', rule: 'weekdays', lastInjectedDate: null };
-    assert.equal(isDueOnDate(t, '2026-08-12'), true); // Wednesday
-  });
-
-  it('daily template is due on a non-holiday weekday', () => {
-    const t = { id: 't1', content: 'x', rule: 'daily', lastInjectedDate: null };
-    assert.equal(isDueOnDate(t, '2026-08-12'), true);
-  });
-
-  it('isDueOnDate does NOT check holidays (pure day-of-week logic only)', () => {
-    const t = { id: 't1', content: 'x', rule: 'daily', lastInjectedDate: null, skipHolidays: true };
-    assert.equal(isDueOnDate(t, '2026-01-01'), true);
-  });
-});
-
-describe('Holiday-aware recurring in work-desk.html (HTML invariants)', () => {
-  it('holiday computation functions are present inline', () => {
-    assert.match(html, /function nthWeekdayOfMonth\s*\(/);
-    assert.match(html, /function lastWeekdayOfMonth\s*\(/);
-    assert.match(html, /function getUSFederalHolidays\s*\(/);
-    assert.match(html, /function checkHoliday\s*\(/);
-  });
-
-  it('isDueToday gates on skipHolidays + checkHoliday', () => {
-    assert.match(html, /template\.skipHolidays && checkHoliday\(today\)\.isHoliday/);
-  });
-
-  it('recurring add form includes skip holidays checkbox', () => {
-    assert.match(html, /recurring-skip-holidays/);
-    assert.match(html, /skipHolidays:\s*skipHolidayCb\.checked/);
-  });
-
-  it('Behavior tab includes holiday settings', () => {
-    assert.match(html, /id="us-federal-holidays-toggle"/);
-    assert.match(html, /id="custom-holidays-list"/);
-    assert.match(html, /id="custom-holiday-add-btn"/);
-    assert.match(html, /id="custom-holiday-date"/);
-    assert.match(html, /id="custom-holiday-label"/);
-  });
-
-  it('state includes holiday prefs and they sync', () => {
-    assert.match(html, /useFederalHolidays:/);
-    assert.match(html, /customHolidays:/);
-    assert.match(html, /US_FEDERAL_HOLIDAYS_KEY/);
-    assert.match(html, /CUSTOM_HOLIDAYS_KEY/);
-    assert.match(html, /prefs\.useFederalHolidays/);
-    assert.match(html, /prefs\.customHolidays/);
-  });
-
-  it('calendar cells show holiday indicators', () => {
-    assert.match(html, /btn\.classList\.add\('holiday'\)/);
-    assert.match(html, /cal-holiday-dot/);
-    assert.match(html, /\.cal-day\.holiday/);
-  });
-
-  it('templates display skip holidays badge', () => {
-    assert.match(html, /t\.skipHolidays/);
-    assert.match(html, /skip holidays/);
-  });
-
-  it('renderCustomHolidaysList function exists', () => {
-    assert.match(html, /function renderCustomHolidaysList\s*\(/);
-  });
-});
-
-describe('Medium themes (HTML invariants)', () => {
-  it('all 32 medium themes have CSS [data-theme] rules with color-scheme: dark', () => {
-    const mediumIds = [
-      'fog','overcast','steel','fjord','nimbus','pewter','horizon','denim',
-      'lichen','fern','tundra','moss','basalt','dot-matrix',
-      'driftwood','clay','sandstone','umber','terracotta','flint',
-      'twilight','haze','plum-mid','mulberry','merlot',
-      'ash','graphite','concrete',
-      'unit-zero-mid','unit-one-mid','unit-two-mid','unit-eight-mid',
-    ];
-    assert.equal(mediumIds.length, 32);
-    for (const id of mediumIds) {
-      const block = html.match(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`));
-      assert.ok(block, `CSS rule for medium theme "${id}" not found`);
-      assert.match(block[1], /color-scheme:\s*dark/, `medium theme "${id}" must set color-scheme: dark`);
-    }
-  });
-
-  it('renderThemeSwatches filters on medium property', () => {
-    assert.match(html, /THEMES\.filter\(t\s*=>\s*t\.medium\)/);
-    assert.match(html, /currentThemeFilter\s*===\s*'medium'/);
-  });
-
-  it('medium filter button exists with data-theme-filter="medium"', () => {
-    assert.match(html, /data-theme-filter="medium"[^>]*>Med</);
-  });
-});
-
-describe('Custom theme builder (HTML invariants)', () => {
-  it('custom theme filter tab exists in markup', () => {
-    assert.match(html, /data-theme-filter="custom"/);
-    assert.match(html, /id="custom-theme-panel"/);
-  });
-
-  it('deriveCustomThemeVars function exists and returns an object', () => {
-    assert.match(html, /function deriveCustomThemeVars\s*\(/);
-    const fnMatch = html.match(/function deriveCustomThemeVars\(\{[^}]+\}\)\s*\{([\s\S]*?)\n    \}/);
-    assert.ok(fnMatch, 'deriveCustomThemeVars body not found');
-    assert.match(fnMatch[1], /--bg/);
-    assert.match(fnMatch[1], /--accent-hover/);
-    assert.match(fnMatch[1], /--sidebar-text/);
-    assert.match(fnMatch[1], /--panel-bg/);
-    assert.match(fnMatch[1], /--danger/);
-    assert.match(fnMatch[1], /--modal-overlay/);
-    assert.match(fnMatch[1], /return vars/);
-  });
-
-  it('hexToRgb, rgbToHex, mixHex helpers exist', () => {
-    assert.match(html, /function hexToRgb\s*\(/);
-    assert.match(html, /function rgbToHex\s*\(/);
-    assert.match(html, /function mixHex\s*\(/);
-  });
-
-  it('CRUD functions exist for custom themes', () => {
-    assert.match(html, /function loadCustomThemes\s*\(/);
-    assert.match(html, /function saveCustomThemes\s*\(/);
-    assert.match(html, /function createCustomTheme\s*\(/);
-    assert.match(html, /function updateCustomTheme\s*\(/);
-    assert.match(html, /function deleteCustomTheme\s*\(/);
-  });
-
-  it('MAX_CUSTOM_THEMES is set to 5', () => {
-    assert.match(html, /MAX_CUSTOM_THEMES\s*=\s*5/);
-  });
-
-  it('isCustomThemeId identifies custom- prefixed IDs', () => {
-    assert.match(html, /function isCustomThemeId\s*\(/);
-    assert.match(html, /\.startsWith\('custom-'\)/);
-  });
-
-  it('applyTheme handles custom theme IDs with inline vars', () => {
-    assert.match(html, /isCustomThemeId\(id\)/);
-    assert.match(html, /deriveCustomThemeVars\(ct\)/);
-    assert.match(html, /clearCustomThemeInlineVars/);
-  });
-
-  it('initTheme recognizes custom theme IDs as valid', () => {
-    const initMatch = html.match(/function initTheme\(\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(initMatch, 'initTheme function not found');
-    assert.match(initMatch[0], /isCustomThemeId/);
-    assert.match(initMatch[0], /loadCustomThemes/);
-  });
-
-  it('readLocalPrefs includes customThemes', () => {
-    const prefsMatch = html.match(/function readLocalPrefs\(\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(prefsMatch, 'readLocalPrefs not found');
-    assert.match(prefsMatch[0], /customThemes/);
-  });
-
-  it('applyCloudPrefs syncs customThemes from remote', () => {
-    assert.match(html, /prefs\.customThemes/);
-    assert.match(html, /saveCustomThemes\(prefs\.customThemes\)/);
-  });
-
-  it('custom theme CSS classes exist', () => {
-    assert.match(html, /\.custom-theme-panel/);
-    assert.match(html, /\.custom-editor/);
-    assert.match(html, /\.custom-color-swatch/);
-    assert.match(html, /\.custom-color-hex/);
-    assert.match(html, /\.custom-swatch-delete/);
-    assert.match(html, /\.custom-add-tile/);
-    assert.match(html, /\.custom-preview-app/);
-  });
-
-  it('renderCustomThemePanel / browse / editor functions exist', () => {
-    assert.match(html, /function renderCustomThemePanel\s*\(/);
-    assert.match(html, /function renderCustomBrowse\s*\(/);
-    assert.match(html, /function renderCustomEditor\s*\(/);
-    assert.match(html, /function updateEditorPreview\s*\(/);
-  });
-
-  it('themes pane is separate from appearance pane (3-tab split)', () => {
-    assert.match(html, /id="options-pane-themes"/);
-    const themesPane = html.match(/id="options-pane-themes"[\s\S]*?<\/div>\s*\n\s*<!-- Appearance/);
-    assert.ok(themesPane, 'themes pane should close before appearance pane starts');
-    assert.match(themesPane[0], /customize-theme-grid/);
-    assert.match(themesPane[0], /custom-theme-panel/);
-    assert.doesNotMatch(themesPane[0], /density-option/);
-    assert.doesNotMatch(themesPane[0], /font-size-select/);
-  });
-
-  it('click-outside guard uses bounding-rect fallback for detached targets', () => {
-    assert.match(html, /getBoundingClientRect/);
-    assert.match(html, /clientX >= r\.left/);
-  });
-});
-
-describe('Custom theme builder (functional — extracted JS)', () => {
-  const script = extractMainScript(html);
-
-  function extractFunctions() {
-    const hexToRgb = script.match(/function hexToRgb\(hex\)\s*\{[\s\S]*?\n    \}/);
-    const rgbToHex = script.match(/function rgbToHex\(r, g, b\)\s*\{[\s\S]*?\n    \}/);
-    const mixHex = script.match(/function mixHex\(c1, c2, pct\)\s*\{[\s\S]*?\n    \}/);
-    const lighten = script.match(/function lighten\(hex, pct\)\s*\{[^}]+\}/);
-    const darken = script.match(/function darken\(hex, pct\)\s*\{[^}]+\}/);
-    const withAlpha = script.match(/function withAlpha\(hex, alpha\)\s*\{[\s\S]*?\n    \}/);
-    const deriveVars = script.match(/function deriveCustomThemeVars\(\{[^}]+\}\)\s*\{[\s\S]*?\n    \}/);
-    const isCustomId = script.match(/function isCustomThemeId\(id\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(hexToRgb && rgbToHex && mixHex && lighten && darken && withAlpha && deriveVars && isCustomId,
-      'all helper functions must be extractable');
-    const code = [hexToRgb[0], rgbToHex[0], mixHex[0], lighten[0], darken[0], withAlpha[0], deriveVars[0], isCustomId[0]].join('\n');
-    return code;
-  }
-
-  it('hexToRgb correctly parses hex colors', () => {
-    const run = new Function(extractFunctions() + `\nreturn hexToRgb('#ff8000');`);
-    assert.deepEqual(run(), [255, 128, 0]);
-  });
-
-  it('hexToRgb handles black and white', () => {
-    const code = extractFunctions();
-    const black = new Function(code + `\nreturn hexToRgb('#000000');`)();
-    const white = new Function(code + `\nreturn hexToRgb('#ffffff');`)();
-    assert.deepEqual(black, [0, 0, 0]);
-    assert.deepEqual(white, [255, 255, 255]);
-  });
-
-  it('rgbToHex produces valid 6-digit hex', () => {
-    const run = new Function(extractFunctions() + `\nreturn rgbToHex(255, 128, 0);`);
-    assert.equal(run(), '#ff8000');
-  });
-
-  it('rgbToHex clamps values outside 0-255', () => {
-    const run = new Function(extractFunctions() + `\nreturn rgbToHex(300, -10, 128);`);
-    assert.match(run(), /^#[0-9a-f]{6}$/);
-    assert.equal(run(), '#ff0080');
-  });
-
-  it('mixHex at 0% returns first color, at 100% returns second color', () => {
-    const code = extractFunctions();
-    const at0 = new Function(code + `\nreturn mixHex('#ff0000', '#0000ff', 0);`)();
-    const at100 = new Function(code + `\nreturn mixHex('#ff0000', '#0000ff', 100);`)();
-    assert.equal(at0, '#ff0000');
-    assert.equal(at100, '#0000ff');
-  });
-
-  it('mixHex at 50% produces midpoint', () => {
-    const run = new Function(extractFunctions() + `\nreturn mixHex('#000000', '#ffffff', 50);`);
-    const result = run();
-    assert.match(result, /^#[0-9a-f]{6}$/);
-    const [r, g, b] = [parseInt(result.slice(1, 3), 16), parseInt(result.slice(3, 5), 16), parseInt(result.slice(5, 7), 16)];
-    assert.ok(r >= 126 && r <= 129, `red channel should be ~128, got ${r}`);
-    assert.ok(g >= 126 && g <= 129, `green channel should be ~128, got ${g}`);
-  });
-
-  it('lighten moves toward white', () => {
-    const run = new Function(extractFunctions() + `\nreturn lighten('#000000', 50);`);
-    const result = run();
-    const r = parseInt(result.slice(1, 3), 16);
-    assert.ok(r >= 126 && r <= 129, `lightened black by 50% should be ~128 gray, got r=${r}`);
-  });
-
-  it('darken moves toward black', () => {
-    const run = new Function(extractFunctions() + `\nreturn darken('#ffffff', 50);`);
-    const result = run();
-    const r = parseInt(result.slice(1, 3), 16);
-    assert.ok(r >= 126 && r <= 129, `darkened white by 50% should be ~128 gray, got r=${r}`);
-  });
-
-  it('isCustomThemeId returns true for custom- prefixed IDs, false otherwise', () => {
-    const code = extractFunctions();
-    assert.equal(new Function(code + `\nreturn isCustomThemeId('custom-abc123');`)(), true);
-    assert.equal(new Function(code + `\nreturn isCustomThemeId('dark');`)(), false);
-    assert.equal(new Function(code + `\nreturn isCustomThemeId('');`)(), false);
-    assert.equal(new Function(code + `\nreturn isCustomThemeId(null);`)(), false);
-    assert.equal(new Function(code + `\nreturn isCustomThemeId(undefined);`)(), false);
-  });
-
-  it('deriveCustomThemeVars returns all critical CSS variables for a light theme', () => {
-    const code = extractFunctions();
-    const run = new Function(code + `\nreturn deriveCustomThemeVars({ bg:'#f4f2ee', surface:'#ffffff', sidebar:'#1e2433', accent:'#3b6fd9', text:'#1a1f2e', dark:false });`);
-    const vars = run();
-    assert.equal(typeof vars, 'object');
-    assert.equal(vars['--bg'], '#f4f2ee');
-    assert.equal(vars['--surface'], '#ffffff');
-    assert.equal(vars['--accent'], '#3b6fd9');
-    assert.equal(vars['--text'], '#1a1f2e');
-    assert.match(vars['--accent-hover'], /^#[0-9a-f]{6}$/);
-    assert.match(vars['--text-muted'], /^#[0-9a-f]{6}$/);
-    assert.match(vars['--border'], /^#[0-9a-f]{6}$/);
-    assert.match(vars['--panel-bg'], /^#[0-9a-f]{6}$/);
-    assert.match(vars['--danger'], /^#[0-9a-f]{6}$/);
-    assert.ok(vars['--shadow'], '--shadow must be set');
-    assert.ok(vars['--modal-overlay'], '--modal-overlay must be set');
-    assert.ok(vars['--sidebar-text'], '--sidebar-text must be set');
-    assert.ok(vars['--tooltip-bg'], '--tooltip-bg must be set');
-    assert.equal(vars['--radius'], '10px');
-  });
-
-  it('deriveCustomThemeVars produces different accent-hover for dark vs light', () => {
-    const code = extractFunctions();
-    const base = { bg:'#121212', surface:'#1c1c1c', sidebar:'#0a0a0a', accent:'#5b8def', text:'#e8ecf3' };
-    const darkVars = new Function(code + `\nreturn deriveCustomThemeVars(${JSON.stringify({ ...base, dark: true })});`)();
-    const lightVars = new Function(code + `\nreturn deriveCustomThemeVars(${JSON.stringify({ ...base, dark: false })});`)();
-    assert.notEqual(darkVars['--accent-hover'], lightVars['--accent-hover']);
-    assert.notEqual(darkVars['--modal-overlay'], lightVars['--modal-overlay']);
-  });
-
-  it('deriveCustomThemeVars returns at least 25 CSS variables', () => {
-    const code = extractFunctions();
-    const run = new Function(code + `\nreturn deriveCustomThemeVars({ bg:'#f4f2ee', surface:'#ffffff', sidebar:'#1e2433', accent:'#3b6fd9', text:'#1a1f2e', dark:false });`);
-    const vars = run();
-    const keys = Object.keys(vars).filter(k => k.startsWith('--'));
-    assert.ok(keys.length >= 25, `expected at least 25 CSS vars, got ${keys.length}`);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// Rich text editor / sanitizer — functional extracted JS
-// ═══════════════════════════════════════════════════════════════════════
-describe('Rich text editor (functional — extracted JS)', () => {
-  const script = extractMainScript(html);
-
-  function extractRichTextFns() {
-    const escapeHtml = script.match(/function escapeHtml\(str\)\s*\{[\s\S]*?\n    \}/);
-    const shouldCollapse = script.match(/function shouldCollapseSoftBreak\(beforePlain, afterStart, beforeHtml[^)]*\)\s*\{[\s\S]*?\n    \}/);
-    const plainTextPreview = script.match(/function plainTextPreview\(html, maxLen[^)]*\)\s*\{[\s\S]*?\n    \}/);
-    const formatCommentTime = script.match(/function formatCommentTime\(iso\)\s*\{[\s\S]*?\n    \}/);
-    const recurringRuleLabel = script.match(/function recurringRuleLabel\(template\)\s*\{[\s\S]*?\n    \}/);
-    const createdDateKey = script.match(/function createdDateKey\(item\)\s*\{[\s\S]*?\n    \}/);
-    const DAY_LABELS = script.match(/const DAY_LABELS = \[[^\]]+\];/);
-    assert.ok(escapeHtml, 'escapeHtml extractable');
-    assert.ok(shouldCollapse, 'shouldCollapseSoftBreak extractable');
-    assert.ok(plainTextPreview, 'plainTextPreview extractable');
-    assert.ok(formatCommentTime, 'formatCommentTime extractable');
-    assert.ok(recurringRuleLabel, 'recurringRuleLabel extractable');
-    assert.ok(createdDateKey, 'createdDateKey extractable');
-    assert.ok(DAY_LABELS, 'DAY_LABELS extractable');
-    return [escapeHtml[0], shouldCollapse[0], plainTextPreview[0], formatCommentTime[0],
-      DAY_LABELS[0], recurringRuleLabel[0], createdDateKey[0]].join('\n');
-  }
-
-  it('escapeHtml escapes &, <, >', () => {
-    const run = new Function(extractRichTextFns() + `\nreturn escapeHtml('<b>AT&T</b>');`);
-    assert.equal(run(), '&lt;b&gt;AT&amp;T&lt;/b&gt;');
-  });
-
-  it('escapeHtml handles null/undefined gracefully', () => {
-    const code = extractRichTextFns();
-    assert.equal(new Function(code + `\nreturn escapeHtml(null);`)(), '');
-    assert.equal(new Function(code + `\nreturn escapeHtml(undefined);`)(), '');
-    assert.equal(new Function(code + `\nreturn escapeHtml('');`)(), '');
-  });
-
-  it('shouldCollapseSoftBreak collapses mid-sentence continuation', () => {
-    const code = extractRichTextFns();
-    const BULLET_START_RE = `/^[•\\-\\*○◦▪▸\\u2022\\u2023\\u25E6\\u2043\\u2219]\\s/`;
-    const NUMBERED_LINE_RE = `/^\\d+[.)]\\s+\\S/`;
-    const BLOCK_END_RE = `/<\\/(ul|ol|li|p|div|h[1-6])>\\s*$/i`;
-    const SENTENCE_END_RE = `/[.!?:]["'""»)\\]]*$/`;
-    const setup = `const BULLET_START_RE=${BULLET_START_RE};const NUMBERED_LINE_RE=${NUMBERED_LINE_RE};const BLOCK_END_RE=${BLOCK_END_RE};const SENTENCE_END_RE=${SENTENCE_END_RE};\n`;
-    assert.equal(new Function(setup + code + `\nreturn shouldCollapseSoftBreak('the quick brown', 'fox jumps');`)(), true);
-  });
-
-  it('shouldCollapseSoftBreak does NOT collapse after sentence-ending punctuation', () => {
-    const code = extractRichTextFns();
-    const setup = `const BULLET_START_RE=/^[•\\-\\*]\\s/;const NUMBERED_LINE_RE=/^\\d+[.)]\\s+\\S/;const BLOCK_END_RE=/<\\/(ul|ol|li|p|div|h[1-6])>\\s*$/i;const SENTENCE_END_RE=/[.!?:]["'""»)\\]]*$/;\n`;
-    assert.equal(new Function(setup + code + `\nreturn shouldCollapseSoftBreak('End of sentence.', 'Start of new');`)(), false);
-  });
-
-  it('shouldCollapseSoftBreak does NOT collapse before bullet lines', () => {
-    const code = extractRichTextFns();
-    const setup = `const BULLET_START_RE=/^[•\\-\\*]\\s/;const NUMBERED_LINE_RE=/^\\d+[.)]\\s+\\S/;const BLOCK_END_RE=/<\\/(ul|ol|li|p|div|h[1-6])>\\s*$/i;const SENTENCE_END_RE=/[.!?:]["'""»)\\]]*$/;\n`;
-    assert.equal(new Function(setup + code + `\nreturn shouldCollapseSoftBreak('above text', '• bullet item');`)(), false);
-  });
-
-  it('plainTextPreview exists, truncates with ellipsis, and uses DOM innerHTML', () => {
-    assert.match(html, /function plainTextPreview\(html, maxLen/);
-    const fnBody = html.match(/function plainTextPreview[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'plainTextPreview extractable');
-    assert.match(fnBody[0], /\.slice\(/);
-    assert.match(fnBody[0], /textContent/);
-    assert.match(fnBody[0], /maxLen/);
-  });
-
-  it('formatCommentTime returns a human-readable timestamp', () => {
-    const code = extractRichTextFns();
-    const result = new Function(code + `\nreturn formatCommentTime('2026-09-16T12:30:00.000Z');`)();
-    assert.ok(result.includes('Sep'), `expected "Sep" in "${result}"`);
-    assert.ok(result.includes('16'), `expected "16" in "${result}"`);
-  });
-
-  it('recurringRuleLabel returns correct labels for each rule type', () => {
-    const code = extractRichTextFns();
-    assert.equal(new Function(code + `\nreturn recurringRuleLabel({ rule: 'daily' });`)(), 'Every day');
-    assert.equal(new Function(code + `\nreturn recurringRuleLabel({ rule: 'weekdays' });`)(), 'Mon–Fri');
-    assert.equal(new Function(code + `\nreturn recurringRuleLabel({ rule: 'weekly', days: [1] });`)(), 'Every Mon');
-    assert.equal(new Function(code + `\nreturn recurringRuleLabel({ rule: 'custom', days: [1, 3, 5] });`)(), 'Mon, Wed, Fri');
-  });
-
-  it('createdDateKey extracts YYYY-MM-DD from createdAt', () => {
-    const code = extractRichTextFns();
-    assert.equal(new Function(code + `\nreturn createdDateKey({ createdAt: '2026-09-16T12:00:00Z' });`)(), '2026-09-16');
-    assert.equal(new Function(code + `\nreturn createdDateKey({});`)(), '');
-  });
-});
-
-describe('Rich text editor (HTML invariants)', () => {
-  it('sanitizeHtml function is present and handles plain text and HTML', () => {
-    assert.match(html, /function sanitizeHtml\(html\)/);
-    const fnBody = html.match(/function sanitizeHtml\(html\)\s*\{[\s\S]*?return repairFlowingHtml/);
-    assert.ok(fnBody, 'sanitizeHtml should call repairFlowingHtml');
-  });
-
-  it('plainTextToRichHtml converts bullets to <ul> lists', () => {
-    assert.match(html, /function plainTextToRichHtml\(text\)/);
-    const fnBody = html.match(/function plainTextToRichHtml[\s\S]*?return chunks\.join/);
-    assert.ok(fnBody, 'plainTextToRichHtml should produce chunked output');
-    assert.match(fnBody[0], /<ul>/);
-    assert.match(fnBody[0], /<li>/);
-  });
-
-  it('normalizeRichHtml processes nested blocks and lists', () => {
-    assert.match(html, /function normalizeRichHtml\(html\)/);
-    const fnBody = html.match(/function normalizeRichHtml[\s\S]*?return joinRichOutput/);
-    assert.ok(fnBody, 'normalizeRichHtml should call joinRichOutput');
-  });
-
-  it('repairMashedBullets detects and splits bullet characters', () => {
-    assert.match(html, /function repairMashedBullets\(html\)/);
-    const fnBody = html.match(/function repairMashedBullets[\s\S]*?return plainTextToRichHtml/);
-    assert.ok(fnBody, 'repairMashedBullets should fallback to plainTextToRichHtml');
-  });
-
-  it('repairSoftLineBreaks collapses unnecessary <br> tags', () => {
-    assert.match(html, /function repairSoftLineBreaks\(html\)/);
-    assert.match(html, /shouldCollapseSoftBreak/);
-  });
-
-  it('repairOrphanPunctuation pulls orphan punctuation back', () => {
-    assert.match(html, /function repairOrphanPunctuation\(html\)/);
-    assert.match(html, /ORPHAN_PUNCT_TAIL_RE/);
-  });
-
-  it('serializeEditorHtml / serializeEditorNode / serializeEditorInline form a tree', () => {
-    assert.match(html, /function serializeEditorHtml\(editor\)/);
-    assert.match(html, /function serializeEditorNode\(node\)/);
-    assert.match(html, /function serializeEditorInline\(node\)/);
-    const serBody = html.match(/function serializeEditorHtml[\s\S]*?normalizeRichHtml/);
-    assert.ok(serBody, 'serializeEditorHtml calls normalizeRichHtml');
-  });
-
-  it('INLINE_ALLOWED whitelist in sanitizeHtml permits B/STRONG/I/EM/U/S/DEL/BR', () => {
-    const fnBody = html.match(/function sanitizeHtml[\s\S]*?return repairFlowingHtml\(normalizeRichHtml\(result\)\);/);
-    assert.ok(fnBody, 'sanitizeHtml body extractable');
-    assert.match(fnBody[0], /INLINE_ALLOWED.*Set.*B.*STRONG.*I.*EM.*U.*S.*DEL.*BR/);
-  });
-
-  it('SKIP_TAGS blocks STYLE/SCRIPT/META in sanitizeHtml', () => {
-    assert.match(html, /SKIP_TAGS.*Set.*STYLE.*SCRIPT.*META/);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// Insights / analytics (HTML invariants + extracted JS)
-// ═══════════════════════════════════════════════════════════════════════
-describe('Insights tab (HTML invariants)', () => {
-  it('insights view element exists', () => {
-    assert.match(html, /id="insights-view"/);
-    assert.match(html, /id="tab-insights"/);
-  });
-
-  it('computeInsights function processes period ranges', () => {
-    assert.match(html, /function computeInsights\(period, anchorKey\)/);
-    const fnBody = html.match(/function computeInsights[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'computeInsights extractable');
-    assert.match(fnBody[0], /getPeriodRange/);
-    assert.match(fnBody[0], /analyzeDayItems/);
-    assert.match(fnBody[0], /completionRate/);
-  });
-
-  it('computeWeekComparison computes deltas against prior week', () => {
-    assert.match(html, /function computeWeekComparison\(currentData, anchorKey\)/);
-    const fnBody = html.match(/function computeWeekComparison[\s\S]*?\n    \}/);
-    assert.ok(fnBody);
-    assert.match(fnBody[0], /computeInsights.*'week'/);
-  });
-
-  it('analyzeCarryOverPatterns tracks carry-overs by day of week from the period + range', () => {
-    assert.match(html, /function analyzeCarryOverPatterns\(period, range\)/);
-    const fnBody = html.match(/function analyzeCarryOverPatterns[\s\S]*?\n    \}/);
-    assert.ok(fnBody);
-    assert.match(fnBody[0], /carryOverByDay/);
-    assert.match(fnBody[0], /item\.carriedFrom/);
-    assert.match(fnBody[0], /Mon.*Tue.*Wed.*Thu.*Fri/);
-  });
-
-  it('computeStreaks finds current and longest streaks', () => {
-    assert.match(html, /function computeStreaks\(\)/);
-    const fnBody = html.match(/function computeStreaks\(\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody);
-    assert.match(fnBody[0], /currentStreak/);
-    assert.match(fnBody[0], /longestStreak/);
-  });
-
-  it('renderInsights function exists and handles all three periods', () => {
-    assert.match(html, /function renderInsights\(\)/);
-    const fnBody = html.match(/function renderInsights\(\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody);
-    assert.match(fnBody[0], /computeInsights/);
-    assert.match(fnBody[0], /renderInsightBars/);
-    assert.match(fnBody[0], /renderLineChart/);
-    assert.match(fnBody[0], /renderHeatmap/);
-  });
-
-  it('all chart renderers exist (bars, line, stacked, pie)', () => {
-    assert.match(html, /function renderInsightBars\(segments\)/);
-    assert.match(html, /function renderLineChart\(segments\)/);
-    assert.match(html, /function renderStackedChart\(segments\)/);
-    assert.match(html, /function renderPieChart\(segments\)/);
-  });
-
-  it('renderInsightsTable produces a summary data table', () => {
-    assert.match(html, /function renderInsightsTable\(daily\)/);
-  });
-
-  it('renderHeatmap visualizes daily activity', () => {
-    assert.match(html, /function renderHeatmap\(startKey, endKey, daily\)/);
-  });
-});
-
-describe('Insights (functional — extracted JS)', () => {
-  const script = extractMainScript(html);
-
-  function extractInsightsFns() {
-    const dateFromKey = script.match(/function dateFromKey\(key\)\s*\{[\s\S]*?\n    \}/);
-    const formatDateKey = script.match(/function formatDateKey\(date\)\s*\{[\s\S]*?\n    \}/);
-    const getPeriodRange = script.match(/function getPeriodRange\(period, anchorKey\)\s*\{[\s\S]*?\n    \}/);
-    const createdDateKey = script.match(/function createdDateKey\(item\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(dateFromKey && formatDateKey && getPeriodRange && createdDateKey,
-      'insights helper functions must be extractable');
-    return [dateFromKey[0], formatDateKey[0], getPeriodRange[0], createdDateKey[0]].join('\n');
-  }
-
-  it('getPeriodRange returns correct week range (Mon–Sun)', () => {
-    const code = extractInsightsFns();
-    const run = new Function(code + `\nreturn getPeriodRange('week', '2026-09-16');`);
-    const r = run();
-    assert.equal(r.startKey, '2026-09-14');
-    assert.equal(r.endKey, '2026-09-20');
-    assert.ok(r.label.includes('Sep'), `label should mention Sep: "${r.label}"`);
-  });
-
-  it('getPeriodRange returns correct month range', () => {
-    const code = extractInsightsFns();
-    const run = new Function(code + `\nreturn getPeriodRange('month', '2026-09-16');`);
-    const r = run();
-    assert.equal(r.startKey, '2026-09-01');
-    assert.equal(r.endKey, '2026-09-30');
-    assert.ok(r.label.includes('September'), `label should mention September: "${r.label}"`);
-  });
-
-  it('getPeriodRange returns correct year range', () => {
-    const code = extractInsightsFns();
-    const run = new Function(code + `\nreturn getPeriodRange('year', '2026-09-16');`);
-    const r = run();
-    assert.equal(r.startKey, '2026-01-01');
-    assert.equal(r.endKey, '2026-12-31');
-    assert.equal(r.label, '2026');
-  });
-
-  it('dateFromKey ↔ formatDateKey round-trips', () => {
-    const code = extractInsightsFns();
-    const run = new Function(code + `\nconst d = dateFromKey('2026-09-16'); return formatDateKey(d);`);
-    assert.equal(run(), '2026-09-16');
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// Recurring templates (HTML invariants)
-// ═══════════════════════════════════════════════════════════════════════
-describe('Recurring templates (HTML invariants)', () => {
-  it('recurring modal HTML structure exists', () => {
-    assert.match(html, /id="recurring-modal"/);
-    assert.match(html, /id="recurring-modal-body"/);
-    assert.match(html, /id="recurring-close"/);
-    assert.match(html, /id="recurring-btn"/);
-  });
-
-  it('recurring CRUD functions exist', () => {
-    assert.match(html, /function loadRecurringTemplates\s*\(/);
-    assert.match(html, /function saveRecurringTemplates\s*\(/);
-    assert.match(html, /function markRecurringTemplateDeleted\s*\(/);
-  });
-
-  it('renderRecurringPanel builds template list with edit/delete actions', () => {
-    const fnBody = html.match(/function renderRecurringPanel\(\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'renderRecurringPanel extractable');
-    assert.match(fnBody[0], /recurring-template-item/);
-    assert.match(fnBody[0], /recurring-rule-badge/);
-    assert.match(fnBody[0], /edit/);
-    assert.match(fnBody[0], /delete/);
-  });
-
-  it('openRecurringEditForm has rule picker (daily/weekdays/weekly/custom)', () => {
-    const fnBody = html.match(/function openRecurringEditForm[\s\S]*?hostEl\.appendChild\(editActions\)/);
-    assert.ok(fnBody, 'openRecurringEditForm extractable');
-    assert.match(fnBody[0], /daily/);
-    assert.match(fnBody[0], /weekdays/);
-    assert.match(fnBody[0], /weekly/);
-    assert.match(fnBody[0], /custom/);
-  });
-
-  it('recurring template items include skip-holidays badge', () => {
-    assert.match(html, /skip-holidays/);
-    assert.match(html, /skipHolidays/);
-  });
-
-  it('injectDueTemplates checks isDueToday before injecting', () => {
-    const fnBody = html.match(/function injectDueTemplates\(\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'injectDueTemplates extractable');
-    assert.match(fnBody[0], /isDueToday/);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// Comments system (HTML invariants)
-// ═══════════════════════════════════════════════════════════════════════
-describe('Comments system (HTML invariants)', () => {
-  it('comment CRUD functions exist', () => {
-    assert.match(html, /function addComment\(taskId, content\)/);
-    assert.match(html, /function deleteComment\(taskId, commentId\)/);
-    assert.match(html, /function updateComment\(taskId, commentId, content\)/);
-  });
-
-  it('addComment sanitizes content and validates non-empty', () => {
-    const fnBody = html.match(/function addComment\(taskId, content\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'addComment extractable');
-    assert.match(fnBody[0], /sanitizeHtml/);
-    assert.match(fnBody[0], /isEmptyHtml/);
-  });
-
-  it('deleteComment stores undo data', () => {
-    const fnBody = html.match(/function deleteComment\(taskId, commentId\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'deleteComment extractable');
-    assert.match(fnBody[0], /pendingUndo/);
-    assert.match(fnBody[0], /showToast.*undo/);
-  });
-
-  it('renderCommentsPanel builds thread with edit/delete actions', () => {
-    const fnBody = html.match(/function renderCommentsPanel\(item\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'renderCommentsPanel extractable');
-    assert.match(fnBody[0], /comments-list/);
-    assert.match(fnBody[0], /add-comment/);
-  });
-
-  it('createCommentsButton shows badge with comment count', () => {
-    const fnBody = html.match(/function createCommentsButton[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'createCommentsButton extractable');
-    assert.match(fnBody[0], /comment-count-badge/);
-    assert.match(fnBody[0], /comments-toggle/);
-  });
-
-  it('comments panel CSS classes exist', () => {
-    assert.match(html, /\.comments-panel/);
-    assert.match(html, /\.comments-list/);
-    assert.match(html, /\.add-comment-form/);
-    assert.match(html, /\.add-comment-trigger/);
-    assert.match(html, /\.comment-count-badge/);
-  });
-
-  it('splitCommentToItem function exists with correct signature', () => {
-    assert.match(html, /function splitCommentToItem\(parentId, commentId, targetType\)/);
-  });
-
-  it('splitCommentToItem creates new item, annotates original comment, and shows toast', () => {
-    const fnBody = html.match(/function splitCommentToItem\(parentId, commentId, targetType\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'splitCommentToItem extractable');
-    assert.match(fnBody[0], /addItem|newItem|items\.push/, 'creates new item');
-    assert.match(fnBody[0], /Split from:/, 'breadcrumb comment added');
-    assert.match(fnBody[0], /moved to/, 'original comment annotated');
-    assert.match(fnBody[0], /showToast/, 'toast shown');
-    assert.match(fnBody[0], /pendingUndo/, 'undo data stored');
-    assert.match(fnBody[0], /tags/, 'tags carried over');
-  });
-
-  it('splitCommentToItem undo handler restores original comment and removes new item', () => {
-    const fnBody = html.match(/function splitCommentToItem\(parentId, commentId, targetType\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'splitCommentToItem extractable');
-    assert.match(fnBody[0], /undo:/, 'undo callback provided');
-    assert.match(fnBody[0], /splice\(removeIdx/, 'removes new item on undo');
-    assert.match(fnBody[0], /originalComment/, 'restores original comment on undo');
-  });
-
-  it('renderCommentsPanel includes text-based edit/delete and split action links', () => {
-    const fnBody = html.match(/function renderCommentsPanel\(item\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'renderCommentsPanel extractable');
-    assert.match(fnBody[0], /comment-action-edit/, 'text edit button');
-    assert.match(fnBody[0], /comment-action-delete/, 'text delete button');
-    assert.match(fnBody[0], /comment-split-btn/);
-    assert.match(fnBody[0], /split-task/);
-    assert.match(fnBody[0], /split-note/);
-    assert.match(fnBody[0], /splitCommentToItem/);
-  });
-
-  it('split action CSS classes exist', () => {
-    assert.match(html, /\.comment-actions-sep/);
-    assert.match(html, /\.comment-split-btn/);
-    assert.match(html, /\.comment-action-delete:hover/);
-  });
-
-  it('→ task has no permanent accent styling (only hover highlights)', () => {
-    assert.doesNotMatch(html, /\.comment-split-btn\.split-task\s*\{/);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// Shared extractor for functional tests below
-// ═══════════════════════════════════════════════════════════════════════
-const mainScript = extractMainScript(html);
-function fnSource(name) {
-  const m = mainScript.match(new RegExp(`function ${name}\\([^)]*\\)\\s*\\{[\\s\\S]*?\\n    \\}`));
-  assert.ok(m, `${name} must be extractable from work-desk.html`);
-  return m[0];
+    localStorage.setItem('work-desk-list-context', 'work');
+    localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+    localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    for (const [k, v] of Object.entries(extraKeys)) localStorage.setItem(k, v);
+  }, extra);
+  await page.goto(DESK_URL);
+  await dismissAuthModal(page);
+  await expect(page.locator('#add-form')).toBeVisible();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// splitCommentToItem (functional — runs the real function with stubs)
-// ═══════════════════════════════════════════════════════════════════════
-describe('splitCommentToItem (functional)', () => {
-  function runSplit(targetType, parentExtras = {}) {
-    const harness = new Function(`
-      let idCounter = 0;
-      let pendingUndo = null;
-      let lastToast = null;
-      let saves = 0;
-      const state = { data: { days: {
-        '2026-09-22': { items: [
-          { id: 'parent', type: 'task', content: 'Parent <b>task</b>', completed: false,
-            comments: [{ id: 'c1', content: 'Follow up with JD', createdAt: '2026-09-22T10:00:00Z' }],
-            ...${JSON.stringify(parentExtras)} },
+test.describe('Desktop layout baselines', { tag: ['@visual'] }, () => {
+  // Re-captured at 1.13.3 (page scroll on .main with a reserved scrollbar gutter). Version text is masked so bumps don't count as changes.
+  const shot = (page: Page, name: string) =>
+    expect(page).toHaveScreenshot(name, {
+      fullPage: true,
+      mask: [page.locator('#version-btn'), page.locator('#version-new-dot'), page.locator('#toast')],
+    });
+
+  for (const width of [1440, 1024, 820]) {
+    test(`desk at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await seedLayout(page);
+      await shot(page, `desk-${width}.png`);
+    });
+  }
+
+  test('insights at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    await page.locator('#tab-insights').click();
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    await shot(page, 'insights-1440.png');
+  });
+
+  test('collapsed sidebar at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page, { 'work-desk-sidebar-collapsed': '1' });
+    await shot(page, 'desk-collapsed-1440.png');
+  });
+
+  test('options panel at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await shot(page, 'options-1440.png');
+  });
+
+  test('export menu at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    await openAccountMenu(page);
+    await page.locator('#export-btn').click();
+    await expect(page.locator('#export-menu')).toBeVisible();
+    await shot(page, 'export-1440.png');
+  });
+});
+
+test.describe('Phone layout baselines', { tag: ['@visual', '@phone'] }, () => {
+  const shot = (page: Page, name: string) =>
+    expect(page).toHaveScreenshot(name, {
+      mask: [page.locator('#mobile-menu-version'), page.locator('#mobile-menu-new-dot'), page.locator('#toast')],
+    });
+
+  test('phone desk and menu at 390px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedLayout(page);
+    await shot(page, 'phone-desk-390.png');
+    await page.locator('#mobile-menu-btn').click();
+    await expect(page.locator('#mobile-menu-sheet')).toBeVisible();
+    await shot(page, 'phone-menu-390.png');
+  });
+});
+
+test.describe('Phone menu (1.13.0)', { tag: ['@phone', '@sidebar'] }, () => {
+  const sheet = (page: Page) => page.locator('#mobile-menu-sheet');
+  const menuBtn = (page: Page) => page.locator('#mobile-menu-btn');
+
+  async function openPhone(page: Page, width = 390, extra: Record<string, string> = {}) {
+    await page.setViewportSize({ width, height: 844 });
+    await seedLayout(page, extra);
+  }
+
+  async function openMenu(page: Page) {
+    await menuBtn(page).click();
+    await expect(sheet(page)).toBeVisible();
+    await expect(menuBtn(page)).toHaveAttribute('aria-expanded', 'true');
+  }
+
+  async function expectMenuClosed(page: Page) {
+    await expect(sheet(page)).toBeHidden();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    await expect(menuBtn(page)).toHaveAttribute('aria-expanded', 'false');
+    expect(await page.evaluate(() => document.body.classList.contains('mobile-menu-open'))).toBe(false);
+    // Account and backup are back in the sidebar, not left in the sheet
+    await expect(page.locator('.sidebar #sidebar-account')).toHaveCount(1);
+    await expect(page.locator('.sidebar .sidebar-backup')).toHaveCount(1);
+    await expect(page.locator('#mobile-menu-moved > *')).toHaveCount(0);
+  }
+
+  const singleIds = ['export-btn', 'import-btn', 'repair-btn', 'sb-signin-btn', 'sb-signout-btn', 'density-popout', 'density-toggle', 'version-btn'];
+  const expectNoDuplicates = async (page: Page) => {
+    const counts = await page.evaluate((ids) => ids.map((id) => document.querySelectorAll(`#${id}`).length), singleIds);
+    expect(counts).toEqual(singleIds.map(() => 1));
+  };
+
+  test('phone shows tabs, search, and a menu button; rarely used rows are tucked away', async ({ page }) => {
+    await openPhone(page);
+    for (const sel of ['#tab-desk', '#tab-insights', '#tab-work', '#tab-personal', '#tab-projects', '#search-input', '#help-btn', '#mobile-menu-btn', '#mobile-sync-dot']) {
+      await expect(page.locator(sel)).toBeVisible();
+    }
+    for (const sel of ['#sidebar-account', '.sidebar-backup', '#sidebar-today-glance', '#version-btn', '#density-toggle', '#mobile-menu-sheet']) {
+      await expect(page.locator(sel)).toBeHidden();
+    }
+    const box = await menuBtn(page).boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(36);
+    expect(box!.height).toBeGreaterThanOrEqual(36);
+    // Tasks start well above where they did when the whole sidebar was stacked on top (~430px of sidebar)
+    const firstTask = await page.locator('.item-card').first().evaluate((el) => el.getBoundingClientRect().top + scrollY);
+    expect(firstTask).toBeLessThan(470);
+  });
+
+  test('menu opens over the desk with account, backup, Options, and What\'s new', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    for (const sel of ['#account-email', '#sb-signin-btn', '#export-btn', '#import-btn', '#repair-btn', '#mobile-menu-options', '#mobile-menu-whatsnew']) {
+      await expect(sheet(page).locator(sel)).toBeVisible();
+    }
+    const version = await page.evaluate(() => (window as any).eval('APP_VERSION'));
+    await expect(page.locator('#mobile-menu-version')).toHaveText(`v${version}`);
+    // Sits above the pinned add-task dock
+    const hit = await page.locator('#import-btn').evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.id;
+    });
+    expect(hit).toBe('import-btn');
+    await expectNoDuplicates(page);
+  });
+
+  test('menu closes with the close button, a tap outside, Esc, and the menu button', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#mobile-menu-close').click();
+    await expectMenuClosed(page);
+
+    await openMenu(page);
+    await page.mouse.click(195, 60);
+    await expectMenuClosed(page);
+
+    await openMenu(page);
+    await page.keyboard.press('Escape');
+    await expectMenuClosed(page);
+
+    await openMenu(page);
+    await menuBtn(page).click({ force: true });
+    await expectMenuClosed(page);
+    await expectNoDuplicates(page);
+  });
+
+  test('swiping the sheet handle down closes it', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('.mobile-menu-grab').evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const touch = (y: number) => new Touch({ identifier: 1, target: el, clientX: r.left + 20, clientY: y });
+      el.dispatchEvent(new TouchEvent('touchstart', { touches: [touch(r.top + 4)], bubbles: true }));
+      el.dispatchEvent(new TouchEvent('touchend', { changedTouches: [touch(r.top + 90)], bubbles: true }));
+    });
+    await expectMenuClosed(page);
+  });
+
+  test('Export and Import work from the menu and keep it open', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#export-btn').click();
+    await expect(page.locator('#export-menu')).toBeVisible();
+    await expect(sheet(page)).toBeVisible();
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#export-desk-opt').click()]);
+    expect(download.suggestedFilename()).toMatch(/\.json$/);
+    await expect(sheet(page)).toBeVisible();
+
+    await page.locator('#import-btn').click();
+    await expect(page.locator('#import-menu')).toBeVisible();
+    await expect(page.locator('#export-menu')).toBeHidden();
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#import-desk-opt').click()]);
+    expect(chooser).toBeTruthy();
+
+    await page.locator('#export-btn').click();
+    await page.locator('#mobile-menu-close').click();
+    await expectMenuClosed(page);
+    await expect(page.locator('#export-menu')).toBeHidden();
+  });
+
+  test('Repair duplicates and Sign in work from the menu', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#repair-btn').click();
+    await expect(page.locator('#toast')).toBeVisible();
+    await page.locator('#sb-signin-btn').click();
+    await expect(page.locator('#auth-modal')).toBeVisible();
+  });
+
+  test('Options opens the settings sheet from any tab and closes on a tap outside', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#mobile-menu-options').click();
+    await expect(sheet(page)).toBeHidden();
+    const popout = page.locator('#density-popout');
+    await expect(popout).toBeVisible();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeVisible();
+    const box = await popout.boundingBox();
+    expect(Math.round(box!.y + box!.height)).toBeLessThanOrEqual(844);
+    expect(Math.round(box!.width)).toBe(390);
+
+    // Switching tabs inside replaces content; the sheet must stay open
+    for (const tab of ['appearance', 'behavior', 'themes']) {
+      await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+      await expect(popout).toBeVisible();
+    }
+
+    await page.mouse.click(195, 40);
+    await expect(popout).toBeHidden();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    expect(await popout.evaluate((el) => el.parentElement!.classList.contains('density-wrap'))).toBe(true);
+
+    await page.locator('#tab-insights').click();
+    await openMenu(page);
+    await page.locator('#mobile-menu-options').click();
+    await expect(popout).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(popout).toBeHidden();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    await expectNoDuplicates(page);
+  });
+
+  test('What\'s new opens the changelog and closes the menu', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.locator('#mobile-menu-whatsnew').click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expectMenuClosed(page);
+  });
+
+  test('sync dot and menu alert follow sign-in and sync status', async ({ page }) => {
+    await openPhone(page);
+    const dot = page.locator('#mobile-sync-dot');
+    await expect(dot).toHaveAttribute('data-state', 'off');
+    await expect(page.locator('#mobile-menu-alert')).toBeVisible();
+
+    await page.evaluate(() => (window as any).updateAccountChrome('signed-in', 'keith@example.com'));
+    await expect(dot).toHaveAttribute('data-state', 'synced');
+    await expect(page.locator('#mobile-menu-alert')).toBeHidden();
+
+    await page.evaluate(() => (window as any).sbSetStatus('syncing'));
+    await expect(dot).toHaveAttribute('data-state', 'syncing');
+    await page.evaluate(() => (window as any).sbSetStatus('error'));
+    await expect(dot).toHaveAttribute('data-state', 'error');
+
+    await openMenu(page);
+    await expect(sheet(page).locator('#sb-signout-btn')).toBeVisible();
+    await expect(sheet(page).locator('#account-email')).toHaveText('keith@example.com');
+  });
+
+  test('768px gets the phone menu; 769px keeps the desktop sidebar', async ({ page }) => {
+    await openPhone(page, 768);
+    await expect(menuBtn(page)).toBeVisible();
+    await expect(page.locator('.sidebar-backup')).toBeHidden();
+
+    await page.setViewportSize({ width: 769, height: 844 });
+    await expect(menuBtn(page)).toBeHidden();
+    await expect(page.locator('#account-menu-btn')).toBeVisible();
+    await openAccountMenu(page);
+    await expect(page.locator('#account-menu .sidebar-backup')).toBeVisible();
+    await expect(page.locator('#sidebar-account')).toBeVisible();
+    await expect(page.locator('#density-toggle')).toBeVisible();
+  });
+
+  test('widening the window with the menu or Options open restores the desktop layout', async ({ page }) => {
+    await openPhone(page);
+    await openMenu(page);
+    await page.setViewportSize({ width: 1024, height: 844 });
+    await expectMenuClosed(page);
+    await expect(page.locator('#account-menu .sidebar-backup #export-btn')).toHaveCount(1);
+    await expect(page.locator('#account-menu-btn')).toBeVisible();
+    await expect(page.locator('#account-menu')).toBeHidden();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openMenu(page);
+    await page.locator('#mobile-menu-options').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.setViewportSize({ width: 1024, height: 844 });
+    await expect(page.locator('#density-popout')).toBeHidden();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    expect(await page.locator('#density-popout').evaluate((el) => el.parentElement!.classList.contains('density-wrap'))).toBe(true);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+    await expectNoDuplicates(page);
+  });
+
+  test('a sidebar collapsed on desktop stays usable on a phone and collapsed again on desktop', async ({ page }) => {
+    await openPhone(page, 390, { 'work-desk-sidebar-collapsed': '1' });
+    await expect(page.locator('#tab-desk')).toBeVisible();
+    const width = await page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width);
+    expect(width).toBeGreaterThan(300);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect.poll(() => page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(0);
+    await expect(page.locator('#sidebar-toggle')).toBeVisible();
+  });
+
+  for (const width of [1440, 1024]) {
+    test(`desktop at ${width}px has no phone menu and the sidebar works as before`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await seedLayout(page);
+      for (const sel of ['#mobile-menu-btn', '#mobile-sync-dot', '#mobile-menu-sheet', '#mobile-menu-backdrop']) {
+        await expect(page.locator(sel)).toBeHidden();
+      }
+      await expect(page.locator('#sidebar-today-glance')).toBeVisible();
+      await openAccountMenu(page);
+      await expect(page.locator('#version-btn')).toBeVisible();
+      await page.locator('#export-btn').click();
+      await expect(page.locator('.sidebar #export-menu')).toBeVisible();
+      await page.locator('#density-toggle').click();
+      await expect(page.locator('#density-popout')).toBeVisible();
+      await expect(page.locator('#mobile-menu-backdrop')).toBeHidden();
+      expect(await page.evaluate(() => document.body.classList.contains('mobile-menu-open'))).toBe(false);
+      await page.keyboard.press('Escape');
+      await page.locator('#sidebar-toggle').click();
+      await expect.poll(() => page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(0);
+    });
+  }
+});
+
+test.describe('UI audit fixes (1.12.1)', { tag: ['@board'] }, () => {
+  // Wed Sep 30, 2026. One task carried from Tuesday (this week), none last week.
+  async function seedAudit(page: Page) {
+    await page.clock.setFixedTime(new Date('2026-09-30T10:00:00'));
+    await page.addInitScript(() => {
+      if (localStorage.getItem('audit-seeded')) return;
+      localStorage.setItem('audit-seeded', '1');
+      const t = (id: string, content: string, extra = {}) => ({
+        id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], tags: ['ace'], createdAt: '2026-09-28T09:00:00Z', ...extra,
+      });
+      const days = {
+        '2026-09-28': { date: '2026-09-28', items: [t('done1', 'Renew vendor contract', { completed: true })] },
+        '2026-09-30': { date: '2026-09-30', items: [
+          t('open1', 'Review PR for IDS batching'),
+          t('open2', 'Call vendor about the renewal', { boardColumn: 'active' }),
+          t('carry1', 'Carried from Tuesday', { completed: true, carriedFrom: '2026-09-29' }),
         ] },
-      } } };
-      const newId = () => 'new-' + (++idCounter);
-      const sanitizeHtml = (s) => s;
-      const stripHtmlTags = (s) => String(s).replace(/<[^>]+>/g, '');
-      const cloneData = (x) => JSON.parse(JSON.stringify(x));
-      const clearPendingUndo = () => { pendingUndo = null; };
-      const clearItemDeleted = () => {};
-      const saveData = () => { saves++; };
-      const render = () => {};
-      const showToast = (msg, opts) => { lastToast = { msg, opts }; };
-      function findItem(id) {
-        for (const date of Object.keys(state.data.days)) {
-          const day = state.data.days[date];
-          const idx = day.items.findIndex(i => i.id === id);
-          if (idx !== -1) return { date, day, idx, item: day.items[idx] };
-        }
-        return null;
+      };
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('#add-form')).toBeVisible();
+  }
+
+  const columnWidths = (page: Page) =>
+    page.locator('.sprint-board > .board-column').evaluateAll(cols => cols.map(c => Math.round(c.getBoundingClientRect().width)));
+
+  test('opening the tag box does not change desktop column widths', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedAudit(page);
+    const before = await columnWidths(page);
+    const card = page.locator('.item-card', { hasText: 'Call vendor about the renewal' });
+    await card.getByRole('button', { name: 'tag', exact: true }).click();
+    await expect(card.locator('.tag-input-inline')).toBeVisible();
+    expect(await columnWidths(page)).toEqual(before);
+  });
+
+  test('opening the tag box on a phone keeps cards inside the screen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedAudit(page);
+    const card = page.locator('.item-card', { hasText: 'Call vendor about the renewal' });
+    await card.getByRole('button', { name: 'tag', exact: true }).click();
+    await expect(card.locator('.tag-input-inline')).toBeVisible();
+    const overflow = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth;
+      return [...document.querySelectorAll('.item-card, .item-card .tag-chip')]
+        .filter(el => el.getBoundingClientRect().right > vw + 1).length;
+    });
+    expect(overflow).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  });
+
+  test('week-over-week shows a carry-over increase in red and completions in green', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#tab-insights').click();
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    const carried = page.locator('.comparison-row', { hasText: 'Carried Over' });
+    await expect(carried.locator('.change-bad')).toHaveText('+1 ↑');
+    await expect(carried.locator('.change-good')).toHaveCount(0);
+    const red = await carried.locator('.change-bad').evaluate(el => getComputedStyle(el).color);
+    expect(red).toBe('rgb(239, 68, 68)');
+  });
+
+  test('stat tiles: 8 tiles in complete rows at desktop, tablet, and phone widths', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#tab-insights').click();
+    for (const [width, perRow] of [[1440, 8], [1024, 4], [390, 2]] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      const tops = await page.locator('.stat-grid .stat-card').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
+      expect(tops).toHaveLength(8);
+      const rows = new Map<number, number>();
+      for (const t of tops) rows.set(t, (rows.get(t) || 0) + 1);
+      expect([...rows.values()].every(n => n === perRow), `width ${width}: ${[...rows.values()]}`).toBe(true);
+    }
+    await expect(page.locator('.stat-grid .stat-card-label', { hasText: 'Completion rate' })).toHaveCount(0);
+  });
+
+  test('year carry-over stops at the current month; streak bar has labels', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#tab-insights').click();
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    const months = page.locator('.carryover-trend[data-carry-trend="month"] .carryover-day-label');
+    await expect(months).toHaveText(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
+    await expect(page.locator('.streak-heatmap-labels span', { hasText: 'Sep' })).toHaveCount(1);
+    await expect(page.locator('.streak-hint')).toHaveText('Each block is a day — darker means more tasks');
+
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    await expect(page.locator('.streak-heatmap-labels span')).toHaveText(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    await page.locator('.period-tab', { hasText: 'Month' }).click();
+    await expect(page.locator('.streak-heatmap-labels span').filter({ hasText: /\d/ })).toHaveText(['1', '8', '15', '22', '29']);
+  });
+
+  test('search results mark finished tasks as done', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#search-input').click();
+    await page.locator('#search-input').fill('vendor');
+    const done = page.locator('.search-result', { hasText: 'Renew vendor contract' });
+    await expect(done.locator('.search-result-status')).toHaveText('✓ Done');
+    await expect(done).toHaveClass(/is-done/);
+    const open = page.locator('.search-result', { hasText: 'Call vendor about the renewal' });
+    await expect(open.locator('.search-result-status')).toHaveCount(0);
+    await done.click();
+    await expect(page.locator('#search-overlay')).toBeHidden();
+  });
+
+  test('no theme name is cut off in any filter', async ({ page }) => {
+    await seedAudit(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    for (const filter of ['light', 'medium', 'dark']) {
+      await page.locator(`[data-theme-filter="${filter}"]`).click();
+      await expect(page.locator('#density-popout')).toBeVisible();
+      const clipped = await page.locator('.theme-swatch-name').evaluateAll(els =>
+        els.filter(e => (e as HTMLElement).offsetParent && e.scrollWidth > e.clientWidth + 1).map(e => e.textContent));
+      expect(clipped, filter).toEqual([]);
+    }
+    await page.locator('[data-theme-filter="light"]').click();
+    await expect(page.locator('.theme-swatch-name', { hasText: 'Mediterranean' })).toHaveClass(/long/);
+  });
+
+  test('progress bar: Done is the accent and all three segments differ', async ({ page }) => {
+    await seedAudit(page);
+    const colors = await page.evaluate(() => {
+      const bg = (id: string) => getComputedStyle(document.getElementById(id)!).backgroundColor;
+      const probe = document.createElement('div');
+      probe.style.color = 'var(--accent)';
+      document.body.appendChild(probe);
+      const accent = getComputedStyle(probe).color;
+      probe.remove();
+      return { accent, done: bg('progress-done'), active: bg('progress-active'), fresh: bg('progress-new') };
+    });
+    expect(colors.done).toBe(colors.accent);
+    expect(new Set([colors.done, colors.active, colors.fresh]).size).toBe(3);
+  });
+
+  test('recurring button shows a theme-colored icon and opens the recurring dialog', async ({ page }) => {
+    await seedAudit(page);
+    const btn = page.locator('#recurring-btn');
+    const [iconColor, textColor] = await btn.evaluate(b => [getComputedStyle(b.querySelector('svg')!).stroke, getComputedStyle(b).color]);
+    expect(iconColor).toBe(textColor);
+    await btn.click();
+    await expect(page.locator('#recurring-modal')).toBeVisible();
+    await expect(page.locator('#recurring-modal .modal-title svg.icon-repeat')).toBeVisible();
+  });
+
+  test('calendar badges for unfinished past days are amber', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-30T10:00:00'));
+    await page.addInitScript(() => {
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {
+        '2026-09-22': { date: '2026-09-22', items: [{ id: 'old', type: 'task', content: 'Left open', completed: false, shelved: false, boardColumn: 'new', comments: [] }] },
+      }, deletedIds: {} }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    const badge = page.locator('.cal-day-badge').first();
+    await expect(badge).toBeVisible();
+    expect(await badge.evaluate(el => getComputedStyle(el).color)).toBe('rgb(251, 191, 36)');
+  });
+
+  test('touch screens: bigger controls and a tap halo around small icons', async ({ page, context }) => {
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'pointer', value: 'coarse' }, { name: 'hover', value: 'none' }] });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedAudit(page);
+    const card = page.locator('.item-card', { hasText: 'Review PR for IDS batching' });
+    await card.scrollIntoViewIfNeeded();
+    expect((await card.locator('.complete-edge').boundingBox())!.width).toBeGreaterThanOrEqual(40);
+    expect((await card.locator('.card-action').first().boundingBox())!.height).toBeGreaterThanOrEqual(32);
+    const remove = card.locator('.tag-chip-remove').first();
+    const box = (await remove.boundingBox())!;
+    // Tap 7px to the left of the tiny ×; the halo should still remove the tag
+    await page.mouse.click(box.x - 7, box.y + box.height / 2);
+    await expect(card.locator('.tag-chip')).toHaveCount(0);
+  });
+});
+
+test.describe('Delete and undo sync records', { tag: ['@sync'] }, () => {
+  const stored = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work') || '{}'));
+
+  test('delete saves a purge record; undo swaps it for a restore record', async ({ page }) => {
+    page.on('dialog', d => d.accept());
+    await openDesk(page);
+    await addTask(page, 'Purge me');
+    const card = page.locator('.item-card', { hasText: 'Purge me' });
+    const id = await page.evaluate(() => {
+      const days = JSON.parse(localStorage.getItem('work-desk-data-work') || '{}').days || {};
+      return Object.values<any>(days).flatMap(d => d.items).find(i => i.content.includes('Purge me'))?.id as string;
+    });
+    expect(id).toBeTruthy();
+
+    await card.locator('.card-overflow-btn').click();
+    await card.locator('.card-overflow-menu button', { hasText: 'Delete' }).click();
+    await expect(page.locator('.item-card', { hasText: 'Purge me' })).toHaveCount(0);
+    let data = await stored(page);
+    expect(data.purgedIds?.[id!]).toBeTruthy();
+    expect(data.deletedIds?.[id!]).toBe(data.purgedIds[id!]);
+
+    await page.locator('.toast-undo-btn').click();
+    await expect(page.locator('.item-card', { hasText: 'Purge me' })).toHaveCount(1);
+    data = await stored(page);
+    expect(data.purgedIds?.[id!]).toBeUndefined();
+    expect(data.deletedIds?.[id!]).toBeUndefined();
+    expect(data.restoredIds?.[id!]).toBeTruthy();
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('.item-card', { hasText: 'Purge me' })).toHaveCount(1);
+    expect((await stored(page)).restoredIds?.[id!]).toBeTruthy();
+  });
+});
+
+async function addTask(page: Page, text: string) {
+  const editor = page.locator('#add-editor-host .rich-editor');
+  await editor.click();
+  await editor.pressSequentially(text, { delay: 15 });
+  await expect(page.locator('#add-btn')).toBeEnabled();
+  await page.locator('#add-btn').click();
+  // #hashtags get extracted into tag chips and stripped from the visible card
+  // text — a lone hashtag (no other content) is the one exception, kept as-is.
+  const visibleText = text.replace(/#[a-zA-Z0-9_-]+/g, '').replace(/\s+/g, ' ').trim() || text;
+  await expect(page.locator('.item-card', { hasText: visibleText }).first()).toBeVisible();
+}
+
+test.describe('Work Desk smoke', { tag: ['@board', '@smoke'] }, () => {
+  test('adds a task to New column', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'E2E smoke task');
+
+    const card = page.locator('.board-column.new .item-card', { hasText: 'E2E smoke task' });
+    await expect(card).toBeVisible();
+  });
+
+  test('add-form placeholder reflects the day being viewed, not always "today"', async ({ page }) => {
+    await openDesk(page);
+    const editor = page.locator('#add-editor-host .rich-editor');
+
+    await expect(editor).toHaveAttribute('data-placeholder', 'Add a task for today…');
+
+    await page.locator('#next-day').click();
+    await expect(editor).toHaveAttribute('data-placeholder', 'Add a task for tomorrow…');
+
+    await page.locator('#next-day').click();
+    // Two days out is no longer "tomorrow" — falls back to a short date, not "today".
+    await expect(editor).not.toHaveAttribute('data-placeholder', 'Add a task for today…');
+    await expect(editor).not.toHaveAttribute('data-placeholder', 'Add a task for tomorrow…');
+
+    await page.locator('#header-today-btn').click();
+    await expect(editor).toHaveAttribute('data-placeholder', 'Add a task for today…');
+
+    await page.locator('#prev-day').click();
+    await expect(editor).toHaveAttribute('data-placeholder', 'Add a task for yesterday…');
+  });
+
+  test('complete then uncomplete keeps task recoverable', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Complete me');
+
+    const card = page.locator('.item-card', { hasText: 'Complete me' }).first();
+    await card.locator('.complete-edge').click();
+    await expect(page.locator('.board-column.done .item.completed', { hasText: 'Complete me' })).toBeVisible();
+
+    await page.locator('.board-column.done .item-card', { hasText: 'Complete me' }).locator('.complete-edge').click();
+    await expect(page.locator('.item.completed', { hasText: 'Complete me' })).toHaveCount(0);
+    await expect(page.locator('.board-column.new .item-card', { hasText: 'Complete me' })).toBeVisible();
+  });
+
+  test('task survives reload via localStorage', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Persist across refresh');
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('.item-card', { hasText: 'Persist across refresh' })).toBeVisible();
+  });
+
+  test('export backup includes deletedIds field', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Export probe');
+
+    // Export lives in the account menu and opens a dropdown; click the single-desk export option
+    await openAccountMenu(page);
+    await page.locator('#export-btn').click();
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#export-desk-opt').click(),
+    ]);
+    const path = await download.path();
+    expect(path).toBeTruthy();
+    const fs = await import('node:fs');
+    const raw = fs.readFileSync(path!, 'utf8');
+    const json = JSON.parse(raw);
+    expect(json).toHaveProperty('days');
+    expect(json).toHaveProperty('deletedIds');
+  });
+
+  test('move task to another day strips dual-day copies', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Move me elsewhere');
+
+    const card = page.locator('.item-card', { hasText: 'Move me elsewhere' }).first();
+    await card.locator('button.card-action', { hasText: /^move$/i }).click();
+    await expect(page.locator('#move-modal:not(.hidden)')).toBeVisible();
+
+    // The move modal uses a custom calendar (not a native date input) so it can
+    // honor the week-start-day setting; pick tomorrow by clicking its day cell.
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayNum = String(tomorrow.getDate());
+    await page.locator('#move-calendar .cal-day:not(.other-month)', { hasText: new RegExp(`^${dayNum}$`) }).click();
+    await page.locator('#move-confirm').click();
+
+    await expect(page.locator('.item-card', { hasText: 'Move me elsewhere' })).toHaveCount(0);
+
+    const stored = await page.evaluate((key) => localStorage.getItem(key), WORK_KEY);
+    const data = JSON.parse(stored || '{"days":{}}');
+    const idCounts = new Map<string, number>();
+    for (const day of Object.values(data.days || {}) as { items?: { id: string }[] }[]) {
+      for (const item of day.items || []) {
+        idCounts.set(item.id, (idCounts.get(item.id) || 0) + 1);
       }
-      ${fnSource('escapeHtml')}
-      ${fnSource('splitCommentToItem')}
-      splitCommentToItem('parent', 'c1', ${JSON.stringify(targetType)});
-      return { state, get pendingUndo() { return pendingUndo; }, lastToast, get saves() { return saves; } };
+    }
+    for (const count of idCounts.values()) {
+      expect(count).toBe(1);
+    }
+  });
+
+  test('the move-to-date calendar honors the Monday week-start setting', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('work-desk-week-start', 'monday');
+    });
+    await openDesk(page);
+    await addTask(page, 'Move me with Monday-first calendar');
+
+    const card = page.locator('.item-card', { hasText: 'Move me with Monday-first calendar' }).first();
+    await card.locator('button.card-action', { hasText: /^move$/i }).click();
+    await expect(page.locator('#move-modal:not(.hidden)')).toBeVisible();
+
+    const weekdayLabels = await page.locator('#move-calendar .cal-weekday').allTextContents();
+    expect(weekdayLabels).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
+  });
+});
+
+test.describe('Tags', { tag: ['@tags'] }, () => {
+  test('typing #hashtag in the add form extracts a tag chip and strips it from content', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Follow up with vendor #ace');
+
+    const card = page.locator('.item-card', { hasText: 'Follow up with vendor' }).first();
+    await expect(card).toBeVisible();
+    await expect(card.locator('.item-content')).not.toContainText('#ace');
+    await expect(card.locator('.tag-chip')).toContainText('ace');
+  });
+
+  test('#ACE and #ace collapse into the same tag (case-insensitive)', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Task one #ACE');
+    await addTask(page, 'Task two #ace');
+
+    const card1 = page.locator('.item-card', { hasText: 'Task one' }).first();
+    const card2 = page.locator('.item-card', { hasText: 'Task two' }).first();
+    await expect(card1.locator('.tag-chip')).toContainText('ace');
+    await expect(card2.locator('.tag-chip')).toContainText('ace');
+  });
+
+  test('a lone hashtag with no other content is left as visible text, not silently dropped', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, '#ace');
+
+    const card = page.locator('.item-card', { hasText: '#ace' }).first();
+    await expect(card).toBeVisible();
+    await expect(card.locator('.tag-chip')).toHaveCount(0);
+  });
+
+  test('the action-bar "tag" button adds a tag without touching task text', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Plain task, no hashtag');
+
+    const card = page.locator('.item-card', { hasText: 'Plain task, no hashtag' }).first();
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await card.locator('.tag-input-inline').fill('vendor');
+    await card.locator('.tag-input-inline').press('Enter');
+
+    await expect(card.locator('.tag-chip')).toContainText('vendor');
+    await expect(card.locator('.item-content')).toHaveText('Plain task, no hashtag');
+  });
+
+  async function seedTagUsage(page: Page) {
+    await openDesk(page);
+    await addTask(page, 'First #ace');
+    await addTask(page, 'Second #ace');
+    await addTask(page, 'Third #ace');
+    await addTask(page, 'Fourth #workdesk');
+    await addTask(page, 'Fifth #workdesk');
+    await addTask(page, 'Sixth #admin');
+    await addTask(page, 'Target task');
+    const card = page.locator('.item-card', { hasText: 'Target task' }).first();
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await expect(card.locator('.tag-input-inline')).toBeFocused();
+    return card;
+  }
+
+  test('tag input offers the two most-used tags as one-click picks', async ({ page }) => {
+    const card = await seedTagUsage(page);
+    const picks = card.locator('.tag-suggestion');
+    await expect(picks).toHaveText(['ace', 'workdesk']);
+    await picks.filter({ hasText: 'workdesk' }).click();
+    await expect(card.locator('.tag-input-inline')).toHaveCount(0);
+    await expect(card.locator('.tag-chip-row .tag-chip-label')).toHaveText(['workdesk']);
+    await expect(card.locator('.item-content')).toHaveText('Target task');
+
+    // Reopen: the tag already on the card is skipped and the next most-used fills in
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await expect(card.locator('.tag-suggestion')).toHaveText(['ace', 'admin']);
+    await card.locator('.tag-suggestion', { hasText: 'ace' }).click();
+    await expect(card.locator('.tag-chip-row .tag-chip-label')).toHaveText(['workdesk', 'ace']);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('.item-card', { hasText: 'Target task' }).first().locator('.tag-chip-row .tag-chip-label')).toHaveText(['workdesk', 'ace']);
+  });
+
+  test('tag picks narrow as you type, and typing a new tag still works', async ({ page }) => {
+    const card = await seedTagUsage(page);
+    const input = card.locator('.tag-input-inline');
+    await input.pressSequentially('a');
+    await expect(card.locator('.tag-suggestion')).toHaveText(['ace', 'admin']);
+    await input.pressSequentially('d');
+    await expect(card.locator('.tag-suggestion')).toHaveText(['admin']);
+    await input.pressSequentially('z');
+    await expect(card.locator('.tag-suggestion')).toHaveCount(0);
+    await expect(input).toBeFocused();
+
+    await input.fill('brandnew');
+    await input.press('Enter');
+    await expect(card.locator('.tag-chip-row .tag-chip-label')).toHaveText(['brandnew']);
+  });
+
+  test('tag picks are hidden when there are no used tags, and Escape closes the input', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Lonely task');
+    const card = page.locator('.item-card', { hasText: 'Lonely task' }).first();
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await expect(card.locator('.tag-input-inline')).toBeVisible();
+    await expect(card.locator('.tag-suggestion')).toHaveCount(0);
+    await expect(card.locator('.tag-suggestions')).toBeHidden();
+    await card.locator('.tag-input-inline').press('Escape');
+    await expect(card.locator('.tag-input-inline')).toHaveCount(0);
+  });
+
+  async function expectTagBoxStaysOpen(page, card) {
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    const input = card.locator('.tag-input-inline');
+    await page.waitForTimeout(600);
+    await expect(input).toBeVisible();
+    await expect(input).toBeFocused();
+    await expect(card.locator('.tag-suggestion').first()).toBeVisible();
+    await page.keyboard.type('kept');
+    await expect(input).toHaveValue('kept');
+  }
+
+  test('tag box stays open and focused while another card has an unsent comment draft', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Draft holder #ace');
+    await addTask(page, 'Tag target');
+    const holder = page.locator('.item-card', { hasText: 'Draft holder' }).first();
+    await holder.locator('.card-action').filter({ hasText: /comment/ }).first().click();
+    const trigger = holder.locator('.add-comment-trigger');
+    if (await trigger.count()) await trigger.click();
+    await holder.locator('.add-comment-form .comment-input').click();
+    await page.keyboard.type('unsent draft');
+
+    await expectTagBoxStaysOpen(page, page.locator('.item-card', { hasText: 'Tag target' }).first());
+    await expect(holder.locator('.add-comment-form .comment-input')).toHaveText('unsent draft');
+  });
+
+  test('tag box stays open and focused while a column add box is open', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Seed #ace');
+    await addTask(page, 'Tag target');
+    await page.locator('.board-column button').filter({ hasText: /add/i }).first().click();
+    await expect(page.locator('.col-inline-input')).toBeVisible();
+
+    await expectTagBoxStaysOpen(page, page.locator('.item-card', { hasText: 'Tag target' }).first());
+  });
+
+  test('tag box closes on an outside click and moves when tagging another card', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Card one #ace');
+    await addTask(page, 'Card two');
+    const one = page.locator('.item-card', { hasText: 'Card one' }).first();
+    const two = page.locator('.item-card', { hasText: 'Card two' }).first();
+
+    await two.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await two.locator('.tag-input-inline').click();
+    await expect(two.locator('.tag-input-inline')).toBeVisible();
+
+    await one.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await expect(page.locator('.tag-input-inline')).toHaveCount(1);
+    await expect(one.locator('.tag-input-inline')).toBeFocused();
+
+    await page.locator('#date-title').click();
+    await expect(page.locator('.tag-input-inline')).toHaveCount(0);
+    await expect(two.locator('button.card-action', { hasText: /^tag$/i })).toBeVisible();
+  });
+
+  test('tag picks work on notes too', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Tagged #ace');
+    await page.locator('.type-btn[data-type="note"]').click();
+    await addTask(page, 'Meeting note');
+    const card = page.locator('.item-card', { hasText: 'Meeting note' }).first();
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await card.locator('.tag-suggestion', { hasText: 'ace' }).click();
+    await expect(card.locator('.tag-chip-row .tag-chip-label')).toHaveText(['ace']);
+  });
+
+  test('removing a tag chip clears it from the card', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Task with tag #vendor');
+
+    const card = page.locator('.item-card', { hasText: 'Task with tag' }).first();
+    await expect(card.locator('.tag-chip')).toHaveCount(1);
+    await card.locator('.tag-chip-remove').click();
+    await expect(card.locator('.tag-chip')).toHaveCount(0);
+  });
+});
+
+// ── Font family persistence ────────────────────────────────────────────
+test.describe('Font family persistence', { tag: ['@options'] }, () => {
+  const bodyFont = (page: Page) => page.evaluate(() => getComputedStyle(document.body).fontFamily);
+
+  async function pickThemeAndFont(page: Page) {
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="monokai"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await openOptionsSectionFor(page, '#font-family-select');
+    await page.locator('#font-family-select').selectOption('jetbrains');
+    await expect.poll(() => bodyFont(page)).toContain('JetBrains Mono');
+  }
+
+  test('chosen font survives a reload when a theme is saved', async ({ page }) => {
+    await pickThemeAndFont(page);
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
+    // applyTheme clears inline vars two animation frames after load; give it time
+    await page.waitForTimeout(700);
+    expect(await bodyFont(page)).toContain('JetBrains Mono');
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#font-family-select')).toHaveValue('jetbrains');
+  });
+
+  test('switching themes keeps the chosen font', async ({ page }) => {
+    await pickThemeAndFont(page);
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="retro"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'retro');
+    await page.waitForTimeout(700);
+    expect(await bodyFont(page)).toContain('JetBrains Mono');
+  });
+
+  test('a light preset after a theme switch has no leftover inline color-scheme', async ({ page }) => {
+    await pickThemeAndFont(page);
+    await page.evaluate(() => document.documentElement.style.setProperty('color-scheme', 'dark'));
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="retro"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'retro');
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('color-scheme'))).toBe('');
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe('light');
+  });
+});
+
+// ── Tag colors ─────────────────────────────────────────────────────────
+test.describe('Tag colors', { tag: ['@tags', '@options'] }, () => {
+  const slot = (tag: string) => {
+    let h = 0;
+    for (const ch of tag) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
+    return h % 8;
+  };
+  // Two tags guaranteed to land on different palette slots
+  const TAG_A = 'ace';
+  const TAG_B = ['urgent', 'ids', 'oms', 'bug', 'ops', 'kt', 'p1'].find((t) => slot(t) !== slot(TAG_A))!;
+
+  const chipOn = (page: Page, text: string) => page.locator('.item-card', { hasText: text }).first().locator('.tag-chip');
+  const colorOf = (loc: ReturnType<Page['locator']>) => loc.evaluate((el) => getComputedStyle(el).color);
+  const accentColor = (page: Page) => page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--accent)';
+    document.body.appendChild(probe);
+    const c = getComputedStyle(probe).color;
+    probe.remove();
+    return c;
+  });
+
+  async function setupTwoTaggedTasks(page: Page) {
+    await openDesk(page);
+    await addTask(page, `Alpha task #${TAG_A}`);
+    await addTask(page, `Bravo task #${TAG_B}`);
+    await expect(chipOn(page, 'Alpha task')).toHaveCount(1);
+    await expect(chipOn(page, 'Bravo task')).toHaveCount(1);
+  }
+
+  async function openAppearance(page: Page) {
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await openOptionsSectionFor(page, '#tag-color-mode-select');
+    await expect(page.locator('#tag-color-mode-select')).toBeVisible();
+  }
+
+  test('defaults to Theme color: every chip uses the accent', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'theme');
+    const accent = await accentColor(page);
+    await expect.poll(() => colorOf(chipOn(page, 'Alpha task'))).toBe(accent);
+    await expect.poll(() => colorOf(chipOn(page, 'Bravo task'))).toBe(accent);
+    await openAppearance(page);
+    await expect(page.locator('#tag-color-mode-select')).toHaveValue('theme');
+  });
+
+  test('Palette gives tags different on-theme colors, persists, and switches back', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await openAppearance(page);
+    await page.locator('#tag-color-mode-select').selectOption('palette');
+    await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'palette');
+    await expect(page.locator('#density-popout')).toBeVisible();
+
+    const accent = await accentColor(page);
+    const a = await colorOf(chipOn(page, 'Alpha task'));
+    const b = await colorOf(chipOn(page, 'Bravo task'));
+    expect(a).not.toBe(b);
+    expect([a, b].some((c) => c !== accent)).toBe(true);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'palette');
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-tag-color-mode'))).toBe('palette');
+
+    await openAppearance(page);
+    await page.locator('#tag-color-mode-select').selectOption('theme');
+    await expect.poll(() => colorOf(chipOn(page, 'Alpha task'))).toBe(accent);
+    await expect.poll(() => colorOf(chipOn(page, 'Bravo task'))).toBe(accent);
+  });
+
+  test('clicking a card chip opens the color popover; picking a swatch pins the color and persists', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    const chip = chipOn(page, 'Alpha task');
+    const before = await colorOf(chip);
+    await chip.click();
+    const pop = page.locator('#tag-color-popover');
+    await expect(pop).toBeVisible();
+    await expect(pop.locator('.tag-color-swatch')).toHaveCount(12);
+    await expect(pop.locator('.tag-color-reset')).toBeDisabled();
+
+    // Clicking inside the popover (non-control) keeps it open
+    await pop.locator('.tag-color-popover-title').click();
+    await expect(pop).toBeVisible();
+
+    await pop.locator('.tag-color-swatch[data-color="#ef4444"]').click();
+    await expect(pop).toHaveCount(0);
+    await expect(chip).toHaveClass(/tag-custom/);
+    await expect.poll(() => colorOf(chip)).not.toBe(before);
+    await expect(chipOn(page, 'Bravo task')).not.toHaveClass(/tag-custom/);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(chipOn(page, 'Alpha task')).toHaveClass(/tag-custom/);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-tag-colors') || '{}'))).toEqual({ [TAG_A]: '#ef4444' });
+
+    // Reopen: the chosen swatch is marked, and Reset to auto clears it
+    await chipOn(page, 'Alpha task').click();
+    await expect(page.locator('#tag-color-popover .tag-color-swatch[data-color="#ef4444"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#tag-color-popover .tag-color-reset').click();
+    await expect(page.locator('#tag-color-popover')).toHaveCount(0);
+    await expect(chipOn(page, 'Alpha task')).not.toHaveClass(/tag-custom/);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-tag-colors'))).toBe('{}');
+  });
+
+  test('custom picker in the popover applies live and keeps the popover open', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await chipOn(page, 'Bravo task').click();
+    const pop = page.locator('#tag-color-popover');
+    await pop.locator('.tag-color-custom-input').fill('#123abc');
+    await expect(pop).toBeVisible();
+    await expect(chipOn(page, 'Bravo task')).toHaveClass(/tag-custom/);
+    expect(await chipOn(page, 'Bravo task').evaluate((el) => (el as HTMLElement).style.getPropertyValue('--tag-custom'))).toBe('#123abc');
+    await expect(pop.locator('.tag-color-popover-title .tag-chip')).toHaveClass(/tag-custom/);
+  });
+
+  test('popover closes on outside click, Escape, and re-clicking the same chip', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    const chip = chipOn(page, 'Alpha task');
+    const pop = page.locator('#tag-color-popover');
+
+    await chip.click();
+    await expect(pop).toBeVisible();
+    await page.locator('#desk-view').click({ position: { x: 5, y: 5 } });
+    await expect(pop).toHaveCount(0);
+
+    await chip.click();
+    await expect(pop).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(pop).toHaveCount(0);
+
+    await chip.click();
+    await expect(pop).toBeVisible();
+    await chip.click();
+    await expect(pop).toHaveCount(0);
+
+    // Each chip opens the popover for its own tag
+    await chipOn(page, 'Bravo task').click();
+    await expect(pop).toBeVisible();
+    await expect(pop.locator('.tag-color-popover-title .tag-chip')).toHaveText(TAG_B);
+  });
+
+  // Resolve any CSS color in the page to [r, g, b] and hue (0–360)
+  const rgbOf = (page: Page, color: string) => page.evaluate((c) => {
+    const ctx = document.createElement('canvas').getContext('2d')!;
+    ctx.fillStyle = '#000';
+    ctx.fillStyle = c;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return [r, g, b];
+  }, color);
+  const hueOf = ([r, g, b]: number[]) => {
+    const [R, G, B] = [r / 255, g / 255, b / 255];
+    const max = Math.max(R, G, B), min = Math.min(R, G, B), d = max - min;
+    if (d === 0) return 0;
+    const h = max === R ? ((G - B) / d) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4;
+    return (h * 60 + 360) % 360;
+  };
+  const hueGap = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+  const toHex = ([r, g, b]: number[]) => '#' + [r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('');
+
+  // Blank space between the chip's letters (text-colored pixels) and the pill's edges, in CSS pixels.
+  // Corners are squared off for the capture so the pill's rounded ends aren't mistaken for text, and
+  // gaps are measured against the pill itself because element screenshots round out to whole pixels.
+  async function inkGaps(page: Page, chip: ReturnType<Page['locator']>) {
+    await chip.evaluate((el: HTMLElement) => { el.style.borderRadius = '0'; el.scrollIntoView({ block: 'center' }); });
+    await page.waitForTimeout(300);
+    const png = (await chip.screenshot({ animations: 'disabled' })).toString('base64');
+    await chip.evaluate((el: HTMLElement) => { el.style.borderRadius = ''; });
+    const box = (await chip.boundingBox())!;
+    const labelBox = (await chip.locator('.tag-chip-label').boundingBox())!;
+    const fg = await rgbOf(page, await colorOf(chip));
+    return page.evaluate(async ({ png, fg, labelEnd }) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${png}`;
+      await img.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const { data } = ctx.getImageData(0, 0, img.width, img.height);
+      const px = (x: number, y: number) => [0, 1, 2].map((i) => data[(y * img.width + x) * 4 + i]);
+      const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      const scale = devicePixelRatio;
+      const probeX = Math.round(4 * scale);
+      const pill = px(probeX, Math.floor(img.height / 2));
+      const isPill = (x: number, y: number) => dist(px(x, y), pill) < 16;
+      let pillTop = 0, pillBottom = img.height - 1;
+      while (pillTop < img.height && !isPill(probeX, pillTop)) pillTop++;
+      while (pillBottom > 0 && !isPill(probeX, pillBottom)) pillBottom--;
+      const probeY = pillTop + Math.round(scale);
+      let pillLeft = 0, pillRight = img.width - 1;
+      while (pillLeft < img.width && !isPill(pillLeft, probeY)) pillLeft++;
+      while (pillRight > 0 && !isPill(pillRight, probeY)) pillRight--;
+      const limit = Math.min(pillRight, Math.round(labelEnd * scale));
+      const rowInk = new Array(img.height).fill(0);
+      const colInk = new Array(img.width).fill(0);
+      for (let y = pillTop; y <= pillBottom; y++) {
+        for (let x = pillLeft; x <= limit; x++) {
+          const p = px(x, y);
+          if (dist(p, pill) > dist(pill, fg) * 0.3 && dist(p, fg) < dist(pill, fg)) { rowInk[y]++; colInk[x]++; }
+        }
+      }
+      // Skip faint anti-aliased fringe rows/columns
+      const span = (counts: number[]) => {
+        const min = Math.max(...counts) * 0.15;
+        return [counts.findIndex((n) => n > min), counts.length - 1 - [...counts].reverse().findIndex((n) => n > min)];
+      };
+      const [top, bottom] = span(rowInk);
+      const [left, right] = span(colInk);
+      const r = (n: number) => Math.round((n / scale) * 10) / 10;
+      return { top: r(top - pillTop), bottom: r(pillBottom - bottom), left: r(left - pillLeft), right: r(pillRight - right) };
+    }, { png, fg, labelEnd: labelBox.x + labelBox.width - Math.floor(box.x) + 1 });
+  }
+
+  test.describe('pill text centering', () => {
+    test.use({ deviceScaleFactor: 4 });
+
+    test('tag text is centered in the pill for every font', async ({ page }) => {
+      await setupTwoTaggedTasks(page);
+      for (const font of ['system', 'inter', 'nunito', 'jetbrains', 'merriweather']) {
+        await openAppearance(page);
+        await openOptionsSectionFor(page, '#font-family-select');
+        await page.locator('#font-family-select').selectOption(font);
+        await openOptionsSectionFor(page, '#tag-color-list');
+        await page.evaluate(() => document.fonts.ready);
+        const g = await inkGaps(page, page.locator(`#tag-color-list .tag-color-row[data-tag-row="${TAG_A}"] .tag-chip`));
+        expect.soft(Math.abs(g.top - g.bottom), `${font}: vertical ${JSON.stringify(g)}`).toBeLessThanOrEqual(1.5);
+        expect.soft(Math.abs(g.left - g.right), `${font}: horizontal ${JSON.stringify(g)}`).toBeLessThanOrEqual(1.5);
+        await page.locator('#density-toggle').click();
+        await expect(page.locator('#density-popout')).toBeHidden();
+        const card = await inkGaps(page, chipOn(page, 'Alpha task'));        expect.soft(Math.abs(card.top - card.bottom), `${font}: card chip ${JSON.stringify(card)}`).toBeLessThanOrEqual(1.5);
+      }
+    });
+  });
+
+  test('Analogous gives tags different shades that stay near the accent hue', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await openAppearance(page);
+    await page.locator('#tag-color-mode-select').selectOption('analogous');
+    await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'analogous');
+
+    const accent = await rgbOf(page, await accentColor(page));
+    const a = await rgbOf(page, await colorOf(chipOn(page, 'Alpha task')));
+    const b = await rgbOf(page, await colorOf(chipOn(page, 'Bravo task')));
+    expect(toHex(a)).not.toBe(toHex(b));
+    expect(hueGap(hueOf(a), hueOf(accent))).toBeLessThan(60);
+    expect(hueGap(hueOf(b), hueOf(accent))).toBeLessThan(60);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'analogous');
+  });
+
+  test('Analogous colors follow the theme when you switch', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await openAppearance(page);
+    await page.locator('#tag-color-mode-select').selectOption('analogous');
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="one-dark"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'one-dark');
+    await page.waitForTimeout(600);
+    const blue = toHex(await rgbOf(page, await colorOf(chipOn(page, 'Alpha task'))));
+
+    await page.locator('#density-toggle').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="monokai"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
+    await page.waitForTimeout(600);
+    const pink = await rgbOf(page, await colorOf(chipOn(page, 'Alpha task')));
+    expect(toHex(pink)).not.toBe(blue);
+    expect(hueGap(hueOf(pink), hueOf(await rgbOf(page, '#f92672')))).toBeLessThan(60);
+  });
+
+  test('Options color boxes show each tag\'s displayed color in every mode', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await openAppearance(page);
+    const rowA = page.locator(`#tag-color-list .tag-color-row[data-tag-row="${TAG_A}"]`);
+    const rowB = page.locator(`#tag-color-list .tag-color-row[data-tag-row="${TAG_B}"]`);
+
+    const accentHex = toHex(await rgbOf(page, await accentColor(page)));
+    await expect(rowA.locator('.tag-color-input')).toHaveValue(accentHex);
+    await expect(rowB.locator('.tag-color-input')).toHaveValue(accentHex);
+
+    for (const mode of ['analogous', 'palette']) {
+      await page.locator('#tag-color-mode-select').selectOption(mode);
+      for (const tag of [TAG_A, TAG_B]) {
+        const row = page.locator(`#tag-color-list .tag-color-row[data-tag-row="${tag}"]`);
+        const shown = toHex(await rgbOf(page, await colorOf(row.locator('.tag-chip'))));
+        await expect(row.locator('.tag-color-input')).toHaveValue(shown);
+      }
+    }
+    await expect(page.locator('#tag-color-mode-select option')).toHaveText([
+      'Single color (accent)', 'Shades of accent', 'Multi-color',
+    ]);
+  });
+
+  test('custom color overrides Palette mode', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await openAppearance(page);
+    await page.locator('#tag-color-mode-select').selectOption('palette');
+    await page.keyboard.press('Escape');
+    await page.locator('#desk-view').click({ position: { x: 5, y: 5 } });
+    const chip = chipOn(page, 'Alpha task');
+    const paletteColor = await colorOf(chip);
+    await chip.click();
+    await page.locator('#tag-color-popover .tag-color-swatch[data-color="#22c55e"]').click();
+    await expect.poll(() => colorOf(chip)).not.toBe(paletteColor);
+    await expect(chip).toHaveClass(/tag-custom/);
+  });
+
+  test('Options tag list: empty state, then rows with counts, live picker, and auto reset', async ({ page }) => {
+    await openDesk(page);
+    await openAppearance(page);
+    await expect(page.locator('#tag-color-list .tag-color-empty')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.locator('#desk-view').click({ position: { x: 5, y: 5 } });
+
+    await addTask(page, `Alpha task #${TAG_A}`);
+    await addTask(page, `Charlie task #${TAG_A}`);
+    await addTask(page, `Bravo task #${TAG_B}`);
+    await openAppearance(page);
+
+    const rows = page.locator('#tag-color-list .tag-color-row');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first().locator('.tag-chip')).toHaveText(TAG_A);
+    await expect(rows.first().locator('.tag-color-count')).toHaveText('2 uses');
+    await expect(rows.nth(1).locator('.tag-color-count')).toHaveText('1 use');
+
+    const rowB = page.locator(`#tag-color-list .tag-color-row[data-tag-row="${TAG_B}"]`);
+    await expect(rowB.locator('.tag-color-row-reset')).toBeDisabled();
+    await rowB.locator('.tag-color-input').fill('#8b5cf6');
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(rowB).toHaveClass(/has-custom/);
+    await expect(rowB.locator('.tag-color-row-reset')).toBeEnabled();
+    await expect(chipOn(page, 'Bravo task')).toHaveClass(/tag-custom/);
+
+    await rowB.locator('.tag-color-row-reset').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(rowB).not.toHaveClass(/has-custom/);
+    await expect(rowB.locator('.tag-color-row-reset')).toBeDisabled();
+    await expect(chipOn(page, 'Bravo task')).not.toHaveClass(/tag-custom/);
+  });
+});
+
+test.describe('Search overlay', { tag: ['@search'] }, () => {
+  test('typing in the sidebar search shows a floating overlay with a result count', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Findable search target');
+
+    await page.locator('#search-input').fill('Findable');
+    const overlay = page.locator('#search-overlay');
+    await expect(overlay).toBeVisible();
+    await expect(overlay).not.toHaveClass(/hidden/);
+    await expect(page.locator('#search-overlay-count')).toContainText('1 result');
+    await expect(page.locator('.search-result')).toContainText('Findable search target');
+  });
+
+  test('#tagname search filters to tagged items only', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Tagged item #urgent');
+    await addTask(page, 'Untagged item');
+
+    await page.locator('#search-input').fill('#urgent');
+    await expect(page.locator('.search-result')).toHaveCount(1);
+    await expect(page.locator('.search-result')).toContainText('Tagged item');
+  });
+
+  test('the #tag token can appear anywhere in the query, and extra words narrow by text regardless of order', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Set up another backlog grooming #ace');
+    await addTask(page, 'Update the ACE dashboard #ace');
+    await addTask(page, 'Unrelated task, no tag here');
+
+    // "#ace" alone: both tagged items match.
+    await page.locator('#search-input').fill('#ace');
+    await expect(page.locator('.search-result')).toHaveCount(2);
+
+    // Tag first, text after — must keep matching, not fall back to
+    // "No items with that tag" just because the query now has more words.
+    await page.locator('#search-input').fill('#ace set up');
+    await expect(page.locator('.search-result')).toHaveCount(1);
+    await expect(page.locator('.search-result')).toContainText('Set up another backlog grooming');
+
+    // Text first, tag at the end — same result, tag position shouldn't matter.
+    await page.locator('#search-input').fill('set up #ace');
+    await expect(page.locator('.search-result')).toHaveCount(1);
+    await expect(page.locator('.search-result')).toContainText('Set up another backlog grooming');
+
+    // Tag in the middle, with words out of order relative to the task text
+    // ("dashboard" appears after "ACE" in the content, not before).
+    await page.locator('#search-input').fill('dashboard #ace update');
+    await expect(page.locator('.search-result')).toHaveCount(1);
+    await expect(page.locator('.search-result')).toContainText('Update the ACE dashboard');
+
+    // Text that matches no tagged item narrows to zero, not an error state.
+    await page.locator('#search-input').fill('#ace nonexistent-phrase');
+    await expect(page.locator('.search-empty')).toContainText('No items with that tag');
+  });
+
+  test('the close button clears the query and hides the overlay', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Closable search result');
+
+    await page.locator('#search-input').fill('Closable');
+    await expect(page.locator('#search-overlay')).toBeVisible();
+
+    await page.locator('#search-overlay-close').click();
+    await expect(page.locator('#search-overlay')).toBeHidden();
+    await expect(page.locator('#search-input')).toHaveValue('');
+  });
+
+  test('clicking outside the overlay closes it', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Outside click target');
+
+    await page.locator('#search-input').fill('Outside');
+    await expect(page.locator('#search-overlay')).toBeVisible();
+
+    await page.locator('#desk-view').click({ position: { x: 5, y: 5 } });
+    await expect(page.locator('#search-overlay')).toBeHidden();
+  });
+});
+
+test.describe('Projects', { tag: ['@projects'] }, () => {
+  async function openNewProject(page: Page, name: string) {
+    await openDesk(page);
+    await page.locator('#tab-projects').click();
+    page.once('dialog', dialog => dialog.accept(name));
+    await page.locator('#new-project-btn').click();
+    await expect(page.locator('#project-title')).toHaveText(name);
+    // Projects default to Notes tab; switch to Tasks for task-focused tests
+    await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
+  }
+
+  test('typing a new task is preserved if an unrelated render fires mid-edit', async ({ page }) => {
+    await openNewProject(page, 'Regression Project A');
+
+    // Bystander task, saved first, used only to trigger a fresh
+    // renderProjectDetail() call while the *other* task below is mid-edit.
+    await page.locator('#project-add-task-btn').click();
+    await page.locator('#project-tasks-list .project-item-editor').click();
+    await page.locator('#project-tasks-list .project-item-editor').pressSequentially('Bystander task', { delay: 15 });
+    await page.locator('#project-tasks-list button', { hasText: 'Save' }).click();
+
+    // Start a second task and type into it, but don't save yet.
+    await page.locator('#project-add-task-btn').click();
+    const editor = page.locator('#project-tasks-list .project-item-editor');
+    await editor.click();
+    await editor.pressSequentially('Do the important thing', { delay: 15 });
+
+    // Trigger renderProjectDetail() while the editor is active, without
+    // archiving the bystander (completing moves it to the archive section
+    // which is collapsed/hidden). Re-clicking the Tasks tab re-renders.
+    await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
+
+    await expect(page.locator('#project-tasks-list .project-item-editor')).toHaveText('Do the important thing');
+
+    await page.locator('#project-tasks-list button', { hasText: 'Save' }).click();
+    await expect(page.locator('.project-item-card', { hasText: 'Do the important thing' })).toBeVisible();
+  });
+
+  test('saving a task with no text removes the empty shell instead of leaving a blank card', async ({ page }) => {
+    await openNewProject(page, 'Regression Project B');
+
+    await page.locator('#project-add-task-btn').click();
+    await page.locator('#project-tasks-list button', { hasText: 'Save' }).click();
+
+    await expect(page.locator('#project-tasks-list .project-items-empty')).toBeVisible();
+    await expect(page.locator('#project-tasks-list .project-item-card')).toHaveCount(0);
+  });
+
+  test('cancelling an edit reverts to the saved content, discarding any in-progress typing', async ({ page }) => {
+    await openNewProject(page, 'Regression Project C');
+
+    await page.locator('#project-add-task-btn').click();
+    const editor = page.locator('#project-tasks-list .project-item-editor');
+    await editor.click();
+    await editor.pressSequentially('Original saved text', { delay: 15 });
+    await page.locator('#project-tasks-list button', { hasText: 'Save' }).click();
+    await expect(page.locator('.project-task-text')).toHaveText('Original saved text');
+
+    await page.locator('#project-tasks-list button', { hasText: 'edit' }).click();
+    const editEditor = page.locator('#project-tasks-list .project-item-editor');
+    await editEditor.click();
+    await editEditor.pressSequentially(' plus more', { delay: 15 });
+    await page.locator('#project-tasks-list button', { hasText: 'Cancel' }).click();
+
+    await expect(page.locator('.project-task-text')).toHaveText('Original saved text');
+  });
+
+  test('deleting a task records a tombstone, so a later cloud sync cannot resurrect it', async ({ page }) => {
+    await openNewProject(page, 'Regression Project D');
+
+    await page.locator('#project-add-task-btn').click();
+    const editor = page.locator('#project-tasks-list .project-item-editor');
+    await editor.click();
+    await editor.pressSequentially('Task to be deleted', { delay: 15 });
+    await page.locator('#project-tasks-list button', { hasText: 'Save' }).click();
+    await expect(page.locator('.project-task-text')).toHaveText('Task to be deleted');
+
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#project-tasks-list button', { hasText: 'delete' }).click();
+    await expect(page.locator('#project-tasks-list .project-items-empty')).toBeVisible();
+
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-projects') || '{}'));
+    expect(stored.projects[0].tasks).toHaveLength(0);
+    expect(Object.keys(stored.deletedIds || {}).length).toBeGreaterThan(0);
+  });
+
+  test('a numbered/bulleted list inside a note stays within the card, not flush against the border', async ({ page }) => {
+    // A real <ol>/<li> list only ends up in note.content when pasted from a
+    // source that already has list markup (Word/Docs/Confluence/etc — see
+    // sanitizeHtml's LIST_ALLOWED handling); typing "1) " manually stays
+    // plain text. Seed that shape directly so this test exercises the real
+    // render path (createProjectNoteCard → .project-item-content) without
+    // depending on flaky synthetic-clipboard paste emulation.
+    await openDesk(page);
+    await page.evaluate(() => {
+      localStorage.setItem('work-desk-projects', JSON.stringify({
+        projects: [{
+          id: 'proj-list-test',
+          name: 'List Regression Project',
+          notes: [{
+            id: 'note-list-test',
+            type: 'note',
+            content: '<p>Report Management will be split into 6 phases.</p><ol><li>First step</li><li>Second step</li></ol>',
+            createdAt: new Date().toISOString(),
+            comments: [],
+          }],
+          tasks: [],
+        }],
+        deletedIds: {},
+      }));
+    });
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('.projects-list li', { hasText: 'List Regression Project' }).click();
+    await expect(page.locator('#project-title')).toHaveText('List Regression Project');
+
+    const list = page.locator('#project-notes-list .project-item-content ol');
+    await expect(list).toBeVisible();
+    await expect(list.locator('li')).toHaveCount(2);
+
+    // The global `* { margin:0; padding:0 }` reset used to leave this at 0,
+    // which pushed the outside list marker past the card's left edge.
+    const paddingLeft = await list.evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
+    expect(paddingLeft).toBeGreaterThan(8);
+
+    // The list's left edge should stay within the card's padded content
+    // area, not bleed out to (or past) the card's own border.
+    const cardBox = await page.locator('#project-notes-list .project-item-card').boundingBox();
+    const listBox = await list.boundingBox();
+    expect(listBox!.x).toBeGreaterThanOrEqual(cardBox!.x);
+  });
+
+  test('double-clicking a task\'s text opens the editor', async ({ page }) => {
+    await openNewProject(page, 'Regression Project E');
+
+    await page.locator('#project-add-task-btn').click();
+    const editor = page.locator('#project-tasks-list .project-item-editor');
+    await editor.click();
+    await editor.pressSequentially('Double-click me', { delay: 15 });
+    await page.locator('#project-tasks-list button', { hasText: 'Save' }).click();
+    await expect(page.locator('.project-task-text')).toHaveText('Double-click me');
+    await expect(page.locator('#project-tasks-list .project-item-editor')).toHaveCount(0);
+
+    await page.locator('.project-task-text').dblclick();
+
+    await expect(page.locator('#project-tasks-list .project-item-editor')).toHaveText('Double-click me');
+    await expect(page.locator('#project-tasks-list button', { hasText: 'Save' })).toBeVisible();
+  });
+});
+
+// ── Settings popout — 3-tab split ──────────────────────────────────────
+test.describe('Settings popout tabs', { tag: ['@options'] }, () => {
+  async function openSettings(page: Page) {
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+  }
+
+  test('settings popout opens with three nav tabs visible', async ({ page }) => {
+    await openSettings(page);
+    const tabs = page.locator('.options-nav-btn');
+    await expect(tabs).toHaveCount(3);
+    await expect(tabs.nth(0)).toHaveText('Themes');
+    await expect(tabs.nth(1)).toHaveText('Appearance');
+    await expect(tabs.nth(2)).toHaveText('Behavior');
+  });
+
+  test('Themes tab is active by default and its pane is visible', async ({ page }) => {
+    await openSettings(page);
+    const themesBtn = page.locator('.options-nav-btn[data-options-tab="themes"]');
+    await expect(themesBtn).toHaveClass(/active/);
+    await expect(page.locator('#options-pane-themes')).toBeVisible();
+    await expect(page.locator('#options-pane-appearance')).toBeHidden();
+    await expect(page.locator('#options-pane-behavior')).toBeHidden();
+  });
+
+  test('clicking Appearance tab shows appearance pane and hides themes pane', async ({ page }) => {
+    await openSettings(page);
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance')).toBeVisible();
+    await expect(page.locator('#options-pane-themes')).toBeHidden();
+    await expect(page.locator('#options-pane-behavior')).toBeHidden();
+    await expect(page.locator('.options-nav-btn[data-options-tab="appearance"]')).toHaveClass(/active/);
+    await expect(page.locator('.options-nav-btn[data-options-tab="themes"]')).not.toHaveClass(/active/);
+  });
+
+  test('clicking Behavior tab shows behavior pane', async ({ page }) => {
+    await openSettings(page);
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await expect(page.locator('#options-pane-behavior')).toBeVisible();
+    await expect(page.locator('#options-pane-themes')).toBeHidden();
+    await expect(page.locator('#options-pane-appearance')).toBeHidden();
+    await expect(page.locator('.options-nav-btn[data-options-tab="behavior"]')).toHaveClass(/active/);
+  });
+
+  test('switching from Behavior back to Themes re-shows theme grid', async ({ page }) => {
+    await openSettings(page);
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await expect(page.locator('#options-pane-themes')).toBeHidden();
+
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    await expect(page.locator('#options-pane-themes')).toBeVisible();
+    await expect(page.locator('#customize-theme-grid')).toBeVisible();
+  });
+
+  test('themes pane contains theme filter buttons and grid', async ({ page }) => {
+    await openSettings(page);
+    await expect(page.locator('#options-pane-themes .theme-filter-btn')).toHaveCount(4);
+    await expect(page.locator('#options-pane-themes #customize-theme-grid')).toBeVisible();
+  });
+
+  test('appearance pane contains card layout and typography controls', async ({ page }) => {
+    await openSettings(page);
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance .density-option')).not.toHaveCount(0);
+  });
+
+  test('behavior pane contains auto-carry toggle', async ({ page }) => {
+    await openSettings(page);
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('#options-pane-behavior [data-options-open="tasks"]').click();
+    await expect(page.locator('#options-pane-behavior #auto-carry-toggle-popout')).toBeVisible();
+  });
+
+  test('settings popout does NOT close when clicking inside it', async ({ page }) => {
+    await openSettings(page);
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+  });
+});
+
+// ── Theme filter buttons ───────────────────────────────────────────────
+test.describe('Theme filter buttons', { tag: ['@options', '@themes'] }, () => {
+  async function openThemesTab(page: Page) {
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#options-pane-themes')).toBeVisible();
+  }
+
+  test('Light filter is active by default and shows theme swatches', async ({ page }) => {
+    await openThemesTab(page);
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="light"]')).toHaveClass(/active/);
+    const swatches = page.locator('#customize-theme-grid .theme-swatch');
+    await expect(swatches.first()).toBeVisible();
+    const count = await swatches.count();
+    expect(count).toBeGreaterThan(0);
+  });
+
+  test('clicking Dark filter shows only dark themes', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="dark"]')).toHaveClass(/active/);
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="light"]')).not.toHaveClass(/active/);
+    await expect(page.locator('#customize-theme-grid .theme-swatch').first()).toBeVisible();
+  });
+
+  test('clicking Med filter shows medium theme swatches', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveClass(/active/);
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="light"]')).not.toHaveClass(/active/);
+    const swatches = page.locator('#customize-theme-grid .theme-swatch');
+    await expect(swatches.first()).toBeVisible();
+    const count = await swatches.count();
+    expect(count).toBe(32);
+  });
+
+  test('Light and Dark filters each show 32 swatches', async ({ page }) => {
+    await openThemesTab(page);
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(32);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(32);
+  });
+
+  const NEW_THEMES: Array<[string, 'light' | 'medium' | 'dark']> = [
+    ['retro', 'light'], ['seafoam', 'light'], ['mediterranean', 'light'], ['citrus', 'light'],
+    ['dot-matrix', 'medium'], ['denim', 'medium'], ['terracotta', 'medium'], ['merlot', 'medium'],
+    ['monokai', 'dark'], ['one-dark', 'dark'], ['phosphor', 'dark'], ['rose-pine', 'dark'],
+  ];
+
+  test('each new v1.8.0 theme swatch applies and persists its theme', async ({ page }) => {
+    await openDesk(page);
+    for (const [id, tier] of NEW_THEMES) {
+      await page.locator('#density-toggle').click();
+      await expect(page.locator('#options-pane-themes')).toBeVisible();
+      await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+      const swatch = page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="${id}"]`);
+      await expect(swatch).toBeVisible();
+      await swatch.click();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', id);
+      await expect(page.locator('#density-popout')).toBeHidden();
+      expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe(id);
+    }
+  });
+
+  test('active swatch is highlighted in the tier the new theme belongs to', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="dot-matrix"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dot-matrix');
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveClass(/active/);
+    await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="dot-matrix"]')).toHaveClass(/active/);
+  });
+
+  test('Retro theme shows the SNES controller stripe and survives reload', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="retro"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'retro');
+    const stripe = await page.locator('.desk-sticky').first().evaluate((el) => getComputedStyle(el).backgroundImage);
+    expect(stripe).toContain('linear-gradient');
+    expect(stripe).toContain('rgb(208, 43, 43)');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'retro');
+  });
+
+  test('Phosphor theme uses dark text on the Add button', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="phosphor"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'phosphor');
+    const addBtn = page.locator('.add-btn').first();
+    await expect.poll(() => addBtn.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(3, 20, 10)');
+  });
+
+  const UNIT_STRIPE_LEAD: Record<string, string> = {
+    zero: 'rgb(47, 111, 184)', one: 'rgb(107, 63, 160)', two: 'rgb(215, 38, 61)', eight: 'rgb(232, 85, 154)',
+  };
+  const UNIT_TIERS: Array<['light' | 'medium' | 'dark', string]> = [['light', '-light'], ['medium', '-mid'], ['dark', '']];
+
+  test('every Unit swatch in every tier applies its theme, draws the header stripe, and persists', async ({ page }) => {
+    await openDesk(page);
+    for (const [tier, suffix] of UNIT_TIERS) {
+      for (const unit of Object.keys(UNIT_STRIPE_LEAD)) {
+        const id = `unit-${unit}${suffix}`;
+        await page.locator('#density-toggle').click();
+        await expect(page.locator('#options-pane-themes')).toBeVisible();
+        await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+        await expect(page.locator('#density-popout')).toBeVisible();
+        const swatch = page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="${id}"]`);
+        await swatch.scrollIntoViewIfNeeded();
+        await expect(swatch).toBeVisible();
+        await swatch.click();
+        await expect(page.locator('html')).toHaveAttribute('data-theme', id);
+        await expect(page.locator('#density-popout')).toBeHidden();
+        expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe(id);
+        const stripe = await page.locator('.desk-sticky').first().evaluate((el) => getComputedStyle(el).backgroundImage);
+        expect(stripe, id).toContain(UNIT_STRIPE_LEAD[unit]);
+      }
+    }
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'unit-eight');
+  });
+
+  test('Unit themes keep the same names in each tier and show as active when reopened', async ({ page }) => {
+    await openThemesTab(page);
+    for (const [tier, suffix] of UNIT_TIERS) {
+      await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+      for (const [unit, name] of [['zero', 'Unit Zero'], ['one', 'Unit One'], ['two', 'Unit Two'], ['eight', 'Unit Eight']]) {
+        await expect(page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="unit-${unit}${suffix}"]`)).toContainText(name);
+      }
+    }
+    await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="unit-one-mid"]').click();
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveClass(/active/);
+    await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="unit-one-mid"]')).toHaveClass(/active/);
+  });
+
+  test('bright Unit accents use dark text on the Add button', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="unit-one"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'unit-one');
+    const addBtn = page.locator('.add-btn').first();
+    await expect.poll(() => addBtn.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(16, 10, 28)');
+  });
+
+  test('a saved gameboy theme loads as Dot Matrix and is rewritten in storage', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('rename-seeded')) {
+        localStorage.setItem('rename-seeded', '1');
+        localStorage.setItem('work-desk-theme', 'gameboy');
+      }
+    });
+    await openDesk(page);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dot-matrix');
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe('dot-matrix');
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveClass(/active/);
+    const swatch = page.locator('#customize-theme-grid .theme-swatch[data-theme-id="dot-matrix"]');
+    await expect(swatch).toHaveClass(/active/);
+    await expect(swatch).toContainText('Dot Matrix');
+    await expect(page.locator('#customize-theme-grid')).not.toContainText('Game Boy');
+  });
+
+  test('switching between all four filters keeps popout open', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator('.theme-filter-btn[data-theme-filter="custom"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+  });
+
+  test('clicking a theme swatch applies the theme', async ({ page }) => {
+    await openThemesTab(page);
+    const secondSwatch = page.locator('#customize-theme-grid .theme-swatch').nth(1);
+    const themeId = await secondSwatch.getAttribute('data-theme-id');
+    expect(themeId).toBeTruthy();
+    await secondSwatch.click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', themeId!);
+  });
+
+  test('clicking Custom filter hides preset grid and shows custom panel', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="custom"]').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="custom"]')).toHaveClass(/active/);
+    await expect(page.locator('#custom-theme-panel')).toBeVisible();
+  });
+
+  test('switching from Custom back to Light restores the preset grid', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="custom"]').click();
+    await expect(page.locator('#custom-theme-panel')).toBeVisible();
+
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await expect(page.locator('#customize-theme-grid .theme-swatch').first()).toBeVisible();
+  });
+});
+
+// ── Custom theme builder (E2E) ─────────────────────────────────────────
+test.describe('Custom theme builder', { tag: ['@themes'] }, () => {
+  async function openCustomPanel(page: Page) {
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator('.theme-filter-btn[data-theme-filter="custom"]').click();
+    await expect(page.locator('#custom-theme-panel')).toBeVisible();
+  }
+
+  test('custom panel shows add-tile when no custom themes exist', async ({ page }) => {
+    await openCustomPanel(page);
+    await expect(page.locator('.custom-add-tile')).toBeVisible();
+  });
+
+  test('clicking add-tile does NOT close settings popout (DOM detach guard)', async ({ page }) => {
+    await openCustomPanel(page);
+    await page.locator('.custom-add-tile').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+  });
+
+  test('clicking add-tile opens the custom theme editor', async ({ page }) => {
+    await openCustomPanel(page);
+    await page.locator('.custom-add-tile').click();
+    await expect(page.locator('.custom-editor')).toBeVisible();
+  });
+
+  test('custom editor has 5 color pickers and a light/dark mode toggle', async ({ page }) => {
+    await openCustomPanel(page);
+    await page.locator('.custom-add-tile').click();
+    await expect(page.locator('.custom-editor')).toBeVisible();
+
+    const colorInputs = page.locator('.custom-editor input[type="color"]');
+    await expect(colorInputs).toHaveCount(5);
+
+    const modeButtons = page.locator('.custom-mode-btn');
+    await expect(modeButtons).toHaveCount(2);
+    await expect(modeButtons.nth(0)).toHaveText('Light');
+    await expect(modeButtons.nth(1)).toHaveText('Dark');
+    await expect(modeButtons.nth(0)).toHaveClass(/active/);
+  });
+
+  test('custom editor has a live preview panel', async ({ page }) => {
+    await openCustomPanel(page);
+    await page.locator('.custom-add-tile').click();
+    await expect(page.locator('.custom-preview-app')).toBeVisible();
+  });
+
+  test('saving a custom theme creates a swatch in the browse view', async ({ page }) => {
+    await openCustomPanel(page);
+    await page.locator('.custom-add-tile').click();
+    await expect(page.locator('.custom-editor')).toBeVisible();
+
+    const nameInput = page.locator('.custom-editor-name');
+    await nameInput.fill('Test Theme');
+
+    const saveBtn = page.locator('.custom-btn-primary');
+    await saveBtn.click();
+
+    await expect(page.locator('.custom-swatch-wrap')).toBeVisible();
+    await expect(page.locator('#density-popout')).toBeVisible();
+  });
+
+  test('full round-trip: create → apply → edit → delete', async ({ page }) => {
+    await openCustomPanel(page);
+
+    // Create
+    await page.locator('.custom-add-tile').click();
+    const nameInput = page.locator('.custom-editor-name');
+    await nameInput.fill('Round Trip Theme');
+    await page.locator('.custom-btn-primary').click();
+    await expect(page.locator('.custom-swatch-wrap')).toBeVisible();
+
+    // Apply — click the theme swatch inside the wrap
+    await page.locator('.custom-swatch-wrap .theme-swatch').first().click();
+    await page.waitForFunction(() => (localStorage.getItem('work-desk-theme') || '').startsWith('custom-'));
+    const appliedTheme = await page.evaluate(() => localStorage.getItem('work-desk-theme'));
+    expect(appliedTheme).toMatch(/^custom-/);
+
+    // Edit — hover to reveal delete, then right-click swatch to edit
+    await page.locator('.custom-swatch-wrap .theme-swatch').first().click({ button: 'right' });
+
+    // If we got into the editor, confirm it's visible
+    const editorVisible = await page.locator('.custom-editor').isVisible().catch(() => false);
+    if (editorVisible) {
+      const editorName = page.locator('.custom-editor-name');
+      await editorName.fill('Renamed Theme');
+      await page.locator('.custom-btn-primary').click();
+    }
+
+    // Delete — hover the wrap to reveal the × button
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator('.custom-swatch-wrap').first().hover();
+    const deleteBtn = page.locator('.custom-swatch-delete').first();
+    await deleteBtn.click();
+    await expect(page.locator('.custom-swatch-wrap')).toHaveCount(0);
+  });
+
+  test('custom theme persists across page reload', async ({ page }) => {
+    await openCustomPanel(page);
+    await page.locator('.custom-add-tile').click();
+    const nameInput = page.locator('.custom-editor-name');
+    await nameInput.fill('Persistent Theme');
+    await page.locator('.custom-btn-primary').click();
+    await expect(page.locator('.custom-swatch-wrap')).toBeVisible();
+
+    // Apply the custom theme
+    await page.locator('.custom-swatch-wrap .theme-swatch').first().click();
+    await page.waitForFunction(() => (localStorage.getItem('work-desk-theme') || '').startsWith('custom-'));
+    const themeId = await page.evaluate(() => localStorage.getItem('work-desk-theme'));
+    expect(themeId).toMatch(/^custom-/);
+
+    // Reload and verify persistence
+    await page.reload();
+    await dismissAuthModal(page);
+    const themeAfterReload = await page.evaluate(() => localStorage.getItem('work-desk-theme'));
+    expect(themeAfterReload).toBe(themeId);
+  });
+
+  test('max 5 custom themes enforced — add tile disappears at limit', async ({ page }) => {
+    await openCustomPanel(page);
+
+    for (let i = 1; i <= 5; i++) {
+      await page.locator('.custom-add-tile').click();
+      await page.locator('.custom-editor-name').fill(`Theme ${i}`);
+      await page.locator('.custom-btn-primary').click();
+      await expect(page.locator('#density-popout')).toBeVisible();
+    }
+
+    const addTile = page.locator('.custom-add-tile');
+    await expect(addTile).toHaveCount(0);
+    const swatches = page.locator('.custom-swatch-wrap');
+    expect(await swatches.count()).toBe(5);
+  });
+});
+
+// ── Comments system ────────────────────────────────────────────────────
+test.describe('Comments', { tag: ['@board'] }, () => {
+  async function addCommentToTask(page: Page, taskText: string, commentText: string) {
+    const card = page.locator('.item-card', { hasText: taskText }).first();
+    await card.locator('.card-action', { hasText: /^comment/i }).click();
+    await expect(card.locator('.comments-panel')).toBeVisible();
+
+    const trigger = card.locator('.add-comment-trigger');
+    if (await trigger.isVisible()) await trigger.click();
+
+    const editor = card.locator('.add-comment-form .comment-input');
+    await expect(editor).toBeVisible();
+    await editor.click();
+    await editor.pressSequentially(commentText, { delay: 15 });
+
+    await card.locator('.comment-add-btn').click();
+  }
+
+  test('adding a comment shows it in the comments panel', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Commentable task');
+    await addCommentToTask(page, 'Commentable task', 'First comment here');
+    await expect(page.locator('.comment', { hasText: 'First comment here' })).toBeVisible();
+  });
+
+  async function openCommentEditor(page: Page, taskText: string, action: RegExp = /^comment/i) {
+    const card = page.locator('.item-card', { hasText: taskText }).first();
+    await card.locator('.card-action', { hasText: action }).click();
+    const trigger = card.locator('.add-comment-trigger');
+    if (await trigger.isVisible()) await trigger.click();
+    const editor = card.locator('.add-comment-form .comment-input');
+    await expect(editor).toBeVisible();
+    await editor.click();
+    return { card, editor };
+  }
+
+  test('Ctrl+Enter adds a comment without clicking Add', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Shortcut task');
+    const { card, editor } = await openCommentEditor(page, 'Shortcut task');
+    await editor.pressSequentially('Via keyboard', { delay: 15 });
+    await editor.press('Control+Enter');
+    await expect(card.locator('.comment', { hasText: 'Via keyboard' })).toHaveCount(1);
+    await expect(card.locator('.card-action.has-comments')).toContainText('comments (1)');
+    await expect(page.locator('.item-card', { hasText: 'Shortcut task' })).toHaveCount(1);
+  });
+
+  test('Cmd+Enter adds a comment too, and adds the next one after it', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Mac shortcut task');
+    const { card, editor } = await openCommentEditor(page, 'Mac shortcut task');
+    await editor.pressSequentially('First', { delay: 15 });
+    await editor.press('Meta+Enter');
+    await expect(card.locator('.comment', { hasText: 'First' })).toBeVisible();
+    const trigger = card.locator('.add-comment-trigger');
+    if (await trigger.isVisible()) await trigger.click();
+    const next = card.locator('.add-comment-form .comment-input');
+    await next.click();
+    await next.pressSequentially('Second', { delay: 15 });
+    await next.press('Control+Enter');
+    await expect(card.locator('.comment')).toHaveCount(2);
+  });
+
+  test('Ctrl+Enter in an empty comment box adds nothing and keeps the box open', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Empty shortcut task');
+    const { card, editor } = await openCommentEditor(page, 'Empty shortcut task');
+    await expect(card.locator('.comment-add-btn')).toBeDisabled();
+    await editor.press('Control+Enter');
+    await expect(card.locator('.comment')).toHaveCount(0);
+    await expect(card.locator('.add-comment-form .comment-input')).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Empty shortcut task' })).toHaveCount(1);
+  });
+
+  test('Ctrl+Enter adds an update to a note', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('.type-btn[data-type="note"]').click();
+    await addTask(page, 'Shortcut note');
+    const { card, editor } = await openCommentEditor(page, 'Shortcut note', /add update/i);
+    await editor.pressSequentially('Note update', { delay: 15 });
+    await editor.press('Control+Enter');
+    await expect(card.locator('.comment', { hasText: 'Note update' })).toBeVisible();
+    await expect(card.locator('.card-action', { hasText: 'updates (1)' })).toBeVisible();
+  });
+
+  test('comment count badge increments after adding a comment', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Badge counter task');
+    await addCommentToTask(page, 'Badge counter task', 'Badge test');
+    const card = page.locator('.item-card', { hasText: 'Badge counter task' }).first();
+    await expect(card.locator('.card-action.has-comments')).toContainText('comments (1)');
+  });
+
+  test('deleting a comment removes it and shows undo toast', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Delete comment task');
+    await addCommentToTask(page, 'Delete comment task', 'Will be deleted');
+    await expect(page.locator('.comment', { hasText: 'Will be deleted' })).toBeVisible();
+
+    const comment = page.locator('.comment', { hasText: 'Will be deleted' });
+    await comment.hover();
+    await comment.locator('.comment-action-delete').click();
+    await expect(page.locator('.comment', { hasText: 'Will be deleted' })).toHaveCount(0);
+    await expect(page.locator('#toast')).toBeVisible();
+  });
+
+  test('editing a comment updates its content', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Edit comment task');
+    await addCommentToTask(page, 'Edit comment task', 'Original comment');
+    await expect(page.locator('.comment', { hasText: 'Original comment' })).toBeVisible();
+
+    const comment = page.locator('.comment', { hasText: 'Original comment' });
+    await comment.hover();
+    await comment.locator('.comment-action-edit').click();
+    const editEditor = page.locator('.comment-edit-wrap .comment-input');
+    await expect(editEditor).toBeVisible();
+    await editEditor.click();
+    await editEditor.press('Control+a');
+    await editEditor.pressSequentially('Updated comment', { delay: 15 });
+    await page.locator('.comment-edit-wrap .edit-save-btn').click();
+
+    await expect(page.locator('.comment', { hasText: 'Updated comment' })).toBeVisible();
+  });
+
+  test('collapsing and re-expanding comments preserves the thread', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Toggle comments task');
+    await addCommentToTask(page, 'Toggle comments task', 'Persistent comment');
+    await expect(page.locator('.comment', { hasText: 'Persistent comment' })).toBeVisible();
+
+    const card = page.locator('.item-card', { hasText: 'Toggle comments task' }).first();
+    await card.locator('.card-action', { hasText: /^comment/i }).click();
+    await expect(card.locator('.comments-panel')).toHaveCount(0);
+
+    await card.locator('.card-action', { hasText: /^comment/i }).click();
+    await expect(page.locator('.comment', { hasText: 'Persistent comment' })).toBeVisible();
+  });
+
+  test('splitting a comment to a task creates a new task card on the same day', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Split source task');
+    await addCommentToTask(page, 'Split source task', 'This should become its own task');
+
+    const comment = page.locator('.comment', { hasText: 'This should become its own task' });
+    await expect(comment).toBeVisible();
+    await comment.hover();
+
+    const splitBtn = comment.locator('.comment-split-btn.split-task');
+    await expect(splitBtn).toBeVisible();
+    await splitBtn.click();
+
+    await expect(page.locator('.item-card', { hasText: 'This should become its own task' })).toHaveCount(2);
+
+    const newCard = page.locator('.item-card', { hasText: 'This should become its own task' }).last();
+    await expect(newCard).toBeVisible();
+  });
+
+  test('split task gets a breadcrumb comment linking back to the source', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Breadcrumb parent');
+    await addCommentToTask(page, 'Breadcrumb parent', 'Spin this off');
+
+    const comment = page.locator('.comment', { hasText: 'Spin this off' });
+    await comment.hover();
+    await comment.locator('.comment-split-btn.split-task').click();
+
+    const newCard = page.locator('.item-card', { hasText: 'Spin this off' }).last();
+    await newCard.hover();
+    await newCard.locator('.card-action', { hasText: /^comment/i }).click();
+    await expect(newCard.locator('.comment', { hasText: 'Split from: Breadcrumb parent' })).toBeVisible();
+  });
+
+  test('original comment is annotated after split', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Annotate test');
+    await addCommentToTask(page, 'Annotate test', 'Will be annotated');
+
+    const comment = page.locator('.comment', { hasText: 'Will be annotated' });
+    await comment.hover();
+    await comment.locator('.comment-split-btn.split-task').click();
+
+    await expect(page.locator('.comment-text', { hasText: 'moved to task' })).toBeVisible();
+  });
+
+  test('splitting a comment to a note creates a note card', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Note split source');
+    await addCommentToTask(page, 'Note split source', 'Becomes a note');
+
+    const comment = page.locator('.comment', { hasText: 'Becomes a note' });
+    await expect(comment).toBeVisible();
+    await comment.hover();
+
+    const splitBtn = comment.locator('.comment-split-btn.split-note');
+    await expect(splitBtn).toBeVisible();
+    await splitBtn.click();
+
+    const noteCards = page.locator('.item-card', { hasText: 'Becomes a note' });
+    await expect(noteCards).toHaveCount(2);
+  });
+
+  test('undo toast reverses the split', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Undo split test');
+    await addCommentToTask(page, 'Undo split test', 'Undo me');
+
+    const comment = page.locator('.comment', { hasText: 'Undo me' });
+    await comment.hover();
+    await comment.locator('.comment-split-btn.split-task').click();
+
+    await expect(page.locator('.item-card', { hasText: 'Undo me' })).toHaveCount(2);
+
+    const undoBtn = page.locator('.toast-undo-btn');
+    await expect(undoBtn).toBeVisible();
+    await undoBtn.click();
+
+    await expect(page.locator('.item-card', { hasText: 'Undo me' })).toHaveCount(1);
+  });
+
+  test('comment hover actions are plain text links in a single consistent style', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Action label task');
+    await addCommentToTask(page, 'Action label task', 'Label check');
+
+    const comment = page.locator('.comment', { hasText: 'Label check' });
+    await comment.hover();
+    const actions = comment.locator('.comment-actions .comment-split-btn');
+    await expect(actions).toHaveText(['edit', 'delete', '→ task', '→ note']);
+    await expect(comment.locator('.comment-actions svg')).toHaveCount(0);
+
+    // Neither split link should be highlighted at rest
+    const colors = await actions.evaluateAll(els => els.map(el => getComputedStyle(el).color));
+    expect(colors[2]).toBe(colors[3]);
+  });
+});
+
+// ── Recurring templates ────────────────────────────────────────────────
+test.describe('Recurring templates', { tag: ['@recurring'] }, () => {
+  test('recurring button opens the modal', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#recurring-btn').click();
+    await expect(page.locator('#recurring-modal')).not.toHaveClass(/hidden/);
+    await expect(page.locator('.recurring-modal-header')).toBeVisible();
+  });
+
+  test('close button dismisses the recurring modal', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#recurring-btn').click();
+    await expect(page.locator('#recurring-modal')).not.toHaveClass(/hidden/);
+    await page.locator('#recurring-close').click();
+    await expect(page.locator('#recurring-modal')).toHaveClass(/hidden/);
+  });
+
+  test('adding a recurring template shows it in the list', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#recurring-btn').click();
+    await expect(page.locator('#recurring-modal')).not.toHaveClass(/hidden/);
+
+    const editor = page.locator('#recurring-modal .rich-editor');
+    await editor.click();
+    await editor.pressSequentially('Daily standup', { delay: 15 });
+
+    await page.locator('#recurring-modal .modal-btn.primary').click();
+
+    await expect(page.locator('.recurring-template-item', { hasText: 'Daily standup' })).toBeVisible();
+    await expect(page.locator('.recurring-rule-badge')).toBeVisible();
+  });
+
+  test('editing a recurring template updates its content', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#recurring-btn').click();
+
+    const editor = page.locator('#recurring-modal .rich-editor').first();
+    await editor.click();
+    await editor.pressSequentially('Original recurring', { delay: 15 });
+    await page.locator('#recurring-modal .modal-btn.primary').click();
+    await expect(page.locator('.recurring-template-item', { hasText: 'Original recurring' })).toBeVisible();
+
+    await page.locator('.recurring-action-link', { hasText: 'edit' }).first().click();
+    const editEditor = page.locator('.recurring-template-item .rich-editor').first();
+    await expect(editEditor).toBeVisible();
+    await editEditor.click();
+    await editEditor.press('Control+a');
+    await editEditor.pressSequentially('Updated recurring', { delay: 15 });
+    await page.locator('.recurring-template-item .modal-btn.primary').first().click();
+
+    await expect(page.locator('.recurring-template-item', { hasText: 'Updated recurring' })).toBeVisible();
+  });
+
+  test('deleting a recurring template removes it from the list', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#recurring-btn').click();
+
+    const editor = page.locator('#recurring-modal .rich-editor').first();
+    await editor.click();
+    await editor.pressSequentially('To be deleted', { delay: 15 });
+    await page.locator('#recurring-modal .modal-btn.primary').click();
+    await expect(page.locator('.recurring-template-item', { hasText: 'To be deleted' })).toBeVisible();
+
+    await page.locator('.recurring-action-link.danger', { hasText: 'delete' }).first().click();
+    await expect(page.locator('.recurring-template-item', { hasText: 'To be deleted' })).toHaveCount(0);
+  });
+
+  test('recurring templates persist across modal close/reopen', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#recurring-btn').click();
+
+    const editor = page.locator('#recurring-modal .rich-editor').first();
+    await editor.click();
+    await editor.pressSequentially('Persistent template', { delay: 15 });
+    await page.locator('#recurring-modal .modal-btn.primary').click();
+    await expect(page.locator('.recurring-template-item', { hasText: 'Persistent template' })).toBeVisible();
+
+    await page.locator('#recurring-close').click();
+    await page.locator('#recurring-btn').click();
+
+    await expect(page.locator('.recurring-template-item', { hasText: 'Persistent template' })).toBeVisible();
+  });
+});
+
+// ── Insights tab ───────────────────────────────────────────────────────
+test.describe('Insights tab', { tag: ['@insights'] }, () => {
+  async function seedAndOpenInsights(page: Page) {
+    await page.addInitScript(() => {
+      const today = new Date();
+      const days: Record<string, { items: any[] }> = {};
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        days[key] = {
+          items: [
+            { id: `task-${i}-1`, type: 'task', content: `Task A day ${i}`, completed: true, shelved: false, boardColumn: 'active', comments: [], createdAt: d.toISOString() },
+            { id: `task-${i}-2`, type: 'task', content: `Task B day ${i}`, completed: false, shelved: false, boardColumn: 'new', comments: [], createdAt: d.toISOString() },
+            { id: `note-${i}`, type: 'note', content: `Note day ${i}`, comments: [], createdAt: d.toISOString() },
+          ],
+        };
+      }
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    });
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+  }
+
+  test('clicking the Insights tab shows the insights view', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    await expect(page.locator('#insights-view')).not.toHaveClass(/hidden/);
+  });
+
+  test('insights view shows period selector (Week/Month/Year)', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    await expect(page.locator('.period-tab', { hasText: 'Week' })).toBeVisible();
+    await expect(page.locator('.period-tab', { hasText: 'Month' })).toBeVisible();
+    await expect(page.locator('.period-tab', { hasText: 'Year' })).toBeVisible();
+  });
+
+  test('insights view renders productivity summary card', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    await expect(page.locator('.productivity-metrics-card')).toBeVisible();
+  });
+
+  test('switching to Month period re-renders insights', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    await page.locator('.period-tab', { hasText: 'Month' }).click();
+    await expect(page.locator('.period-tab.active', { hasText: 'Month' })).toBeVisible();
+    await expect(page.locator('.productivity-metrics-card')).toBeVisible();
+  });
+
+  test('switching to Year period re-renders insights', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await expect(page.locator('.period-tab.active', { hasText: 'Year' })).toBeVisible();
+  });
+
+  test('navigation arrows exist and prev arrow updates the stored anchor', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    const insightsNav = page.locator('#insights-view .insights-nav');
+    await expect(insightsNav.locator('.nav-arrow').first()).toBeVisible();
+    await expect(insightsNav.locator('.nav-arrow').last()).toBeVisible();
+
+    const anchorBefore = await page.evaluate(() => localStorage.getItem('work-desk-insights-anchor'));
+    await insightsNav.locator('.nav-arrow').first().click();
+    const anchorAfter = await page.evaluate(() => localStorage.getItem('work-desk-insights-anchor'));
+    expect(anchorAfter).not.toBe(anchorBefore);
+  });
+
+  test('insights chart container is rendered', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    const chart = page.locator('#insights-view').locator('.insight-bars, .line-chart-wrap, .stacked-chart-wrap, .pie-chart-wrap');
+    await expect(chart.first()).toBeVisible();
+  });
+
+  test('returning to Desk tab hides insights view', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    await page.locator('.app-tab', { hasText: 'Desk' }).click();
+    await expect(page.locator('#insights-view')).toBeHidden();
+  });
+
+  test('day-by-day table labels rows with real dates and marks today as "(Today)"', async ({ page }) => {
+    await seedAndOpenInsights(page);
+    await page.locator('.period-tab', { hasText: 'Month' }).click();
+    const firstCells = page.locator('.insight-table tbody tr td:first-child');
+    await expect(firstCells.first()).toBeVisible();
+
+    const expectedToday = await page.evaluate(() =>
+      new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' (Today)');
+    const labels = await firstCells.allTextContents();
+    expect(labels).toContain(expectedToday);
+    expect(labels).not.toContain('Today');
+    expect(labels).not.toContain('Yesterday');
+  });
+});
+
+// ── Local-date seeding helpers (browser side) ──────────────────────────
+function seedWorkDays(page: Page, build: string) {
+  // `build` is a function body that receives (localKey, today) and returns a days map
+  return page.addInitScript((body) => {
+    const localKey = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const days = new Function('localKey', 'today', body)(localKey, new Date());
+    localStorage.setItem('work-desk-list-context', 'work');
+    localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+    localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+  }, build);
+}
+
+async function openSettingsBehavior(page: Page) {
+  await page.locator('#density-toggle').click();
+  await expect(page.locator('#density-popout')).toBeVisible();
+  await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+}
+
+// ── Carry-Over Analysis ────────────────────────────────────────────────
+test.describe('Carry-Over Analysis', { tag: ['@insights'] }, () => {
+  // Left unfinished Wed Mar 5, Wed Sep 10 (x2), and Wed Sep 24, 2025; each lands the next day
+  async function openCarryInsights(page: Page, period: 'week' | 'month' | 'year', anchor: string) {
+    // Pin "today" so the fixed 2025 dates stay inside the 12-month retention window
+    await page.clock.setFixedTime(new Date('2025-12-15T10:00:00'));
+    await page.addInitScript(([p, a]) => {
+      const carried = (id: string, from: string) => ({
+        // Completed so startup auto-carry leaves them where they landed
+        id, type: 'task', content: `Carried ${id}`, completed: true, shelved: false,
+        boardColumn: 'active', comments: [], createdAt: `${from}T09:00:00Z`, carriedFrom: from,
+      });
+      const days = {
+        '2025-03-06': { items: [carried('m', '2025-03-05')] },
+        '2025-09-11': { items: [carried('a', '2025-09-10'), carried('b', '2025-09-10')] },
+        '2025-09-25': { items: [carried('c', '2025-09-24')] },
+      };
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-insights-period', p);
+      localStorage.setItem('work-desk-insights-anchor', a);
+    }, [period, anchor]);
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('.carryover-card')).toBeVisible();
+  }
+
+  const row = (page: Page, scope: string, label: string) =>
+    page.locator(`${scope} .carryover-day-row`).filter({ has: page.locator('.carryover-day-label', { hasText: new RegExp(`^${label}$`) }) });
+
+  test('Month view shows a by-week trend and the dates behind each weekday', async ({ page }) => {
+    await openCarryInsights(page, 'month', '2025-09-15');
+    const card = page.locator('.carryover-card');
+    await expect(card.locator('.carryover-summary')).toHaveText('3 tasks left unfinished and carried forward this period');
+
+    const trend = card.locator('.carryover-trend[data-carry-trend="week"]');
+    await expect(trend.locator('.carryover-subtitle')).toHaveText('Carry-Over by Week');
+    await expect(trend.locator('.carryover-day-label')).toHaveText(['Sep 1–7', 'Sep 8–14', 'Sep 15–21', 'Sep 22–28', 'Sep 29–30']);
+    await expect(trend.locator('.carryover-day-count')).toHaveText(['0', '2', '0', '1', '0']);
+
+    await expect(row(page, '.carryover-by-day', 'Wed').locator('.carryover-day-count')).toHaveText('3');
+    await expect(row(page, '.carryover-by-day', 'Thu').locator('.carryover-day-count')).toHaveText('0');
+    await expect(card.locator('.carryover-day-dates[data-weekday="Wed"]')).toHaveText('Sep 10 (2) · Sep 24 (1)');
+    await expect(card.locator('.carryover-day-dates')).toHaveCount(1);
+
+    // Dates sit inside their bar's track, and the full list is in the row's tooltip
+    const wed = row(page, '.carryover-by-day', 'Wed');
+    await expect(wed.locator('.carryover-day-bar .carryover-day-dates')).toHaveCount(1);
+    await expect(wed).toHaveAttribute('title', 'Sep 10 (2), Sep 24 (1)');
+    const rowBox = (await wed.boundingBox())!;
+    const barBox = (await wed.locator('.carryover-day-bar').boundingBox())!;
+    const datesBox = (await wed.locator('.carryover-day-dates').boundingBox())!;
+    expect(rowBox.height).toBeLessThan(24);
+    expect(datesBox.y).toBeGreaterThanOrEqual(barBox.y);
+    expect(datesBox.y + datesBox.height).toBeLessThanOrEqual(barBox.y + barBox.height + 0.5);
+    expect(datesBox.x + datesBox.width).toBeLessThanOrEqual(barBox.x + barBox.width);
+
+    // Wed holds every carry-over (100% fill), so its dates go inside the fill
+    await expect(wed.locator('.carryover-day-dates')).toHaveClass(/inside/);
+
+    // Weekday bars stretch to the same width as the by-week bars
+    const weekBar = (await trend.locator('.carryover-day-bar').first().boundingBox())!;
+    const monBar = (await row(page, '.carryover-by-day', 'Mon').locator('.carryover-day-bar').boundingBox())!;
+    expect(Math.abs(monBar.x - weekBar.x)).toBeLessThan(1);
+    expect(Math.abs(monBar.width - weekBar.width)).toBeLessThan(1);
+    expect(Math.abs(barBox.width - weekBar.width)).toBeLessThan(1);
+  });
+
+  test('Year view shows a 12-month trend and dates across the year', async ({ page }) => {
+    await openCarryInsights(page, 'year', '2025-06-01');
+    const card = page.locator('.carryover-card');
+    await expect(card.locator('.carryover-summary')).toContainText('4 tasks');
+    const trend = card.locator('.carryover-trend[data-carry-trend="month"]');
+    await expect(trend.locator('.carryover-subtitle')).toHaveText('Carry-Over by Month');
+    await expect(trend.locator('.carryover-day-row')).toHaveCount(12);
+    await expect(row(page, '.carryover-trend', 'Mar').locator('.carryover-day-count')).toHaveText('1');
+    await expect(row(page, '.carryover-trend', 'Sep').locator('.carryover-day-count')).toHaveText('3');
+    await expect(card.locator('.carryover-day-dates[data-weekday="Wed"]')).toHaveText('Mar 5 (1) · Sep 10 (2) · Sep 24 (1)');
+  });
+
+  test('Week view keeps the weekday chart only (no trend, no date lists)', async ({ page }) => {
+    await openCarryInsights(page, 'week', '2025-09-10');
+    const card = page.locator('.carryover-card');
+    await expect(card.locator('.carryover-trend')).toHaveCount(0);
+    await expect(card.locator('.carryover-day-dates')).toHaveCount(0);
+    await expect(row(page, '.carryover-by-day', 'Wed').locator('.carryover-day-count')).toHaveText('2');
+  });
+
+  test('period arrows re-render the card: hidden for a month with no carry-overs, back on return', async ({ page }) => {
+    await openCarryInsights(page, 'month', '2025-09-15');
+    const nav = page.locator('#insights-view .insights-nav');
+    await nav.locator('.nav-arrow').first().click();
+    await expect(nav.locator('.insights-nav-label')).toHaveText('August 2025');
+    await expect(page.locator('.carryover-card')).toHaveCount(0);
+    await nav.locator('.nav-arrow').last().click();
+    await expect(nav.locator('.insights-nav-label')).toHaveText('September 2025');
+    await expect(page.locator('.carryover-trend .carryover-day-row')).toHaveCount(5);
+  });
+});
+
+async function readStreaks(page: Page) {
+  await page.locator('#tab-insights').click();
+  const values = page.locator('.streak-card .streak-value');
+  await expect(values.first()).toBeVisible();
+  const [current, longest] = (await values.allTextContents()).map(Number);
+  await page.locator('#tab-desk').click();
+  return { current, longest };
+}
+
+// ── Streaks: weekend handling ──────────────────────────────────────────
+test.describe('Streak weekend handling', { tag: ['@insights'] }, () => {
+  // Weekdays only across the last 11 calendar days (always spans at least one weekend)
+  const WEEKDAYS_ONLY = `
+    const days = {};
+    for (let i = 0; i <= 10; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      if (d.getDay() === 0 || d.getDay() === 6) continue;
+      const key = localKey(d);
+      days[key] = { date: key, items: [{ id: 'streak-' + i, type: 'task', content: 'Streak ' + i, completed: true, shelved: false, boardColumn: 'active', createdAt: d.toISOString() }] };
+    }
+    return days;
+  `;
+
+  test('toggle is on by default in Behavior settings', async ({ page }) => {
+    await openDesk(page);
+    await openSettingsBehavior(page);
+    await expect(page.locator('#streak-skip-weekends-toggle')).toBeChecked();
+  });
+
+  test('with the toggle on, an idle weekend does not break the streak; turning it off does', async ({ page }) => {
+    await seedWorkDays(page, WEEKDAYS_ONLY);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+
+    const on = await readStreaks(page);
+    expect(on.current).toBeGreaterThanOrEqual(6);
+    expect(on.longest).toBe(on.current);
+
+    await openSettingsBehavior(page);
+    await openOptionsSectionFor(page, '#streak-skip-weekends-toggle');
+    await page.locator('#streak-skip-weekends-toggle').click();
+    await expect(page.locator('#streak-skip-weekends-toggle')).not.toBeChecked();
+
+    const off = await readStreaks(page);
+    expect(off.longest).toBeLessThanOrEqual(5);
+    expect(off.longest).toBeLessThan(on.longest);
+  });
+
+  test('toggle choice persists across reload', async ({ page }) => {
+    await openDesk(page);
+    await openSettingsBehavior(page);
+    await openOptionsSectionFor(page, '#streak-skip-weekends-toggle');
+    await page.locator('#streak-skip-weekends-toggle').click();
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-streak-skip-weekends'))).toBe('false');
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await openSettingsBehavior(page);
+    await expect(page.locator('#streak-skip-weekends-toggle')).not.toBeChecked();
+  });
+});
+
+// ── Desk vs Projects separation ────────────────────────────────────────
+test.describe('Desk vs Projects separation', { tag: ['@projects'] }, () => {
+  async function createProject(page: Page, name: string) {
+    page.once('dialog', dialog => dialog.accept(name));
+    await page.locator('#new-project-btn').click();
+    await expect(page.locator('#project-title')).toHaveText(name);
+  }
+
+  test('switching to Projects hides the daily desk and shows the projects view', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#tab-projects').click();
+    await expect(page.locator('#desk-view')).toBeHidden();
+    await expect(page.locator('#add-form')).toBeHidden();
+    await expect(page.locator('#date-title')).toBeHidden();
+    await expect(page.locator('#projects-view')).toBeVisible();
+  });
+
+  test('clicking between projects keeps the daily desk hidden', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#tab-projects').click();
+    await createProject(page, 'Separation Alpha');
+    await createProject(page, 'Separation Beta');
+
+    for (const name of ['Separation Alpha', 'Separation Beta', 'Separation Alpha']) {
+      await page.locator('.project-list-item', { hasText: name }).click();
+      await expect(page.locator('#project-title')).toHaveText(name);
+      await expect(page.locator('#desk-view')).toBeHidden();
+    }
+  });
+
+  test('returning to Work from Projects shows the desk again', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#tab-projects').click();
+    await expect(page.locator('#desk-view')).toBeHidden();
+    await page.locator('#tab-work').click();
+    await expect(page.locator('#desk-view')).toBeVisible();
+    await expect(page.locator('#projects-view')).toBeHidden();
+  });
+
+  test('Insights hides the desk and the projects view', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('#desk-view')).toBeHidden();
+    await expect(page.locator('#projects-view')).toBeHidden();
+    await expect(page.locator('#insights-view')).toBeVisible();
+  });
+});
+
+// ── Project lifecycle ──────────────────────────────────────────────────
+test.describe('Project lifecycle', { tag: ['@projects'] }, () => {
+  async function openProjects(page: Page, name: string) {
+    await openDesk(page);
+    await page.locator('#tab-projects').click();
+    page.once('dialog', dialog => dialog.accept(name));
+    await page.locator('#new-project-btn').click();
+    await expect(page.locator('#project-title')).toHaveText(name);
+  }
+
+  test('empty state prompts to select or create a project', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#tab-projects').click();
+    await expect(page.locator('#project-empty')).toBeVisible();
+    await expect(page.locator('.project-list-empty')).toHaveText('No projects yet');
+  });
+
+  test('rename updates the title and the sidebar list', async ({ page }) => {
+    await openProjects(page, 'Before Rename');
+    page.once('dialog', dialog => dialog.accept('After Rename'));
+    await page.locator('#project-rename-btn').click();
+    await expect(page.locator('#project-title')).toHaveText('After Rename');
+    await expect(page.locator('.project-list-item', { hasText: 'After Rename' })).toBeVisible();
+    await expect(page.locator('.project-list-item', { hasText: 'Before Rename' })).toHaveCount(0);
+  });
+
+  test('dismissing the delete confirm keeps the project', async ({ page }) => {
+    await openProjects(page, 'Keep Me');
+    page.once('dialog', dialog => dialog.dismiss());
+    await page.locator('#project-delete-btn').click();
+    await expect(page.locator('#project-title')).toHaveText('Keep Me');
+  });
+
+  test('confirming delete removes the project and returns to the empty state', async ({ page }) => {
+    await openProjects(page, 'Delete Me');
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#project-delete-btn').click();
+    await expect(page.locator('.project-list-item', { hasText: 'Delete Me' })).toHaveCount(0);
+    await expect(page.locator('#project-empty')).toBeVisible();
+  });
+
+  test('adding a project note shows it in the Notes tab and updates the sidebar count', async ({ page }) => {
+    await openProjects(page, 'Notes Project');
+    await page.locator('#project-add-note-btn').click();
+    const editor = page.locator('#project-notes-list .project-item-editor');
+    await editor.click();
+    await editor.pressSequentially('A project note', { delay: 15 });
+    await page.locator('#project-notes-list button', { hasText: 'Save' }).click();
+
+    await expect(page.locator('#project-notes-list .project-item-card', { hasText: 'A project note' })).toBeVisible();
+    await expect(page.locator('.project-list-item', { hasText: 'Notes Project' })).toContainText('1 note');
+  });
+
+  test('Notes and Tasks tabs switch panes', async ({ page }) => {
+    await openProjects(page, 'Tabs Project');
+    await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
+    await expect(page.locator('#project-pane-tasks')).toBeVisible();
+    await expect(page.locator('#project-pane-notes')).toBeHidden();
+    await page.locator('.project-tab-btn[data-project-tab="notes"]').click();
+    await expect(page.locator('#project-pane-notes')).toBeVisible();
+  });
+
+  test('projects persist across reload', async ({ page }) => {
+    await openProjects(page, 'Persistent Project');
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('.project-list-item', { hasText: 'Persistent Project' })).toBeVisible();
+  });
+});
+
+// ── Work / Personal contexts ───────────────────────────────────────────
+test.describe('Work / Personal contexts', { tag: ['@sidebar'] }, () => {
+  test('tasks stay in their own context and the badge follows the tab', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Work-only task');
+    await expect(page.locator('#context-badge')).toHaveText('Work');
+
+    await page.locator('#tab-personal').click();
+    await expect(page.locator('#context-badge')).toHaveText('Personal');
+    await expect(page.locator('.item-card', { hasText: 'Work-only task' })).toHaveCount(0);
+
+    await addTask(page, 'Personal-only task');
+    await page.locator('#tab-work').click();
+    await expect(page.locator('.item-card', { hasText: 'Work-only task' })).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Personal-only task' })).toHaveCount(0);
+  });
+});
+
+// ── Day navigation & notes ─────────────────────────────────────────────
+test.describe('Day navigation', { tag: ['@calendar'] }, () => {
+  test('next arrow leaves today and "Back to today" returns', async ({ page }) => {
+    await openDesk(page);
+    const todayTitle = await page.locator('#date-title').textContent();
+    await expect(page.locator('#header-today-btn')).toBeHidden();
+
+    await page.locator('#next-day').click();
+    await expect(page.locator('#date-title')).not.toHaveText(todayTitle || '');
+    await expect(page.locator('#header-today-btn')).toBeVisible();
+
+    await page.locator('#header-today-btn').click();
+    await expect(page.locator('#date-title')).toHaveText(todayTitle || '');
+    await expect(page.locator('#header-today-btn')).toBeHidden();
+  });
+
+  test('prev arrow moves back one day', async ({ page }) => {
+    await openDesk(page);
+    const expected = await page.evaluate(() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    });
+    await page.locator('#prev-day').click();
+    await expect(page.locator('#date-title')).toHaveText(expected);
+  });
+});
+
+test.describe('Notes on the desk', { tag: ['@board'] }, () => {
+  test('Note type adds a note item, not a task', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('.type-btn[data-type="note"]').click();
+    await expect(page.locator('.type-btn[data-type="note"]')).toHaveClass(/active/);
+    await addTask(page, 'Desk note entry');
+
+    const types = await page.evaluate(() => {
+      const data = JSON.parse(localStorage.getItem('work-desk-data-work') || '{}');
+      return Object.values<any>(data.days || {}).flatMap((d: any) => d.items)
+        .filter((i: any) => i.content.includes('Desk note entry')).map((i: any) => i.type);
+    });
+    expect(types).toEqual(['note']);
+  });
+});
+
+// ── Carry forward ──────────────────────────────────────────────────────
+test.describe('Carry forward', { tag: ['@board'] }, () => {
+  test('button moves yesterday\'s unfinished task to today and stamps carriedFrom', async ({ page }) => {
+    await seedWorkDays(page, `
+      const y = new Date(today); y.setDate(y.getDate() - 1);
+      const key = localKey(y);
+      return { [key]: { date: key, items: [
+        { id: 'carry-me', type: 'task', content: 'Carry me forward', completed: false, shelved: false, boardColumn: 'active', createdAt: y.toISOString() },
+        { id: 'done-stays', type: 'task', content: 'Done stays put', completed: true, shelved: false, boardColumn: 'active', createdAt: y.toISOString() },
+      ] } };
     `);
-    return harness();
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+
+    await expect(page.locator('#carry-forward-btn')).toBeVisible();
+    await page.locator('#carry-forward-btn').click();
+    await expect(page.locator('.item-card', { hasText: 'Carry me forward' })).toBeVisible();
+
+    const result = await page.evaluate(() => {
+      const d = new Date();
+      const key = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+      const y = new Date(d); y.setDate(y.getDate() - 1);
+      const data = JSON.parse(localStorage.getItem('work-desk-data-work') || '{}');
+      const todayItems = data.days[key(d)]?.items || [];
+      const yItems = data.days[key(y)]?.items || [];
+      return {
+        carried: todayItems.find((i: any) => i.id === 'carry-me')?.carriedFrom,
+        yesterdayKey: key(y),
+        leftBehind: yItems.map((i: any) => i.id),
+      };
+    });
+    expect(result.carried).toBe(result.yesterdayKey);
+    expect(result.leftBehind).toEqual(['done-stays']);
+  });
+});
+
+test.describe('Auto carry toggle', { tag: ['@board', '@options'] }, () => {
+  const YESTERDAY_UNFINISHED = `
+    const y = new Date(today); y.setDate(y.getDate() - 1);
+    const key = localKey(y);
+    return { [key]: { date: key, items: [
+      { id: 'left-open', type: 'task', content: 'Left open yesterday', completed: false, shelved: false, boardColumn: 'active', createdAt: y.toISOString() },
+    ] } };
+  `;
+
+  async function itemLocation(page: Page) {
+    return page.evaluate(() => {
+      const key = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+      const t = new Date();
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      const data = JSON.parse(localStorage.getItem('work-desk-data-work') || '{}');
+      const has = (k: string) => (data.days[k]?.items || []).some((i: any) => i.id === 'left-open');
+      return { onToday: has(key(t)), onYesterday: has(key(y)) };
+    });
   }
 
-  it('split to task adds a task with the comment text, a breadcrumb, and an annotated source comment', () => {
-    const h = runSplit('task');
-    const items = h.state.data.days['2026-09-22'].items;
-    assert.equal(items.length, 2);
-    const created = items[1];
-    assert.equal(created.type, 'task');
-    assert.equal(created.content, 'Follow up with JD');
-    assert.equal(created.completed, false);
-    assert.equal(created.boardColumn, 'new');
-    assert.equal(created.comments.length, 1);
-    assert.equal(created.comments[0].content, 'Split from: Parent task');
-    assert.match(items[0].comments[0].content, /moved to task/);
-    assert.equal(h.lastToast.msg, 'Task created from comment');
-    assert.equal(h.pendingUndo.type, 'split-comment');
-    assert.equal(h.saves, 1);
+  test('with Auto carry off, yesterday\'s unfinished tasks stay put and the manual button is offered', async ({ page }) => {
+    await seedWorkDays(page, YESTERDAY_UNFINISHED);
+    await page.addInitScript(() => localStorage.setItem('work-desk-auto-carry-forward', 'false'));
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+
+    await expect(page.locator('#carry-forward-btn')).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Left open yesterday' })).toHaveCount(0);
+    expect(await itemLocation(page)).toEqual({ onToday: false, onYesterday: true });
+
+    await page.reload();
+    await dismissAuthModal(page);
+    expect(await itemLocation(page)).toEqual({ onToday: false, onYesterday: true });
   });
 
-  it('split to note creates a note without task-only fields', () => {
-    const h = runSplit('note');
-    const created = h.state.data.days['2026-09-22'].items[1];
-    assert.equal(created.type, 'note');
-    assert.equal(created.boardColumn, undefined);
-    assert.equal(created.comments, undefined);
-    assert.equal(h.lastToast.msg, 'Note created from comment');
+  test('with Auto carry on, yesterday\'s unfinished tasks move to today on load', async ({ page }) => {
+    await seedWorkDays(page, YESTERDAY_UNFINISHED);
+    await page.addInitScript(() => localStorage.setItem('work-desk-auto-carry-forward', 'true'));
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+
+    await expect(page.locator('.item-card', { hasText: 'Left open yesterday' })).toBeVisible();
+    expect(await itemLocation(page)).toEqual({ onToday: true, onYesterday: false });
   });
 
-  it('carries parent tags onto the new item', () => {
-    const h = runSplit('task', { tags: ['ace', 'ids'] });
-    assert.deepEqual(h.state.data.days['2026-09-22'].items[1].tags, ['ace', 'ids']);
-  });
-
-  it('undo removes the new item and restores the original comment text', () => {
-    const h = runSplit('task');
-    h.lastToast.opts.undo();
-    const items = h.state.data.days['2026-09-22'].items;
-    assert.equal(items.length, 1);
-    assert.equal(items[0].comments[0].content, 'Follow up with JD');
+  test('turning Auto carry off in Behavior settings persists', async ({ page }) => {
+    await openDesk(page);
+    await openSettingsBehavior(page);
+    await openOptionsSectionFor(page, '#auto-carry-toggle-popout');
+    const toggle = page.locator('#auto-carry-toggle-popout');
+    if (!(await toggle.isChecked())) await toggle.click();
+    await toggle.click();
+    await expect(toggle).not.toBeChecked();
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-auto-carry-forward'))).toBe('false');
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// Streaks (functional — weekend-aware counting)
-// ═══════════════════════════════════════════════════════════════════════
-describe('Streaks (functional)', () => {
-  // 2026-09-18 is a Friday; 2026-09-21 is a Monday
-  function runStreaks(activeKeys, { today, skipWeekends = true } = {}) {
-    const days = Object.fromEntries(activeKeys.map(k => [k, { items: [{ id: k, type: 'task' }] }]));
-    return new Function('days', 'today', 'skip', `
-      const state = { data: { days }, streakSkipWeekends: skip };
-      const todayKey = () => today;
-      const yesterdayKey = () => '';
-      ${fnSource('dateFromKey')}
-      ${fnSource('formatDateKey')}
-      ${fnSource('isConsecutiveDay')}
-      ${fnSource('isStreakConsecutive')}
-      ${fnSource('computeStreaks')}
-      return { computeStreaks, isStreakConsecutive };
-    `)(days, today, skipWeekends);
+// ── Character encoding ─────────────────────────────────────────────────
+test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
+  const MOJIBAKE = /â€|â†|Ã[\u0080-\u00BF\u0152-\u2122]|Â[\u00A0-\u00BF]|ðŸ|ï¸|\uFFFD/;
+
+  async function expectClean(page: Page, selector: string) {
+    const text = await page.locator(selector).innerText();
+    const m = text.match(MOJIBAKE);
+    expect(m, m ? `${selector}: …${text.slice(Math.max(0, m.index! - 30), m.index! + 30)}…` : '').toBeNull();
   }
 
-  const MON_TO_FRI = ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18'];
+  test('What\'s New, Help, Options, and the desk render real characters', async ({ page }) => {
+    await openDesk(page);
+    await expectClean(page, 'body');
 
-  it('Fri → Mon is consecutive with the toggle on and broken with it off', () => {
-    assert.equal(runStreaks([], { skipWeekends: true }).isStreakConsecutive('2026-09-18', '2026-09-21'), true);
-    assert.equal(runStreaks([], { skipWeekends: false }).isStreakConsecutive('2026-09-18', '2026-09-21'), false);
-  });
+    await openAccountMenu(page);
+    await expectClean(page, '#account-menu');
+    await page.locator('#version-btn').click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expect(page.locator('#changelog-body')).toContainText('faint ✓');
+    await expect(page.locator('#changelog-body')).toContainText('Options → Appearance → Card layout');
+    await expect(page.locator('#changelog-body')).toContainText('Back is now just ‹ Back');
+    await expectClean(page, '#changelog-body');
+    await page.locator('#changelog-modal-dismiss').click();
 
-  it('a missed weekday breaks the streak even with the toggle on', () => {
-    const { isStreakConsecutive } = runStreaks([], { skipWeekends: true });
-    assert.equal(isStreakConsecutive('2026-09-17', '2026-09-21'), false);
-    assert.equal(isStreakConsecutive('2026-09-14', '2026-09-16'), false);
-  });
+    await page.locator('#help-btn').click();
+    await expect(page.locator('#help-modal')).toBeVisible();
+    await expect(page.locator('#help-modal')).toContainText('→');
+    await expect(page.locator('#help-modal')).toContainText('Sep 9 (2) · Sep 23 (1)');
+    await expectClean(page, '#help-modal');
+    await page.locator('#help-modal-close').click();
 
-  it('Sat → Mon bridges an idle Sunday', () => {
-    assert.equal(runStreaks([], { skipWeekends: true }).isStreakConsecutive('2026-09-19', '2026-09-21'), true);
-  });
-
-  it('Mon–Fri plus the next Monday is a 6-day streak with the toggle on, 5 with it off', () => {
-    const keys = [...MON_TO_FRI, '2026-09-21'];
-    assert.deepEqual(runStreaks(keys, { today: '2026-09-21', skipWeekends: true }).computeStreaks(), { current: 6, longest: 6 });
-    assert.deepEqual(runStreaks(keys, { today: '2026-09-21', skipWeekends: false }).computeStreaks(), { current: 1, longest: 5 });
-  });
-
-  it('active weekend days still count toward the streak', () => {
-    const keys = [...MON_TO_FRI, '2026-09-19', '2026-09-21'];
-    assert.equal(runStreaks(keys, { today: '2026-09-21' }).computeStreaks().longest, 7);
-  });
-
-  it('current streak survives into Monday before any Monday activity', () => {
-    const r = runStreaks(MON_TO_FRI, { today: '2026-09-21', skipWeekends: true }).computeStreaks();
-    assert.equal(r.current, 5);
-    const strict = runStreaks(MON_TO_FRI, { today: '2026-09-21', skipWeekends: false }).computeStreaks();
-    assert.equal(strict.current, 0);
-  });
-
-  it('current streak resets after an idle weekday', () => {
-    const r = runStreaks(MON_TO_FRI, { today: '2026-09-22', skipWeekends: true }).computeStreaks();
-    assert.equal(r.current, 0);
-    assert.equal(r.longest, 5);
-  });
-
-  it('no activity yields zero streaks; days with empty item lists do not count', () => {
-    assert.deepEqual(runStreaks([], { today: '2026-09-21' }).computeStreaks(), { current: 0, longest: 0 });
-    const h = new Function(`
-      const state = { data: { days: { '2026-09-21': { items: [] } } }, streakSkipWeekends: true };
-      const todayKey = () => '2026-09-21';
-      ${fnSource('dateFromKey')}
-      ${fnSource('formatDateKey')}
-      ${fnSource('isConsecutiveDay')}
-      ${fnSource('isStreakConsecutive')}
-      ${fnSource('computeStreaks')}
-      return computeStreaks();
-    `)();
-    assert.deepEqual(h, { current: 0, longest: 0 });
+    await page.locator('#density-toggle').click();
+    for (const tab of ['themes', 'appearance', 'behavior']) {
+      await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+      await expectClean(page, '#density-popout');
+    }
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    for (const tier of ['light', 'medium', 'dark']) {
+      await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+      await expectClean(page, '#customize-theme-grid');
+    }
+    await expect(page.locator('#customize-theme-grid')).toContainText('Rosé Pine');
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// Insights math (functional)
-// ═══════════════════════════════════════════════════════════════════════
-describe('Insights math (functional)', () => {
-  function insightsFns(days = {}) {
-    return new Function('days', `
-      const state = { data: { days } };
-      ${fnSource('dateFromKey')}
-      ${fnSource('formatDateKey')}
-      ${fnSource('eachDateInRange')}
-      ${fnSource('getPeriodRange')}
-      ${fnSource('createdDateKey')}
-      ${fnSource('sortNewColumnTasks')}
-      ${fnSource('getTaskBuckets')}
-      ${fnSource('analyzeDayItems')}
-      ${fnSource('computeInsights')}
-      ${fnSource('analyzeCarryOverPatterns')}
-      ${fnSource('formatInsightsDayLabel')}
-      ${fnSource('formatSidebarLabel')}
-      return { getTaskBuckets, analyzeDayItems, computeInsights, analyzeCarryOverPatterns, formatInsightsDayLabel, formatSidebarLabel, eachDateInRange };
-    `)(days);
+// ── Help & What's New modals ───────────────────────────────────────────
+test.describe('Help and What\'s New modals', { tag: ['@docs'] }, () => {
+  test('help button opens the help modal and the close button dismisses it', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#help-btn').click();
+    await expect(page.locator('#help-modal')).toBeVisible();
+    await expect(page.locator('#help-modal')).toContainText('Weekends don\'t break streaks');
+    await page.locator('#help-modal-close').click();
+    await expect(page.locator('#help-modal')).toBeHidden();
+  });
+
+  test('clicking the help backdrop closes it', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#help-btn').click();
+    await page.locator('#help-modal').click({ position: { x: 5, y: 5 } });
+    await expect(page.locator('#help-modal')).toBeHidden();
+  });
+
+  test('version button opens What\'s New for the current version and marks it seen', async ({ page }) => {
+    await openDesk(page);
+    const label = (await page.locator('#version-btn').textContent())?.trim() || '';
+    expect(label).toMatch(/^v\d+\.\d+\.\d+$/);
+
+    await openAccountMenu(page);
+    await page.locator('#version-btn').click();
+    await expect(page.locator('#account-menu')).toBeHidden();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expect(page.locator('#changelog-body')).toContainText(label.slice(1));
+
+    await page.locator('#changelog-modal-dismiss').click();
+    await expect(page.locator('#changelog-modal')).toBeHidden();
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-last-seen-version'))).toBe(label.slice(1));
+    await expect(page.locator('#whats-new-link')).toBeHidden();
+    await expect(page.locator('#version-new-dot')).toBeHidden();
+  });
+});
+
+// ── What's new link + version footer (1.13.2) ──────────────────────────
+test.describe('What\'s new link and version footer (1.13.2)', { tag: ['@docs', '@sidebar'] }, () => {
+  const headerHeight = (page: Page) =>
+    page.evaluate(() => Math.round(document.querySelector('.sidebar-header')!.getBoundingClientRect().height));
+  const box = async (page: Page, sel: string) => (await page.locator(sel).boundingBox())!;
+
+  test('unseen update: link sits under the subtitle; opening keeps it, closing removes it and restores the header height', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    const link = page.locator('#whats-new-link');
+    await expect(link).toBeVisible();
+    await expect(link).toHaveText("What's new");
+    await expect(page.locator('#version-new-dot')).toBeVisible();
+    const sub = await box(page, '#logo-sub');
+    const linkBox = await box(page, '#whats-new-link');
+    expect(linkBox.y).toBeGreaterThanOrEqual(sub.y + sub.height - 1);
+    expect(Math.abs(linkBox.x - sub.x)).toBeLessThan(2);
+    await expect(page.locator('#logo-sub #version-btn')).toHaveCount(0);
+    const tallHeader = await headerHeight(page);
+
+    await link.click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expect(link).toBeVisible();
+
+    await page.locator('#changelog-modal-close').click();
+    await expect(page.locator('#changelog-modal')).toBeHidden();
+    await expect(link).toBeHidden();
+    const normalHeader = await headerHeight(page);
+    expect(normalHeader).toBeLessThan(tallHeader);
+    expect(normalHeader).toBe(50);
+    await expect(page.locator('#sidebar-today-glance')).toBeVisible();
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(link).toBeHidden();
+    expect(await headerHeight(page)).toBe(normalHeader);
+  });
+
+  for (const how of ['Got it', 'backdrop', 'Escape'] as const) {
+    test(`closing the changelog with ${how} also removes the link`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await seedLayout(page);
+      await page.locator('#whats-new-link').click();
+      await expect(page.locator('#changelog-modal')).toBeVisible();
+      if (how === 'Got it') await page.locator('#changelog-modal-dismiss').click();
+      else if (how === 'backdrop') await page.locator('#changelog-modal').click({ position: { x: 5, y: 5 } });
+      else await page.keyboard.press('Escape');
+      await expect(page.locator('#changelog-modal')).toBeHidden();
+      await expect(page.locator('#whats-new-link')).toBeHidden();
+    });
   }
 
-  it('getTaskBuckets splits tasks by column/state and floats recurring tasks to the top of New', () => {
-    const { getTaskBuckets } = insightsFns();
-    const b = getTaskBuckets([
-      task({ id: 'n1', boardColumn: 'new' }),
-      task({ id: 'r1', boardColumn: 'new', recurringTemplateId: 't1' }),
-      task({ id: 'a1', boardColumn: 'active' }),
-      task({ id: 'c1', completed: true }),
-      task({ id: 's1', shelved: true }),
-    ]);
-    assert.deepEqual(b.new.map(t => t.id), ['r1', 'n1']);
-    assert.deepEqual(b.active.map(t => t.id), ['a1']);
-    assert.deepEqual(b.completed.map(t => t.id), ['c1']);
-    assert.deepEqual(b.shelved.map(t => t.id), ['s1']);
+  test('version button sits at the bottom of the account menu and opens the changelog any time', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    const ver = page.locator('#account-menu > .sidebar-version > #version-btn');
+    await expect(ver).toBeHidden();
+    await openAccountMenu(page);
+    await expect(ver).toBeVisible();
+    await expect(ver).toHaveText(/^v\d+\.\d+\.\d+$/);
+    const verBox = await box(page, '#version-btn');
+    const signIn = await box(page, '#sb-signin-btn');
+    expect(verBox.y).toBeGreaterThanOrEqual(signIn.y + signIn.height - 1);
+    const menu = await box(page, '#account-menu');
+    const btn = await box(page, '#account-menu-btn');
+    expect(menu.y + menu.height).toBeLessThanOrEqual(btn.y);
+
+    // Version click while the link is showing: closing still clears the link
+    await ver.click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await page.locator('#changelog-modal-dismiss').click();
+    await expect(page.locator('#whats-new-link')).toBeHidden();
+
+    // Already seen: it still opens the changelog, link never comes back
+    await openAccountMenu(page);
+    await ver.click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expect(page.locator('#changelog-body')).toContainText((await ver.textContent())!.slice(1));
+    await page.locator('#changelog-modal-close').click();
+    await expect(page.locator('#whats-new-link')).toBeHidden();
   });
 
-  it('analyzeDayItems counts completed, shelved, open, carried, created, notes, and comments', () => {
-    const { analyzeDayItems } = insightsFns();
-    const s = analyzeDayItems('2026-09-22', [
-      task({ id: '1', completed: true, createdAt: '2026-09-22T09:00:00Z', comments: [{ id: 'x' }, { id: 'y' }] }),
-      task({ id: '2', shelved: true, createdAt: '2026-09-22T09:00:00Z' }),
-      task({ id: '3', boardColumn: 'new', createdAt: '2026-09-22T09:00:00Z' }),
-      task({ id: '4', boardColumn: 'active', carriedFrom: '2026-09-21', createdAt: '2026-09-21T09:00:00Z' }),
-      { id: 'n', type: 'note', content: 'note' },
-    ]);
-    assert.equal(s.hasActivity, true);
-    assert.equal(s.tasks, 4);
-    assert.equal(s.completed, 1);
-    assert.equal(s.shelved, 1);
-    assert.equal(s.unfinished, 2);
-    assert.equal(s.openNew, 1);
-    assert.equal(s.openCarried, 1);
-    assert.equal(s.carriedOver, 1);
-    assert.equal(s.createdToday, 3);
-    assert.equal(s.notes, 1);
-    assert.equal(s.comments, 2);
+  test('when the current version was already seen, no link shows and the header is normal height', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    const version = (await page.locator('#version-btn').textContent())!.slice(1);
+    await page.evaluate((v) => localStorage.setItem('work-desk-last-seen-version', v), version);
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('#whats-new-link')).toBeHidden();
+    expect(await headerHeight(page)).toBe(50);
+    await expect(page.locator('#account-menu-btn-dot')).toBeHidden();
+    await openAccountMenu(page);
+    await expect(page.locator('#version-btn')).toBeVisible();
+    await expect(page.locator('#account-menu-new-dot')).toBeHidden();
   });
 
-  it('a task completed on a later day than it was created is not counted as carried over', () => {
-    const { analyzeDayItems } = insightsFns();
-    const s = analyzeDayItems('2026-09-24', [
-      task({ id: 'future', completed: true, createdAt: '2026-09-21T09:00:00Z' }),
-    ]);
-    assert.equal(s.carriedOver, 0);
-    assert.equal(s.createdToday, 0);
+  test('collapsed sidebar hides both; expanding brings them back', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seedLayout(page);
+    await page.locator('#sidebar-toggle').click();
+    await expect.poll(() => page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(0);
+    await expect(page.locator('#whats-new-link')).not.toBeInViewport();
+    await expect(page.locator('#account-menu-btn')).not.toBeInViewport();
+    await page.locator('#sidebar-toggle').click();
+    await expect(page.locator('#whats-new-link')).toBeInViewport();
+    await expect(page.locator('#account-menu-btn')).toBeInViewport();
+    await page.locator('#whats-new-link').click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
   });
 
-  it('computeInsights week totals and completion rate', () => {
-    const { computeInsights } = insightsFns({
-      '2026-09-14': { items: [task({ id: 'a', completed: true }), task({ id: 'b', completed: true })] },
-      '2026-09-16': { items: [task({ id: 'c', shelved: true }), task({ id: 'd', boardColumn: 'active' })] },
-      '2026-09-21': { items: [task({ id: 'outside', completed: true })] },
-    });
-    const r = computeInsights('week', '2026-09-16');
-    assert.equal(r.daily.length, 7);
-    assert.equal(r.totals.activeDays, 2);
-    assert.equal(r.totals.completed, 2);
-    assert.equal(r.totals.shelved, 1);
-    assert.equal(r.totals.unfinished, 1);
-    assert.equal(r.completionRate, 50);
-    assert.equal(r.segments.length, 7);
-  });
-
-  it('computeInsights returns a null completion rate for an empty period', () => {
-    const { computeInsights } = insightsFns();
-    assert.equal(computeInsights('week', '2026-09-16').completionRate, null);
-  });
-
-  it('computeInsights year view has 12 monthly segments', () => {
-    const { computeInsights } = insightsFns({
-      '2026-03-10': { items: [task({ id: 'm', completed: true })] },
-    });
-    const r = computeInsights('year', '2026-09-16');
-    assert.equal(r.segments.length, 12);
-    assert.equal(r.segments[2].completed, 1);
-  });
-
-  // Tasks landing on `toKey` that were left unfinished on `fromKey`
-  const carried = (id, fromKey) => task({ id, carriedFrom: fromKey, createdAt: `${fromKey}T09:00:00Z` });
-  const SEP = { startKey: '2026-09-01', endKey: '2026-09-30' };
-
-  it('analyzeCarryOverPatterns counts each carry-over on the day it was left unfinished', () => {
-    const { analyzeCarryOverPatterns } = insightsFns({
-      '2026-09-10': { items: [carried('a', '2026-09-09'), carried('b', '2026-09-09')] }, // left Wed Sep 9
-      '2026-09-24': { items: [carried('c', '2026-09-23')] },                              // left Wed Sep 23
-      '2026-09-18': { items: [carried('d', '2026-09-17')] },                              // left Thu Sep 17
-    });
-    const p = analyzeCarryOverPatterns('month', SEP);
-    assert.equal(p.total, 4);
-    assert.equal(p.carryOverByDay.Wed, 3);
-    assert.equal(p.carryOverByDay.Thu, 1, 'Sep 10 arrivals must not count as Thursday');
-    assert.equal(p.carryOverByDay.Mon, 0);
-    assert.deepEqual(p.datesByWeekday.Wed, [{ dayKey: '2026-09-09', count: 2 }, { dayKey: '2026-09-23', count: 1 }]);
-    assert.deepEqual(p.datesByWeekday.Thu, [{ dayKey: '2026-09-17', count: 1 }]);
-  });
-
-  it('analyzeCarryOverPatterns ignores notes, uncarried tasks, and carry-overs left outside the period', () => {
-    const { analyzeCarryOverPatterns } = insightsFns({
-      '2026-09-01': { items: [carried('aug', '2026-08-31')] },                     // left in August
-      '2026-10-01': { items: [carried('sep30', '2026-09-30')] },                   // left Sep 30, landed Oct
-      '2026-09-15': { items: [
-        task({ id: 'plain' }),
-        { id: 'n', type: 'note', content: 'x', carriedFrom: '2026-09-14' },
-      ] },
-    });
-    const p = analyzeCarryOverPatterns('month', SEP);
-    assert.equal(p.total, 1);
-    assert.deepEqual(Object.keys(p.perDate), ['2026-09-30']);
-  });
-
-  it('analyzeCarryOverPatterns counts a duplicated task copy only once per source day', () => {
-    const { analyzeCarryOverPatterns } = insightsFns({
-      '2026-09-10': { items: [carried('dup', '2026-09-09')] },
-      '2026-09-11': { items: [carried('dup', '2026-09-09'), carried('dup', '2026-09-10')] },
-    });
-    const p = analyzeCarryOverPatterns('month', SEP);
-    assert.equal(p.perDate['2026-09-09'], 1);
-    assert.equal(p.perDate['2026-09-10'], 1, 'a re-carry from the next day is a separate carry-over');
-    assert.equal(p.total, 2);
-  });
-
-  it('month trend buckets Mon–Sun weeks clipped to the month and sums correctly', () => {
-    const { analyzeCarryOverPatterns } = insightsFns({
-      '2026-09-10': { items: [carried('a', '2026-09-09'), carried('b', '2026-09-09')] },
-      '2026-09-24': { items: [carried('c', '2026-09-23')] },
-      '2026-09-30': { items: [carried('d', '2026-09-29')] },
-    });
-    const p = analyzeCarryOverPatterns('month', SEP);
-    assert.deepEqual(p.trend.map((b) => b.label), ['Sep 1–6', 'Sep 7–13', 'Sep 14–20', 'Sep 21–27', 'Sep 28–30']);
-    assert.deepEqual(p.trend.map((b) => b.count), [0, 2, 0, 1, 1]);
-    assert.equal(p.trend[0].startKey, '2026-09-01');
-    assert.equal(p.trend.at(-1).endKey, '2026-09-30');
-    assert.equal(p.trend.reduce((s, b) => s + b.count, 0), p.total);
-  });
-
-  it('month trend handles a month starting on Sunday (single-day first bucket)', () => {
-    const { analyzeCarryOverPatterns } = insightsFns({});
-    const p = analyzeCarryOverPatterns('month', { startKey: '2026-11-01', endKey: '2026-11-30' });
-    assert.equal(p.trend[0].label, 'Nov 1');
-    assert.equal(p.trend[1].label, 'Nov 2–8');
-    assert.equal(p.trend.at(-1).label, 'Nov 30');
-  });
-
-  it('year trend has 12 month buckets that add up to the total', () => {
-    const { analyzeCarryOverPatterns } = insightsFns({
-      '2026-03-05': { items: [carried('m', '2026-03-04')] },
-      '2026-09-10': { items: [carried('a', '2026-09-09'), carried('b', '2026-09-09')] },
-      '2026-12-31': { items: [carried('d', '2026-12-30')] },
-    });
-    const p = analyzeCarryOverPatterns('year', { startKey: '2026-01-01', endKey: '2026-12-31' });
-    assert.equal(p.trend.length, 12);
-    assert.deepEqual(p.trend.map((b) => b.label), ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
-    assert.equal(p.trend[2].count, 1);
-    assert.equal(p.trend[8].count, 2);
-    assert.equal(p.trend[11].count, 1);
-    assert.equal(p.trend[1].endKey, '2026-02-28');
-    assert.equal(p.total, 4);
-  });
-
-  it('1.8.1 documents the carry-over changes in help and What\'s New', () => {
-    const entry = html.match(/version: '1\.8\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /left unfinished/);
-    assert.match(html, /id="help-modal"[\s\S]*counted on the day the task was left unfinished/);
-    assert.doesNotMatch(html, /which days of the week tasks most often carry over from/);
-  });
-
-  it('week view has no trend chart', () => {
-    const { analyzeCarryOverPatterns } = insightsFns({ '2026-09-24': { items: [carried('c', '2026-09-23')] } });
-    const p = analyzeCarryOverPatterns('week', { startKey: '2026-09-21', endKey: '2026-09-27' });
-    assert.equal(p.trend, null);
-    assert.equal(p.carryOverByDay.Wed, 1);
-  });
-
-  it('eachDateInRange is inclusive and crosses month boundaries', () => {
-    const { eachDateInRange } = insightsFns();
-    const seen = [];
-    eachDateInRange('2026-09-29', '2026-10-02', k => seen.push(k));
-    assert.deepEqual(seen, ['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02']);
-  });
-
-  it('formatInsightsDayLabel shows the real date, adding "(Today)" only for today', () => {
-    const { formatInsightsDayLabel } = insightsFns();
-    const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const fmt = (d) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const now = new Date();
-    const yest = new Date(); yest.setDate(yest.getDate() - 1);
-    assert.equal(formatInsightsDayLabel(key(now)), `${fmt(now)} (Today)`);
-    assert.equal(formatInsightsDayLabel(key(yest)), fmt(yest));
-    assert.equal(formatInsightsDayLabel('2026-01-05'), 'Mon, Jan 5');
-  });
-
-  it('sidebar labels still use Today / Yesterday', () => {
-    const { formatSidebarLabel } = insightsFns();
-    const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const yest = new Date(); yest.setDate(yest.getDate() - 1);
-    assert.equal(formatSidebarLabel(key(new Date())), 'Today');
-    assert.equal(formatSidebarLabel(key(yest)), 'Yesterday');
-  });
-
-  it('the day-by-day table uses the insights formatter, not the sidebar one', () => {
-    const body = fnSource('renderInsightsTable');
-    assert.match(body, /formatInsightsDayLabel\(row\.dayKey\)/);
-    assert.doesNotMatch(body, /formatSidebarLabel/);
+  test('phone: link and footer stay hidden; the menu dot clears after closing What\'s new', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedLayout(page);
+    await expect(page.locator('#whats-new-link')).toBeHidden();
+    await expect(page.locator('.sidebar-version')).toBeHidden();
+    await page.locator('#mobile-menu-btn').click();
+    await expect(page.locator('#mobile-menu-new-dot')).toBeVisible();
+    await page.locator('#mobile-menu-whatsnew').click();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await page.locator('#changelog-modal-dismiss').click();
+    await page.locator('#mobile-menu-btn').click();
+    await expect(page.locator('#mobile-menu-sheet')).toBeVisible();
+    await expect(page.locator('#mobile-menu-new-dot')).toBeHidden();
+    await expect(page.locator('#whats-new-link')).toBeHidden();
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// Desk / Projects view separation + streak preference wiring
-// ═══════════════════════════════════════════════════════════════════════
-describe('View separation and streak preference (HTML invariants)', () => {
-  it('#desk-view.hidden overrides the ID-level display:flex', () => {
-    assert.match(html, /#desk-view\s*\{[^}]*display:\s*flex/);
-    assert.match(html, /#desk-view\.hidden\s*\{\s*display:\s*none;?\s*\}/);
+// ── Insights 1.15.0 additions ──────────────────────────────────────────
+// Fixed "today" of Tue Oct 6, 2026 (week Mon Oct 5 – Sun Oct 11)
+test.describe('Insights 1.15.0 additions', { tag: ['@insights'] }, () => {
+  async function openInsights(page: Page, period: 'week' | 'month' | 'year' = 'week', anchor = '2026-10-06') {
+    await page.clock.setFixedTime(new Date('2026-10-06T10:00:00'));
+    await page.addInitScript(([p, a]) => {
+      if (localStorage.getItem('qol-seeded')) return;
+      localStorage.setItem('qol-seeded', '1');
+      const t = (id: string, content: string, extra: Record<string, unknown> = {}) => ({
+        id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], tags: [], createdAt: '2026-10-06T09:00:00', ...extra,
+      });
+      const days: Record<string, { date: string; items: any[] }> = {
+        '2026-09-02': { date: '2026-09-02', items: [t('sep1', 'Early September win', { completed: true, createdAt: '2026-09-02T09:00:00' })] },
+        '2026-09-14': { date: '2026-09-14', items: [t('s-old', 'Old cache spike', { shelved: true, tags: ['ids'], createdAt: '2026-09-14T09:00:00' })] },
+        '2026-10-01': { date: '2026-10-01', items: [
+          t('d1', 'Renew vendor contract', { completed: true, tags: ['ace'] }),
+          t('d2', 'Review IDS batching', { completed: true, tags: ['ids'] }),
+          t('s1', 'Draft Postgres migration plan', { shelved: true, tags: ['ace', 'postgres'], createdAt: '2026-10-01T09:00:00' }),
+        ] },
+        '2026-10-02': { date: '2026-10-02', items: Array.from({ length: 8 }, (_, i) =>
+          t(`tg${i}`, `Tagged ${i}`, { completed: true, tags: [`tag${i}`] })) },
+        '2026-10-03': { date: '2026-10-03', items: Array.from({ length: 8 }, (_, i) =>
+          t(`sh${i}`, `Parked ${i}`, { shelved: true, createdAt: '2026-10-03T09:00:00' })) },
+        '2026-10-05': { date: '2026-10-05', items: [
+          t('s2', 'Look into flaky test', { shelved: true, createdAt: '2026-10-05T09:00:00' }),
+          t('d3', 'Send sprint notes', { completed: true }),
+        ] },
+        '2026-10-06': { date: '2026-10-06', items: [
+          t('o1', 'Follow up on silver layer', { tags: ['databricks'], carriedFrom: '2026-10-05', createdAt: '2026-09-17T09:00:00' }),
+          t('o2', 'Write KT notes', { boardColumn: 'active', carriedFrom: '2026-10-05', createdAt: '2026-09-28T09:00:00' }),
+          t('d4', 'Standup', { completed: true, tags: ['ace'] }),
+        ] },
+      };
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-insights-period', p);
+      localStorage.setItem('work-desk-insights-anchor', a);
+    }, [period, anchor]);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+  }
+
+  const expectDeskOn = async (page: Page, title: string, key: string) => {
+    await expect(page.locator('#insights-view')).toBeHidden();
+    await expect(page.locator('#date-title')).toHaveText(title);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-selected-date'))).toBe(key);
+  };
+  const workDay = (page: Page, key: string) =>
+    page.evaluate((k) => JSON.parse(localStorage.getItem('work-desk-data-work')!).days[k]?.items ?? null, key);
+
+  test('clicking a Day-by-day row opens that day on the desk', async ({ page }) => {
+    await openInsights(page, 'month');
+    await page.locator('.insight-table .insight-day-link[data-open-day="2026-10-01"]').click();
+    await expectDeskOn(page, 'Thursday, October 1, 2026', '2026-10-01');
+    await expect(page.locator('#item-d1')).toBeVisible();
   });
 
-  it('renderSidebar hides the desk whenever Projects is active', () => {
-    const body = fnSource('renderSidebar');
-    assert.match(body, /els\.deskView\.classList\.toggle\('hidden', !isDesk \|\| isProjects\)/);
-    assert.match(body, /els\.projectsView\.classList\.toggle\('hidden', !isProjects\)/);
-    assert.match(body, /els\.insightsView\.classList\.toggle\('hidden', isDesk \|\| isProjects\)/);
+  test('clicking a breakdown bar opens that day; Enter on a focused bar does too', async ({ page }) => {
+    await openInsights(page, 'week');
+    const bar = page.locator('.insight-bar-row[data-open-day="2026-10-05"]');
+    await expect(bar).toHaveAttribute('role', 'button');
+    await bar.click();
+    await expectDeskOn(page, 'Monday, October 5, 2026', '2026-10-05');
+
+    await page.locator('#tab-insights').click();
+    await page.locator('.insight-bar-row[data-open-day="2026-10-06"]').focus();
+    await page.keyboard.press('Enter');
+    await expectDeskOn(page, 'Tuesday, October 6, 2026', '2026-10-06');
   });
 
-  it('renderProjectDetail refreshes the sidebar list so note/task counts stay current', () => {
-    assert.match(fnSource('renderProjectDetail'), /renderProjectsList\(\)/);
+  test('clicking a streak-strip square opens that day', async ({ page }) => {
+    await openInsights(page, 'month');
+    await page.locator('.streak-heatmap .heatmap-cell[data-open-day="2026-10-03"]').click();
+    await expectDeskOn(page, 'Saturday, October 3, 2026', '2026-10-03');
   });
 
-  it('render() skips desk/insights rendering while in Projects', () => {
-    const body = fnSource('render');
-    assert.match(body, /if \(state\.listContext === 'projects'\)\s*\{\s*return;/);
+  test('Year view: a month bar opens that month in Insights, and a heatmap square opens the day', async ({ page }) => {
+    await openInsights(page, 'year');
+    await page.locator('.insight-bar-row[data-open-month="2026-09-01"]').click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(page.locator('.period-tab.active')).toHaveText('Month');
+    await expect(page.locator('.insights-nav-label')).toHaveText('September 2026');
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-insights-period'))).toBe('month');
+
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await page.locator('.heatmap-wrap .heatmap-cell[data-open-day="2026-09-14"]').click();
+    await expectDeskOn(page, 'Monday, September 14, 2026', '2026-09-14');
+    await expect(page.locator('.heatmap-wrap .heatmap-cell.out-of-range[data-open-day]')).toHaveCount(0);
   });
 
-  it('streak toggle lives in the Behavior pane and defaults on', () => {
-    const behavior = html.match(/id="options-pane-behavior"[\s\S]*?id="us-federal-holidays-toggle"/);
-    assert.ok(behavior, 'behavior pane precedes holiday settings');
-    assert.match(behavior[0], /id="streak-skip-weekends-toggle"/);
-    assert.match(html, /streakSkipWeekends: localStorage\.getItem\(STREAK_SKIP_WEEKENDS_KEY\) !== 'false'/);
+  test('"This week" appears only away from the current week and returns to it, even from an empty week', async ({ page }) => {
+    await openInsights(page, 'week');
+    const btn = page.locator('.insights-current-btn');
+    await expect(btn).toHaveCount(0);
+    const label = page.locator('.insights-nav-label');
+    const current = await label.textContent();
+
+    for (let i = 0; i < 6; i++) await page.locator('.insights-nav .nav-arrow').first().click();
+    await expect(page.locator('.insight-empty')).toBeVisible();
+    await expect(btn).toHaveText('This week');
+    await btn.click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(label).toHaveText(current!);
+    await expect(btn).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-insights-anchor'))).toBe('2026-10-06');
+
+    await page.locator('.insights-nav .nav-arrow').last().click();
+    await btn.click();
+    await expect(label).toHaveText(current!);
   });
 
-  it('streak preference is included in local prefs and applied from cloud prefs', () => {
-    assert.match(fnSource('readLocalPrefs'), /streakSkipWeekends/);
-    const apply = fnSource('applyCloudPrefs');
-    assert.match(apply, /typeof prefs\.streakSkipWeekends === 'boolean'/);
-    assert.match(apply, /STREAK_SKIP_WEEKENDS_KEY/);
+  test('"This month" and "This year" follow the period', async ({ page }) => {
+    await openInsights(page, 'month');
+    await page.locator('.insights-nav .nav-arrow').first().click();
+    await expect(page.locator('.insights-current-btn')).toHaveText('This month');
+    await page.locator('.insights-current-btn').click();
+    await expect(page.locator('.insights-nav-label')).toHaveText('October 2026');
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await page.locator('.insights-nav .nav-arrow').first().click();
+    await expect(page.locator('.insights-current-btn')).toHaveText('This year');
+    await page.locator('.insights-current-btn').click();
+    await expect(page.locator('.insights-nav-label')).toHaveText('2026');
   });
 
-  it('changing the toggle pushes prefs and re-renders Insights when visible', () => {
-    const block = html.match(/streakSkipWeekendsToggle\.addEventListener\('change'[\s\S]*?\}\);/);
-    assert.ok(block);
-    assert.match(block[0], /schedulePrefsPush\(\)/);
-    assert.match(block[0], /renderInsights\(\)/);
+  test('comparison card: Week, Month to date, a finished Month, and Year', async ({ page }) => {
+    await openInsights(page, 'week');
+    await expect(page.locator('.comparison-card[data-comparison="week"] .comparison-title')).toHaveText('Week-over-Week');
+    await expect(page.locator('.comparison-card .comparison-hint')).toHaveCount(0);
+
+    await page.locator('.period-tab', { hasText: 'Month' }).click();
+    const month = page.locator('.comparison-card[data-comparison="month"]');
+    await expect(month.locator('.comparison-title')).toHaveText('Month-over-Month');
+    await expect(month.locator('.comparison-hint')).toHaveText('So far this month, compared with Sep 1 – Sep 6');
+    await expect(month.locator('.comparison-row').first().locator('.comp-current')).toHaveText('12');
+    await expect(month.locator('.comparison-row').first().locator('.comp-previous')).toHaveText('(1 by this point last month)');
+    await expect(month.locator('.comparison-row').first().locator('.change-good')).toHaveText('+11 ↑');
+
+    await page.locator('.insights-nav .nav-arrow').first().click();
+    const sept = page.locator('.comparison-card[data-comparison="month"]');
+    await expect(sept.locator('.comparison-hint')).toHaveCount(0);
+    await expect(sept.locator('.comparison-row').first().locator('.comp-previous')).toHaveText('(0 last month)');
+
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await expect(page.locator('.comparison-card[data-comparison="year"] .comparison-title')).toHaveText('Year-over-Year');
   });
 
-  it('docs mention the streak toggle in help and What\'s New', () => {
-    assert.match(html, /id="help-modal"[\s\S]*Weekends don't break streaks/);
-    const entry = html.match(/version: '1\.7\.0'[\s\S]*?\n      \},/);
-    assert.ok(entry);
-    assert.match(entry[0], /break streaks/);
+  test('Tasks by Tag: counts per tag, No tag row, and Show all / Show fewer keep Insights open', async ({ page }) => {
+    await openInsights(page, 'month');
+    const card = page.locator('.tags-card');
+    await expect(card.locator('.insight-card-title')).toHaveText('Tasks by Tag');
+    const rows = card.locator('.tag-breakdown-row');
+    await expect(rows).toHaveCount(9);
+    await expect(rows.first()).toHaveAttribute('data-tag', 'ace');
+    await expect(rows.first().locator('.tag-breakdown-counts')).toHaveText('2 done · 0 open · 1 shelved');
+    await expect(card.locator('.tag-breakdown-row[data-tag=""] .tag-breakdown-name')).toHaveText('No tag');
+    await expect(card.locator('.tag-breakdown-row[data-tag="databricks"] .tag-breakdown-counts')).toHaveText('0 done · 1 open · 1 carried');
+
+    const toggle = card.locator('.insight-show-all');
+    await expect(toggle).toHaveText('Show all (12)');
+    await toggle.click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(page.locator('.tags-card .tag-breakdown-row')).toHaveCount(13);
+    await expect(page.locator('.tags-card .insight-show-all')).toHaveText('Show fewer');
+    await expect(page.locator('.tags-card .insight-show-all')).toHaveAttribute('aria-expanded', 'true');
+    await page.locator('.tags-card .insight-show-all').click();
+    await expect(page.locator('.tags-card .tag-breakdown-row')).toHaveCount(9);
+  });
+
+  test('Tasks by Tag hides the Show all link when there are 8 tags or fewer', async ({ page }) => {
+    await openInsights(page, 'week');
+    await expect(page.locator('.tags-card .tag-breakdown-row[data-tag="ace"]')).toBeVisible();
+    await expect(page.locator('.tags-card .insight-show-all')).toHaveCount(0);
+  });
+
+  test('Lingering Tasks lists the oldest open tasks and Open jumps to the highlighted card', async ({ page }) => {
+    await openInsights(page, 'week');
+    const card = page.locator('.lingering-card');
+    const rows = card.locator('.insight-task-row');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toHaveAttribute('data-item-id', 'o1');
+    await expect(rows.first().locator('.insight-task-meta')).toHaveText('Open 19 days · created Sep 17 · last carried from Oct 5');
+    await expect(rows.nth(1).locator('.insight-task-text')).toHaveText('Write KT notes');
+    await rows.first().locator('.insight-task-btn.open').click();
+    await expectDeskOn(page, 'Tuesday, October 6, 2026', '2026-10-06');
+    await expect(page.locator('#item-o1')).toHaveClass(/search-highlight/);
+  });
+
+  test('Lingering Tasks ignores the period; Shelved Review hides when the period has no shelved tasks', async ({ page }) => {
+    await openInsights(page, 'week', '2026-09-02');
+    await expect(page.locator('.lingering-card .insight-task-row')).toHaveCount(2);
+    await expect(page.locator('.shelved-card')).toHaveCount(0);
+  });
+
+  test('Shelved Review: list, Show all, footer, and Open', async ({ page }) => {
+    await openInsights(page, 'month');
+    const card = page.locator('.shelved-card');
+    await expect(card.locator('.carryover-hint')).toHaveText('10 shelved tasks sitting on days in this period');
+    await expect(card.locator('.insight-task-row')).toHaveCount(8);
+    await expect(card.locator('.insight-task-row').first()).toHaveAttribute('data-item-id', 's1');
+    await expect(card.locator('.insight-task-row').first().locator('.insight-task-meta')).toHaveText('On Oct 1 · 5 days ago');
+    await expect(card.locator('.insight-card-foot')).toHaveText('All time: 11 shelved, oldest from Sep 14, 2026');
+
+    await card.locator('.insight-show-all').click();
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(page.locator('.shelved-card .insight-task-row')).toHaveCount(10);
+    await page.locator('.shelved-card .insight-show-all').click();
+    await expect(page.locator('.shelved-card .insight-task-row')).toHaveCount(8);
+
+    await page.locator('.shelved-card .insight-show-all').click();
+    await page.locator('.shelved-card .insight-task-row[data-item-id="s2"] .insight-task-btn.open').click();
+    await expectDeskOn(page, 'Monday, October 5, 2026', '2026-10-05');
+    await expect(page.locator('#item-s2')).toHaveClass(/search-highlight/);
+  });
+
+  test('Bring back moves a shelved task to today\'s Active column and keeps Insights open', async ({ page }) => {
+    await openInsights(page, 'month');
+    const row = page.locator('.shelved-card .insight-task-row[data-item-id="s1"]');
+    await row.locator('.insight-task-btn.bring-back').click();
+    await expect(page.locator('#toast')).toContainText('Task brought back to today');
+    await expect(page.locator('#insights-view')).toBeVisible();
+    await expect(page.locator('.shelved-card .insight-task-row[data-item-id="s1"]')).toHaveCount(0);
+    await expect(page.locator('.shelved-card .carryover-hint')).toHaveText('9 shelved tasks sitting on days in this period');
+    await expect(page.locator('.lingering-card')).toBeVisible();
+
+    const oct1 = await workDay(page, '2026-10-01');
+    expect(oct1.map((i: any) => i.id)).not.toContain('s1');
+    const today = await workDay(page, '2026-10-06');
+    const s1 = today.find((i: any) => i.id === 's1');
+    expect(s1).toMatchObject({ shelved: false, boardColumn: 'active', tags: ['ace', 'postgres'] });
+    expect(s1.carriedFrom).toBeUndefined();
+
+    await page.locator('#tab-desk').click();
+    await expect(page.locator('#date-title')).toHaveText('Tuesday, October 6, 2026');
+    await expect(page.locator('.board-column.active #item-s1')).toBeVisible();
+  });
+
+  test('bringing back the last shelved task in a period hides the card', async ({ page }) => {
+    await openInsights(page, 'week', '2026-09-14');
+    await expect(page.locator('.shelved-card .insight-task-row')).toHaveCount(1);
+    await page.locator('.shelved-card .insight-task-btn.bring-back').click();
+    await expect(page.locator('.shelved-card')).toHaveCount(0);
+    await expect(page.locator('.insight-empty')).toBeVisible();
+    await expect(page.locator('.insights-current-btn')).toHaveText('This week');
   });
 });
 
-describe('v1.8.0 themes (HTML invariants)', () => {
-  const themesSrc = html.match(/const THEMES = (\[[\s\S]*?\n    \]);/)[1];
-  const themes = new Function(`return ${themesSrc}`)();
-  const byId = Object.fromEntries(themes.map((t) => [t.id, t]));
-  const NEW_LIGHT = ['retro', 'seafoam', 'mediterranean', 'citrus'];
-  const NEW_MEDIUM = ['dot-matrix', 'denim', 'terracotta', 'merlot'];
-  const NEW_DARK = ['monokai', 'one-dark', 'phosphor', 'rose-pine'];
-  const cssBlock = (id) => [...html.matchAll(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`, 'g'))]
-    .find((m) => /--accent:/.test(m[1]));
+// ── Options menu 1.15.1 polish ──────────────────────────────────────────
+test.describe('Options menu 1.15.1 polish', { tag: ['@options'] }, () => {
+  type Seed = { theme?: string; holidays?: { date: string; label: string }[]; tags?: boolean };
+  const DEFAULT_HOLIDAYS = [
+    { date: '2026-10-06', label: 'National Taco Day' },
+    { date: '2026-10-31', label: 'Halloween' },
+    { date: '2026-12-24', label: '<b>Eve</b>' },
+  ];
 
-  it('new themes are registered in the right tier', () => {
-    for (const id of NEW_LIGHT) assert.ok(byId[id] && !byId[id].dark && !byId[id].medium, `${id} should be light`);
-    for (const id of NEW_MEDIUM) assert.ok(byId[id] && byId[id].medium === true && byId[id].dark === false, `${id} should be medium`);
-    for (const id of NEW_DARK) assert.ok(byId[id] && byId[id].dark === true, `${id} should be dark`);
-  });
-
-  it('every new theme has a full CSS block whose accent matches its swatch', () => {
-    for (const id of [...NEW_LIGHT, ...NEW_MEDIUM, ...NEW_DARK]) {
-      const block = cssBlock(id);
-      assert.ok(block, `CSS block for ${id} missing`);
-      for (const v of ['--bg', '--surface', '--sidebar', '--accent', '--text', '--border']) {
-        assert.match(block[1], new RegExp(`${v}:\\s*#`), `${id} missing ${v}`);
-      }
-      const accent = block[1].match(/--accent:\s*(#[0-9a-fA-F]{6})/)[1];
-      assert.equal(accent.toLowerCase(), byId[id].accent.toLowerCase(), `${id} swatch accent drifted from CSS`);
-    }
-  });
-
-  it('new light themes declare color-scheme: light', () => {
-    for (const id of NEW_LIGHT) assert.match(cssBlock(id)[1], /color-scheme:\s*light/, id);
-  });
-
-  it('new dark themes are in the shared dark semantics selector list', () => {
-    const shared = html.match(/Shared semantics for all non-default dark themes[\s\S]*?\{/)[0];
-    for (const id of NEW_DARK) assert.ok(shared.includes(`[data-theme="${id}"]`), `${id} not in shared dark list`);
-  });
-
-  it('every new theme has an early-paint favicon entry', () => {
-    const favicons = html.match(/const FAVICONS = \{[\s\S]*?\n\s*\};/)[0];
-    for (const id of [...NEW_LIGHT, ...NEW_MEDIUM, ...NEW_DARK]) {
-      assert.match(favicons, new RegExp(`(^|\\s)'?${id}'?:`, 'm'), `${id} missing from FAVICONS`);
-    }
-  });
-
-  it('Retro theme draws the SNES four-button stripe on the desk header', () => {
-    const stripe = html.match(/\[data-theme="retro"\] \.desk-sticky \{[^}]*\}/);
-    assert.ok(stripe);
-    for (const c of ['#d02b2b', '#f5c518', '#2e9e44', '#2459c8']) assert.ok(stripe[0].includes(c), `stripe missing ${c}`);
-  });
-
-  it('theme swatches expose data-theme-id (not data-theme, which would match theme CSS selectors)', () => {
-    const fn = html.match(/function renderThemeSwatches[\s\S]*?grid\.appendChild\(sw\)/)[0];
-    assert.match(fn, /sw\.dataset\.themeId = t\.id/);
-    assert.doesNotMatch(fn, /sw\.dataset\.theme = /);
-  });
-
-  it('bright-accent themes use dark text on primary buttons', () => {
-    for (const id of ['dot-matrix', 'phosphor', 'denim', 'terracotta', 'merlot', 'rose-pine']) {
-      assert.match(html, new RegExp(`\\[data-theme="${id}"\\] \\.add-btn`), `${id} add-btn text override missing`);
-    }
-  });
-
-  it('1.8.0 changelog entry documents the new themes', () => {
-    const entry = html.match(/version: '1\.8\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Retro/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /id="help-modal"[\s\S]*96 presets \(32 light, 32 medium, 32 dark/);
-  });
-});
-
-describe('v1.14.0 Unit themes and Dot Matrix rename (HTML invariants)', () => {
-  const themesSrc = html.match(/const THEMES = (\[[\s\S]*?\n    \]);/)[1];
-  const themes = new Function(`return ${themesSrc}`)();
-  const byId = Object.fromEntries(themes.map((t) => [t.id, t]));
-  const UNITS = { zero: 'Unit Zero', one: 'Unit One', two: 'Unit Two', eight: 'Unit Eight' };
-  const cssBlock = (id) => [...html.matchAll(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`, 'g'))]
-    .find((m) => /--accent:/.test(m[1]));
-
-  it('each unit exists in light, medium, and dark under the same display name', () => {
-    for (const [unit, name] of Object.entries(UNITS)) {
-      const light = byId[`unit-${unit}-light`];
-      const mid = byId[`unit-${unit}-mid`];
-      const dark = byId[`unit-${unit}`];
-      assert.ok(light && !light.dark && !light.medium, `unit-${unit}-light should be light`);
-      assert.ok(mid && mid.medium === true && mid.dark === false, `unit-${unit}-mid should be medium`);
-      assert.ok(dark && dark.dark === true, `unit-${unit} should be dark`);
-      for (const t of [light, mid, dark]) assert.equal(t.name, name);
-    }
-  });
-
-  it('every unit theme has a full CSS block, matching swatch accent, favicon, and the right color-scheme', () => {
-    const favicons = html.match(/const FAVICONS = \{[\s\S]*?\n\s*\};/)[0];
-    const shared = html.match(/Shared semantics for all non-default dark themes[\s\S]*?\{/)[0];
-    for (const unit of Object.keys(UNITS)) {
-      for (const id of [`unit-${unit}-light`, `unit-${unit}-mid`, `unit-${unit}`]) {
-        const block = cssBlock(id);
-        assert.ok(block, `CSS block for ${id} missing`);
-        for (const v of ['--bg', '--surface', '--sidebar', '--accent', '--text', '--border']) {
-          assert.match(block[1], new RegExp(`${v}:\\s*#`), `${id} missing ${v}`);
+  async function openOptions(page: Page, tab: 'themes' | 'appearance' | 'behavior', seed: Seed = {}, section?: string) {
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript((s) => {
+      if (localStorage.getItem('opts-seeded')) return;
+      localStorage.setItem('opts-seeded', '1');
+      const items: any[] = [];
+      if (s.tags) {
+        for (let i = 0; i < 10; i++) {
+          for (let n = 0; n < 10 - i; n++) {
+            items.push({ id: `k${i}-${n}`, type: 'task', content: `Tagged ${i}.${n}`, completed: false, shelved: false,
+              boardColumn: 'new', comments: [], tags: [`k${i}`], createdAt: '2026-10-13T09:00:00' });
+          }
         }
-        const accent = block[1].match(/--accent:\s*(#[0-9a-fA-F]{6})/)[1];
-        assert.equal(accent.toLowerCase(), byId[id].accent.toLowerCase(), `${id} swatch accent drifted from CSS`);
-        assert.ok(favicons.includes(`'${id}':`), `${id} missing from FAVICONS`);
       }
-      assert.match(cssBlock(`unit-${unit}-light`)[1], /color-scheme:\s*light/);
-      assert.match(cssBlock(`unit-${unit}-mid`)[1], /color-scheme:\s*dark/);
-      assert.ok(shared.includes(`[data-theme="unit-${unit}"]`), `unit-${unit} not in shared dark list`);
-    }
-  });
-
-  it('each unit draws its header stripe in every tier', () => {
-    assert.match(html, /\[data-theme\^="unit-"\] \.desk-sticky \{[^}]*background-size: 100% 4px/);
-    for (const unit of Object.keys(UNITS)) {
-      assert.match(html, new RegExp(`\\[data-theme\\^="unit-${unit}"\\] \\.desk-sticky \\{ background-image: linear-gradient`));
-    }
-  });
-
-  it('bright-accent unit themes use dark text on primary buttons', () => {
-    for (const id of ['unit-zero-mid', 'unit-zero', 'unit-one-mid', 'unit-one', 'unit-two-mid', 'unit-eight-mid', 'unit-eight']) {
-      assert.match(html, new RegExp(`\\[data-theme="${id}"\\] \\.add-btn`), `${id} add-btn text override missing`);
-    }
-  });
-
-  it('no Game Boy name or gameboy id remains, except the rename map', () => {
-    assert.doesNotMatch(html, /Game Boy/);
-    assert.equal(byId.gameboy, undefined);
-    assert.equal(byId['dot-matrix'].name, 'Dot Matrix');
-    const mentions = html.match(/gameboy/g) || [];
-    assert.equal(mentions.length, 1, 'only RENAMED_THEME_IDS should mention gameboy');
-    assert.match(html, /const RENAMED_THEME_IDS = \{ gameboy: 'dot-matrix' \};/);
-  });
-
-  it('a saved gameboy theme is migrated before first paint and synced prefs are mapped', () => {
-    const boot = html.match(/const RENAMED_THEME_IDS[\s\S]*?setFavicon\(themeId\);/)[0];
-    assert.match(boot, /localStorage\.setItem\('work-desk-theme', stored\)/);
-    assert.match(boot, /window\.__RENAMED_THEME_IDS = RENAMED_THEME_IDS/);
-    assert.match(html, /const prefTheme = typeof prefs\.theme === 'string' \? \(window\.__RENAMED_THEME_IDS\?\.\[prefs\.theme\] \?\? prefs\.theme\) : null;/);
-  });
-
-  it('1.14.0 documents the Unit themes and rename', () => {
-    const entry = html.match(/version: '1\.14\.0'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(entry, /12 Unit themes/);
-    assert.match(entry, /now called Dot Matrix/);
-    assert.match(html, /id="help-modal"[\s\S]*four Unit themes \(Zero, One, Two, Eight\)/);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// v1.15.0 Insights additions (functional + invariants)
-// ═══════════════════════════════════════════════════════════════════════
-describe('v1.15.0 Insights additions', () => {
-  function fns(days = {}, extra = {}) {
-    return new Function('days', 'extra', `
-      const state = { data: { days, deletedIds: {} }, selectedDate: null, highlightItemId: null };
-      const calls = { saved: 0, toasts: [], renders: 0 };
-      const todayKey = () => extra.today || '2026-10-06';
-      const saveData = () => { calls.saved++; };
-      const showToast = (m) => { calls.toasts.push(m); };
-      const render = () => { calls.renders++; };
-      ${fnSource('dateFromKey')}
-      ${fnSource('formatDateKey')}
-      ${fnSource('eachDateInRange')}
-      ${fnSource('getPeriodRange')}
-      ${fnSource('createdDateKey')}
-      ${fnSource('sortNewColumnTasks')}
-      ${fnSource('getTaskBuckets')}
-      ${fnSource('analyzeDayItems')}
-      ${fnSource('normalizeTag')}
-      ${fnSource('normalizeTagList')}
-      ${fnSource('daysBetweenKeys')}
-      ${fnSource('isKeyInRange')}
-      ${fnSource('summarizeRange')}
-      ${fnSource('computePeriodComparison')}
-      ${fnSource('computeTagBreakdown')}
-      ${fnSource('findLingeringTasks')}
-      ${fnSource('findShelvedTasks')}
-      ${fnSource('findItem')}
-      ${fnSource('clearItemDeleted')}
-      ${fnSource('bringBackShelvedTask')}
-      return { state, calls, summarizeRange, computePeriodComparison, computeTagBreakdown, findLingeringTasks, findShelvedTasks, bringBackShelvedTask, daysBetweenKeys };
-    `)(days, extra);
+      const days = items.length ? { '2026-10-13': { date: '2026-10-13', items } } : {};
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      if (s.theme) localStorage.setItem('work-desk-theme', s.theme);
+      if (s.holidays) localStorage.setItem('work-desk-custom-holidays', JSON.stringify(s.holidays));
+    }, seed);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+    if (section) await page.locator(`#options-pane-${tab} [data-options-open="${section}"]`).click();
   }
-  const at = (k) => `${k}T09:00:00Z`;
+  const backToList = (page: Page) => page.locator('.options-pane:not(.hidden) .options-section:not([hidden]) [data-options-back]').click();
 
-  it('summarizeRange totals tasks and returns a null rate for an empty range', () => {
-    const { summarizeRange } = fns({
-      '2026-10-01': { items: [task({ id: 'a', completed: true }), task({ id: 'b', shelved: true }), task({ id: 'c', carriedFrom: '2026-09-30' })] },
-    });
-    const r = summarizeRange('2026-10-01', '2026-10-31');
-    assert.deepEqual(r.totals, { activeDays: 1, tasks: 3, completed: 1, shelved: 1, unfinished: 1, carriedOver: 1 });
-    assert.equal(r.completionRate, 33);
-    assert.equal(summarizeRange('2026-11-01', '2026-11-30').completionRate, null);
+  const popout = (page: Page) => page.locator('#density-popout');
+  const holidayRows = (page: Page) => page.locator('#custom-holidays-list .custom-holiday-item');
+
+  const controlSnapshot = (page: Page) => page.evaluate(() => {
+    const out: Record<string, string | boolean> = {};
+    document.querySelectorAll<HTMLInputElement>('#options-pane-appearance input[type=checkbox], #options-pane-behavior input[type=checkbox]')
+      .forEach(el => { out[el.id] = el.checked; });
+    document.querySelectorAll<HTMLSelectElement>('#options-pane-appearance select, #options-pane-behavior select')
+      .forEach(el => { out[el.id] = el.value; });
+    out.density = document.getElementById('desk-view')!.dataset.density || 'comfortable';
+    return out;
   });
 
-  it('an in-progress month is compared with the same number of days at the start of last month', () => {
-    const { computePeriodComparison } = fns({
-      '2026-09-03': { items: [task({ id: 'early', completed: true })] },
-      '2026-09-20': { items: [task({ id: 'late', completed: true }), task({ id: 'late2', completed: true })] },
-      '2026-10-02': { items: [task({ id: 'now', completed: true }), task({ id: 'open', carriedFrom: '2026-10-01' })] },
-    });
-    const c = computePeriodComparison('month', '2026-10-06', '2026-10-06');
-    assert.equal(c.toDate, true);
-    assert.deepEqual(c.previousRange, { startKey: '2026-09-01', endKey: '2026-09-06' });
-    assert.equal(c.current.completed, 1);
-    assert.equal(c.previous.completed, 1, 'Sep 20 is past "this point" last month');
-    assert.equal(c.change.completed, 0);
-    assert.equal(c.change.carriedOver, 1);
-    assert.equal(c.currentRate, 50);
-    assert.equal(c.previousRate, 100);
+  test('Themes: the current theme is named, and Show jumps back to its group', async ({ page }) => {
+    await openOptions(page, 'themes', { theme: 'monokai' });
+    const current = page.locator('#current-theme-btn');
+    await expect(current).toHaveText('Current: Monokai · Dark');
+    await expect(current.locator('.current-theme-jump')).toHaveCount(0);
+
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await expect(current).toHaveText('Current: Monokai · DarkShow');
+    await current.locator('.current-theme-jump').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="dark"]')).toHaveClass(/active/);
+    await expect(page.locator('.theme-swatch.active')).toHaveAttribute('data-theme-id', 'monokai');
+    await expect(current.locator('.current-theme-jump')).toHaveCount(0);
+
+    await current.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="dark"]')).toHaveClass(/active/);
   });
 
-  it('a finished month compares in full, and a long month clamps to a short previous month', () => {
-    const days = {
-      '2026-09-20': { items: [task({ id: 'sep', completed: true })] },
-      '2026-08-31': { items: [task({ id: 'aug', completed: true })] },
-    };
-    const full = fns(days).computePeriodComparison('month', '2026-09-15', '2026-10-06');
-    assert.equal(full.toDate, false);
-    assert.deepEqual(full.previousRange, { startKey: '2026-08-01', endKey: '2026-08-31' });
-    assert.equal(full.change.completed, 0);
-    const clamp = fns({}).computePeriodComparison('month', '2026-03-31', '2026-03-31');
-    assert.deepEqual(clamp.previousRange, { startKey: '2026-02-01', endKey: '2026-02-28' });
+  test('Themes: a new install names Default · Light, and picking a theme updates the line', async ({ page }) => {
+    await openOptions(page, 'themes');
+    await expect(page.locator('#current-theme-btn')).toHaveText('Current: Default · Light');
+    await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
+    await page.locator('.theme-swatch').first().click();
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#current-theme-btn')).toHaveText(/^Current: .+ · Medium$/);
   });
 
-  it('year-over-year to date stops last year at the same day', () => {
-    const { computePeriodComparison } = fns({
-      '2025-02-01': { items: [task({ id: 'a', completed: true })] },
-      '2025-11-01': { items: [task({ id: 'b', completed: true })] },
-      '2026-03-01': { items: [task({ id: 'c', completed: true }), task({ id: 'd', completed: true })] },
-    });
-    const c = computePeriodComparison('year', '2026-10-06', '2026-10-06');
-    assert.deepEqual(c.previousRange, { startKey: '2025-01-01', endKey: '2025-10-06' });
-    assert.equal(c.previous.completed, 1);
-    assert.equal(c.change.completed, 1);
+  test('Appearance: tag list shows 8 tags, Show all / Show fewer keep the menu open', async ({ page }) => {
+    await openOptions(page, 'appearance', { tags: true }, 'tags');
+    const rows = page.locator('#tag-color-list .tag-color-row');
+    await expect(rows).toHaveCount(10);
+    await expect(page.locator('#tag-color-list .tag-color-row:visible')).toHaveCount(8);
+    await expect(rows.first()).toHaveAttribute('data-tag-row', 'k0');
+    await expect(page.locator('#tag-color-list .tag-color-row[data-tag-row="k8"]')).toBeHidden();
+
+    const more = page.locator('#tag-color-list .tag-color-more-btn');
+    await expect(more).toHaveText('Show all (10)');
+    await more.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#tag-color-list .tag-color-row:visible')).toHaveCount(10);
+    await expect(more).toHaveText('Show fewer');
+    await expect(more).toHaveAttribute('aria-expanded', 'true');
+    await more.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#tag-color-list .tag-color-row:visible')).toHaveCount(8);
+    expect(await page.locator('#tag-color-list').evaluate(el => getComputedStyle(el).overflowY)).toBe('visible');
   });
 
-  it('computeTagBreakdown counts each tag, splits states, counts multi-tag tasks under each, and sorts by total', () => {
-    const { computeTagBreakdown } = fns({
-      '2026-10-01': { items: [
-        task({ id: '1', completed: true, tags: ['ACE'] }),
-        task({ id: '2', tags: ['ace', 'ids'], carriedFrom: '2026-09-30' }),
-        task({ id: '3', shelved: true, tags: ['#ids'] }),
-        task({ id: '4', tags: [] }),
-        { id: 'n', type: 'note', content: 'x', tags: ['ace'] },
-      ] },
-      '2026-11-01': { items: [task({ id: 'out', tags: ['zzz'] })] },
-    });
-    const { rows, untagged } = computeTagBreakdown({ startKey: '2026-10-01', endKey: '2026-10-31' });
-    assert.deepEqual(rows.map(r => r.tag), ['ace', 'ids']);
-    assert.deepEqual(rows[0], { tag: 'ace', total: 2, done: 1, open: 1, shelved: 0, carried: 1 });
-    assert.deepEqual(rows[1], { tag: 'ids', total: 2, done: 0, open: 1, shelved: 1, carried: 1 });
-    assert.equal(untagged.total, 1);
-    assert.equal(computeTagBreakdown({ startKey: '2026-12-01', endKey: '2026-12-31' }).untagged, null);
+  test('Appearance: Reset only shows on a tag with a pinned color', async ({ page }) => {
+    await openOptions(page, 'appearance', { tags: true }, 'tags');
+    const row = page.locator('#tag-color-list .tag-color-row[data-tag-row="k1"]');
+    const reset = row.locator('.tag-color-row-reset');
+    await expect(reset).toBeHidden();
+    await row.locator('.tag-color-input').fill('#22c55e');
+    await expect(reset).toBeVisible();
+    await expect(reset).toHaveText('Reset');
+    await reset.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(reset).toBeHidden();
+    await expect(row).not.toHaveClass(/has-custom/);
   });
 
-  it('findLingeringTasks returns the oldest open tasks, skipping done, shelved, today-created, future, and duplicates', () => {
-    const { findLingeringTasks } = fns({
-      '2026-10-06': { items: [
-        task({ id: 'old', createdAt: at('2026-09-01'), carriedFrom: '2026-10-05' }),
-        task({ id: 'mid', createdAt: at('2026-09-20') }),
-        task({ id: 'fresh', createdAt: at('2026-10-06') }),
-        task({ id: 'done', completed: true, createdAt: at('2026-08-01') }),
-        task({ id: 'shelf', shelved: true, createdAt: at('2026-08-01') }),
-      ] },
-      '2026-10-05': { items: [task({ id: 'old', createdAt: at('2026-09-01') })] },
-      '2026-10-20': { items: [task({ id: 'future', createdAt: at('2026-08-01') })] },
-    });
-    const r = findLingeringTasks('2026-10-06', 5);
-    assert.deepEqual(r.items.map(x => x.item.id), ['old', 'mid']);
-    assert.equal(r.items[0].age, 35);
-    assert.equal(r.total, 2);
-    assert.equal(findLingeringTasks('2026-10-06', 1).items.length, 1);
+  test('Appearance: no Show all link with 8 tags or fewer', async ({ page }) => {
+    await openOptions(page, 'appearance', {}, 'tags');
+    await expect(page.locator('#tag-color-list .tag-color-empty')).toBeVisible();
+    await expect(page.locator('#tag-color-list .tag-color-more-btn')).toHaveCount(0);
   });
 
-  it('findLingeringTasks ages a task by its day when it sits on a day before it was created', () => {
-    const { findLingeringTasks } = fns({
-      '2026-09-30': { items: [task({ id: 'moved-back', createdAt: at('2026-10-04') })] },
-    });
-    assert.equal(findLingeringTasks('2026-10-06').items[0].age, 6);
+  test('Behavior: Confirm before delete lives under Tasks and still saves', async ({ page }) => {
+    await openOptions(page, 'behavior', {}, 'tasks');
+    await expect(page.locator('[data-options-section="tasks"] #confirm-delete-toggle')).toBeVisible();
+    await page.locator('label:has(#confirm-delete-toggle)').click();
+    await expect(page.locator('#confirm-delete-toggle')).toBeChecked();
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-confirm-delete'))).toBe('true');
   });
 
-  it('findShelvedTasks lists shelved tasks in range oldest first with an all-time count', () => {
-    const { findShelvedTasks } = fns({
-      '2026-08-02': { items: [task({ id: 'aug', shelved: true })] },
-      '2026-10-05': { items: [task({ id: 'b', shelved: true }), task({ id: 'done-shelf', shelved: true, completed: true })] },
-      '2026-10-01': { items: [task({ id: 'a', shelved: true }), task({ id: 'open' })] },
-    });
-    const r = findShelvedTasks({ startKey: '2026-10-01', endKey: '2026-10-31' });
-    assert.deepEqual(r.items.map(x => [x.item.id, x.dayKey]), [['a', '2026-10-01'], ['b', '2026-10-05']]);
-    assert.equal(r.allTime, 3);
-    assert.equal(r.oldestKey, '2026-08-02');
-    assert.equal(findShelvedTasks({ startKey: '2026-11-01', endKey: '2026-11-30' }).items.length, 0);
+  test('Behavior: holidays list readable dates, plain-text labels, and Show past / Hide past', async ({ page }) => {
+    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS }, 'holidays');
+    await expect(holidayRows(page)).toHaveCount(2);
+    await expect(holidayRows(page).first().locator('.holiday-date')).toHaveText('Sat, Oct 31, 2026');
+    await expect(holidayRows(page).first().locator('.holiday-label')).toHaveText('Halloween');
+    await expect(holidayRows(page).nth(1).locator('.holiday-label')).toHaveText('<b>Eve</b>');
+    await expect(holidayRows(page).nth(1).locator('.holiday-label')).toHaveAttribute('title', '<b>Eve</b>');
+    await expect(holidayRows(page).nth(1).locator('b')).toHaveCount(0);
+
+    const past = page.locator('#custom-holidays-list .custom-holidays-past-btn');
+    await expect(past).toHaveText('Show past (1)');
+    await past.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(holidayRows(page)).toHaveCount(3);
+    await expect(holidayRows(page).first()).toHaveClass(/is-past/);
+    await expect(holidayRows(page).first().locator('.holiday-label')).toHaveText('National Taco Day');
+    await expect(page.locator('#custom-holidays-list .custom-holidays-past-btn')).toHaveText('Hide past');
+    await page.locator('#custom-holidays-list .custom-holidays-past-btn').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(holidayRows(page)).toHaveCount(2);
   });
 
-  it('bringBackShelvedTask moves the same task to today as Active, clears its carry stamp, and empties the old day', () => {
-    const { state, calls, bringBackShelvedTask } = fns({
-      '2026-09-14': { date: '2026-09-14', items: [task({ id: 's', shelved: true, boardColumn: 'new', carriedFrom: '2026-09-13', tags: ['ace'] })] },
-      '2026-10-06': { date: '2026-10-06', items: [task({ id: 'x' })] },
-    });
-    state.data.deletedIds.s = '2026-10-01T00:00:00Z';
-    bringBackShelvedTask('s');
-    assert.equal(state.data.days['2026-09-14'], undefined);
-    const today = state.data.days['2026-10-06'].items;
-    assert.deepEqual(today.map(i => i.id), ['x', 's']);
-    const s = today[1];
-    assert.equal(s.shelved, false);
-    assert.equal(s.boardColumn, 'active');
-    assert.equal('carriedFrom' in s, false);
-    assert.deepEqual(s.tags, ['ace']);
-    assert.equal(state.data.deletedIds.s, undefined);
-    assert.equal(calls.saved, 1);
-    assert.deepEqual(calls.toasts, ['Task brought back to today']);
+  test('Behavior: removing a past holiday and adding past and upcoming ones keep the menu open', async ({ page }) => {
+    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS }, 'holidays');
+    await page.locator('#custom-holidays-list .custom-holidays-past-btn').click();
+    await holidayRows(page).first().locator('.holiday-remove').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(holidayRows(page)).toHaveCount(2);
+    await expect(page.locator('#custom-holidays-list .custom-holidays-past-btn')).toHaveCount(0);
+
+    await page.locator('#custom-holiday-label').fill('Team offsite');
+    await page.locator('#custom-holiday-date').fill('2026-10-01');
+    await page.locator('#custom-holiday-add-btn').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(holidayRows(page)).toHaveCount(3);
+    await expect(holidayRows(page).first().locator('.holiday-label')).toHaveText('Team offsite');
+    await expect(holidayRows(page).first()).toHaveClass(/is-past/);
+
+    await page.locator('#custom-holiday-date').fill('2026-11-27');
+    await page.locator('#custom-holiday-add-btn').click();
+    await expect(holidayRows(page)).toHaveCount(4);
+    await expect(holidayRows(page).nth(2).locator('.holiday-label')).toHaveText('(no label)');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-custom-holidays')!).map((h: any) => h.date));
+    expect(saved).toEqual(['2026-10-01', '2026-10-31', '2026-11-27', '2026-12-24']);
   });
 
-  it('bringBackShelvedTask creates today when missing and ignores tasks that are not shelved', () => {
-    const { state, calls, bringBackShelvedTask } = fns({
-      '2026-09-14': { date: '2026-09-14', items: [task({ id: 's', shelved: true }), task({ id: 'open' })] },
-    });
-    bringBackShelvedTask('open');
-    bringBackShelvedTask('missing');
-    assert.equal(calls.saved, 0);
-    bringBackShelvedTask('s');
-    assert.deepEqual(state.data.days['2026-09-14'].items.map(i => i.id), ['open']);
-    assert.deepEqual(state.data.days['2026-10-06'].items.map(i => i.id), ['s']);
+  test('Behavior: only past holidays shows "No upcoming holidays" with Show past', async ({ page }) => {
+    await openOptions(page, 'behavior', { holidays: [{ date: '2026-10-06', label: 'National Taco Day' }] }, 'holidays');
+    await expect(page.locator('#custom-holidays-list .custom-holidays-empty')).toHaveText('No upcoming holidays');
+    await expect(holidayRows(page)).toHaveCount(0);
+    await page.locator('#custom-holidays-list .custom-holidays-past-btn').click();
+    await expect(holidayRows(page)).toHaveCount(1);
+    await expect(page.locator('#custom-holidays-list .custom-holidays-empty')).toHaveCount(0);
   });
 
-  it('chart segments carry the day or month they open', () => {
-    const fn = html.match(/function computeInsights[\s\S]*?\n    \}/)[0];
-    assert.match(fn, /monthKey: formatDateKey\(monthStart\)/);
-    assert.equal((fn.match(/dayKey: s\.dayKey/g) || []).length, 2);
-    const bars = html.match(/function renderInsightBars[\s\S]*?\n    \}/)[0];
-    assert.match(bars, /row\.dataset\.openDay = seg\.dayKey/);
-    assert.match(bars, /row\.dataset\.openMonth = seg\.monthKey/);
-    assert.match(bars, /row\.tabIndex = 0/);
+  test('Behavior: the label box gets its own full-width line', async ({ page }) => {
+    await openOptions(page, 'behavior', {}, 'holidays');
+    const label = await page.locator('#custom-holiday-label').boundingBox();
+    const date = await page.locator('#custom-holiday-date').boundingBox();
+    const row = await page.locator('.custom-holiday-add-row').boundingBox();
+    expect(label!.width).toBeGreaterThan(row!.width - 2);
+    expect(date!.y).toBeGreaterThan(label!.y + label!.height - 1);
   });
 
-  it('table days, both heatmaps, and the current-period button carry their actions', () => {
-    const table = html.match(/function renderInsightsTable[\s\S]*?\n    \}/)[0];
-    assert.match(table, /class="insight-day-link" data-open-day="\$\{row\.dayKey\}"/);
-    const heat = html.match(/function renderHeatmap[\s\S]*?\n    \}/)[0];
-    assert.match(heat, /if \(inRange\) cell\.dataset\.openDay = key;/);
-    const ri = html.match(/function renderInsights\(\)[\s\S]*?\n    \}/)[0];
-    assert.match(ri, /cell\.dataset\.openDay = day\.dayKey/);
-    assert.match(ri, /if \(!isKeyInRange\(todayKey\(\), range\)\)/);
-    assert.match(ri, /currentBtn\.textContent = `This \$\{state\.insightsPeriod\}`/);
-    assert.ok(ri.indexOf("panel.addEventListener('click'") < ri.indexOf('if (!hasData)'),
-      'actions must be wired before the empty-state return so "This week" works on an empty period');
-  });
-
-  it('comparison card runs in every period with the right titles', () => {
-    const ri = html.match(/function renderInsights\(\)[\s\S]*?\n    \}/)[0];
-    assert.doesNotMatch(ri, /state\.insightsPeriod === 'week' && totals\.activeDays > 0/);
-    assert.match(ri, /week: 'Week-over-Week', month: 'Month-over-Month', year: 'Year-over-Year'/);
-    assert.match(ri, /computePeriodComparison\(period, state\.insightsAnchor, todayKey\(\)\)/);
-  });
-
-  it('1.15.0 documents every Insights addition', () => {
-    const entry = html.match(/version: '1\.15\.0'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    for (const s of ['click a day', 'This week', 'Month-over-Month', 'Tasks by Tag', 'Lingering Tasks', 'Shelved Review']) {
-      assert.ok(entry.includes(s), `changelog missing ${s}`);
+  test('Reset Behavior: cancel changes nothing; confirm restores defaults and keeps custom holidays', async ({ page }) => {
+    await openOptions(page, 'behavior', { holidays: DEFAULT_HOLIDAYS });
+    const fresh = await controlSnapshot(page);
+    for (const sel of ['#confirm-delete-toggle', '#confetti-toggle', '#us-federal-holidays-toggle']) {
+      await openOptionsSectionFor(page, sel);
+      await page.locator(`label:has(${sel})`).click();
     }
-    const help = html.match(/<h3>Insights<\/h3>[\s\S]*?<\/ul>/)[0];
-    for (const s of ['Click a day to open it', 'This week / This month / This year', 'Month-over-month', 'Tasks by Tag', 'Lingering Tasks', 'Shelved Review', 'Bring back']) {
-      assert.ok(help.includes(s), `Help missing ${s}`);
-    }
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*\*Shelved Review\*\*/);
-    assert.match(readme, /### Insights\n\n- \*\*Lingering Tasks ignores the period\*\*/);
+    await openOptionsSectionFor(page, '#week-start-select');
+    await page.locator('#week-start-select').selectOption('monday');
+    await page.locator('#startup-view-select').selectOption('today');
+    await page.locator('#quiet-weekends-select').selectOption('both');
+    await openOptionsSectionFor(page, '#auto-collapse-completed-at');
+    await page.locator('#auto-collapse-completed-at').selectOption('10');
+    await backToList(page);
+    const changed = await controlSnapshot(page);
+    expect(changed).not.toEqual(fresh);
+
+    page.once('dialog', d => d.dismiss());
+    await page.locator('[data-options-reset="behavior"]').click();
+    expect(await controlSnapshot(page)).toEqual(changed);
+
+    page.once('dialog', d => { expect(d.message()).toContain('Custom holidays are kept'); d.accept(); });
+    await page.locator('[data-options-reset="behavior"]').click();
+    await expect(page.locator('#toast')).toContainText('Behavior reset to defaults');
+    await expect(popout(page)).toBeVisible();
+    expect(await controlSnapshot(page)).toEqual(fresh);
+    const stored = await page.evaluate(() => ({
+      confirm: localStorage.getItem('work-desk-confirm-delete'),
+      week: localStorage.getItem('work-desk-week-start'),
+      holidays: JSON.parse(localStorage.getItem('work-desk-custom-holidays')!).length,
+    }));
+    expect(stored).toEqual({ confirm: 'false', week: 'sunday', holidays: 3 });
+
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="behavior"]').click();
+    await expect(page.locator('#toast')).toContainText('Behavior is already on the defaults');
   });
 
-  it('Ctrl/Cmd+Enter submits the task add box and both comment add forms', () => {
-    const fn = fnSource('bindCtrlEnterSubmit');
-    assert.match(fn, /\(e\.ctrlKey \|\| e\.metaKey\) && e\.key === 'Enter'/);
-    assert.match(fn, /if \(!submitBtn\.disabled\) form\.requestSubmit\(\)/);
-    assert.match(fnSource('initAddEditor'), /bindCtrlEnterSubmit\(editor, els\.addForm, els\.addBtn\)/);
-    assert.match(fnSource('restoreCommentDraft'), /bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/);
-    assert.equal((mainScript.match(/bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/g) || []).length, 2);
-    assert.match(html, /<li><strong>Add comment\/update<\/strong> — Ctrl\/Cmd \+ Enter<\/li>/);
-    const entry = html.match(/version: '1\.15\.0'[\s\S]*?\n      \},/)[0];
-    assert.ok(entry.includes('Ctrl+Enter (Cmd+Enter on Mac) adds a comment'));
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\| Add comment \/ update \| `Ctrl\/Cmd \+ Enter` \|/);
+  test('Reset Appearance: restores defaults, survives reload, keeps theme and pinned tag colors', async ({ page }) => {
+    await openOptions(page, 'appearance', { theme: 'monokai', tags: true });
+    const fresh = await controlSnapshot(page);
+    await openOptionsSectionFor(page, '#font-size-select');
+    await page.locator('#font-size-select').selectOption('large');
+    await page.locator('#font-family-select').selectOption('jetbrains');
+    await openOptionsSectionFor(page, '#sidebar-position-select');
+    await page.locator('#sidebar-position-select').selectOption('right');
+    await openOptionsSectionFor(page, '#tag-color-mode-select');
+    await page.locator('#tag-color-mode-select').selectOption('palette');
+    await page.locator('#tag-color-list .tag-color-row[data-tag-row="k0"] .tag-color-input').fill('#22c55e');
+    await openOptionsSectionFor(page, '#card-glow-toggle');
+    await page.locator('label:has(#card-glow-toggle)').click();
+    await openOptionsSectionFor(page, '.density-option[data-density="compact"]');
+    await page.locator('.density-option[data-density="compact"]').click();
+    await expect(popout(page)).toBeVisible();
+    await backToList(page);
+    expect((await controlSnapshot(page)).density).toBe('compact');
+
+    page.once('dialog', d => { expect(d.message()).toContain('Pinned tag colors are kept'); d.accept(); });
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(page.locator('#toast')).toContainText('Appearance reset to defaults');
+    await expect(popout(page)).toBeVisible();
+    expect(await controlSnapshot(page)).toEqual(fresh);
+    const kept = await page.evaluate(() => ({
+      theme: localStorage.getItem('work-desk-theme'),
+      pinned: JSON.parse(localStorage.getItem('work-desk-tag-colors') || '{}').k0,
+    }));
+    expect(kept).toEqual({ theme: 'monokai', pinned: '#22c55e' });
+
+    await page.reload();
+    await dismissAuthModal(page);
+    expect(await controlSnapshot(page)).toEqual(fresh);
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// v1.15.1 Options menu polish
-// ═══════════════════════════════════════════════════════════════════════
-describe('v1.15.1 Options menu polish', () => {
-  const pane = (id) => html.match(new RegExp(`<div class="options-pane[^"]*" id="options-pane-${id}">[\\s\\S]*?data-options-reset="${id}"`))[0];
-  const defaults = () => new Function(`${mainScript.match(/const OPTIONS_DEFAULTS = \{[\s\S]*?\n    \};/)[0]}; return OPTIONS_DEFAULTS;`)();
+// ── Board lanes 1.16.0: drop below a column ─────────────────────────────
+test.describe('Board lanes 1.16.0', { tag: ['@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
 
-  it('every checkbox and select in Appearance and Behavior has a reset default', () => {
-    const d = defaults();
-    for (const tab of ['appearance', 'behavior']) {
-      const body = pane(tab);
-      const checkboxes = [...body.matchAll(/<input id="([^"]+)" type="checkbox"/g)].map(m => m[1]);
-      const selects = [...body.matchAll(/<select id="([^"]+)"/g)].map(m => m[1]);
-      assert.ok(checkboxes.length && selects.length, `${tab} pane parsed`);
-      assert.deepEqual(Object.keys(d[tab].toggles).sort(), checkboxes.sort(), `${tab} toggles`);
-      assert.deepEqual(Object.keys(d[tab].selects).sort(), selects.sort(), `${tab} selects`);
-    }
+  async function openBoard(page: Page, opts: { newCount?: number; activeCount?: number; note?: boolean } = {}) {
+    const { newCount = 12, activeCount = 1, note = false } = opts;
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript(([n, a, withNote]) => {
+      if (localStorage.getItem('lane-seeded')) return;
+      localStorage.setItem('lane-seeded', '1');
+      const t = (id: string, content: string, extra: Record<string, unknown> = {}) => ({
+        id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], tags: [], createdAt: '2026-10-13T09:00:00', ...extra,
+      });
+      const items: any[] = [];
+      for (let i = 0; i < n; i++) items.push(t(`n${i}`, `New task ${i + 1}`));
+      for (let i = 0; i < a; i++) items.push(t(`a${i}`, `Active task ${i + 1}`, { boardColumn: 'active' }));
+      items.push(t('c0', 'Finished already', { completed: true }));
+      if (withNote) items.push({ id: 'note1', type: 'note', content: 'Meeting notes', comments: [], createdAt: '2026-10-13T09:00:00' });
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-13': { date: '2026-10-13', items } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    }, [newCount, activeCount, note] as const);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('.sprint-board')).toBeVisible();
+  }
+
+  // Starts a real mouse drag on a card and moves to (x, y) in viewport coordinates
+  async function dragCardTo(page: Page, cardId: string, point: (page: Page) => Promise<{ x: number; y: number }>) {
+    const card = page.locator(`#item-${cardId}`);
+    await card.scrollIntoViewIfNeeded();
+    const cb = (await card.boundingBox())!;
+    const sx = cb.x + cb.width * 0.4;
+    const sy = cb.y + cb.height / 2;
+    await page.mouse.move(sx, sy);
+    await page.mouse.down();
+    await page.mouse.move(sx + 15, sy + 10, { steps: 4 });
+    const p = await point(page);
+    await page.mouse.move(p.x, p.y, { steps: 10 });
+    await page.mouse.move(p.x, p.y + 2, { steps: 2 });
+  }
+
+  const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
+  const ghost = (page: Page) => page.locator('#board-lane-ghost');
+  const columnIds = (page: Page, cls: string) =>
+    page.locator(`.board-column.${cls} .item-card`).evaluateAll(els => els.map(e => e.id.replace(/^item-/, '')));
+
+  test('dragging into the space under Active shows the lane and drops into Active', async ({ page }) => {
+    await openBoard(page);
+    await dragCardTo(page, 'n10', async (p) => {
+      const a = await box(p, '.board-column.active');
+      const card = await box(p, '#item-n10');
+      return { x: a.x + a.width / 2, y: card.y + card.height / 2 };
+    });
+    await expect(ghost(page)).toBeVisible();
+    await expect(ghost(page)).toHaveAttribute('data-target', 'active');
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in Active');
+    await expect(page.locator('.board-column.active')).toHaveClass(/drag-over/);
+    await expect(page.locator('.board-column.new')).not.toHaveClass(/drag-over/);
+    const g = (await ghost(page).boundingBox())!;
+    const a = await box(page, '.board-column.active');
+    expect(Math.abs(g.x - a.x)).toBeLessThan(2);
+    expect(Math.abs(g.width - a.width)).toBeLessThan(2);
+
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Moved to Active');
+    expect(await columnIds(page, 'active')).toContain('n10');
+    expect(await columnIds(page, 'new')).not.toContain('n10');
+    await expect(ghost(page)).toBeHidden();
+    await expect(page.locator('.drag-over')).toHaveCount(0);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!).days['2026-10-13'].items.find((i: any) => i.id === 'n10'));
+    expect(saved.boardColumn).toBe('active');
   });
 
-  it('reset defaults match the first-launch state', () => {
-    const { appearance, behavior } = defaults();
-    const off = (key) => new RegExp(`localStorage\\.getItem\\(${key}\\) === 'true'`);
-    const on = (key) => new RegExp(`localStorage\\.getItem\\(${key}\\) !== 'false'`);
-    const t = behavior.toggles;
-    assert.equal(t['confirm-delete-toggle'], false); assert.match(mainScript, off('CONFIRM_DELETE_KEY'));
-    assert.equal(t['auto-carry-toggle-popout'], false); assert.match(mainScript, off('AUTO_CARRY_FORWARD_KEY'));
-    assert.equal(t['keep-comments-open-toggle'], false); assert.match(mainScript, off("'work-desk-keep-comments-open'"));
-    assert.equal(t['auto-collapse-completed-toggle'], true); assert.match(mainScript, on("'work-desk-auto-collapse-completed'"));
-    assert.equal(t['confetti-toggle'], true); assert.match(mainScript, on('CONFETTI_KEY'));
-    assert.equal(t['strike-completed-toggle'], true); assert.match(mainScript, on('STRIKE_COMPLETED_KEY'));
-    assert.equal(t['truncate-notes-toggle'], true); assert.match(mainScript, on('TRUNCATE_NOTES_KEY'));
-    assert.equal(t['streak-skip-weekends-toggle'], true); assert.match(mainScript, on('STREAK_SKIP_WEEKENDS_KEY'));
-    assert.equal(t['us-federal-holidays-toggle'], true); assert.match(mainScript, on('US_FEDERAL_HOLIDAYS_KEY'));
-    assert.match(mainScript, /getItem\('work-desk-auto-collapse-completed-at'\) \|\| '5'/);
-    assert.equal(behavior.selects['auto-collapse-completed-at'], '5');
-    assert.match(mainScript, /localStorage\.getItem\(WEEK_START_KEY\) \|\| 'sunday'/);
-    assert.match(mainScript, /localStorage\.getItem\(STARTUP_VIEW_KEY\) \|\| 'last_viewed'/);
-    assert.match(mainScript, /localStorage\.getItem\(FONT_SIZE_KEY\) \|\| 'default'/);
-    assert.match(mainScript, /localStorage\.getItem\(FONT_FAMILY_KEY\) \|\| 'system'/);
-    assert.match(mainScript, /localStorage\.getItem\(SIDEBAR_POSITION_KEY\) \|\| 'left'/);
-    assert.match(mainScript, /applyCardGlow\(localStorage\.getItem\(CARD_GLOW_KEY\) === 'true'/);
-    assert.match(mainScript, /applyGradientHeader\(localStorage\.getItem\(GRADIENT_HEADER_KEY\) === 'true'/);
-    assert.match(fnSource('normalizeTagColorMode'), /: 'theme'/);
-    assert.equal(appearance.selects['tag-color-mode-select'], 'theme');
+  test('the lane under Completed / Shelved marks the task done and highlights Completed only', async ({ page }) => {
+    await openBoard(page);
+    await dragCardTo(page, 'n8', async (p) => {
+      const d = await box(p, '.board-column.done');
+      const card = await box(p, '#item-n8');
+      return { x: d.x + d.width / 2, y: card.y + card.height / 2 };
+    });
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in Completed');
+    await expect(page.locator('.board-column.done .col-subsection[data-drop-target="completed"]')).toHaveClass(/drag-over/);
+    await expect(page.locator('.board-column.done .col-subsection[data-drop-target="shelved"]')).not.toHaveClass(/drag-over/);
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Task completed');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!).days['2026-10-13'].items.find((i: any) => i.id === 'n8'));
+    expect(saved.completed).toBe(true);
+    expect(saved.shelved).toBe(false);
   });
 
-  it('resetOptionsTab drives controls through their change handlers and resets density', () => {
-    const fn = fnSource('resetOptionsTab');
-    assert.match(fn, /el\.dispatchEvent\(new Event\('change'\)\)/);
-    assert.match(fn, /applyDensity\('comfortable'\)/);
-    assert.doesNotMatch(fn, /customHolidays|tagColors|THEME_KEY/);
+  test('when Active is the long column, the space under New drops into New', async ({ page }) => {
+    await openBoard(page, { newCount: 1, activeCount: 10 });
+    await dragCardTo(page, 'a8', async (p) => {
+      const n = await box(p, '.board-column.new');
+      const card = await box(p, '#item-a8');
+      return { x: n.x + n.width / 2, y: card.y + card.height / 2 };
+    });
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in New');
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Moved to New');
+    expect(await columnIds(page, 'new')).toContain('a8');
   });
 
-  it('Confirm before delete sits in the Tasks section', () => {
-    const body = pane('behavior');
-    const tasksAt = body.indexOf('data-options-section="tasks"');
-    const confirmAt = body.indexOf('id="confirm-delete-toggle"');
-    const projectsAt = body.indexOf('data-options-section="projects"');
-    assert.ok(tasksAt > 0 && confirmAt > tasksAt && confirmAt < projectsAt);
+  test('the gap between columns does not accept a drop', async ({ page }) => {
+    await openBoard(page);
+    await dragCardTo(page, 'n10', async (p) => {
+      const n = await box(p, '.board-column.new');
+      const a = await box(p, '.board-column.active');
+      const card = await box(p, '#item-n10');
+      return { x: (n.x + n.width + a.x) / 2, y: card.y + card.height / 2 };
+    });
+    await expect(ghost(page)).toBeHidden();
+    await expect(page.locator('.board-column.active')).not.toHaveClass(/drag-over/);
+    await page.mouse.up();
+    expect(await columnIds(page, 'new')).toContain('n10');
+    await expect(page.locator('.drag-over')).toHaveCount(0);
   });
 
-  it('splitCustomHolidays and formatHolidayDate', () => {
-    const split = new Function(`${fnSource('splitCustomHolidays')}; return splitCustomHolidays;`)();
-    const fmt = new Function(`${fnSource('formatHolidayDate')}; return formatHolidayDate;`)();
-    const r = split([{ date: '2026-10-06' }, { date: '2026-10-13' }, { date: '2026-10-31' }], '2026-10-13');
-    assert.deepEqual(r.past.map(h => h.date), ['2026-10-06']);
-    assert.deepEqual(r.upcoming.map(h => h.date), ['2026-10-13', '2026-10-31']);
-    assert.equal(fmt('2026-10-31'), 'Sat, Oct 31, 2026');
-    assert.equal(fmt('bogus'), 'bogus');
+  test('the Notes area below the board does not accept a drop', async ({ page }) => {
+    await openBoard(page, { note: true });
+    await dragCardTo(page, 'n11', async (p) => {
+      const a = await box(p, '.board-column.active');
+      const notes = await box(p, '.item-section');
+      return { x: a.x + a.width / 2, y: notes.y + Math.min(notes.height / 2, 40) };
+    });
+    await expect(ghost(page)).toBeHidden();
+    await page.mouse.up();
+    expect(await columnIds(page, 'new')).toContain('n11');
   });
 
-  it('custom holiday labels are set as text, never HTML', () => {
-    const fn = fnSource('renderCustomHolidaysList');
-    assert.doesNotMatch(fn, /innerHTML\s*=\s*`/);
-    assert.match(fn, /labelEl\.textContent = h\.label \|\| '\(no label\)'/);
+  test('moving from the lane back over New clears the lane; moving into the Active box keeps its own highlight', async ({ page }) => {
+    await openBoard(page, { newCount: 6 });
+    await dragCardTo(page, 'n5', async (p) => {
+      const a = await box(p, '.board-column.active');
+      return { x: a.x + a.width / 2, y: a.y + a.height + 60 };
+    });
+    await expect(ghost(page)).toBeVisible();
+    await expect(page.locator('.board-column.active')).toHaveClass(/drag-over/);
+
+    const n = await box(page, '.board-column.new');
+    await page.mouse.move(n.x + n.width / 2, n.y + n.height - 30, { steps: 8 });
+    await page.mouse.move(n.x + n.width / 2, n.y + n.height - 28, { steps: 2 });
+    await expect(ghost(page)).toBeHidden();
+    await expect(page.locator('.board-column.active')).not.toHaveClass(/drag-over/);
+
+    const a = await box(page, '.board-column.active');
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height - 20, { steps: 8 });
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height - 18, { steps: 2 });
+    await expect(ghost(page)).toBeHidden();
+    await expect(page.locator('.board-column.active')).toHaveClass(/drag-over/);
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Moved to Active');
+    expect(await columnIds(page, 'active')).toContain('n5');
+    await expect(page.locator('.drag-over')).toHaveCount(0);
   });
 
-  it('tag color list caps at 8 rows and hides Reset unless a color is pinned', () => {
-    assert.match(mainScript, /const TAG_COLOR_LIST_CAP = 8;/);
-    const fn = fnSource('renderTagColorList');
-    assert.match(fn, /index >= TAG_COLOR_LIST_CAP \? ' is-overflow' : ''/);
-    assert.match(fn, /reset\.textContent = 'Reset'/);
-    assert.match(html, /\.tag-color-row-reset:disabled \{ visibility: hidden; \}/);
-    assert.doesNotMatch(html, /\.tag-color-list \{[^}]*max-height/);
+  test('1.16.1: on a short board, the bottom of the page under Active still drops into Active', async ({ page }) => {
+    await openBoard(page, { newCount: 3, activeCount: 1 });
+    const boardBottom = (await box(page, '.sprint-board')).y + (await box(page, '.sprint-board')).height;
+    await dragCardTo(page, 'n2', async (p) => {
+      const a = await box(p, '.board-column.active');
+      return { x: a.x + a.width / 2, y: 870 };
+    });
+    expect(870).toBeGreaterThan(boardBottom + 100);
+    await expect(ghost(page)).toBeVisible();
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in Active');
+    await expect(page.locator('.board-column.active')).toHaveClass(/drag-over/);
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Moved to Active');
+    expect(await columnIds(page, 'active')).toContain('n2');
+    await expect(page.locator('.drag-over')).toHaveCount(0);
   });
 
-  it('1.15.1 is documented', () => {
-    const latest = html.match(/version: '1\.15\.1'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    for (const s of ['current theme', 'Show all', 'Confirm before delete', 'Show past', 'Reset Appearance / Behavior to defaults', 'plain text']) {
-      assert.ok(latest.includes(s), `changelog missing ${s}`);
-    }
-    const help = html.match(/<h3>Options menu<\/h3>[\s\S]*?<\/ul>/)[0];
-    for (const s of ['Show past', 'Reset to defaults', 'Show all', 'current theme']) assert.ok(help.includes(s), `Help missing ${s}`);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.15\.1\] — 2026-10-13/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*Reset to defaults\* at the bottom of Appearance and Behavior/);
+  test('1.16.1: the far right margin drops into Completed; the far left margin is New', async ({ page }) => {
+    await openBoard(page, { newCount: 3, activeCount: 1 });
+    await dragCardTo(page, 'n1', async (p) => {
+      const d = await box(p, '.board-column.done');
+      return { x: d.x + d.width + 12, y: d.y + 40 };
+    });
+    await expect(page.locator('.board-column.done .col-subsection[data-drop-target="completed"]')).toHaveClass(/drag-over/);
+    await expect(ghost(page)).toBeHidden();
+    const n = await box(page, '.board-column.new');
+    await page.mouse.move(n.x - 10, 860, { steps: 8 });
+    await page.mouse.move(n.x - 10, 862, { steps: 2 });
+    await expect(ghost(page)).toBeVisible();
+    await expect(page.locator('.board-lane-label')).toHaveText('Drop in New');
+    await expect(page.locator('.board-column.done .drag-over')).toHaveCount(0);
+    const d = await box(page, '.board-column.done');
+    await page.mouse.move(d.x + d.width + 12, d.y + 40, { steps: 8 });
+    await page.mouse.move(d.x + d.width + 12, d.y + 42, { steps: 2 });
+    await page.mouse.up();
+    await expect(page.locator('#toast')).toContainText('Task completed');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!).days['2026-10-13'].items.find((i: any) => i.id === 'n1'));
+    expect(saved.completed).toBe(true);
+  });
+
+  test('1.16.1: dragging over the sidebar or the header above the board is not a lane', async ({ page }) => {
+    await openBoard(page, { newCount: 3, activeCount: 1 });
+    await dragCardTo(page, 'n0', async (p) => {
+      const s = await box(p, '.sidebar');
+      return { x: s.x + s.width / 2, y: 700 };
+    });
+    await expect(ghost(page)).toBeHidden();
+    const a = await box(page, '.board-column.active');
+    await page.mouse.move(a.x + a.width / 2, a.y - 30, { steps: 8 });
+    await page.mouse.move(a.x + a.width / 2, a.y - 28, { steps: 2 });
+    await expect(ghost(page)).toBeHidden();
+    await page.mouse.up();
+    expect(await columnIds(page, 'new')).toContain('n0');
+  });
+
+  test('stacked columns (1000px wide) have no lanes', async ({ page }) => {
+    await page.setViewportSize({ width: 1000, height: 900 });
+    await openBoard(page, { newCount: 3 });
+    await dragCardTo(page, 'n1', async (p) => {
+      const d = await box(p, '.board-column.done');
+      return { x: d.x + d.width / 2, y: d.y + d.height + 10 };
+    });
+    await expect(ghost(page)).toHaveCount(0);
+    await page.mouse.up();
+    expect(await columnIds(page, 'new')).toContain('n1');
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// v1.16.0 Board lanes: drop below a column
-// ═══════════════════════════════════════════════════════════════════════
-describe('v1.16.0 board lanes', () => {
-  const findBoardLane = new Function(`${fnSource('findBoardLane')}; return findBoardLane;`)();
-  const col = (target, left, right, bottom, top = 100) => ({ target, rect: { left, right, top, bottom } });
-  const side = [col('new', 40, 300, 1500), col('active', 314, 614, 400), col('completed', 628, 878, 500)];
-  const page = { left: 10, right: 910, bottom: 2000 };
+// ── Patterned background 1.16.1 ─────────────────────────────────────────
+test.describe('Patterned background 1.16.1', { tag: ['@options'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
 
-  it('below a shorter column maps to that column, all the way down the page', () => {
-    assert.equal(findBoardLane(side, page, 400, 900).target, 'active');
-    assert.equal(findBoardLane(side, page, 700, 600).target, 'completed');
-    assert.equal(findBoardLane(side, page, 314, 401).target, 'active');
-    assert.equal(findBoardLane(side, page, 400, 1990).target, 'active', 'far below the tallest column still counts');
-  });
+  async function openAppearance(page: Page, stored?: Record<string, string>) {
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript((s) => {
+      if (localStorage.getItem('bgp-seeded')) return;
+      localStorage.setItem('bgp-seeded', '1');
+      const items = [{ id: 'n1', type: 'task', content: 'Review PR', completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: '2026-10-13T09:00:00' }];
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-13': { date: '2026-10-13', items } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      for (const [k, v] of Object.entries(s || {})) localStorage.setItem(k, v);
+    }, stored);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    if ((page.viewportSize()?.width ?? 1440) <= 768) {
+      await page.locator('#mobile-menu-btn').click();
+      await page.locator('#mobile-menu-options').click();
+    } else {
+      await page.locator('#density-toggle').click();
+    }
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance')).toBeVisible();
+    await page.locator('#options-pane-appearance [data-options-open="background"]').click();
+    await expect(page.locator('[data-options-section="background"]')).toBeVisible();
+  }
 
-  it('the outer margins belong to the first and last columns', () => {
-    assert.equal(findBoardLane(side, page, 900, 300).target, 'completed', 'right margin beside Completed');
-    assert.equal(findBoardLane(side, page, 900, 1800).target, 'completed');
-    assert.equal(findBoardLane(side, page, 20, 300).target, 'new', 'left margin beside New');
-  });
-
-  it('over the box itself, in a gutter, above the columns, or outside the page area is not a lane', () => {
-    assert.equal(findBoardLane(side, page, 400, 300), null);
-    assert.equal(findBoardLane(side, page, 400, 400), null);
-    assert.equal(findBoardLane(side, page, 307, 900), null);
-    assert.equal(findBoardLane(side, page, 400, 99), null);
-    assert.equal(findBoardLane(side, page, 400, 2001), null);
-    assert.equal(findBoardLane(side, page, 920, 900), null);
-    assert.equal(findBoardLane(side, page, 5, 900), null);
-    assert.equal(findBoardLane(side, page, 100, 900), null);
-  });
-
-  it('stacked columns (tablet/phone) have no lanes', () => {
-    const stacked = [col('new', 0, 600, 400, 100), col('active', 0, 600, 700, 412), col('completed', 0, 600, 900, 712)];
-    assert.equal(findBoardLane(stacked, page, 300, 920), null);
-    assert.equal(findBoardLane([], page, 300, 920), null);
-    assert.equal(findBoardLane(null, page, 300, 920), null);
-    assert.equal(findBoardLane(side, null, 400, 900), null);
-  });
-
-  it('lanes are desktop-only, task-drag-only, and leave real drop zones alone', () => {
-    const at = fnSource('boardLaneAt');
-    assert.match(at, /isTouchLikePointer\(\) \|\| state\.activeTab !== 'desk'/);
-    assert.match(at, /includes\('text\/task-id'\)/);
-    assert.match(at, /closest\?\.\('\[data-drop-target\], \.item-card'\)/);
-    const layout = fnSource('boardLaneLayout');
-    assert.match(layout, /col\.classList\.contains\('done'\) \? 'completed'/);
-    assert.doesNotMatch(mainScript, /BOARD_LANE_BOTTOM_SLACK/);
-    assert.match(layout, /const after = board\.nextElementSibling;/, 'lanes stop at the Notes section');
-    assert.match(layout, /Math\.min\(mainRect\.bottom, window\.innerHeight,/);
-    const init = fnSource('initBoardLanes');
-    assert.match(init, /moveTaskToColumn\(taskId, lane\.target\)/);
-    assert.match(init, /document\.addEventListener\('dragend', clearBoardLane\)/);
-    assert.match(mainScript, /\n    initBoardLanes\(\);\n/);
-    assert.match(html, /\.board-lane-ghost \{[^}]*pointer-events: none;/);
-    assert.match(html, /\.board-lane-ghost\[hidden\] \{ display: none; \}/);
-  });
-
-  it('the Completed lane highlights the Completed section, not Shelved', () => {
-    assert.match(fnSource('showBoardLane'), /lane\.col\.querySelector\('\.col-subsection\[data-drop-target="completed"\]'\)/);
-  });
-
-  it('sidebar position accepts left, right, top, and bottom; anything else falls back to left', () => {
-    const normalize = new Function(`${mainScript.match(/const SIDEBAR_POSITIONS = \[[^\]]*\];/)[0]}; ${fnSource('normalizeSidebarPosition')}; return normalizeSidebarPosition;`)();
-    for (const p of ['left', 'right', 'top', 'bottom']) assert.equal(normalize(p), p);
-    assert.equal(normalize('middle'), 'left');
-    assert.equal(normalize(undefined), 'left');
-    const select = html.match(/<select id="sidebar-position-select"[\s\S]*?<\/select>/)[0];
-    assert.deepEqual([...select.matchAll(/value="(\w+)"/g)].map(m => m[1]), ['left', 'right', 'top', 'bottom']);
-    assert.match(mainScript, /prefs\.sidebarPosition && SIDEBAR_POSITIONS\.includes\(prefs\.sidebarPosition\)/);
-  });
-
-  it('top/bottom set data-sidebar-bar and track the bar height on <body>', () => {
-    const fn = fnSource('applySidebarPosition');
-    assert.match(fn, /if \(next === 'top' \|\| next === 'bottom'\) root\.dataset\.sidebarBar = 'true';/);
-    assert.match(fn, /else delete root\.dataset\.sidebarBar;/);
-    assert.match(fn, /new ResizeObserver\(syncSidebarBarHeight\)/);
-    assert.match(fn, /sidebarEl\.style\.transition = 'none';/, 'switching layouts must not animate the sidebar width');
-    assert.match(fnSource('syncSidebarBarHeight'), /document\.body\.style\.setProperty\('--sidebar-bar-h'/);
-  });
-
-  it('bar layout CSS only applies above phone width, and wide screens stay on one row', () => {
-    const block = html.match(/@media \(min-width: 769px\) \{\s*\[data-sidebar-position="top"\] \.app \{ flex-direction: column; \}[\s\S]*?\n    \}\n/)[0];
-    assert.match(block, /\[data-sidebar-position="bottom"\] \.app \{ flex-direction: column-reverse; \}/);
-    assert.match(block, /\[data-sidebar-bar\] \.sidebar-collapse-btn \{ display: none; \}/);
-    assert.match(block, /\[data-sidebar-bar\] \.date-nav \{ display: none; \}/);
-    assert.match(block, /\[data-sidebar-bar\] \.week-strip-row \{ display: flex; \}/);
-    assert.match(block, /\[data-sidebar-position="top"\] \.account-menu \{ bottom: auto; top: calc\(100% \+ 6px\); \}/);
-    assert.match(block, /\[data-sidebar-position="bottom"\] \.toast \{ bottom: calc\(var\(--sidebar-bar-h, 0px\) \+ 16px\); \}/);
-    const wide = html.indexOf('@media (min-width: 1280px) {\n      [data-sidebar-bar] .sidebar,');
-    assert.ok(wide > html.indexOf(block), 'one-row rules must come after the bar block to win');
-    assert.match(html.slice(wide, wide + 300), /flex-wrap: nowrap;/);
-  });
-
-  it('search results open above a bottom bar', () => {
-    const fn = fnSource('positionSearchOverlay');
-    assert.match(fn, /sidebarPosition === 'bottom' && window\.innerWidth > 768/);
-    assert.match(fn, /overlay\.style\.bottom = `\$\{window\.innerHeight - rect\.top \+ 8\}px`/);
-  });
-
-  it('1.16.0 is documented', () => {
-    const latest = html.match(/version: '1\.16\.0'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    assert.ok(latest.includes('Drop below a column'));
-    assert.ok(latest.includes('Sidebar at the top or bottom'));
-    assert.match(html, /<li><strong>Sidebar at the top or bottom<\/strong>/);
-    assert.match(html, /Layout \(sidebar left, right, top, or bottom\)/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /<li><strong>Drop below a column<\/strong>/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.16\.0\] — 2026-10-13\n\n### Added\n- \*\*Drop below a column\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*\*Column lanes when dragging\*\*/);
-    assert.match(readme, /## Future ideas\n\n- \*\*Faster edge scrolling while dragging\*\*/);
-    assert.match(readme, /- \*\*Suggested colors for custom themes\*\*/);
-    assert.match(readme, /- \*\*Sidebar at the top or bottom\*\*/);
-    assert.match(md, /- \*\*Sidebar at the top or bottom\*\*/);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// v1.16.1 Patterned backgrounds
-// ═══════════════════════════════════════════════════════════════════════
-describe('v1.16.1 patterned backgrounds', () => {
-  const store = () => {
-    const m = new Map();
-    return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), _m: m };
+  const popout = (page: Page) => page.locator('#density-popout');
+  const tiles = (page: Page) => page.locator('#bg-pattern-grid .bg-pattern-tile');
+  // Theme switches cross-fade the background; read it once the fade settles
+  const mainTile = async (page: Page) => {
+    const raw = () => page.locator('.main').evaluate(el => getComputedStyle(el).backgroundImage);
+    await expect.poll(async () => (await raw()).startsWith('cross-fade')).toBe(false);
+    return decodeURIComponent(await raw());
   };
-  const consts = ['BG_PATTERN_ON_KEY', 'BG_PATTERN_KEY', 'BG_PATTERN_STRENGTH_KEY']
-    .map(n => mainScript.match(new RegExp(`const ${n} = '[^']+';`))[0]).join('\n');
-  const block = mainScript.slice(mainScript.indexOf('    const BG_PATTERNS = ['), mainScript.indexOf('    let bgPatternObserver = null;'));
-  const build = (ls) => new Function('localStorage', `${consts}\n${block}\n${fnSource('normalizeBgPattern')}\n${fnSource('normalizeBgPatternStrength')}\n${fnSource('readBgPatternState')}\n${fnSource('bgPatternTileUrl')}
-    return { BG_PATTERNS, normalizeBgPattern, normalizeBgPatternStrength, readBgPatternState, bgPatternTileUrl };`)(ls);
 
-  it('ships the 12 chosen patterns with unique ids, each a single SVG using the INK placeholder', () => {
-    const { BG_PATTERNS } = build(store());
-    assert.deepEqual(BG_PATTERNS.map(p => p.name), ['Graph paper', 'Plus grid', 'Isometric', 'Diagonal', 'Pinstripe', 'Crosshatch',
-      'Hexagon', 'Herringbone', 'Basketweave', 'Chevron', 'Greek key', 'Dot grid']);
-    assert.equal(new Set(BG_PATTERNS.map(p => p.id)).size, 12);
-    for (const p of BG_PATTERNS) {
-      assert.match(p.svg, /^<svg xmlns='http:\/\/www\.w3\.org\/2000\/svg' width='[\d.]+' height='[\d.]+'>[\s\S]*<\/svg>$/, p.id);
-      assert.ok(p.svg.includes('INK'), `${p.id} uses INK`);
-      assert.ok(!p.svg.includes('"'), `${p.id} has no double quotes (it goes inside url("..."))`);
+  test('off by default: just the toggle, no pattern on the page', async ({ page }) => {
+    await openAppearance(page);
+    await expect(page.locator('#bg-pattern-toggle')).not.toBeChecked();
+    await expect(page.locator('#bg-pattern-controls')).toBeHidden();
+    expect(await mainTile(page)).toBe('none');
+  });
+
+  test('turning it on shows 12 patterns and the slider, applies Graph paper at 10%, and keeps Options open', async ({ page }) => {
+    await openAppearance(page);
+    await page.locator('label:has(#bg-pattern-toggle)').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#bg-pattern-controls')).toBeVisible();
+    await expect(tiles(page)).toHaveCount(12);
+    expect(await tiles(page).evaluateAll(els => els.map(el => el.getAttribute('aria-label')))).toEqual(['Graph paper', 'Plus grid', 'Isometric',
+      'Diagonal', 'Pinstripe', 'Crosshatch', 'Hexagon', 'Herringbone', 'Basketweave', 'Chevron', 'Greek key', 'Dot grid']);
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'graph');
+    await expect(page.locator('#bg-pattern-name')).toHaveText('Graph paper');
+    await expect(page.locator('#bg-pattern-strength-val')).toHaveText('10%');
+    const tile = await mainTile(page);
+    expect(tile).toContain('data:image/svg+xml');
+    expect(tile).toContain("<g opacity='0.1'>");
+    expect(tile).toContain("width='60'");
+  });
+
+  test('clicking every pattern applies it, marks it checked, and never closes Options', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    const seen = new Set<string>();
+    for (let i = 0; i < 12; i++) {
+      const tile = tiles(page).nth(i);
+      const id = (await tile.getAttribute('data-bg-pattern'))!;
+      await tile.click();
+      await expect(popout(page)).toBeVisible();
+      await expect(tile).toHaveClass(/active/);
+      await expect(tile).toHaveAttribute('aria-checked', 'true');
+      await expect(page.locator('.bg-pattern-tile.active')).toHaveCount(1);
+      await expect(page.locator('#bg-pattern-name')).toHaveText((await tile.getAttribute('aria-label'))!);
+      expect(await page.evaluate(() => localStorage.getItem('work-desk-bg-pattern'))).toBe(id);
+      seen.add(await mainTile(page));
     }
-    assert.doesNotMatch(block, /paisley|scallop|contour/i);
+    expect(seen.size).toBe(12);
   });
 
-  it('defaults to off, Graph paper, 10%; bad stored values fall back; strength is clamped to 2–45', () => {
-    const ls = store();
-    const api = build(ls);
-    assert.deepEqual(api.readBgPatternState(), { on: false, pattern: 'graph', strength: 10 });
-    ls.setItem('work-desk-bg-pattern-on', 'true');
-    ls.setItem('work-desk-bg-pattern', 'paisley');
-    ls.setItem('work-desk-bg-pattern-strength', '99');
-    assert.deepEqual(api.readBgPatternState(), { on: true, pattern: 'graph', strength: 45 });
-    assert.equal(api.normalizeBgPatternStrength(0), 2);
-    assert.equal(api.normalizeBgPatternStrength('12.6'), 13);
-    assert.equal(api.normalizeBgPatternStrength('abc'), 10);
-    assert.equal(api.normalizeBgPattern('greek-key'), 'greek-key');
+  test('Strength slider changes the pattern opacity live and the label follows', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    await page.locator('#bg-pattern-strength').fill('25');
+    await expect(page.locator('#bg-pattern-strength-val')).toHaveText('25%');
+    expect(await mainTile(page)).toContain("<g opacity='0.25'>");
+    await page.locator('#bg-pattern-strength').fill('2');
+    await expect(page.locator('#bg-pattern-strength-val')).toHaveText('2%');
+    expect(await mainTile(page)).toContain("<g opacity='0.02'>");
+    await expect(popout(page)).toBeVisible();
   });
 
-  it('tile URLs are tinted with the theme color and wrapped at the chosen opacity', () => {
-    const { bgPatternTileUrl } = build(store());
-    const url = bgPatternTileUrl('pinstripe', '#e6e3d8', 0.12);
-    assert.match(url, /^url\("data:image\/svg\+xml,/);
-    const svg = decodeURIComponent(url.slice('url("data:image/svg+xml,'.length, -2));
-    assert.match(svg, /^<svg[^>]*><g opacity='0\.12'><path d='M5 0V10' stroke='#e6e3d8'/);
-    assert.match(svg, /<\/g><\/svg>$/);
-    assert.equal(bgPatternTileUrl('nope', '#000', 0.1), 'none');
+  test('choices survive a reload; turning off hides the controls but remembers the pattern and strength', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    await page.locator('.bg-pattern-tile[data-bg-pattern="herringbone"]').click();
+    await page.locator('#bg-pattern-strength').fill('18');
+    await page.reload();
+    await dismissAuthModal(page);
+    expect(await mainTile(page)).toContain("<g opacity='0.18'>");
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance [data-options-open="background"]')).toHaveAttribute('title', 'Current: Herringbone · 18%');
+    await page.locator('#options-pane-appearance [data-options-open="background"]').click();
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'herringbone');
+
+    await page.locator('label:has(#bg-pattern-toggle)').click();
+    await expect(page.locator('#bg-pattern-controls')).toBeHidden();
+    expect(await mainTile(page)).toBe('none');
+    await page.locator('label:has(#bg-pattern-toggle)').click();
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'herringbone');
+    await expect(page.locator('#bg-pattern-strength-val')).toHaveText('18%');
   });
 
-  it('wired like the other appearance settings: synced, reset, set on <body>, recolored on theme change', () => {
-    assert.match(mainScript, /return \{ bgPatternOn: bg\.on, bgPattern: bg\.pattern, bgPatternStrength: bg\.strength \};/);
-    assert.match(fnSource('applyCloudPrefs'), /applyBgPattern\(next, \{ fromSync: true \}\)/);
-    assert.match(mainScript, /'bg-pattern-toggle': false/);
-    assert.match(fnSource('resetOptionsTab'), /applyBgPattern\(\{ pattern: BG_PATTERN_DEFAULT, strength: BG_PATTERN_STRENGTH_DEFAULT \}\)/);
-    assert.match(fnSource('renderBgPattern'), /document\.body\.style\.setProperty\('--desk-pattern'/);
-    assert.match(fnSource('initBgPattern'), /attributeFilter: \['class', 'style', 'data-theme'\]/);
-    assert.match(fnSource('initDensityToggle'), /initBgPattern\(\);/);
-    assert.match(html.match(/\n    \.main \{[^}]*\}/)[0], /background-image: var\(--desk-pattern, none\);/);
-    assert.match(html, /<input id="bg-pattern-strength" type="range" min="2" max="45" step="1" value="10" \/>/);
-    const pane = html.slice(html.indexOf('id="options-pane-appearance"'), html.indexOf('id="options-pane-behavior"'));
-    const at = id => pane.indexOf(`data-options-section="${id}"`);
-    assert.ok(at('background') > at('effects') && at('effects') > 0 && at('background') < at('tags'),
-      'Background sits between Effects and Tags');
+  test('switching to a dark theme recolors the pattern with the theme text color', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    const lightInk = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text').trim());
+    expect(await mainTile(page)).toContain(`stroke='${lightInk}'`);
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch').first().click();
+    const textColor = () => page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text').trim());
+    await expect.poll(textColor).not.toBe(lightInk);
+    const darkInk = await textColor();
+    await expect.poll(() => mainTile(page)).toContain(`stroke='${darkInk}'`);
+    if (!(await popout(page).isVisible())) await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await page.locator('#options-pane-appearance [data-options-open="background"]').click();
+    const swatch = await page.locator('.bg-pattern-tile.active .bg-pattern-swatch').evaluate(el => decodeURIComponent(getComputedStyle(el).backgroundImage));
+    expect(swatch).toContain(`stroke='${darkInk}'`);
   });
 
-  it('pattern clicks only toggle classes, so the Options popout never loses its click target', () => {
-    const render = fnSource('renderBgPattern');
-    assert.doesNotMatch(render, /innerHTML/);
-    assert.match(fnSource('initBgPattern'), /if \(grid && !grid\.children\.length\)/);
+  test('arrow keys move between patterns', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    await page.locator('.bg-pattern-tile[data-bg-pattern="graph"]').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'plus');
+    await expect(page.locator('.bg-pattern-tile[data-bg-pattern="plus"]')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'pinstripe');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'diagonal');
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'graph');
+    await expect(popout(page)).toBeVisible();
   });
 
-  it('1.16.1 is documented everywhere', () => {
-    const latest = html.match(/version: '1\.16\.1'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    assert.ok(latest.includes('Patterned backgrounds'));
-    assert.ok(latest.includes('Drop anywhere below a column'));
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /<li><strong>Patterned background<\/strong> — Options → Appearance → Background/);
-    assert.match(html, /Effects \(card glow on hover, gradient header\), Background \(patterned background\), and Tags \(tag colors\)/);
-    assert.match(html, /all the way down the page\. The far left margin counts as New and the far right as Completed/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.16\.1\] — 2026-10-13\n\n### Added\n- \*\*Patterned backgrounds\*\*/);
-    assert.match(md, /### Improved\n- \*\*Drop anywhere below a column\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /- \*\*Patterned background\*\* — Options → Appearance → Background/);
-    assert.doesNotMatch(readme, /- \*\*Patterned backgrounds\*\* — optional subtle patterns/, 'moved out of Future ideas');
-    assert.match(readme, /all the way down the page belongs to that column/);
-  });
-});
-
-describe('v1.16.2 tag color labels', () => {
-  it('uses plain labels everywhere, with stored values unchanged', () => {
-    assert.match(mainScript, /const TAG_COLOR_MODES = \['theme', 'analogous', 'palette'\];/);
-    assert.doesNotMatch(html, /Analogous \(shades of accent\)<\/option>|Multi-color \(from theme\)<\/option>/);
-    assert.match(html, /<p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color/);
-    assert.match(html, /There are 8 colors per mode, so with more tags some share a color — pin one to change it/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*Shades of accent\* \(lighter\/darker\/neighboring shades of the accent\), or \*Multi-color\*/);
-    assert.doesNotMatch(readme, /Multi-color \(from theme\)/);
+  test('Reset Appearance turns the pattern off and restores Graph paper at 10%', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true', 'work-desk-bg-pattern': 'greek-key', 'work-desk-bg-pattern-strength': '30' });
+    expect(await mainTile(page)).toContain("<g opacity='0.3'>");
+    await page.locator('[data-options-section="background"] [data-options-back]').click();
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(page.locator('#toast')).toContainText('Appearance reset to defaults');
+    await expect(page.locator('#bg-pattern-toggle')).not.toBeChecked();
+    expect(await mainTile(page)).toBe('none');
+    const stored = await page.evaluate(() => [localStorage.getItem('work-desk-bg-pattern'), localStorage.getItem('work-desk-bg-pattern-strength')]);
+    expect(stored).toEqual(['graph', '10']);
   });
 
-  it('1.16.2 is documented', () => {
-    const entry = html.match(/version: '1\.16\.2'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.ok(entry.includes('Simpler tag color names'));
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.16\.2\] — 2026-10-14\n\n### Improved\n- \*\*Simpler tag color names\*\*/);
-  });
-});
-
-describe('v1.16.0 tag pills do not narrow card text', () => {
-  it('chips render inside the top row, before the content, and never while editing', () => {
-    const src = fnSource('renderItem');
-    assert.match(src, /tags\.length && !isEditing && !tagsInBar \? ' has-tags' : ''/);
-    const chipAt = src.indexOf('if (!isEditing && tags.length && !tagsInBar) row.appendChild(buildTagChipRow(item, tags))');
-    assert.ok(chipAt > 0, 'chip row is appended to the .item row');
-    assert.ok(chipAt < src.indexOf("content.className = 'item-content rich-content'"), 'chip row comes before the content');
-    assert.doesNotMatch(src, /card\.appendChild\(buildTagChipRow/);
-  });
-
-  it('CSS gives chips a grid area instead of padding the content', () => {
-    assert.doesNotMatch(html, /\.has-tags \.item-content \{[^}]*padding-right/);
-    const block = html.slice(html.indexOf('    .tag-chip-row {'), html.indexOf('    .tag-chip {'));
-    assert.match(block, /\.tag-chip-row \{\s*grid-area: tags;[^}]*flex-wrap: wrap;/);
-    assert.doesNotMatch(block, /\.tag-chip-row \{[^}]*position: absolute/);
-    assert.match(block, /\.board-column \.item\.has-tags \{\s*grid-template-columns: auto minmax\(0, 1fr\);\s*grid-template-areas:\s*"check tags"\s*"content content";/);
-    assert.match(block, /\.item\.note\.has-tags \{[^}]*"tags"\s*"content";/);
-    assert.match(block, /data-density="compact"\] \.board-column \.item\.has-tags \.tag-chip-row \{\s*order: -1;\s*flex: 0 0 100%;/);
-    assert.match(html, /\.item-card\.menu-open \.item\.has-tags:not\(:has\(\.edit-wrap\)\) \{\s*grid-template-areas:\s*"check tags"\s*"content content"\s*"actions actions";/);
-  });
-
-  it('is listed under 1.16.0 Fixed in both changelogs', () => {
-    const entry = html.slice(html.indexOf("version: '1.16.0'"), html.indexOf("version: '1.15.1'"));
-    assert.match(entry, /label: 'Fixed', items: \[\s*'Adding a tag no longer squeezes/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    const block = md.slice(md.indexOf('## [1.16.0]'), md.indexOf('## [1.15.1]'));
-    assert.match(block, /### Fixed\n- \*\*Tags narrowing card text\*\*/);
+  test('phone: the pattern grid fits the Options sheet and the pattern shows behind the board', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    const grid = page.locator('#bg-pattern-grid');
+    await grid.scrollIntoViewIfNeeded();
+    const g = (await grid.boundingBox())!;
+    expect(g.x).toBeGreaterThanOrEqual(0);
+    expect(g.x + g.width).toBeLessThanOrEqual(390);
+    await page.locator('.bg-pattern-tile[data-bg-pattern="isometric"]').click();
+    await expect(popout(page)).toBeVisible();
+    expect(await mainTile(page)).toContain("height='41.57'");
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// Theme switching must not wipe other inline settings (font family)
-// ═══════════════════════════════════════════════════════════════════════
-describe('clearCustomThemeInlineVars', () => {
-  function run(initial) {
-    const props = { ...initial };
-    const style = {
-      get length() { return Object.keys(props).length; },
-      removeProperty: (k) => { delete props[k]; },
-    };
-    const keys = () => Object.keys(props);
-    const proxy = new Proxy(style, { get: (t, k) => (typeof k === 'string' && /^\d+$/.test(k) ? keys()[Number(k)] : t[k]) });
-    const document = { documentElement: { style: proxy } };
-    const src = mainScript.match(/const NON_THEME_INLINE_VARS = [^\n]+/)[0];
-    new Function('document', `${src}\n${fnSource('clearCustomThemeInlineVars')}\nclearCustomThemeInlineVars();`)(document);
-    return props;
+// ── Sidebar top / bottom 1.16.0 ─────────────────────────────────────────
+test.describe('Card tags 1.16.0', { tag: ['@tags', '@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  const LONG = 'Sometimes if there are too many items under new, it becomes a chore to drag the item under the active card. Let us add the ability to drop in the middle of the page.';
+
+  async function openTagged(page: Page) {
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript((long) => {
+      if (localStorage.getItem('cardtags-seeded')) return;
+      localStorage.setItem('cardtags-seeded', '1');
+      const t = (id: string, extra: Record<string, unknown> = {}) => ({
+        id, type: 'task', content: long, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], createdAt: '2026-10-13T09:00:00', ...extra,
+      });
+      const n = (id: string, extra: Record<string, unknown> = {}) => ({ id, type: 'note', content: long, comments: [], createdAt: '2026-10-13T09:00:00', ...extra });
+      const items = [
+        t('tagged', { tags: ['workdesk'] }),
+        t('plain'),
+        t('many', { tags: ['workdesk', 'averyveryverylongtagnamethatkeepsgoing', 'eoyreview', 'ops'] }),
+        t('later'),
+        n('note-tagged', { tags: ['notes'] }),
+        n('note-plain'),
+      ];
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-13': { date: '2026-10-13', items } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    }, LONG);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('#item-plain')).toBeVisible();
   }
 
-  it('keeps the font family while clearing custom theme vars and color-scheme', () => {
-    const left = run({
-      '--bg': '#000', '--accent': '#f00', '--sidebar': '#111',
-      '--font-family': '"JetBrains Mono", monospace',
-      'color-scheme': 'dark',
-    });
-    assert.deepEqual(left, { '--font-family': '"JetBrains Mono", monospace' });
-  });
-
-  it('is a no-op on an empty style', () => {
-    assert.deepEqual(run({}), {});
-  });
-
-  it('1.9.1 documents the font fix', () => {
-    const entry = html.match(/version: '1\.9\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /font no longer resets/);
-  });
-
-  it('applyTheme clears inline vars before applying, and the font is applied after initTheme', () => {
-    assert.match(fnSource('applyTheme'), /clearCustomThemeInlineVars\(\)/);
-    assert.match(fnSource('applyFontFamily'), /setProperty\('--font-family'/);
-    assert.match(html, /NON_THEME_INLINE_VARS = new Set\(\[[^\]]*'--font-family'/);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// Tag colors (functional + HTML invariants)
-// ═══════════════════════════════════════════════════════════════════════
-describe('Tag colors', () => {
-  function tagColorFns(stored = {}) {
-    return new Function('stored', `
-      const store = { ...stored };
-      const localStorage = {
-        getItem: (k) => (k in store ? store[k] : null),
-        setItem: (k, v) => { store[k] = String(v); },
-      };
-      let pushes = 0;
-      const schedulePrefsPush = () => { pushes++; };
-      const syncTagColorListRows = () => {};
-      const document = { querySelectorAll: () => [], documentElement: { dataset: {} }, getElementById: () => null };
-      const TAG_COLOR_MODE_KEY = 'work-desk-tag-color-mode';
-      const TAG_COLORS_KEY = 'work-desk-tag-colors';
-      const TAG_PALETTE_SIZE = 8;
-      ${mainScript.match(/const TAG_COLOR_MODES = [^\n]+/)[0]}
-      ${fnSource('normalizeTag')}
-      ${fnSource('tagPaletteSlot')}
-      ${fnSource('normalizeTagColorMode')}
-      ${fnSource('normalizeTagColors')}
-      ${fnSource('loadTagColors')}
-      ${fnSource('saveTagColors')}
-      const state = { tagColors: loadTagColors(), tagColorMode: normalizeTagColorMode(localStorage.getItem(TAG_COLOR_MODE_KEY)) };
-      ${fnSource('decorateTagChip')}
-      ${fnSource('refreshTagChipColors')}
-      ${fnSource('applyTagColorMode')}
-      ${fnSource('setTagColor')}
-      return { tagPaletteSlot, normalizeTagColorMode, normalizeTagColors, decorateTagChip, applyTagColorMode, setTagColor,
-        state, store, document, pushes: () => pushes };
-    `)(stored);
-  }
-  const fakeChip = () => {
-    const props = {};
-    const classes = new Set();
+  // Width actually available to the text (content box minus padding) plus its rendered height
+  const textBox = (page: Page, id: string) => page.locator(`#item-${id} .item-content`).evaluate((el) => {
+    const cs = getComputedStyle(el);
     return {
-      dataset: {},
-      classList: { toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)), has: (c) => classes.has(c) },
-      style: { setProperty: (k, v) => { props[k] = v; }, removeProperty: (k) => { delete props[k]; } },
-      props,
+      width: el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+      height: el.getBoundingClientRect().height,
     };
-  };
+  });
 
-  it('tagPaletteSlot is deterministic and within the palette size', () => {
-    const { tagPaletteSlot } = tagColorFns();
-    for (const tag of ['ace', 'urgent', 'ids', 'p1', 'databricks', 'a', 'x-y_z']) {
-      const s = tagPaletteSlot(tag);
-      assert.ok(Number.isInteger(s) && s >= 0 && s < 8, `${tag} → ${s}`);
-      assert.equal(tagPaletteSlot(tag), s, 'same tag must always map to the same slot');
+  async function expectSameText(page: Page, a: string, b: string) {
+    const [x, y] = [await textBox(page, a), await textBox(page, b)];
+    expect(Math.abs(x.width - y.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(x.height - y.height)).toBeLessThanOrEqual(2);
+  }
+
+  async function expectChipsClearOfText(page: Page, id: string) {
+    const chips = (await page.locator(`#item-${id} .tag-chip-row`).boundingBox())!;
+    const text = (await page.locator(`#item-${id} .item-content`).boundingBox())!;
+    const card = (await page.locator(`#item-${id}`).boundingBox())!;
+    expect(chips.y + chips.height).toBeLessThanOrEqual(text.y + 1);
+    expect(chips.x + chips.width).toBeLessThanOrEqual(card.x + card.width);
+  }
+
+  test('a tagged card wraps its text exactly like an untagged one', async ({ page }) => {
+    await openTagged(page);
+    await expectSameText(page, 'tagged', 'plain');
+    await expectSameText(page, 'many', 'plain');
+    await expectSameText(page, 'note-tagged', 'note-plain');
+    for (const id of ['tagged', 'many', 'note-tagged']) await expectChipsClearOfText(page, id);
+    await expect(page.locator('#item-many .tag-chip')).toHaveCount(4);
+  });
+
+  test('adding a tag through the tag button leaves the text width unchanged', async ({ page }) => {
+    await openTagged(page);
+    const card = page.locator('#item-later');
+    const before = await textBox(page, 'later');
+    await card.locator('button.card-action', { hasText: /^tag$/i }).click();
+    await card.locator('.tag-input-inline').fill('fresh');
+    await card.locator('.tag-input-inline').press('Enter');
+    await expect(card.locator('.tag-chip-row .tag-chip-label')).toHaveText(['fresh']);
+    const after = await textBox(page, 'later');
+    expect(Math.abs(after.width - before.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(2);
+    await expectChipsClearOfText(page, 'later');
+    await card.locator('.tag-chip-remove').click();
+    await expect(card.locator('.tag-chip')).toHaveCount(0);
+    expect(Math.abs((await textBox(page, 'later')).width - before.width)).toBeLessThanOrEqual(2);
+  });
+
+  test('compact layout keeps the one-line text the same width with tags', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('work-desk-density', 'compact'));
+    await openTagged(page);
+    await expect(page.locator('#desk-view')).toHaveAttribute('data-density', 'compact');
+    await expectSameText(page, 'tagged', 'plain');
+    await expectSameText(page, 'many', 'plain');
+    await expectChipsClearOfText(page, 'many');
+  });
+
+  test('phone width keeps tagged and untagged text the same', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openTagged(page);
+    await expectSameText(page, 'tagged', 'plain');
+    await expectSameText(page, 'many', 'plain');
+    await expectSameText(page, 'note-tagged', 'note-plain');
+    for (const id of ['tagged', 'many', 'note-tagged']) await expectChipsClearOfText(page, id);
+  });
+});
+
+test.describe('Sidebar top and bottom 1.16.0', { tag: ['@sidebar'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  async function openDesk(page: Page, position?: string) {
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+    await page.addInitScript((pos) => {
+      if (localStorage.getItem('bar-seeded')) return;
+      localStorage.setItem('bar-seeded', '1');
+      const t = (id: string, content: string, extra: Record<string, unknown> = {}) => ({
+        id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new',
+        comments: [], tags: [], createdAt: '2026-10-13T09:00:00', ...extra,
+      });
+      const items = [t('n1', 'Review PR for IDS batching'), t('a1', 'Call vendor about the renewal', { boardColumn: 'active' })];
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-13': { date: '2026-10-13', items } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+        { id: 'p1', name: 'EoY Review', createdAt: '2026-10-13T09:00:00', notes: [], tasks: [] },
+        { id: 'p2', name: 'Databricks Silver Layer', createdAt: '2026-10-13T09:00:00', notes: [], tasks: [] },
+      ] }));
+      if (pos) localStorage.setItem('work-desk-sidebar-position', pos);
+    }, position);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('.sprint-board')).toBeVisible();
+  }
+
+  async function pickPosition(page: Page, pos: string) {
+    if (!(await page.locator('#density-popout').isVisible())) await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await openOptionsSectionFor(page, '#sidebar-position-select');
+    await page.locator('#sidebar-position-select').selectOption(pos);
+    await expect(page.locator('#density-popout')).toBeVisible();
+  }
+
+  const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
+
+  test('Options: Top, Bottom, Right, and Left each move the sidebar', async ({ page }) => {
+    await openDesk(page);
+    const sel = page.locator('#sidebar-position-select');
+    await expect(sel.locator('option')).toHaveText(['Left', 'Right', 'Top', 'Bottom']);
+
+    await pickPosition(page, 'top');
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar-bar', 'true');
+    let s = await box(page, '.sidebar');
+    expect(s.y).toBe(0);
+    expect(s.width).toBe(1440);
+    expect((await box(page, '.main')).y).toBeGreaterThanOrEqual(s.height - 1);
+
+    await pickPosition(page, 'bottom');
+    s = await box(page, '.sidebar');
+    expect(s.width).toBe(1440);
+    expect(Math.round(s.y + s.height)).toBe(900);
+    expect((await box(page, '.main')).y).toBe(0);
+
+    await pickPosition(page, 'right');
+    await expect(page.locator('html')).not.toHaveAttribute('data-sidebar-bar', /.*/);
+    s = await box(page, '.sidebar');
+    expect(s.height).toBe(900);
+    expect(Math.round(s.x + s.width)).toBe(1440);
+
+    await pickPosition(page, 'left');
+    s = await box(page, '.sidebar');
+    expect(s.x).toBe(0);
+    expect(s.height).toBe(900);
+    expect(s.width).toBeLessThan(400);
+    await expect(page.locator('#sidebar-toggle')).toBeVisible();
+    await expect(page.locator('.date-nav')).toBeVisible();
+  });
+
+  test('top bar: one row at 1440, collapse and calendar hidden, week strip shown, survives reload', async ({ page }) => {
+    await openDesk(page);
+    await pickPosition(page, 'top');
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeHidden();
+    expect((await box(page, '.sidebar')).height).toBeLessThan(80);
+    await expect(page.locator('#sidebar-toggle')).toBeHidden();
+    await expect(page.locator('.date-nav')).toBeHidden();
+    await expect(page.locator('#week-strip-row')).toBeVisible();
+    await expect(page.locator('#logo-sub-text')).toBeHidden();
+    const barH = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--sidebar-bar-h'));
+    expect(parseFloat(barH)).toBeGreaterThan(40);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar-position', 'top');
+    expect((await box(page, '.sidebar')).y).toBe(0);
+    expect((await box(page, '.sidebar')).width).toBe(1440);
+  });
+
+  test('top bar: tabs, Projects list, account menu Export, and Repair all work', async ({ page }) => {
+    await openDesk(page, 'top');
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('#tab-insights')).toHaveClass(/active/);
+    await page.locator('#tab-desk').click();
+    await expect(page.locator('.sprint-board')).toBeVisible();
+
+    await openAccountMenu(page);
+    const acct = await box(page, '#account-menu');
+    const acctBtn = await box(page, '#account-menu-btn');
+    expect(acct.y).toBeGreaterThanOrEqual(acctBtn.y + acctBtn.height);
+    expect(Math.round(acct.x + acct.width)).toBeLessThanOrEqual(1440);
+    await page.locator('#export-btn').click();
+    const menu = page.locator('#export-menu');
+    await expect(menu).toBeVisible();
+    const m = await box(page, '#export-menu');
+    const b = await box(page, '#export-btn');
+    expect(m.y).toBeGreaterThanOrEqual(b.y + b.height);
+    expect(m.y + m.height).toBeLessThanOrEqual(900);
+    await page.locator('#export-btn').click();
+    await expect(menu).toBeHidden();
+
+    await page.locator('#repair-btn').click();
+    await expect(page.locator('#toast')).toContainText('No duplicates found');
+
+    await page.locator('#tab-projects').click();
+    const projects = page.locator('#projects-list li');
+    await expect(projects).toHaveCount(2);
+    const p0 = await projects.nth(0).boundingBox();
+    const p1 = await projects.nth(1).boundingBox();
+    expect(Math.abs(p0!.y - p1!.y)).toBeLessThan(4);
+    expect(p1!.x).toBeGreaterThan(p0!.x);
+    expect((await box(page, '.sidebar')).height).toBeLessThan(80);
+    await page.locator('#tab-work').click();
+    await expect(page.locator('.sprint-board')).toBeVisible();
+  });
+
+  test('bottom bar: search results and toasts open above it', async ({ page }) => {
+    await openDesk(page, 'bottom');
+    const bar = await box(page, '.sidebar');
+    await page.locator('#search-input').fill('vendor');
+    const overlay = page.locator('#search-overlay');
+    await expect(overlay).toBeVisible();
+    await expect(overlay).toContainText('Call vendor');
+    const o = await box(page, '#search-overlay');
+    const input = await box(page, '#search-input');
+    expect(o.y).toBeGreaterThanOrEqual(0);
+    expect(o.y + o.height).toBeLessThanOrEqual(input.y);
+    expect(o.y + o.height).toBeLessThan(bar.y + 12);
+    await page.locator('#search-overlay-close').click();
+    await expect(overlay).toBeHidden();
+
+    await openAccountMenu(page);
+    const acct = await box(page, '#account-menu');
+    expect(acct.y + acct.height).toBeLessThanOrEqual((await box(page, '#account-menu-btn')).y);
+    expect(acct.y).toBeGreaterThanOrEqual(0);
+    await page.locator('#repair-btn').click();
+    await expect(page.locator('#account-menu')).toBeHidden();
+    const toast = page.locator('#toast');
+    await expect(toast).toContainText('No duplicates found');
+    await expect.poll(async () => {
+      const t = await box(page, '#toast');
+      return t.y + t.height;
+    }).toBeLessThanOrEqual(bar.y);
+  });
+
+  test('1024px: the top bar wraps but stays full width above the board', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await openDesk(page, 'top');
+    const s = await box(page, '.sidebar');
+    expect(s.y).toBe(0);
+    expect(s.width).toBe(1024);
+    expect((await box(page, '.main')).y).toBeGreaterThanOrEqual(s.height - 1);
+    await expect(page.locator('#week-strip-row')).toBeVisible();
+  });
+
+  test('phones ignore Top and Bottom and keep the normal phone header', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await openDesk(page, 'left');
+    const phone = await box(page, '.sidebar');
+    await page.evaluate(() => localStorage.setItem('work-desk-sidebar-position', 'bottom'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar-position', 'bottom');
+    const s = await box(page, '.sidebar');
+    expect(s.y).toBe(0);
+    expect(s.height).toBe(phone.height);
+    await expect(page.locator('#mobile-menu-btn')).toBeVisible();
+    const barH = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--sidebar-bar-h'));
+    expect(barH.trim()).toBe('0px');
+  });
+
+  test('Reset Appearance returns a bar to the left sidebar', async ({ page }) => {
+    await openDesk(page, 'bottom');
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#sidebar-position-select')).toHaveValue('bottom');
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#sidebar-position-select')).toHaveValue('left');
+    await expect(page.locator('html')).not.toHaveAttribute('data-sidebar-bar', /.*/);
+    expect((await box(page, '.sidebar')).x).toBe(0);
+    expect((await box(page, '.sidebar')).height).toBe(900);
+  });
+});
+
+// ── 1.17.0: Options summary list, account menu, calendar polish, quieter weekends ──
+async function open117(page: Page, stored: Record<string, string> = {}) {
+  await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+  await page.addInitScript((s) => {
+    if (localStorage.getItem('v117-seeded')) return;
+    localStorage.setItem('v117-seeded', '1');
+    const task = (id: string, content: string) => ({ id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: '2026-10-05T09:00:00' });
+    localStorage.setItem('work-desk-list-context', 'work');
+    localStorage.setItem('work-desk-auto-carry-forward', 'false');
+    localStorage.setItem('work-desk-data-work', JSON.stringify({ deletedIds: {}, days: {
+      '2026-10-05': { date: '2026-10-05', items: [task('w1', 'Left open on Monday'), task('w2', 'Also left open')] },
+      '2026-10-13': { date: '2026-10-13', items: [task('w3', 'Today task')] },
+    } }));
+    localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v);
+  }, stored);
+  await page.goto(DESK_URL);
+  await dismissAuthModal(page);
+  await expect(page.locator('.sprint-board')).toBeVisible();
+}
+
+test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const popout = (page: Page) => page.locator('#density-popout');
+  const ROWS = {
+    appearance: ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags'],
+    behavior: ['general', 'tasks', 'projects', 'insights', 'holidays'],
+  } as const;
+
+  async function openTab(page: Page, tab: 'appearance' | 'behavior') {
+    if (!(await popout(page).isVisible())) await page.locator('#density-toggle').click();
+    await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+    await expect(page.locator(`#options-pane-${tab} .options-summary`)).toBeVisible();
+  }
+
+  for (const tab of ['appearance', 'behavior'] as const) {
+    test(`${tab}: every row opens its section and the back button returns to the list`, async ({ page }) => {
+      await open117(page);
+      await openTab(page, tab);
+      const pane = page.locator(`#options-pane-${tab}`);
+      await expect(pane.locator('[data-options-open]')).toHaveCount(ROWS[tab].length);
+      for (const id of ROWS[tab]) {
+        await expect(pane.locator(`[data-options-open="${id}"] .options-row-desc`)).toBeVisible();
+        await expect(pane.locator(`[data-options-open="${id}"]`)).toHaveAttribute('title', /^Current: .+/);
+        await pane.locator(`[data-options-open="${id}"]`).click();
+        // The clicked row is hidden by the click; Options must stay open
+        await expect(popout(page)).toBeVisible();
+        const section = pane.locator(`[data-options-section="${id}"]`);
+        await expect(section).toBeVisible();
+        await expect(pane.locator('.options-section:visible')).toHaveCount(1);
+        await expect(pane.locator('.options-summary')).toBeHidden();
+        await expect(pane.locator(`[data-options-reset="${tab}"]`)).toBeHidden();
+        const back = section.locator('[data-options-back]');
+        await expect(back).toHaveText('‹ Back');
+        await expect(back).toBeFocused();
+        await back.click();
+        await expect(popout(page)).toBeVisible();
+        await expect(section).toBeHidden();
+        await expect(pane.locator('.options-summary')).toBeVisible();
+        await expect(pane.locator(`[data-options-reset="${tab}"]`)).toBeVisible();
+        await expect(pane.locator(`[data-options-open="${id}"]`)).toBeFocused();
+      }
+    });
+  }
+
+  test('Esc goes back to the list first, then closes Options', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'behavior');
+    await page.locator('#options-pane-behavior [data-options-open="tasks"]').click();
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#options-pane-behavior .options-summary')).toBeVisible();
+    await expect(page.locator('[data-options-section="tasks"]')).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+  });
+
+  test('switching tabs or reopening Options always lands on the list', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    await page.locator('#options-pane-appearance [data-options-open="effects"]').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance .options-summary')).toBeVisible();
+    await expect(page.locator('[data-options-section="effects"]')).toBeHidden();
+
+    await page.locator('#options-pane-appearance [data-options-open="effects"]').click();
+    await page.locator('#density-toggle').click();
+    await expect(popout(page)).toBeHidden();
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance .options-summary')).toBeVisible();
+  });
+
+  test('the panel keeps its height between the list and a short section', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    const listH = (await popout(page).boundingBox())!.height;
+    await page.locator('#options-pane-appearance [data-options-open="layout"]').click();
+    const sectionH = (await popout(page).boundingBox())!.height;
+    expect(Math.abs(sectionH - listH)).toBeLessThanOrEqual(2);
+  });
+
+  for (const tab of ['appearance', 'behavior'] as const) {
+    test(`${tab}: the panel hugs the list with no empty space below Reset`, async ({ page }) => {
+      await open117(page);
+      await openTab(page, tab);
+      const pop = (await popout(page).boundingBox())!;
+      const reset = (await page.locator(`[data-options-reset="${tab}"]`).boundingBox())!;
+      expect(pop.y + pop.height - (reset.y + reset.height)).toBeLessThanOrEqual(24);
+
+      // A tall section can grow the panel; going back returns it to the list's size
+      await page.locator(`#options-pane-${tab} [data-options-open="${tab === 'appearance' ? 'tags' : 'tasks'}"]`).click();
+      await page.keyboard.press('Escape');
+      await expect(page.locator(`#options-pane-${tab}`)).toHaveAttribute('style', /^(?!.*min-height)/);
+      await expect.poll(async () => Math.round((await popout(page).boundingBox())!.height)).toBe(Math.round(pop.height));
+    });
+  }
+
+  test('summary values follow changes made inside a section (round trip)', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    const value = (id: string) => page.locator(`.options-row[data-options-open="${id}"]`);
+    await expect(value('typography')).toHaveAttribute('title', 'Current: Default · System font');
+    await page.locator('[data-options-open="typography"]').click();
+    await page.locator('#font-size-select').selectOption('large');
+    await page.locator('#font-family-select').selectOption('jetbrains');
+    await page.locator('[data-options-section="typography"] [data-options-back]').click();
+    await expect(value('typography')).toHaveAttribute('title', 'Current: Large · JetBrains Mono');
+
+    await expect(value('card-layout')).toHaveAttribute('title', 'Current: Comfortable · Done label');
+    await page.locator('[data-options-open="card-layout"]').click();
+    await page.locator('.density-option[data-density="compact"]').click();
+    await expect(popout(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(value('card-layout')).toHaveAttribute('title', 'Current: Compact · Done label');
+
+    await expect(value('effects')).toHaveAttribute('title', 'Current: Off');
+    await page.locator('[data-options-open="effects"]').click();
+    await page.locator('label:has(#card-glow-toggle)').click();
+    await page.keyboard.press('Escape');
+    await expect(value('effects')).toHaveAttribute('title', 'Current: Glow');
+
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    const before = (await value('tasks').getAttribute('title'))!;
+    const on = Number(before.split(' ')[1]);
+    await page.locator('[data-options-open="tasks"]').click();
+    await page.locator('label:has(#confetti-toggle)').click();
+    await page.keyboard.press('Escape');
+    await expect(value('tasks')).not.toHaveAttribute('title', before);
+    expect(Math.abs(Number((await value('tasks').getAttribute('title'))!.split(' ')[1]) - on)).toBe(1);
+
+    await page.locator('[data-options-open="general"]').click();
+    await page.locator('#startup-view-select').selectOption('today');
+    await page.locator('#week-start-select').selectOption('monday');
+    await page.keyboard.press('Escape');
+    await expect(value('general')).toHaveAttribute('title', 'Current: Today · Mon');
+  });
+
+  test('settings switches flip on click and persist', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    await page.locator('[data-options-open="effects"]').click();
+    const glow = page.locator('#card-glow-toggle');
+    expect(await glow.evaluate(el => getComputedStyle(el).appearance)).toBe('none');
+    const offBg = await glow.evaluate(el => getComputedStyle(el).backgroundColor);
+    await glow.click();
+    await expect(glow).toBeChecked();
+    await expect.poll(() => glow.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(offBg);
+    await page.reload();
+    await dismissAuthModal(page);
+    await openTab(page, 'appearance');
+    await page.locator('[data-options-open="effects"]').click();
+    await expect(page.locator('#card-glow-toggle')).toBeChecked();
+    await page.locator('#card-glow-toggle').click();
+    await expect(page.locator('#card-glow-toggle')).not.toBeChecked();
+  });
+
+  test('New tags mark Card layout and its two new settings in this release', async ({ page }) => {
+    await open117(page);
+    await openTab(page, 'appearance');
+    await expect(page.locator('[data-options-open="card-layout"] .options-new-tag')).toBeVisible();
+    await expect(page.locator('#options-pane-appearance [data-options-open="layout"] .options-new-tag')).toBeHidden();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await expect(page.locator('#options-pane-behavior .options-new-tag:not([hidden])')).toHaveCount(0);
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await page.locator('[data-options-open="card-layout"]').click();
+    for (const id of ['complete-style-select', 'tag-position-select']) {
+      await expect(page.locator(`label[for="${id}"] .options-new-tag`)).toBeVisible();
+      await expect(page.locator(`label[for="${id}"] .options-new-tag`)).toHaveText(/new/i);
     }
   });
+  test('phone: sections and back work in the Options sheet', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open117(page);
+    await page.locator('#mobile-menu-btn').click();
+    await page.locator('#mobile-menu-options').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('#options-pane-behavior [data-options-open="holidays"]').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#custom-holiday-label')).toBeVisible();
+    // The section slides in 14px; measure once it settles
+    await expect.poll(async () => {
+      const box = (await page.locator('[data-options-section="holidays"]').boundingBox())!;
+      return box.x + box.width;
+    }).toBeLessThanOrEqual(390);
+    await page.locator('[data-options-section="holidays"] [data-options-back]').click();
+    await expect(page.locator('#options-pane-behavior .options-summary')).toBeVisible();
+    await expect(popout(page)).toBeVisible();
+  });
+});
 
-  it('tagPaletteSlot spreads common tags across several colors', () => {
-    const { tagPaletteSlot } = tagColorFns();
-    const tags = ['ace', 'urgent', 'ids', 'p1', 'oms', 'databricks', 'postgres', 'aic', 'bug', 'meeting', 'ops', 'kt'];
-    assert.ok(new Set(tags.map(tagPaletteSlot)).size >= 5, 'palette should not collapse to a couple of colors');
+test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const popout = (page: Page) => page.locator('#density-popout');
+  const value = (page: Page, id: string) => page.locator(`.options-row[data-options-open="${id}"]`);
+
+  async function openSection(page: Page, tab: 'appearance' | 'behavior', id: string) {
+    if (!(await popout(page).isVisible())) await page.locator('#density-toggle').click();
+    await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+    await page.locator(`#options-pane-${tab} [data-options-open="${id}"]`).click();
+    await expect(page.locator(`[data-options-section="${id}"]`)).toBeVisible();
+  }
+
+  test('New tags stay up while a section is open, then are gone for good (per section)', async ({ page }) => {
+    await open117(page);
+    const rowTag = page.locator('[data-options-open="card-layout"] .options-new-tag');
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(rowTag).toBeVisible();
+
+    await page.locator('[data-options-open="card-layout"]').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('[data-options-section="card-layout"] .options-new-tag:not([hidden])')).toHaveCount(2);
+    await page.locator('[data-options-section="card-layout"] [data-options-back]').click();
+    await expect(page.locator('#options-pane-appearance .options-summary')).toBeVisible();
+    await expect(rowTag).toBeHidden();
+
+    await page.locator('[data-options-open="card-layout"]').click();
+    await expect(page.locator('[data-options-section="card-layout"] .options-new-tag:not([hidden])')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(rowTag).toBeHidden();
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('work-desk-seen-new-tags')))!)).toEqual(['card-layout@1.18.0']);
   });
 
-  it('normalizeTagColorMode allows theme/analogous/palette, defaulting to theme', () => {
-    const { normalizeTagColorMode } = tagColorFns();
-    assert.equal(normalizeTagColorMode('palette'), 'palette');
-    assert.equal(normalizeTagColorMode('analogous'), 'analogous');
-    assert.equal(normalizeTagColorMode('theme'), 'theme');
-    assert.equal(normalizeTagColorMode(null), 'theme');
-    assert.equal(normalizeTagColorMode('rainbow'), 'theme');
+  test('Complete button name stays on one line with its New tag inline', async ({ page }) => {
+    await open117(page);
+    await openSection(page, 'appearance', 'card-layout');
+    const name = page.locator('label[for="complete-style-select"] > span:first-child');
+    const tag = name.locator('.options-new-tag');
+    const nameBox = (await name.boundingBox())!;
+    const tagBox = (await tag.boundingBox())!;
+    const lineH = await name.evaluate(el => parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3);
+    expect(nameBox.height).toBeLessThanOrEqual(lineH + 4);
+    expect(tagBox.y).toBeGreaterThanOrEqual(nameBox.y - 1);
+    await expect(page.locator('label[for="complete-style-select"] .customize-toggle-sub')).toHaveText("Click a task's left edge to finish it");
   });
-
-  it('normalizeTagColors keeps valid hex colors, normalizes tag names, and drops junk', () => {
-    const { normalizeTagColors } = tagColorFns();
-    assert.deepEqual(normalizeTagColors({ '#ACE': '#FF0000', urgent: '#00ff00', bad: 'red', '': '#123456', short: '#fff', n: 5 }),
-      { ace: '#ff0000', urgent: '#00ff00' });
-    assert.deepEqual(normalizeTagColors(null), {});
-    assert.deepEqual(normalizeTagColors(['#ff0000']), {});
-  });
-
-  it('corrupt stored tag colors load as an empty map', () => {
-    const { state } = tagColorFns({ 'work-desk-tag-colors': '{not json' });
-    assert.deepEqual(state.tagColors, {});
-  });
-
-  it('decorateTagChip sets the slot and applies/removes a custom color', () => {
-    const f = tagColorFns({ 'work-desk-tag-colors': JSON.stringify({ urgent: '#ef4444' }) });
-    const chip = fakeChip();
-    f.decorateTagChip(chip, 'urgent');
-    assert.equal(chip.dataset.tag, 'urgent');
-    assert.equal(chip.dataset.tagSlot, String(f.tagPaletteSlot('urgent')));
-    assert.ok(chip.classList.has('tag-custom'));
-    assert.equal(chip.props['--tag-custom'], '#ef4444');
-
-    const plain = fakeChip();
-    f.decorateTagChip(plain, 'ace');
-    assert.ok(!plain.classList.has('tag-custom'));
-    assert.equal(plain.props['--tag-custom'], undefined);
-  });
-
-  it('setTagColor saves, normalizes, clears, and schedules a prefs push', () => {
-    const f = tagColorFns();
-    f.setTagColor('#ACE', '#3B82F6');
-    assert.deepEqual(f.state.tagColors, { ace: '#3b82f6' });
-    assert.deepEqual(JSON.parse(f.store['work-desk-tag-colors']), { ace: '#3b82f6' });
-    assert.equal(f.pushes(), 1);
-    f.setTagColor('ace', 'not-a-color');
-    assert.deepEqual(f.state.tagColors, {}, 'invalid color clears the custom color');
-    f.setTagColor('ace', '#111111');
-    f.setTagColor('ace', null);
-    assert.deepEqual(f.state.tagColors, {});
-    f.setTagColor('', '#111111');
-    assert.deepEqual(f.state.tagColors, {}, 'empty tag is ignored');
-  });
-
-  it('applyTagColorMode stores the mode on <html> and only pushes for user changes', () => {
-    const f = tagColorFns();
-    f.applyTagColorMode('palette');
-    assert.equal(f.document.documentElement.dataset.tagColors, 'palette');
-    assert.equal(f.store['work-desk-tag-color-mode'], 'palette');
-    assert.equal(f.pushes(), 1);
-    f.applyTagColorMode('bogus', { fromSync: true });
-    assert.equal(f.state.tagColorMode, 'theme');
-    assert.equal(f.pushes(), 1);
-  });
-
-  it('defaults to Theme color mode', () => {
-    assert.equal(tagColorFns().state.tagColorMode, 'theme');
-    assert.match(html, /<option value="theme">Single color \(accent\)<\/option>\s*<option value="analogous">Shades of accent<\/option>\s*<option value="palette">Multi-color<\/option>/);
-  });
-
-  it('CSS: chips read --tag-fg/--tag-bg, palette is gated by @supports, custom beats palette', () => {
-    assert.match(html, /\.tag-chip \{\s*--tag-fg: var\(--accent\);\s*--tag-bg: var\(--accent-light\);/);
-    assert.match(html, /@supports \(color: oklch\(from red l c h\)\) \{\s*html\[data-tag-colors="palette"\] \.tag-chip \{/);
-    for (let s = 1; s < 8; s++) assert.match(html, new RegExp(`\\.tag-chip\\[data-tag-slot="${s}"\\] \\{ --tag-hue: ${s * 45}; \\}`));
-    // Analogous: every slot gets a hue/lightness offset; lightness is clamped for readability
-    assert.match(html, /html\[data-tag-colors="analogous"\] \.tag-chip \{[^}]*oklch\(from var\(--accent\) clamp\(0\.4, calc\(l \+ var\(--tag-dl\)\), 0\.86\) c calc\(h \+ var\(--tag-dh\)\)\)/);
-    const offsets = new Set();
-    for (let s = 1; s < 8; s++) {
-      const m = html.match(new RegExp(`data-tag-colors="analogous"\\] \\.tag-chip\\[data-tag-slot="${s}"\\] \\{ --tag-dh: (-?\\d+); +--tag-dl: (-?[\\d.]+); \\}`));
-      assert.ok(m, `analogous slot ${s} missing`);
-      assert.ok(Math.abs(Number(m[1])) <= 30, 'analogous hues stay within 30° of the accent');
-      offsets.add(`${m[1]}|${m[2]}`);
+  test('row descriptions wrap instead of being cut off, and tooltips carry the current settings', async ({ page }) => {
+    await open117(page, { 'work-desk-launch-desk': 'work', 'work-desk-startup-view': 'today', 'work-desk-show-cal-legend': 'false', 'work-desk-show-today-progress': 'false' });
+    await page.locator('#density-toggle').click();
+    for (const tab of ['appearance', 'behavior'] as const) {
+      await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+      for (const el of await page.locator(`#options-pane-${tab} .options-row-desc`).all()) {
+        const clipped = await el.evaluate(e => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === 'ellipsis');
+        expect(clipped, (await el.textContent()) ?? '').toBe(false);
+      }
     }
-    assert.equal(offsets.size, 7, 'each analogous slot must look different');
-    assert.ok(!offsets.has('0|0'), 'only slot 0 may be the plain accent');
-    // (0,3,0) custom selector must out-rank the (0,2,1) palette selector
-    assert.match(html, /\.tag-chip\.tag-custom\[data-tag\] \{\s*--tag-fg: color-mix\(in oklch, var\(--tag-custom\) \d+%, var\(--text\)\);/);
-    assert.match(html, /\.tag-chip-remove \{[^}]*color: inherit;/);
+    await expect(value(page, 'general')).toHaveAttribute('title', 'Current: Work · Today · Sun');
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left · No legend · No progress');
   });
 
-  it('every chip builder decorates chips; only card chips open the popover', () => {
-    const builders = mainScript.match(/chip\.className = 'tag-chip[^']*';[\s\S]{0,300}?decorateTagChip\(chip, tag\)/g) || [];
-    assert.equal(builders.length, 5, 'card chips, recurring list chips, template editor chips, the Options tag list, and Insights chips');
-    assert.match(fnSource('insightTagChips'), /decorateTagChip\(chip, tag\);\s*chip\.appendChild\(tagChipLabel\(tag\.toUpperCase\(\)\)\)/);
-    assert.doesNotMatch(fnSource('insightTagChips'), /openTagColorPopover/);
-    const cardRow = fnSource('buildTagChipRow');
-    assert.match(cardRow, /tag-clickable/);
-    assert.match(cardRow, /openTagColorPopover\(tag, chip\)/);
-    assert.match(cardRow, /e\.stopPropagation\(\)/);
+  test('calendar legend switch hides and restores the legend (round trip + reset)', async ({ page }) => {
+    await open117(page);
+    const legend = page.locator('.sidebar-calendar .cal-legend');
+    await expect(legend).toBeVisible();
+    await openSection(page, 'appearance', 'layout');
+    const toggle = page.locator('#show-cal-legend-toggle');
+    await expect(toggle).toBeChecked();
+    await toggle.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(toggle).not.toBeChecked();
+    await expect(legend).toBeHidden();
+    // The calendar redraws when the month changes; the legend stays hidden
+    await page.locator('.sidebar-calendar .cal-nav-btn').last().click();
+    await expect(page.locator('.sidebar-calendar .cal-legend')).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left · No legend');
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('.sidebar-calendar .cal-legend')).toBeHidden();
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(page.locator('.sidebar-calendar .cal-legend')).toBeVisible();
+    await expect(page.locator('#show-cal-legend-toggle')).toBeChecked();
+    await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left');
   });
 
-  it('tag list rows update in place instead of re-rendering while you pick', () => {
-    const sync = fnSource('syncTagColorListRows');
-    assert.doesNotMatch(sync, /innerHTML/);
-    assert.match(sync, /document\.activeElement !== input/);
-    assert.match(fnSource('refreshTagChipColors'), /syncTagColorListRows\(\)/);
+  test("Today's Progress switch hides and restores the sidebar card (round trip)", async ({ page }) => {
+    await open117(page);
+    const card = page.locator('#sidebar-today-glance');
+    await expect(card).toBeVisible();
+    await openSection(page, 'appearance', 'layout');
+    const toggle = page.locator('#show-today-progress-toggle');
+    await toggle.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(card).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left · No progress');
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(card).toBeHidden();
+    await openSection(page, 'appearance', 'layout');
+    await page.locator('#show-today-progress-toggle').click();
+    await expect(card).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-show-today-progress'))).toBe('true');
   });
 
-  it('color pickers show the chip\'s displayed color, refreshed on mode and theme changes', () => {
-    assert.match(fnSource('syncTagColorListRows'), /displayedTagColorHex\(row\.querySelector\('\.tag-chip'\), tag\)/);
-    assert.doesNotMatch(fnSource('syncTagColorListRows'), /TAG_PRESET_COLORS\[/);
-    assert.match(fnSource('openTagColorPopover'), /displayedTagColorHex\(anchorEl, tag\)/);
-    const shown = fnSource('displayedTagColorHex');
-    assert.match(shown, /state\.tagColors\[tag\]/);
-    assert.match(shown, /getComputedStyle\(chip\)\.color/);
-    assert.match(fnSource('applyTagColorMode'), /syncTagColorListRows\(\)/);
-    assert.match(fnSource('applyTheme'), /syncTagColorListRows\(\)/);
+  test('Open desk picks the desk on launch; Last used follows the last one (round trip + reset)', async ({ page }) => {
+    await open117(page);
+    await expect(page.locator('#context-badge')).toHaveText('Work');
+    await openSection(page, 'behavior', 'general');
+    const select = page.locator('#launch-desk-select');
+    await expect(select).toHaveValue('last');
+    await select.selectOption('personal');
+    await expect(popout(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(value(page, 'general')).toHaveAttribute('title', 'Current: Personal · Last viewed · Sun');
+    await page.keyboard.press('Escape');
+
+    // Still on Work now; next launch opens Personal even after using Work last
+    await expect(page.locator('#context-badge')).toHaveText('Work');
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('#context-badge')).toHaveText('Personal');
+
+    await openSection(page, 'behavior', 'general');
+    await page.locator('#launch-desk-select').selectOption('work');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('#context-badge')).toHaveText('Work');
+
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="behavior"]').click();
+    await expect(page.locator('#launch-desk-select')).toHaveValue('last');
+    await page.keyboard.press('Escape');
+    await page.locator('#tab-personal').click();
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('#context-badge')).toHaveText('Personal');
   });
 
-  it('1.10.0 documents analogous tag colors', () => {
-    const entry = html.match(/version: '1\.10\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Analogous/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Shades of accent<\/strong> gives each tag a lighter, darker, or neighboring shade/);
-  });
-
-  it('every tag chip wraps its text in a label so it can be centered', () => {
-    assert.equal((mainScript.match(/className = 'tag-chip( tag-clickable)?';/g) || []).length, 6);
-    assert.doesNotMatch(mainScript, /(chip|preview)\.textContent = tag/);
-    assert.equal((mainScript.match(/appendChild\(tagChipLabel\(/g) || []).length, 7);
-    assert.match(fnSource('tagChipLabel'), /label\.className = 'tag-chip-label'/);
-  });
-
-  describe('quick-pick tag suggestions', () => {
-    const suggest = (...args) => new Function('args', `
-      ${fnSource('normalizeTag')}
-      const TAG_SUGGESTION_LIMIT = 2;
-      ${fnSource('topTagSuggestions')}
-      return topTagSuggestions(...args);
-    `)(args);
-    const usage = [
-      { tag: 'ace', count: 9 },
-      { tag: 'workdesk', count: 6 },
-      { tag: 'ids', count: 3 },
-      { tag: 'admin', count: 1 },
-      { tag: 'unused', count: 0 },
-    ];
-
-    it('offers the two most-used tags', () => {
-      assert.deepEqual(suggest(usage), ['ace', 'workdesk']);
-    });
-
-    it('skips tags the item already has and backfills with the next most-used', () => {
-      assert.deepEqual(suggest(usage, ['ace']), ['workdesk', 'ids']);
-    });
-
-    it('narrows to tags starting with what is typed (ignoring # and case)', () => {
-      assert.deepEqual(suggest(usage, [], 'a'), ['ace', 'admin']);
-      assert.deepEqual(suggest(usage, [], '#AD'), ['admin']);
-      assert.deepEqual(suggest(usage, [], 'zzz'), []);
-    });
-
-    it('never suggests tags with no uses (color-only or template-only tags)', () => {
-      assert.deepEqual(suggest(usage, ['ace', 'workdesk', 'ids', 'admin']), []);
-      assert.deepEqual(suggest([]), []);
-    });
-
-    it('card tag input renders the suggestions and keeps focus when one is clicked', () => {
-      assert.match(mainScript, /topTagSuggestions\(usage, itemTags, tagInput\.value\)/);
-      assert.match(mainScript, /btn\.className = 'tag-chip tag-suggestion'/);
-      assert.match(mainScript, /btn\.addEventListener\('mousedown', \(e\) => e\.preventDefault\(\)\)/);
-    });
-
-  });
-
-  it('tag chip CSS centers the label in any font', () => {
-    const chip = html.match(/\n    \.tag-chip \{[\s\S]*?\n    \}/)[0];
-    assert.match(chip, /padding: 2px 8px;/, 'even left/right padding when there is no remove button');
-    assert.match(html, /\.tag-chip:has\(\.tag-chip-remove\) \{ padding-right: 5px; \}/);
-    assert.match(html, /@supports \(text-box: trim-both cap alphabetic\) \{\s*\.tag-chip \{ padding-block: [\d.]+em; \}\s*\.tag-chip-label \{ text-box: trim-both cap alphabetic; \}/);
-  });
-
-  it('1.10.1 documents the chip and carry-over fixes', () => {
-    const entry = html.match(/version: '1\.10\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /centered in its pill/);
-    assert.match(entry, /same line as its bar/);
-  });
-
-  it('1.11.0 documents quick-pick tags', () => {
-    const entry = html.match(/version: '1\.11\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Quick-pick tags/);
-    assert.match(html, /id="help-modal"[\s\S]*two most-used tags appear next to the box/);
-  });
-
-  it('1.11.1 documents the full-width carry-over bars', () => {
-    const entry = html.match(/version: '1\.11\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /stretch the full width/);
-  });
-
-  it('1.12.0 documents updates, the stale-copy guard, and search', () => {
-    const entry = html.match(/version: '1\.12\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Update prompt/);
-    assert.match(entry, /out-of-date copy/);
-    assert.match(entry, /separate lines/);
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Staying up to date<\/strong>/);
-  });
-
-  it('1.12.1 documents the UI audit fixes', () => {
-    const entry = html.slice(html.indexOf("version: '1.12.1'"), html.indexOf("version: '1.12.0'"));
-    assert.match(entry, /more carry-over in red/);
-    assert.match(entry, /tag box no longer pushes cards/);
-    assert.match(html, /id="help-modal"[\s\S]*New, Active, and Completed \/ Shelved columns/);
-    assert.doesNotMatch(html, /New \/ Active \/ Done \/ Shelved/);
-  });
-
-  it('1.13.0 documents the phone menu', () => {
-    const entry = html.match(/version: '1\.13\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Phone menu/);
-    assert.match(entry, /Desktop and tablet layouts are unchanged/);
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Phone menu<\/strong>/);
-    assert.doesNotMatch(html, /stay available in the sidebar on mobile/);
-  });
-
-  it('1.13.1 documents the tag box fix', () => {
-    const entry = html.match(/version: '1\.13\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /tag box on a card no longer closes/);
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(html, /id="help-modal"[\s\S]*box stays open until you add a tag, press Esc, or click outside it/);
-  });
-
-  it('1.13.3 documents normal desktop page scroll', () => {
-    const entry = html.match(/version: '1\.13\.3'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /date: 'Oct 1, 2026'/);
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(entry, /scrolls like a normal page/);
-    assert.doesNotMatch(entry, /recurring tasks appear/);
-  });
-
-  it('1.13.4: Help and README explain when recurring tasks are added', () => {
-    const latestEntry = html.match(/version: '1\.13\.4'[\s\S]*?\n      \},/)[0];
-    assert.match(latestEntry, /date: 'Oct 6, 2026'/);
-    assert.doesNotMatch(latestEntry, /tag: 'latest'/);
-    assert.match(html, /<strong>When they appear<\/strong> — a due task is added to <em>today<\/em> whenever the app opens or refreshes, syncs/);
-    assert.match(html, /Days the app wasn't opened aren't filled in afterward/);
-    assert.match(latestEntry, /explains when recurring tasks appear/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /## How it behaves/);
-    assert.match(readme, /\*\*When they're added\*\* — a due template is added to \*today's\* date/);
-    assert.match(readme, /\*\*No backfill, no preview\*\*/);
-  });
-
-  it('1.13.2 documents the version move', () => {
-    const entry = html.match(/version: '1\.13\.2'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(entry, /bottom of the sidebar/);
-    assert.match(entry, /What\\'s new link/);
-    assert.match(html, /id="help-modal"[\s\S]*highlighted <strong>What's new<\/strong> link/);
-    assert.doesNotMatch(html, /next to the app name to see the full changelog/);
-  });
-
-  it('version lives in the sidebar footer; the What\'s new link sits under the subtitle and hides on close', () => {
-    const sub = html.match(/<p id="logo-sub" class="logo-sub">[\s\S]*?<\/p>/)[0];
-    assert.doesNotMatch(sub, /version-btn|version-new-dot/);
-    assert.match(html, /<\/p>\s*<button id="whats-new-link" class="whats-new-link hidden" type="button">What's new<span id="version-new-dot" class="version-new-dot"><\/span><\/button>/);
-    assert.match(html, /<div id="account-menu"[\s\S]*?<div class="sidebar-version">\s*<span>Version<\/span>\s*<button id="version-btn" class="version-btn" type="button" role="menuitem" title="What's new"><\/button>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/aside>/);
-    assert.equal((html.match(/id="version-btn"/g) || []).length, 1);
-    assert.equal((html.match(/id="whats-new-link"/g) || []).length, 1);
-    const close = html.match(/function closeChangelog\(\) \{[\s\S]*?\n    \}/)[0];
-    assert.match(close, /changelogModal\.classList\.add\('hidden'\);\s*whatsNewLink\.classList\.add\('hidden'\);/);
-    const open = html.match(/function openChangelog\(\) \{[\s\S]*?\n    \}/)[0];
-    assert.doesNotMatch(open, /whatsNewLink/, 'link stays visible while the changelog is open');
-    assert.match(html, /if \(localStorage\.getItem\(LAST_SEEN_VERSION_KEY\) !== APP_VERSION\) \{\s*whatsNewLink\.classList\.remove\('hidden'\);/);
-    assert.match(html, /whatsNewLink\.addEventListener\('click', openChangelog\);/);
-    assert.match(html, /mobile-menu-new-dot'\)\.classList\.toggle\('hidden', whatsNewLink\.classList\.contains\('hidden'\)\)/);
-    assert.doesNotMatch(html, /versionDot/);
-  });
-
-  it('card tag box closes on outside clicks, not on blur, and wins focus', () => {
-    const box = html.match(/if \(state\.taggingId === item\.id\) \{[\s\S]*?\n        \} else \{/)[0];
-    assert.doesNotMatch(box, /addEventListener\('blur'/);
-    assert.match(box, /setTimeout\(\(\) => setTimeout\(\(\) => \{ if \(tagInput\.isConnected\) tagInput\.focus\(\); \}, 0\), 0\)/);
-    assert.match(html, /if \(!state\.taggingId \|\| e\.target\.closest\?\.\('\.tag-input-wrap'\)\) return;[\s\S]{0,200}state\.taggingId = null;/);
-  });
-
-  it('carry-over weekday dates live inside the bar so bars keep full width', () => {
-    assert.doesNotMatch(html, /has-dates/);
-    assert.match(html, /\.carryover-card:has\(\.carryover-trend\) \.carryover-by-day \.carryover-day-row \{\s*grid-template-columns: 72px 1fr 40px;/);
-    assert.match(html, /\.carryover-day-fill \{\s*width: var\(--fill, 0%\);/);
-    assert.match(mainScript, /<div class="carryover-day-fill"><\/div>\$\{inBar\}/);
-    assert.match(mainScript, /const inside = count \/ carryTotal > 0\.6;/);
-  });
-
-  it('tag color prefs are synced both ways', () => {
-    const read = fnSource('readLocalPrefs');
-    assert.match(read, /tagColorMode: normalizeTagColorMode\(/);
-    assert.match(read, /tagColors: loadTagColors\(\)/);
-    const apply = fnSource('applyCloudPrefs');
-    assert.match(apply, /applyTagColorMode\(next, \{ fromSync: true \}\)/);
-    assert.match(apply, /normalizeTagColors\(prefs\.tagColors\)/);
-  });
-
-  it('1.9.0 changelog and help document tag colors', () => {
-    const entry = html.match(/version: '1\.9\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Tag colors/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Tag colors<\/strong>/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Custom tag color<\/strong>/);
-    assert.match(html, /Synced preferences[^<]*<\/strong>[^<]*tag colors/);
+  test('notes have no 📝 icon and their text starts at the card edge, with or without tags', { tag: '@board' }, async ({ page }) => {
+    const note = (id: string, content: string, tags: string[] = []) => ({ id, type: 'note', content, completed: false, shelved: false, boardColumn: 'notes', comments: [], tags, createdAt: '2026-10-13T09:00:00' });
+    const task = { ...note('t1', 'A task'), type: 'task', boardColumn: 'new' };
+    const items = [task, note('n1', 'Plain note'), note('n2', 'Tagged note', ['ops'])];
+    await open117(page, { 'work-desk-data-work': JSON.stringify({ deletedIds: {}, days: { '2026-10-13': { date: '2026-10-13', items } } }) });
+    const plain = page.locator('.item-card', { hasText: 'Plain note' });
+    const tagged = page.locator('.item-card', { hasText: 'Tagged note' });
+    await expect(plain).toBeVisible();
+    await expect(page.locator('.note-icon')).toHaveCount(0);
+    for (const n of await page.locator('.item.note').all()) await expect(n).not.toContainText('📝');
+    for (const card of [plain, tagged]) {
+      const row = (await card.locator('.item').boundingBox())!;
+      const text = (await card.locator('.item-content').boundingBox())!;
+      const padLeft = await card.locator('.item').evaluate(el => parseFloat(getComputedStyle(el).paddingLeft));
+      expect(text.x - row.x).toBeLessThanOrEqual(padLeft + 2);
+      // No empty checkbox row above the text
+      const padTop = await card.locator('.item').evaluate(el => parseFloat(getComputedStyle(el).paddingTop));
+      if (card === plain) expect(text.y - row.y).toBeLessThanOrEqual(padTop + 2);
+    }
+    await expect(tagged.locator('.tag-chip-row')).toBeVisible();
+    // The action row still sits under the text
+    const text = (await plain.locator('.item-content').boundingBox())!;
+    const edit = (await plain.getByRole('button', { name: 'edit' }).first().boundingBox())!;
+    expect(edit.y).toBeGreaterThan(text.y);
   });
 });
 
-describe('App updates and stale-client guard', () => {
-  const versionFns = (session = {}) => new Function('session', 'APP_VERSION', `
-    const sessionStorage = {
-      getItem: (k) => (k in session ? session[k] : null),
-      setItem: (k, v) => { session[k] = String(v); },
-    };
-    ${fnSource('compareVersions')}
-    ${fnSource('extractAppVersion')}
-    ${fnSource('shouldReloadForNewerCloud')}
-    return { compareVersions, extractAppVersion, shouldReloadForNewerCloud, session };
-  `)(session, '1.12.0');
+test.describe('Account menu 1.17.0', { tag: ['@sidebar'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const menu = (page: Page) => page.locator('#account-menu');
+  const btn = (page: Page) => page.locator('#account-menu-btn');
 
-  it('compareVersions compares each segment numerically', () => {
-    const { compareVersions } = versionFns();
-    assert.equal(compareVersions('1.10.0', '1.9.1'), 1, '10 > 9 numerically, not as text');
-    assert.equal(compareVersions('1.6.0', '1.11.1'), -1);
-    assert.equal(compareVersions('2.0.0', '1.99.99'), 1);
-    assert.equal(compareVersions('1.12.0', '1.12.0'), 0);
-    assert.equal(compareVersions(undefined, '1.12.0'), 0, 'missing version never counts as newer');
-    assert.equal(compareVersions('1.x.0', '1.2.0'), 0);
+  test('the button opens and closes the menu: click, click outside, and Esc', async ({ page }) => {
+    await open117(page);
+    await expect(menu(page)).toBeHidden();
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'false');
+    await btn(page).click();
+    await expect(menu(page)).toBeVisible();
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'true');
+    for (const id of ['account-menu-options', 'account-menu-help', 'account-menu-whatsnew', 'export-btn', 'import-btn', 'repair-btn', 'version-btn']) {
+      await expect(page.locator(`#account-menu #${id}`)).toBeVisible();
+    }
+    const m = (await menu(page).boundingBox())!;
+    expect(m.y).toBeGreaterThanOrEqual(0);
+    await btn(page).click();
+    await expect(menu(page)).toBeHidden();
+
+    await btn(page).click();
+    await page.locator('.date-title').click();
+    await expect(menu(page)).toBeHidden();
+
+    await btn(page).click();
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect(btn(page)).toBeFocused();
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('extractAppVersion reads APP_VERSION out of a deployed page', () => {
-    const { extractAppVersion } = versionFns();
-    assert.equal(extractAppVersion("<script>const APP_VERSION = '1.12.3';</script>"), '1.12.3');
-    assert.equal(extractAppVersion('<html>no version</html>'), null);
-    assert.equal(extractAppVersion(html), html.match(/const APP_VERSION = '([\d.]+)'/)[1]);
+  test('Options opens next to the gear on the Desk and stays open', async ({ page }) => {
+    await open117(page);
+    await openAccountMenu(page);
+    await page.locator('#account-menu-options').click();
+    await expect(menu(page)).toBeHidden();
+    const popout = page.locator('#density-popout');
+    await expect(popout).toBeVisible();
+    await expect(popout).not.toHaveClass(/options-floating/);
+    expect(await popout.evaluate(el => el.parentElement!.classList.contains('density-wrap'))).toBe(true);
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await expect(popout).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(popout).toBeHidden();
   });
 
-  it('a stale client reloads once when the cloud was written by a newer version', () => {
-    const fns = versionFns();
-    assert.equal(fns.shouldReloadForNewerCloud('1.13.0'), true);
-    assert.equal(fns.shouldReloadForNewerCloud('1.13.0'), false, 'only once per session, so a rollback cannot loop');
-    assert.equal(fns.shouldReloadForNewerCloud('1.14.0'), true, 'a later version gets its own reload');
+  for (const tab of ['insights', 'projects'] as const) {
+    test(`Options opens from the menu on ${tab} and returns home when closed`, async ({ page }) => {
+      await open117(page);
+      await page.locator(`#tab-${tab}`).click();
+      await openAccountMenu(page);
+      await page.locator('#account-menu-options').click();
+      const popout = page.locator('#density-popout');
+      await expect(popout).toBeVisible();
+      const b = (await popout.boundingBox())!;
+      expect(b.x).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width).toBeLessThanOrEqual(1440);
+      expect(b.y).toBeGreaterThanOrEqual(0);
+      await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+      await page.locator('#options-pane-appearance [data-options-open="typography"]').click();
+      await expect(popout).toBeVisible();
+      await page.locator('#font-size-select').selectOption('large');
+      await expect(popout).toBeVisible();
+      await page.mouse.click(700, 600);
+      await expect(popout).toBeHidden();
+      await expect(popout).not.toHaveClass(/options-floating/);
+      expect(await popout.evaluate(el => el.parentElement!.classList.contains('density-wrap'))).toBe(true);
+    });
+  }
+
+  test('Help opens the help modal; What\'s new opens the changelog and clears both dots', async ({ page }) => {
+    await open117(page);
+    await expect(page.locator('#account-menu-btn-dot')).toBeVisible();
+    await openAccountMenu(page);
+    await expect(page.locator('#account-menu-new-dot')).toBeVisible();
+    await page.locator('#account-menu-help').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#help-modal')).toBeVisible();
+    await expect(page.locator('#help-modal')).toContainText('Today chip');
+    await page.locator('#help-modal-close').click();
+
+    await openAccountMenu(page);
+    await page.locator('#account-menu-whatsnew').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#changelog-modal')).toBeVisible();
+    await expect(page.locator('#changelog-body')).toContainText('Account menu');
+    await page.locator('#changelog-modal-dismiss').click();
+    await expect(page.locator('#account-menu-btn-dot')).toBeHidden();
+    await openAccountMenu(page);
+    await expect(page.locator('#account-menu-new-dot')).toBeHidden();
   });
 
-  it('same, older, or missing cloud versions never trigger a reload', () => {
-    const fns = versionFns();
-    assert.equal(fns.shouldReloadForNewerCloud('1.12.0'), false);
-    assert.equal(fns.shouldReloadForNewerCloud('1.6.0'), false);
-    assert.equal(fns.shouldReloadForNewerCloud(undefined), false);
-    assert.deepEqual(fns.session, {});
+  test('Export and Import open inline, keep the menu open, and choosing an option closes it', async ({ page }) => {
+    await open117(page);
+    await openAccountMenu(page);
+    await page.locator('#export-btn').click();
+    await expect(page.locator('#export-menu')).toBeVisible();
+    await expect(menu(page)).toBeVisible();
+    const exp = (await page.locator('#export-menu').boundingBox())!;
+    const m = (await menu(page).boundingBox())!;
+    expect(exp.y + exp.height).toBeLessThanOrEqual(m.y + m.height);
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#export-all-opt').click()]);
+    expect(download.suggestedFilename()).toMatch(/\.json$/);
+    await expect(menu(page)).toBeHidden();
+
+    await openAccountMenu(page);
+    await page.locator('#import-btn').click();
+    await expect(page.locator('#import-menu')).toBeVisible();
+    await expect(page.locator('#export-menu')).toBeHidden();
+    await expect(menu(page)).toBeVisible();
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#import-desk-opt').click()]);
+    expect(chooser).toBeTruthy();
+    await expect(menu(page)).toBeHidden();
+
+    // Reopening starts with the dropdowns closed
+    await openAccountMenu(page);
+    await expect(page.locator('#import-menu')).toBeHidden();
   });
 
-  it('sync stamps the app version and bails out before merging, carrying, or pushing', () => {
-    assert.match(fnSource('buildSbPayload'), /appVersion: APP_VERSION/);
-    const sync = mainScript.slice(mainScript.indexOf('async function sbPostAuthSync'));
-    const guard = sync.indexOf('shouldReloadForNewerCloud(remote.data.appVersion)');
-    assert.ok(guard > 0);
-    assert.ok(guard < sync.indexOf('mergeDaysData('), 'guard runs before any merge');
-    assert.ok(guard < sync.indexOf('carryForwardUnfinished('), 'guard runs before auto carry');
-    assert.match(sync.slice(guard, guard + 400), /sbSynced = false;[\s\S]*return;/);
+  test('Repair and Sign in close the menu and do their job', async ({ page }) => {
+    await open117(page);
+    await openAccountMenu(page);
+    await page.locator('#repair-btn').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#toast')).toBeVisible();
+    await openAccountMenu(page);
+    await expect(page.locator('#sb-signin-btn')).toHaveText('Sign in to sync');
+    await page.locator('#sb-signin-btn').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#auth-modal')).toBeVisible();
   });
 
-  it('service worker is registered without the HTTP cache, and resuming the app checks for updates', () => {
-    assert.match(mainScript, /register\('\/work_desk\/sw\.js', \{ scope: '\/work_desk\/', updateViaCache: 'none' \}\)/);
-    assert.match(mainScript, /visibilitychange[\s\S]{0,120}checkForAppUpdate\(\)/);
-    assert.match(fnSource('checkForAppUpdate'), /fetch\('\/work_desk\/index\.html', \{ cache: 'no-store' \}\)/);
+  test('the button shows who you are and sync status in words', async ({ page }) => {
+    await open117(page);
+    await expect(page.locator('#account-email')).toHaveText('Offline Mode');
+    await expect(page.locator('#account-sync-text')).toHaveText('This browser only');
+    await page.evaluate(() => (window as any).updateAccountChrome('signed-in', 'keith@example.com'));
+    await expect(page.locator('#account-email')).toHaveText('keith@example.com');
+    for (const [status, text] of [['syncing', 'Syncing…'], ['ok', 'Synced'], ['error', 'Sync error']]) {
+      await page.evaluate((s) => (window as any).sbSetStatus(s), status);
+      await expect(page.locator('#account-sync-text')).toHaveText(text);
+    }
+    await openAccountMenu(page);
+    await expect(page.locator('#sb-signout-btn')).toBeVisible();
+    await expect(page.locator('#sb-signin-btn')).toBeHidden();
+  });
+
+  test('collapsed sidebar hides the button; expanding brings it back working', async ({ page }) => {
+    await open117(page);
+    await page.locator('#sidebar-toggle').click();
+    await expect(btn(page)).not.toBeInViewport();
+    await page.locator('#sidebar-toggle').click();
+    await expect(btn(page)).toBeInViewport();
+    await openAccountMenu(page);
+    await expect(page.locator('#version-btn')).toBeInViewport();
+  });
+
+  test('phone: the sheet shows the account and sign in inline, without the desktop menu items', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open117(page);
+    await expect(btn(page)).toBeHidden();
+    await page.locator('#mobile-menu-btn').click();
+    const sheet = page.locator('#mobile-menu-sheet');
+    await expect(sheet.locator('#account-email')).toBeVisible();
+    await expect(sheet.locator('#sb-signin-btn')).toBeVisible();
+    await expect(sheet.locator('#export-btn')).toBeVisible();
+    await expect(sheet.locator('#account-menu-options')).toBeHidden();
+    await expect(sheet.locator('#version-btn')).toBeHidden();
+    await page.locator('#mobile-menu-close').click();
+    await expect(page.locator('#account-menu .sidebar-backup')).toHaveCount(1);
   });
 });
 
-describe('UI audit fixes (1.12.1)', () => {
-  const load = (name) => new Function(`${fnSource(name)}; return ${name};`)();
+test.describe('Calendar 1.17.0', { tag: ['@calendar'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const cal = (page: Page) => page.locator('#sidebar-calendar');
+  const chip = (page: Page) => page.locator('#cal-today-chip');
+  const next = (page: Page) => cal(page).locator('.cal-nav-btn[aria-label="Next month"]');
+  const prev = (page: Page) => cal(page).locator('.cal-nav-btn[aria-label="Previous month"]');
+  const colorOf = (loc: ReturnType<Page['locator']>) => loc.evaluate(el => getComputedStyle(el).color);
 
-  it('week-over-week colors changes by good/bad, and more carry-over is bad', () => {
-    const formatChange = load('formatChange');
-    assert.match(formatChange(2), /class="change-good">\+2 ↑/);
-    assert.match(formatChange(-1), /class="change-bad">-1 ↓/);
-    assert.match(formatChange(2, { lowerIsBetter: true }), /class="change-bad">\+2 ↑/);
-    assert.match(formatChange(-2, { lowerIsBetter: true }), /class="change-good">-2 ↓/);
-    assert.match(formatChange(0), /change-neutral/);
-    assert.match(mainScript, /formatChange\(comparison\.change\.carriedOver, \{ lowerIsBetter: true \}\)/);
-    assert.doesNotMatch(html, /change-up|change-down/);
+  test('Today chip appears away from this month and jumps back (DOM replaced on click)', async ({ page }) => {
+    await open117(page);
+    await expect(chip(page)).toHaveCount(0);
+    for (let i = 0; i < 14; i++) await next(page).click();
+    await expect(cal(page).locator('.cal-title')).toHaveText('December 2027');
+    await expect(chip(page)).toBeVisible();
+    await expect(chip(page)).toHaveText('Today');
+    await chip(page).click();
+    await expect(cal(page).locator('.cal-title')).toHaveText('October 2026');
+    await expect(chip(page)).toHaveCount(0);
+    await expect(cal(page).locator('.cal-day.selected')).toHaveText('13');
+    await expect(cal(page)).toBeVisible();
+
+    await prev(page).click();
+    await expect(chip(page)).toBeVisible();
+    await next(page).click();
+    await expect(chip(page)).toHaveCount(0);
   });
 
-  it('search marks finished tasks as done or shelved, never notes', () => {
-    const status = load('searchItemStatus');
-    assert.equal(status({ type: 'task', completed: true }), 'done');
-    assert.equal(status({ type: 'task', shelved: true }), 'shelved');
-    assert.equal(status({ type: 'task' }), null);
-    assert.equal(status({ type: 'note', completed: true }), null);
-    assert.equal((fnSource('collectSearchMatches').match(/status: searchItemStatus\(item\)/g) || []).length, 3);
+  test('the legend explains the marks and the calendar stays compact', async ({ page }) => {
+    await open117(page);
+    const legend = cal(page).locator('.cal-legend');
+    await expect(legend).toBeVisible();
+    await expect(legend.locator('.cal-legend-item')).toHaveText([/Has items/, /Left open/, /Holiday/]);
+    // The sample is a swatch, not a count; real counts only sit on past days with open tasks
+    await expect(legend.locator('.cal-legend-badge')).toHaveText('');
+    const dot = await legend.locator('.cal-legend-dot').first().boundingBox();
+    const sample = await legend.locator('.cal-legend-badge').boundingBox();
+    expect(sample!.width).toBeCloseTo(dot!.width, 0);
+    expect(sample!.height).toBeCloseTo(dot!.height, 0);
+    const realInk = await cal(page).locator('.cal-day-badge').first().evaluate(el => getComputedStyle(el).color);
+    expect(await legend.locator('.cal-legend-badge').evaluate(el => getComputedStyle(el).backgroundColor)).toBe(realInk);
+    await expect(cal(page).locator('.cal-day-badge')).toHaveText(['2']);
+    await expect(cal(page).locator('.cal-day', { has: page.locator('.cal-day-badge') })).toContainText('5');
+    const h = (await cal(page).boundingBox())!.height;
+    expect(h).toBeLessThan(300);
   });
 
-  it('board columns cannot be widened by their content, and the card action row wraps', () => {
-    assert.match(html, /\.sprint-board \{[^}]*grid-template-columns: minmax\(0, 1\.1fr\) minmax\(0, 1\.1fr\) minmax\(0, 0\.9fr\);/);
-    assert.match(html, /\.sprint-board \{ grid-template-columns: minmax\(0, 1fr\); \}/);
-    assert.match(html, /\.card-action-bar \{\s*display: flex;\s*flex-wrap: wrap;/);
-    assert.match(html, /\.tag-input-wrap \{\s*display: inline-flex;\s*flex-wrap: wrap;/);
+  test('with nothing left open the calendar shows no counts, only the legend swatch', async ({ page }) => {
+    await open117(page, { 'work-desk-data-work': JSON.stringify({ deletedIds: {}, days: {
+      '2026-10-05': { date: '2026-10-05', items: [{ id: 'd1', type: 'task', content: 'Finished Monday', completed: true, completedAt: '2026-10-05T12:00:00', shelved: false, boardColumn: 'done', comments: [], tags: [], createdAt: '2026-10-05T09:00:00' }] },
+      '2026-10-13': { date: '2026-10-13', items: [{ id: 't1', type: 'task', content: 'Today task', completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: '2026-10-13T09:00:00' }] },
+    } }) });
+    await expect(cal(page).locator('.cal-legend')).toBeVisible();
+    await expect(cal(page).locator('.cal-day-badge')).toHaveCount(0);
+    await expect(cal(page).locator('.cal-legend-badge')).toHaveText('');
   });
 
-  it('insights has 8 stat tiles laid out 8, 4, or 2 per row', () => {
-    const render = mainScript.slice(mainScript.indexOf("statGrid.className = 'stat-grid'"));
-    const cards = render.slice(0, render.indexOf('];')).match(/label: '/g);
-    assert.equal(cards.length, 8);
-    assert.doesNotMatch(render.slice(0, 600), /Completion rate/);
-    assert.match(html, /\.stat-grid \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
-    assert.match(html, /@media \(min-width: 1360px\) \{\s*\.stat-grid \{ grid-template-columns: repeat\(8, minmax\(0, 1fr\)\); \}/);
-    assert.match(html, /@media \(max-width: 600px\) \{\s*\.stat-grid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
-  });
-
-  it('progress bar: Done is the solid accent, Active and New are lighter accent shades', () => {
-    assert.match(html, /\.progress-seg\.done \{ background: var\(--progress-done, var\(--accent\)\); \}/);
-    assert.match(html, /\.progress-seg\.active \{ background: var\(--progress-active, color-mix\(in srgb, var\(--accent\) 55%/);
-    assert.match(html, /\.progress-seg\.new \{ background: var\(--progress-new, color-mix\(in srgb, var\(--accent\) 22%/);
-  });
-
-  it('long theme names get the compact label instead of being cut off', () => {
-    assert.equal((mainScript.match(/theme-swatch-name\$\{t\.name\.length > 11 \? ' long' : ''\}/g) || []).length, 2);
-    assert.match(html, /\.theme-swatch-name \{[^}]*max-width: 100%;/);
-    assert.match(html, /\.theme-swatch-name\.long \{ font-size: 0\.56rem;/);
-  });
-
-  it('touch screens get finger-sized hit areas without shifting the layout', () => {
-    const touch = html.slice(html.indexOf('@media (hover: none), (pointer: coarse)'));
-    const block = touch.slice(0, touch.indexOf('.empty-state'));
-    assert.match(block, /\.tag-chip-remove::after, \.card-overflow-btn::after[^{]*\{\s*content: ''; position: absolute; inset: -10px;/);
-    assert.match(block, /\.card-action, \.comment-split-btn \{ padding: 8px 6px; \}/);
-    assert.match(block, /min-height: 36px;/);
-  });
-
-  it('calendar badges are amber, the recurring icon follows the theme, and the week strip snaps', () => {
-    assert.match(html, /\.cal-day-badge \{[^}]*background: color-mix\(in srgb, var\(--carried\) 20%, transparent\);[^}]*color: var\(--carried-ink\);/);
-    assert.doesNotMatch(html, /\u{1F501}/u, 'the always-blue emoji is gone');
-    assert.match(html, /id="recurring-btn"[^>]*><svg class="icon-repeat"/);
-    assert.match(mainScript, /badge\.innerHTML = REPEAT_ICON_SVG;/);
-    assert.match(html, /\.icon-repeat \{[^}]*stroke: currentColor;/);
-    assert.match(html, /\.week-strip \{[^}]*scroll-snap-type: x proximity;[^}]*mask-image:/);
-  });
-
-  it('year carry-over hides empty future months; streak bar gets labels and a legend', () => {
-    assert.match(mainScript, /\.filter\(\(b\) => unit === 'Week' \|\| b\.startKey <= today \|\| b\.count > 0\)/);
-    assert.match(mainScript, /labels\.className = 'streak-heatmap-labels';/);
-    assert.match(mainScript, /labels\.style\.gridTemplateColumns = heatmap\.style\.gridTemplateColumns;/);
-    assert.match(mainScript, /Each block is a day — darker means more tasks/);
-  });
-});
-
-describe('Deletions stay deleted across devices', () => {
-  const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
-  const day = (date, ...items) => ({ [date]: { date, items } });
-
-  const htmlMerge = new Function('lib', `
-    const { mergeTags, deduplicateDayItems, deduplicateAcrossDays, normalizeItem } = lib;
-    const console = { log() {} };
-    ${fnSource('pruneDeletedIds')}
-    ${fnSource('mergeDeletedIds')}
-    ${fnSource('mergeDaysData')}
-    return mergeDaysData;
-  `)({ mergeTags, deduplicateDayItems, deduplicateAcrossDays, normalizeItem: (i) => normalizeItem(i, () => i.id) });
-
-  const records = () => new Function(`
-    const state = { data: { days: {}, deletedIds: {} } };
-    ${fnSource('pruneDeletedIds')}
-    ${fnSource('syncRecords')}
-    ${fnSource('markItemDeleted')}
-    ${fnSource('clearItemDeleted')}
-    ${fnSource('markItemRestored')}
-    return { state, syncRecords, markItemDeleted, clearItemDeleted, markItemRestored };
-  `)();
-
-  for (const [label, merge] of [['lib', mergeDaysData], ['work-desk.html', htmlMerge]]) {
-    it(`${label}: a purged task is dropped even when the other device still has a local copy`, () => {
-      const local = { days: day('2026-09-30', task({ id: 'zombie', content: 'Old task' })), deletedIds: {} };
-      const remote = { days: {}, deletedIds: { zombie: ago(60) }, purgedIds: { zombie: ago(60) } };
-      const merged = merge(local, remote);
-      assert.equal(Object.values(merged.days).flatMap(d => d.items).length, 0);
-      assert.ok(merged.purgedIds.zombie, 'purge record travels on so the next device drops it too');
-    });
-
-    it(`${label}: legacy tombstones (no purge record) keep the local-copy-wins rule`, () => {
-      const local = { days: day('2026-09-30', task({ id: 'old-undo', content: 'Restored long ago' })), deletedIds: {} };
-      const remote = { days: {}, deletedIds: { 'old-undo': ago(600) } };
-      const merged = merge(local, remote);
-      assert.equal(merged.days['2026-09-30'].items[0].id, 'old-undo');
-    });
-
-    it(`${label}: an Undo-restore after the delete wins on every device, including ones without a copy`, () => {
-      const remote = {
-        days: day('2026-09-29', task({ id: 'undone', content: 'Oops, keep this' })),
-        deletedIds: { undone: ago(10) }, purgedIds: { undone: ago(10) }, restoredIds: { undone: ago(9) },
+  test('selected day is a solid theme fill with readable text on light and amber themes', async ({ page }) => {
+    await open117(page);
+    const sel = cal(page).locator('.cal-day.selected');
+    // Relative colors compute to color(srgb …) / lch(…), so resolve them to RGBA through a canvas pixel
+    const read = () => sel.evaluate(el => {
+      const cs = getComputedStyle(el);
+      const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+      const rgba = (c: string) => {
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = c;
+        ctx.fillRect(0, 0, 1, 1);
+        return [...ctx.getImageData(0, 0, 1, 1).data];
       };
-      const merged = merge({ days: {}, deletedIds: {} }, remote);
-      assert.equal(merged.days['2026-09-29'].items[0].id, 'undone');
-      assert.equal(merged.deletedIds.undone, undefined);
-      assert.equal(merged.purgedIds.undone, undefined);
+      const lum = (c: string) => {
+        const [r, g, b] = rgba(c).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const [a, b] = [lum(cs.backgroundColor), lum(cs.color)].sort((x, y) => y - x);
+      return { alpha: rgba(cs.backgroundColor)[3] / 255, contrast: (a + 0.05) / (b + 0.05) };
     });
+    const light = await read();
+    expect(light.alpha).toBe(1);
+    expect(light.contrast).toBeGreaterThanOrEqual(3);
 
-    it(`${label}: deleting again after an Undo wins over the older restore`, () => {
-      const local = { days: day('2026-09-30', task({ id: 'twice', content: 'Changed my mind' })), deletedIds: {}, restoredIds: { twice: ago(30) } };
-      const remote = { days: {}, deletedIds: { twice: ago(5) }, purgedIds: { twice: ago(5) } };
-      const merged = merge(local, remote);
-      assert.equal(Object.values(merged.days).flatMap(d => d.items).length, 0);
-    });
-  }
-
-  it('deleting writes a purge record; Undo replaces it with a restore record', () => {
-    const r = records();
-    r.markItemDeleted('t1');
-    assert.ok(r.state.data.deletedIds.t1);
-    assert.equal(r.state.data.purgedIds.t1, r.state.data.deletedIds.t1);
-    r.markItemRestored('t1');
-    assert.equal(r.state.data.deletedIds.t1, undefined);
-    assert.equal(r.state.data.purgedIds.t1, undefined);
-    assert.ok(r.state.data.restoredIds.t1);
+    await page.evaluate(() => localStorage.setItem('work-desk-theme', 'flint'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'flint');
+    await expect.poll(async () => (await read()).contrast).toBeGreaterThanOrEqual(3);
+    expect((await read()).alpha).toBe(1);
   });
 
-  it('carry-forward and moves only clear the local tombstone; they never count as a restore', () => {
-    assert.match(fnSource('restoreDeleted'), /markItemRestored\(undo\.item\.id\)/);
-    assert.doesNotMatch(fnSource('carryForwardUnfinished'), /markItemRestored/);
-    assert.equal((mainScript.match(/markItemRestored\(/g) || []).length, 2, 'declaration + Undo only');
+  test('left-open badges are amber by default and rose on amber-accent themes', async ({ page }) => {
+    await open117(page);
+    const badge = cal(page).locator('.cal-day-badge').first();
+    await expect(badge).toHaveText('2');
+    expect(await colorOf(badge)).toBe('rgb(251, 191, 36)');
+    await page.evaluate(() => localStorage.setItem('work-desk-theme', 'flint'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect.poll(() => colorOf(cal(page).locator('.cal-day-badge').first())).toBe('rgb(253, 164, 175)');
   });
 
-  it('syncRecords keeps recent records, drops expired or malformed ones', () => {
-    const { syncRecords } = records();
-    const out = syncRecords({ purgedIds: { a: ago(1), old: '2020-01-01T00:00:00.000Z' }, restoredIds: 'bad' });
-    assert.deepEqual(Object.keys(out.purgedIds), ['a']);
-    assert.deepEqual(out.restoredIds, {});
-    assert.deepEqual(syncRecords(null), { purgedIds: {}, restoredIds: {} });
-  });
+  test('quieter weekends: Off, Work desk only, and Both desks across Work and Personal', async ({ page }) => {
+    await open117(page);
+    const sat = () => cal(page).locator('.cal-day.weekend:not(.other-month):not(.selected)').first();
+    const weekday = () => cal(page).locator('.cal-day:not(.weekend):not(.other-month):not(.selected):not(.today):not(.holiday)').first();
+    const quiet = async () => (await colorOf(sat())) !== (await colorOf(weekday()));
+    expect(await quiet()).toBe(false);
 
-  it('loading and importing keep the purge/restore records', () => {
-    assert.match(fnSource('loadData'), /\.\.\.syncRecords\(parsed\)/);
-    assert.match(fnSource('mergeImportData'), /\.\.\.syncRecords\(state\.data\)/);
-    assert.match(fnSource('applyImport'), /deletedIds, \.\.\.syncRecords\(state\.data\)/);
-    assert.match(fnSource('applyImportAll'), /\.\.\.syncRecords\(workData\)[\s\S]*\.\.\.syncRecords\(personalData\)/);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('[data-options-open="general"]').click();
+    await page.locator('#quiet-weekends-select').selectOption('work');
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect.poll(quiet).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.options-row[data-options-open="general"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await page.locator('#tab-personal').click();
+    await expect.poll(quiet).toBe(false);
+    await page.locator('#tab-work').click();
+    await expect.poll(quiet).toBe(true);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect.poll(quiet).toBe(true);
+
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('[data-options-open="general"]').click();
+    await page.locator('#quiet-weekends-select').selectOption('both');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await page.locator('#tab-personal').click();
+    await expect.poll(quiet).toBe(true);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-quiet-weekends'))).toBe('both');
+
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('[data-options-open="general"]').click();
+    await page.locator('#quiet-weekends-select').selectOption('off');
+    await expect.poll(quiet).toBe(false);
   });
 });
 
-describe('Service worker (sw.js)', () => {
-  const swSource = readFileSync(join(__dirname, '../sw.js'), 'utf8');
+// ═══════════════════════════════════════════════════════════════════════
+// 1.18.0 complete edge + tag position
+// ═══════════════════════════════════════════════════════════════════════
+async function open118(page: Page, stored: Record<string, string> = {}) {
+  await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+  await page.addInitScript((s) => {
+    if (localStorage.getItem('v118-seeded')) return;
+    localStorage.setItem('v118-seeded', '1');
+    const t = (id: string, content: string, extra: Record<string, unknown> = {}) => ({ id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: '2026-10-13T09:00:00', ...extra });
+    localStorage.setItem('work-desk-list-context', 'work');
+    localStorage.setItem('work-desk-auto-carry-forward', 'false');
+    localStorage.setItem('work-desk-data-work', JSON.stringify({ deletedIds: {}, days: {
+      '2026-10-13': { date: '2026-10-13', items: [t('k1', 'Plain task'), t('k2', 'Tagged task', { tags: ['dco', 'q4'] }), t('k3', 'Done task', { completed: true })] },
+    } }));
+    localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v);
+  }, stored);
+  await page.goto(DESK_URL);
+  await dismissAuthModal(page);
+  await expect(page.locator('.sprint-board')).toBeVisible();
+}
+const beforeContent = (loc: ReturnType<Page['locator']>) => loc.evaluate(el => getComputedStyle(el, '::before').content);
+const taskCard = (page: Page, text: string) => page.locator('.item-card', { hasText: text });
 
-  function loadSw({ online = true, networkBody = 'fresh', cached = {} } = {}) {
-    const handlers = {};
-    const store = new Map(Object.entries(cached));
-    const fetches = [];
-    const cache = {
-      put: async (req, res) => { store.set(typeof req === 'string' ? req : new URL(req.url).pathname, res); },
-      match: async (req) => store.get(typeof req === 'string' ? req : new URL(req.url).pathname),
-      addAll: async () => {},
-    };
-    const ctx = {
-      self: {
-        location: { origin: 'https://example.github.io' },
-        addEventListener: (type, fn) => { handlers[type] = fn; },
-        skipWaiting: () => {},
-        clients: { claim: async () => {} },
-      },
-      caches: { open: async () => cache, keys: async () => [], delete: async () => true },
-      fetch: async (req, init) => {
-        fetches.push({ url: req.url, init });
-        if (!online) throw new TypeError('offline');
-        return { ok: true, status: 200, body: networkBody, clone() { return this; } };
-      },
-      Request: class { constructor(url, init) { this.url = url; this.init = init; } },
-      Response: { error: () => ({ error: true }) },
-      URL,
-    };
-    vm.createContext(ctx);
-    vm.runInContext(swSource, ctx);
-    const respond = async (url, mode = 'no-cors') => {
-      let pending;
-      handlers.fetch({ request: { url, method: 'GET', mode }, respondWith: (p) => { pending = p; } });
-      return pending;
-    };
-    return { respond, fetches, store, source: swSource };
-  }
+test.describe('Complete edge 1.18.0', { tag: ['@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
 
-  it('pages come from the network first, bypassing the HTTP cache', async () => {
-    const sw = loadSw({ cached: { '/work_desk/': { body: 'stale' } } });
-    const res = await sw.respond('https://example.github.io/work_desk/', 'navigate');
-    assert.equal(res.body, 'fresh', 'a new deploy shows on the first load');
-    assert.equal(sw.fetches[0].init.cache, 'no-cache');
-    assert.equal(sw.store.get('/work_desk/').body, 'fresh', 'cache is refreshed for offline use');
+  test('the edge completes and reopens a task: DONE, DONE? on hover, DONE!, UNDO?', async ({ page }) => {
+    await open118(page);
+    const card = taskCard(page, 'Plain task');
+    const edge = card.locator('.complete-edge');
+    await expect(edge).toBeVisible();
+    await expect(card.locator('.item > .checkbox')).toBeHidden();
+    await expect(edge).toHaveAttribute('aria-label', 'Mark complete');
+    expect(await beforeContent(edge)).toBe('"done"');
+    await edge.hover();
+    expect(await beforeContent(edge)).toBe('"done\u200A?"');
+    await edge.click();
+    const done = page.locator('.board-column.done .item-card', { hasText: 'Plain task' });
+    await expect(done.locator('.item.completed')).toBeVisible();
+    const doneEdge = done.locator('.complete-edge');
+    await expect(doneEdge).toHaveClass(/is-done/);
+    await expect(doneEdge).toHaveAttribute('aria-label', 'Mark incomplete');
+    await page.mouse.move(5, 5);
+    expect(await beforeContent(doneEdge)).toBe('"done\u200A!"');
+    await doneEdge.hover();
+    expect(await beforeContent(doneEdge)).toBe('"undo\u200A?"');
+    await doneEdge.click();
+    await expect(page.locator('.board-column.new .item-card', { hasText: 'Plain task' })).toBeVisible();
+    await expect(page.locator('.item.completed', { hasText: 'Plain task' })).toHaveCount(0);
   });
 
-  it('pages fall back to the cached copy when offline', async () => {
-    const sw = loadSw({ online: false, cached: { '/work_desk/index.html': { body: 'offline copy' } } });
-    const res = await sw.respond('https://example.github.io/work_desk/', 'navigate');
-    assert.equal(res.body, 'offline copy');
+  test('keyboard: Enter on the focused edge completes the task', async ({ page }) => {
+    await open118(page);
+    await taskCard(page, 'Plain task').locator('.complete-edge').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.board-column.done .item.completed', { hasText: 'Plain task' })).toBeVisible();
   });
 
-  it('icons are served from cache and refreshed in the background', async () => {
-    const sw = loadSw({ cached: { '/work_desk/icon-192.png': { body: 'cached icon' } } });
-    const res = await sw.respond('https://example.github.io/work_desk/icon-192.png');
-    assert.equal(res.body, 'cached icon');
-    assert.equal(sw.fetches.length, 1);
+  test('reads DOING while the card is dragged', async ({ page }) => {
+    await open118(page);
+    const card = taskCard(page, 'Plain task');
+    const dt = await page.evaluateHandle(() => new DataTransfer());
+    await card.locator('.item-content').dispatchEvent('dragstart', { dataTransfer: dt });
+    await expect(card).toHaveClass(/dragging/);
+    expect(await beforeContent(card.locator('.complete-edge'))).toBe('"doing"');
+    await card.dispatchEvent('dragend');
+    await expect(card).not.toHaveClass(/dragging/);
+    expect(await beforeContent(card.locator('.complete-edge'))).toBe('"done"');
   });
 
-  it('cross-origin requests (Supabase, fonts) are left alone', async () => {
-    const sw = loadSw();
-    assert.equal(await sw.respond('https://abc.supabase.co/rest/v1/user_data'), undefined);
+  test('a press that moves like a drag does not complete the task', async ({ page }) => {
+    await open118(page);
+    const card = taskCard(page, 'Plain task');
+    const box = (await card.locator('.complete-edge').boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + 40, { steps: 5 });
+    await page.mouse.up();
+    await expect(card.locator('.item.completed')).toHaveCount(0);
+    await expect(page.locator('.board-column.new .item-card', { hasText: 'Plain task' })).toBeVisible();
   });
 
-  it('uses a new cache name so the old cache-first copy is cleared', () => {
-    const name = swSource.match(/const CACHE = '([^']+)'/)[1];
-    assert.notEqual(name, 'work-desk-v1');
-    assert.match(swSource, /keys\.filter\(k => k !== CACHE\)\.map\(k => caches\.delete\(k\)\)/);
-    assert.match(swSource, /self\.skipWaiting\(\)/);
-    assert.match(swSource, /self\.clients\.claim\(\)/);
+  test('the edge covers the task and action bar, stopping above open comments', async ({ page }) => {
+    await open118(page);
+    const card = taskCard(page, 'Plain task');
+    await card.locator('.card-action', { hasText: /^comment/ }).click();
+    await expect(card.locator('.comments-panel')).toBeVisible();
+    const edge = (await card.locator('.complete-edge').boundingBox())!;
+    const bar = (await card.locator('.card-action-bar').boundingBox())!;
+    const panel = (await card.locator('.comments-panel').boundingBox())!;
+    const cardBox = (await card.boundingBox())!;
+    expect(edge.y - cardBox.y).toBeLessThanOrEqual(2);
+    expect(Math.abs(edge.y + edge.height - (bar.y + bar.height))).toBeLessThanOrEqual(1);
+    expect(edge.y + edge.height).toBeLessThanOrEqual(panel.y + 1);
+    // Text sits clear of the edge
+    const text = (await card.locator('.item-content').boundingBox())!;
+    expect(text.x).toBeGreaterThanOrEqual(edge.x + edge.width + 6);
+  });
+
+  test('compact cards show a bar instead of the label', async ({ page }) => {
+    await open118(page, { 'work-desk-density': 'compact' });
+    const edge = taskCard(page, 'Plain task').locator('.complete-edge');
+    await expect(edge).toBeVisible();
+    expect(await beforeContent(edge)).not.toContain('done');
+    await edge.click();
+    await expect(page.locator('.board-column.done .item.completed', { hasText: 'Plain task' })).toBeVisible();
   });
 });
 
-describe('Phone menu (1.13.0)', () => {
-  const css = html.slice(html.indexOf('<style>'), html.indexOf('</style>'));
+test.describe('Complete edge and tag position on phones 1.18.0', { tag: ['@phone', '@board'] }, () => {
+  test.use({ viewport: { width: 390, height: 1200 }, isMobile: true, hasTouch: true });
 
-  function phoneBlocks() {
-    const blocks = [];
-    let from = 0;
-    for (;;) {
-      const start = css.indexOf('@media (max-width: 768px) {', from);
-      if (start < 0) return blocks;
-      let depth = 0;
-      let i = css.indexOf('{', start);
-      for (; i < css.length; i++) {
-        if (css[i] === '{') depth++;
-        else if (css[i] === '}' && --depth === 0) break;
+  test('the edge is 40px wide and a tap completes the task', async ({ page }) => {
+    await open118(page);
+    const edge = taskCard(page, 'Plain task').locator('.complete-edge');
+    expect((await edge.boundingBox())!.width).toBeGreaterThanOrEqual(40);
+    await edge.tap();
+    await expect(page.locator('.board-column.done .item.completed', { hasText: 'Plain task' })).toBeVisible();
+  });
+
+  test('action-bar tags share a right-aligned line with ⋮ when the bar wraps', async ({ page }) => {
+    await open118(page, { 'work-desk-tag-position': 'actions' });
+    const card = taskCard(page, 'Tagged task');
+    const chips = card.locator('.card-action-end > .tag-chip-row');
+    await expect(chips).toBeVisible();
+    await expect(card.locator('.item .tag-chip-row')).toHaveCount(0);
+    const c = (await chips.boundingBox())!;
+    const dots = (await card.locator('.card-overflow-btn').boundingBox())!;
+    const bar = (await card.locator('.card-action-bar').boundingBox())!;
+    const edit = (await card.getByRole('button', { name: 'edit' }).boundingBox())!;
+    expect(Math.abs((c.y + c.height / 2) - (dots.y + dots.height / 2))).toBeLessThanOrEqual(4);
+    expect(bar.x + bar.width - (dots.x + dots.width)).toBeLessThanOrEqual(16);
+    expect(dots.x - (c.x + c.width)).toBeLessThanOrEqual(16);
+    expect(c.y).toBeGreaterThan(edit.y + edit.height - 2);
+  });
+});
+
+test.describe('Card layout options 1.18.0', { tag: ['@options'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const popout = (page: Page) => page.locator('#density-popout');
+  const html = (page: Page) => page.locator('html');
+  async function openCardLayout(page: Page) {
+    if (!(await popout(page).isVisible())) await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await page.locator('#options-pane-appearance [data-options-open="card-layout"]').click();
+    await expect(page.locator('[data-options-section="card-layout"]')).toBeVisible();
+  }
+  async function closeOptions(page: Page) {
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+  }
+
+  test('Complete button: every style applies, Checkbox brings back the checkbox, and it persists', async ({ page }) => {
+    await open118(page);
+    await openCardLayout(page);
+    await expect(page.locator('[data-options-section="card-layout"] .options-new-tag')).toHaveCount(2);
+    const sel = page.locator('#complete-style-select');
+    await expect(sel).toHaveValue('label');
+    await sel.click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-options-section="card-layout"]')).toBeVisible();
+    for (const v of ['bar', 'raised', 'switch', 'circle', 'square', 'diamond', 'check', 'none', 'label']) {
+      await sel.selectOption(v);
+      await expect(html(page)).toHaveAttribute('data-complete-style', v);
+      await expect(html(page)).toHaveAttribute('data-complete-edge', 'on');
+      await expect(popout(page)).toBeVisible();
+    }
+    await sel.selectOption('checkbox');
+    await expect(html(page)).toHaveAttribute('data-complete-edge', 'off');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toBeVisible();
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toHaveAttribute('title', 'Current: Comfortable · Checkbox');
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+    const card = taskCard(page, 'Plain task');
+    await expect(card.locator('.complete-edge')).toBeHidden();
+    await expect(card.locator('.item > .checkbox')).toBeVisible();
+    await card.locator('.item > .checkbox').click();
+    await expect(page.locator('.board-column.done .item.completed', { hasText: 'Plain task' })).toBeVisible();
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(html(page)).toHaveAttribute('data-complete-style', 'checkbox');
+    await expect(page.locator('#complete-style-select')).toHaveValue('checkbox');
+  });
+
+  test('Tag position: slim keeps text level, action bar moves chips next to ⋮, own row puts them back', async ({ page }) => {
+    await open118(page);
+    await openCardLayout(page);
+    const sel = page.locator('#tag-position-select');
+    await expect(sel).toHaveValue('row');
+    await sel.click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-options-section="card-layout"]')).toBeVisible();
+    const textTop = (text: string) => taskCard(page, text).evaluate(c => Math.round(c.querySelector('.item-content')!.getBoundingClientRect().top - c.getBoundingClientRect().top));
+
+    await sel.selectOption('slim');
+    await expect(html(page)).toHaveAttribute('data-tag-position', 'slim');
+    expect(await textTop('Plain task')).toBe(await textTop('Tagged task'));
+    for (const chip of await taskCard(page, 'Tagged task').locator('.tag-chip').all()) {
+      expect((await chip.boundingBox())!.height).toBeLessThanOrEqual(14.5);
+    }
+
+    await sel.selectOption('actions');
+    await expect(popout(page)).toBeVisible();
+    await expect(taskCard(page, 'Tagged task').locator('.card-action-end .tag-chip')).toHaveCount(2);
+    await expect(taskCard(page, 'Tagged task').locator('.item .tag-chip')).toHaveCount(0);
+    expect(await textTop('Plain task')).toBe(await textTop('Tagged task'));
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toBeVisible();
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toHaveAttribute('title', 'Current: Comfortable · Done label · Tags in bar');
+    await page.locator('#options-pane-appearance [data-options-open="card-layout"]').click();
+
+    await page.locator('#tag-position-select').selectOption('row');
+    await expect(taskCard(page, 'Tagged task').locator('.item .tag-chip')).toHaveCount(2);
+    await expect(taskCard(page, 'Tagged task').locator('.card-action-end .tag-chip')).toHaveCount(0);
+    expect(await textTop('Tagged task')).toBeGreaterThan(await textTop('Plain task'));
+
+    // Chips in the action bar keep working: × removes the tag
+    await page.locator('#tag-position-select').selectOption('actions');
+    await closeOptions(page);
+    await taskCard(page, 'Tagged task').locator('.card-action-end .tag-chip-remove').first().click();
+    await expect(taskCard(page, 'Tagged task').locator('.tag-chip')).toHaveCount(1);
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(html(page)).toHaveAttribute('data-tag-position', 'actions');
+    await expect(taskCard(page, 'Tagged task').locator('.card-action-end .tag-chip')).toHaveCount(1);
+  });
+
+  test('Reset Appearance restores the "Done" label and tags on their own row', async ({ page }) => {
+    await open118(page, { 'work-desk-complete-style': 'switch', 'work-desk-tag-position': 'actions' });
+    await expect(html(page)).toHaveAttribute('data-complete-style', 'switch');
+    await expect(taskCard(page, 'Tagged task').locator('.card-action-end .tag-chip')).toHaveCount(2);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    page.once('dialog', d => d.accept());
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(page.locator('#complete-style-select')).toHaveValue('label');
+    await expect(page.locator('#tag-position-select')).toHaveValue('row');
+    await expect(html(page)).toHaveAttribute('data-complete-style', 'label');
+    await expect(html(page)).toHaveAttribute('data-tag-position', 'row');
+    await expect(taskCard(page, 'Tagged task').locator('.item .tag-chip')).toHaveCount(2);
+    await expect(page.locator('.options-row[data-options-open="card-layout"]')).toHaveAttribute('title', 'Current: Comfortable · Done label');
+  });
+});
+
+test.describe('Options list 1.18.2', { tag: ['@options'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const popout = (page: Page) => page.locator('#density-popout');
+  const SECTIONS = {
+    appearance: ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags'],
+    behavior: ['general', 'tasks', 'projects', 'insights', 'holidays'],
+  } as const;
+
+  test('every section says ‹ Back and the title never runs into it', async ({ page }) => {
+    await open117(page);
+    await page.locator('#density-toggle').click();
+    for (const tab of ['appearance', 'behavior'] as const) {
+      await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+      for (const id of SECTIONS[tab]) {
+        await page.locator(`#options-pane-${tab} [data-options-open="${id}"]`).click();
+        const section = page.locator(`[data-options-section="${id}"]`);
+        const back = section.locator('[data-options-back]');
+        await expect(back).toHaveText('‹ Back');
+        const backRight = (await back.boundingBox())!.x + (await back.boundingBox())!.width;
+        const titleLeft = await section.locator('.options-section-title').evaluate(el => {
+          const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().left;
+        });
+        expect(titleLeft - backRight, id).toBeGreaterThanOrEqual(8);
+        await back.click();
+        await expect(popout(page)).toBeVisible();
+        await expect(page.locator(`#options-pane-${tab} .options-summary`)).toBeVisible();
       }
-      blocks.push([start, i + 1]);
-      from = i + 1;
-    }
-  }
-
-  it('sync dot shows off, synced, syncing, or error', () => {
-    const state = new Function(`${fnSource('mobileSyncState')}; return mobileSyncState;`)();
-    assert.equal(state({ signedIn: false, status: 'ok' }), 'off');
-    assert.equal(state({ signedIn: true, status: 'idle' }), 'synced');
-    assert.equal(state({ signedIn: true, status: 'ok' }), 'synced');
-    assert.equal(state({ signedIn: true, status: 'syncing' }), 'syncing');
-    assert.equal(state({ signedIn: true, status: 'error' }), 'error');
-  });
-
-  it('outside the phone breakpoint, the menu only ever hides itself', () => {
-    let outside = css;
-    for (const [s, e] of phoneBlocks().reverse()) outside = outside.slice(0, s) + outside.slice(e);
-    const rules = outside.match(/[^{}]*mobile-(menu|sync)[^{}]*\{[^}]*\}/g) || [];
-    assert.deepEqual(rules.map((r) => r.trim()), [
-      '/* Phone-only menu; every visible rule lives in the max-width: 768px block */\n    .mobile-menu-actions, .mobile-menu-sheet, .mobile-menu-backdrop { display: none; }',
-      'body.mobile-menu-open { overflow: hidden; }',
-    ]);
-  });
-
-  it('phone block hides the moved rows, Today card, version, and gear, and keeps a collapsed sidebar open', () => {
-    const phone = phoneBlocks().map(([s, e]) => css.slice(s, e)).join('\n');
-    assert.match(phone, /\.sidebar \.sidebar-backup,\s*\.sidebar \.sidebar-account,\s*#sidebar-today-glance,\s*\.sidebar-version,\s*#whats-new-link,\s*#density-toggle \{ display: none; \}/);
-    assert.match(phone, /\.sidebar\.collapsed \{ width: 100%;/);
-    assert.match(phone, /\.mobile-menu-sheet:not\(\.hidden\) \{[^}]*position: fixed;[^}]*z-index: 91;/);
-    assert.match(phone, /\.density-popout \{[^}]*position: fixed;[^}]*bottom: 0;/);
-    // Above the pinned add-task dock (45), below modals (100)
-    const dock = Number(css.match(/#desk-view \.add-form \{[^}]*z-index: (\d+)/)[1]);
-    assert.ok(dock < 90 && 95 < 100);
-  });
-
-  it('account and backup are moved into the sheet and put back, never copied', () => {
-    const init = mainScript.slice(mainScript.indexOf('function initMobileMenu()'), mainScript.indexOf('initMobileMenu();'));
-    assert.match(init, /sections\.forEach\(\(el\) => movedHost\.appendChild\(el\)\)/);
-    assert.match(init, /sections\.forEach\(\(el, i\) => homes\[i\]\.after\(el\)\)/);
-    assert.doesNotMatch(init, /cloneNode/);
-    assert.match(init, /PHONE_QUERY\.addEventListener\('change'/);
-    assert.match(mainScript, /const PHONE_QUERY = window\.matchMedia\('\(max-width: 768px\)'\);/);
-    for (const id of ['mobile-menu-btn', 'mobile-menu-sheet', 'mobile-menu-backdrop', 'mobile-menu-close', 'mobile-menu-options', 'mobile-menu-whatsnew']) {
-      assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, id);
     }
   });
+
+  test('settings inside a section get space and a faint divider, except the first one', async ({ page }) => {
+    await open117(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await page.locator('[data-options-open="card-layout"]').click();
+    const rows = page.locator('[data-options-section="card-layout"] > .customize-select-row');
+    await expect(rows).toHaveCount(2);
+    expect(await rows.nth(0).evaluate(el => getComputedStyle(el, '::before').height)).toBe('1px');
+    expect(await rows.nth(1).evaluate(el => getComputedStyle(el, '::before').height)).toBe('1px');
+    const group = (await page.locator('[data-options-section="card-layout"] .density-option-group').boundingBox())!;
+    const first = (await rows.nth(0).boundingBox())!;
+    expect(first.y - (group.y + group.height)).toBeGreaterThanOrEqual(8);
+
+    await page.keyboard.press('Escape');
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('[data-options-open="tasks"]').click();
+    const toggles = page.locator('[data-options-section="tasks"] > .customize-toggle');
+    expect(await toggles.nth(0).evaluate(el => getComputedStyle(el, '::before').content)).toBe('none');
+    expect(await toggles.nth(1).evaluate(el => getComputedStyle(el, '::before').height)).toBe('1px');
+    // Collapse after belongs to Auto-collapse, so no divider splits them
+    expect(await page.locator('[data-options-section="tasks"] > .customize-threshold-row').evaluate(el => getComputedStyle(el, '::before').content)).toBe('none');
+  });
+
+  test('rows describe what is inside; the tooltip follows a change (round trip)', async ({ page }) => {
+    await open117(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    const row = page.locator('.options-row[data-options-open="card-layout"]');
+    await expect(row.locator('.options-row-desc')).toHaveText('Density, complete button, tag spot');
+    await expect(row.locator('.options-row-value')).toHaveCount(0);
+    await expect(row).toHaveAttribute('title', 'Current: Comfortable · Done label');
+    await row.click();
+    await page.locator('#tag-position-select').selectOption('slim');
+    await page.locator('[data-options-section="card-layout"] [data-options-back]').click();
+    await expect(row).toHaveAttribute('title', 'Current: Comfortable · Done label · Slim tags');
+    await row.click();
+    await page.locator('#tag-position-select').selectOption('row');
+    await page.locator('[data-options-section="card-layout"] [data-options-back]').click();
+    await expect(row).toHaveAttribute('title', 'Current: Comfortable · Done label');
+
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await expect(page.locator('.options-row[data-options-open="tasks"] .options-row-desc')).toHaveText('Delete, carry-forward, collapse, confetti');
+  });
+
+  test('phone: descriptions and ‹ Back fit the Options sheet', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open117(page);
+    await page.locator('#mobile-menu-btn').click();
+    await page.locator('#mobile-menu-options').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    const desc = page.locator('.options-row[data-options-open="general"] .options-row-desc');
+    await expect(desc).toBeVisible();
+    expect((await desc.boundingBox())!.x + (await desc.boundingBox())!.width).toBeLessThanOrEqual(390);
+    await page.locator('[data-options-open="general"]').click();
+    await expect(page.locator('[data-options-section="general"] [data-options-back]')).toHaveText('‹ Back');
+    await page.locator('[data-options-section="general"] [data-options-back]').click();
+    await expect(page.locator('#options-pane-behavior .options-summary')).toBeVisible();
+    await expect(popout(page)).toBeVisible();
+  });
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// v1.17.0 Options summary list, account menu, calendar polish, quieter weekends
-// ═══════════════════════════════════════════════════════════════════════
-describe('v1.17.0 Options summary list', () => {
-  const labelConsts = ['OPTIONS_FONT_LABELS', 'OPTIONS_TAG_MODE_LABELS', 'OPTIONS_COMPLETE_STYLE_LABELS', 'OPTIONS_TAG_POSITION_LABELS']
-    .map(n => mainScript.match(new RegExp(`const ${n} = \\{[\\s\\S]*?\\};`))[0]).join('\n');
-  const summary = new Function(`${labelConsts}
-    const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
-    ${fnSource('optionsSummaryText')}
-    return optionsSummaryText;`)();
-  const appearance = html.slice(html.indexOf('id="options-pane-appearance"'), html.indexOf('id="options-pane-behavior"'));
-  const behavior = html.slice(html.indexOf('id="options-pane-behavior"'), html.indexOf('id="options-pane-behavior"') + 40000);
+test.describe('Expanded Completed list scrolling 1.18.2', { tag: ['@board'] }, () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
 
-  it('summarizes every Appearance row', () => {
-    assert.equal(summary('card-layout', { density: 'compact', completeStyle: 'bar', tagPosition: 'slim' }), 'Compact · Bar · Slim tags');
-    assert.equal(summary('card-layout', {}), 'Comfortable · Done label');
-    assert.equal(summary('typography', { fontSize: 'large', fontFamily: 'jetbrains' }), 'Large · JetBrains Mono');
-    assert.equal(summary('typography', { fontFamily: 'nope' }), 'Default · System font');
-    assert.equal(summary('layout', { sidebarPosition: 'top' }), 'Sidebar top');
-    assert.equal(summary('effects', {}), 'Off');
-    assert.equal(summary('effects', { cardGlow: true, gradientHeader: true }), 'Glow · Gradient');
-    assert.equal(summary('background', { bgOn: false }), 'Off');
-    assert.equal(summary('background', { bgOn: true, bgPatternName: 'Greek key', bgStrength: 12 }), 'Greek key · 12%');
-    assert.equal(summary('tags', { tagMode: 'palette', pinnedTags: 2 }), 'Multi-color · 2 pinned');
-    assert.equal(summary('tags', {}), 'Single color');
-  });
+  test('the board scrolls on its own layer and expanded completed cards stay in place', async ({ page }) => {
+    const today = '2026-10-15';
+    const task = (id: string, content: string, extra: Record<string, unknown> = {}) => ({ id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: `${today}T09:00:00`, ...extra });
+    const items = [
+      ...Array.from({ length: 6 }, (_, i) => task(`n${i}`, `New task ${i}`)),
+      ...Array.from({ length: 7 }, (_, i) => task(`d${i}`, i % 2 ? `Done task ${i} with a longer title that wraps to two lines` : `Done task ${i}`, { completed: true, completedAt: `${today}T1${i}:00:00`, boardColumn: 'done' })),
+    ];
+    await page.clock.setFixedTime(new Date(`${today}T12:00:00`));
+    await page.addInitScript((d) => {
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-bg-pattern-on', 'true');
+      localStorage.setItem('work-desk-bg-pattern', 'basketweave');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ deletedIds: {}, days: { [d.today]: { date: d.today, items: d.items } } }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    }, { today, items });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await expect(page.locator('main.main')).toHaveCSS('will-change', 'scroll-position');
 
-  it('summarizes every Behavior row', () => {
-    assert.equal(summary('general', { startupView: 'today', weekStart: 'monday' }), 'Today · Mon');
-    assert.equal(summary('general', {}), 'Last viewed · Sun');
-    assert.equal(summary('tasks', { tasksOn: 3, tasksTotal: 6 }), '3 of 6 on');
-    assert.equal(summary('projects', { truncateNotes: true }), 'Truncate long notes');
-    assert.equal(summary('projects', {}), 'Full notes');
-    assert.equal(summary('insights', { streakSkipWeekends: false }), 'Strict streaks');
-    assert.equal(summary('holidays', { federalHolidays: true, customHolidays: 3 }), 'US federal · 3 custom');
-    assert.equal(summary('holidays', {}), 'No federal');
-    assert.equal(summary('unknown', {}), '');
-  });
+    const label = page.locator('.board-column.done .col-subsection-label.collapsible');
+    await expect(label).toHaveAttribute('aria-expanded', 'false');
+    await label.click();
+    await expect(label).toHaveAttribute('aria-expanded', 'true');
+    const cards = page.locator('.board-column.done .item-card');
+    await expect(cards).toHaveCount(7);
 
-  it('each row opens a matching section with a back button, and Reset stays on the list', () => {
-    const rows = (pane) => [...pane.matchAll(/data-options-open="([\w-]+)"/g)].map(m => m[1]);
-    assert.deepEqual(rows(appearance), ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags']);
-    assert.deepEqual(rows(behavior), ['general', 'tasks', 'projects', 'insights', 'holidays']);
-    for (const pane of [appearance, behavior]) {
-      for (const id of rows(pane)) {
-        const at = pane.indexOf(`data-options-section="${id}"`);
-        assert.ok(at > 0, `${id} section exists`);
-        assert.match(pane.slice(at, at + 400), /data-options-back>‹ Back<\/button>/);
-      }
+    const read = () => page.evaluate(() => ({
+      st: document.querySelector('main.main')!.scrollTop,
+      tops: [...document.querySelectorAll('.board-column.done .item-card')].map(el => { const r = el.getBoundingClientRect(); return [r.top, r.bottom]; }),
+    }));
+    let prev = await read();
+    await page.mouse.move(1100, 400);
+    for (let i = 0; i < 12; i++) {
+      await page.mouse.wheel(0, 40);
+      await page.waitForTimeout(30);
+      const now = await read();
+      const d = now.st - prev.st;
+      now.tops.forEach(([top], k) => expect(Math.abs(prev.tops[k][0] - top - d)).toBeLessThan(0.6));
+      now.tops.slice(1).forEach(([top], k) => expect(top).toBeGreaterThanOrEqual(now.tops[k][1] - 0.5));
+      prev = now;
     }
-    assert.doesNotMatch(appearance + behavior, /<p class="density-popout-label">/);
-    assert.match(html, /\.options-pane\.in-section \.options-summary,\s*\.options-pane\.in-section > \.options-reset-btn \{ display: none; \}/);
-  });
-
-  it('Esc closes an open section before the popout, and tabs / reopening return to the list', () => {
-    const init = fnSource('initDensityToggle');
-    assert.match(init, /\.options-pane\.in-section:not\(\.hidden\)/);
-    assert.match(fnSource('openDensityPopout'), /resetOptionsNavigation\(\);/);
-    assert.match(fnSource('closeOptionsSection'), /renderOptionsSummaries\(\);/);
-    assert.match(fnSource('openOptionsSection'), /if \(id === 'tags'\) renderTagColorList\(\);/);
-  });
-
-  it('New tags show only during the release that added them', () => {
-    const isNew = new Function(`const APP_VERSION = '1.17.0'; ${fnSource('isNewInCurrentRelease')} return isNewInCurrentRelease;`)();
-    assert.equal(isNew('1.17.0'), true);
-    assert.equal(isNew('1.17.0', '1.17.3'), true);
-    assert.equal(isNew('1.17.0', '1.18.0'), false);
-    assert.equal(isNew('1.16.2'), false);
-    assert.equal(isNew(''), false);
-    assert.equal(isNew(undefined), false);
-    assert.ok((html.match(/class="options-new-tag" data-new-in="1\.17\.\d"/g) || []).length >= 2);
-  });
-
-  it('switches replace checkboxes; patterns are 3 wide with the selected name below', () => {
-    assert.match(html, /\.customize-toggle input \{[^}]*appearance: none;/);
-    assert.match(mainScript, /const BG_PATTERN_COLUMNS = 3;/);
-    assert.match(html, /<p class="bg-pattern-picked">Selected: <strong id="bg-pattern-name"><\/strong><\/p>/);
-    assert.match(fnSource('renderBgPattern'), /bg-pattern-name/);
-    assert.doesNotMatch(html, /bg-pattern-tile-name/);
-  });
-});
-
-describe('v1.17.0 account menu', () => {
-  it('holds the app links, backup, sign in/out, and version; the old footer controls live only here', () => {
-    const menu = html.slice(html.indexOf('<div id="account-menu"'), html.indexOf('</aside>'));
-    for (const id of ['account-menu-options', 'account-menu-help', 'account-menu-whatsnew', 'account-menu-new-dot', 'export-btn', 'import-btn', 'repair-btn', 'sb-signin-btn', 'sb-signout-btn', 'version-btn']) {
-      assert.match(menu, new RegExp(`id="${id}"`), id);
-      assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} is unique`);
-    }
-    assert.match(html, /id="account-menu-btn"[^>]*aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu"/);
-    assert.match(html, /<button id="help-btn" class="logo-help-btn"/, 'the ? next to the logo stays');
-  });
-
-  it('opens and closes like a menu and hands off to Options, Help, and What\'s new', () => {
-    const block = mainScript.slice(mainScript.indexOf('/* ── Account menu ── */'), mainScript.indexOf("versionBtn.textContent = `v${APP_VERSION}`;"));
-    assert.match(block, /accountMenuBtn\.setAttribute\('aria-expanded', 'true'\)/);
-    assert.match(block, /e\.key !== 'Escape'/);
-    assert.match(block, /!e\.target\.closest\?\.\('#sidebar-account'\)/);
-    assert.match(block, /account-menu-help'\)\.addEventListener\('click', \(\) => \{ closeAccountMenu\(\); openHelpModal\(\); \}\)/);
-    assert.match(block, /account-menu-whatsnew'\)\.addEventListener\('click', \(\) => \{ closeAccountMenu\(\); openChangelog\(\); \}\)/);
-    assert.match(block, /popout\.classList\.add\('options-floating'\);\s*document\.body\.appendChild\(popout\);/);
-    assert.match(fnSource('closeDensityPopout'), /popout\.classList\.remove\('options-floating'\);/);
-    assert.match(fnSource('closeChangelog'), /syncAccountNewDots\(\);/);
-  });
-
-  it('describes sync status in words', () => {
-    const text = new Function(`${fnSource('accountStatusText')} return accountStatusText;`)();
-    assert.equal(text('guest'), 'Not syncing');
-    assert.equal(text('offline'), 'This browser only');
-    assert.equal(text('signed-in', 'ok'), 'Synced');
-    assert.equal(text('signed-in', 'syncing'), 'Syncing…');
-    assert.equal(text('signed-in', 'error'), 'Sync error');
-    assert.equal(text('signed-in', undefined), 'Signed in');
-    assert.match(fnSource('updateAccountChrome'), /accountMode = mode;\s*syncAccountStatusText\(\);/);
-  });
-
-  it('bar layouts anchor the menu to the right, opening down from a top bar; the phone sheet shows it inline', () => {
-    assert.match(html, /\[data-sidebar-bar\] \.account-menu \{ left: auto; right: 0; width: 240px; \}/);
-    assert.match(html, /\.mobile-menu-sheet \.account-menu\.hidden \{ display: flex; position: static;/);
-    assert.match(html, /\.mobile-menu-sheet \.account-menu-app,\s*\.mobile-menu-sheet \.account-menu \.sidebar-version \{ display: none; \}/);
-    assert.doesNotMatch(html, /\[data-sidebar-bar\] \.sidebar-repair-link::before/);
-  });
-});
-
-describe('v1.17.0 calendar', () => {
-  const chip = new Function(`${fnSource('calendarNeedsTodayChip')} return calendarNeedsTodayChip;`)();
-  const weekends = new Function(`${fnSource('normalizeQuietWeekends')}\n${fnSource('quietWeekendsActive')} return { normalizeQuietWeekends, quietWeekendsActive };`)();
-
-  it('shows the Today chip only away from the current month', () => {
-    assert.equal(chip({ year: 2026, month: 9 }, '2026-10-14'), false);
-    assert.equal(chip({ year: 2026, month: 10 }, '2026-10-14'), true);
-    assert.equal(chip({ year: 2027, month: 9 }, '2026-10-14'), true);
-    assert.equal(chip(null, '2026-10-14'), false);
-    assert.equal(chip({ year: 2026, month: 9 }, ''), false);
-  });
-
-  it('quieter weekends: off by default, work-only follows the desk, both always', () => {
-    assert.equal(weekends.normalizeQuietWeekends(null), 'off');
-    assert.equal(weekends.normalizeQuietWeekends('bogus'), 'off');
-    assert.equal(weekends.normalizeQuietWeekends('work'), 'work');
-    assert.equal(weekends.normalizeQuietWeekends('both'), 'both');
-    assert.equal(weekends.quietWeekendsActive('off', 'work'), false);
-    assert.equal(weekends.quietWeekendsActive('work', 'work'), true);
-    assert.equal(weekends.quietWeekendsActive('work', 'personal'), false);
-    assert.equal(weekends.quietWeekendsActive('both', 'personal'), true);
-  });
-
-  it('quieter weekends is synced, reset, and redraws the calendar', () => {
-    assert.match(mainScript, /const QUIET_WEEKENDS_KEY = 'work-desk-quiet-weekends';/);
-    assert.match(mainScript, /quietWeekends: normalizeQuietWeekends\(localStorage\.getItem\(QUIET_WEEKENDS_KEY\)\)/);
-    assert.match(fnSource('applyCloudPrefs'), /prefs\.quietWeekends/);
-    assert.match(mainScript, /'quiet-weekends-select': 'off'/);
-    const render = fnSource('renderCalendar');
-    assert.match(render, /host\.classList\.toggle\('quiet-weekends', quietWeekendsActive\(state\.quietWeekends, state\.listContext\)\)/);
-    assert.match(html, /\.sidebar-calendar\.quiet-weekends \.cal-day\.weekend:not\(\.selected\):not\(\.holiday\):not\(\.other-month\) \{ color: var\(--sidebar-muted\); \}/);
-  });
-
-  it('renders the Today chip and the legend, and fills the selected day with the theme color', () => {
-    const render = fnSource('renderCalendar');
-    assert.match(render, /calendarNeedsTodayChip\(/);
-    assert.match(render, /cal-legend/);
-    for (const label of ['Has items', 'Left open', 'Holiday']) assert.ok(render.includes(label), label);
-    assert.match(html, /rgb\(from var\(--sidebar-cal-selected-bg\) r g b \/ 1\)/);
-  });
-
-  it('left open and carried over share --carried: amber, rose on the six amber-accent themes', () => {
-    assert.match(html, /--carried: #f59e0b;/);
-    assert.match(html, /\[data-theme="clay"\], \[data-theme="flint"\], \[data-theme="denim"\],\s*\[data-theme="warm"\], \[data-theme="noir"\], \[data-theme="mocha"\] \{ --carried: #fb7185; --carried-ink: #fda4af; \}/);
-    assert.match(html, /--carried-ink: #fbbf24;/);
-    assert.match(html, /\.legend-swatch\.carried \{[^}]*var\(--carried\)/);
-    assert.match(html, /\.insight-bar-seg\.carried \{[^}]*var\(--carried\)/);
-  });
-});
-
-describe('v1.17.0 docs', () => {
-  it('1.17.0 is documented everywhere', () => {
-    const latest = html.match(/version: '1\.17\.0'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    for (const s of ['Simpler Options', 'Account menu', 'Calendar Today chip', 'Calendar legend', 'Quieter weekends', 'switches']) assert.ok(latest.includes(s), s);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.17\.0\] — 2026-10-14\n\n### Added\n- \*\*Summary-list Options\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /- \*\*Account menu\*\*/);
-    assert.match(readme, /- \*\*Quieter weekends\*\*/);
-    assert.match(html, /<li><strong>Today chip<\/strong>/);
-    assert.match(html, /<li><strong>Account menu<\/strong>/);
-    assert.match(html, /<li><strong>Summary list<\/strong>/);
-  });
-
-  it('1.17.1: Options panes size to their list and lock that height only while a section is open', () => {
-    const entry = html.match(/version: '1\.17\.1'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.ok(entry.includes('Options fits its list'));
-    assert.doesNotMatch(html, /#options-pane-appearance, #options-pane-behavior \{ min-height/);
-    assert.match(fnSource('openOptionsSection'), /pane\.style\.minHeight = `\$\{pane\.getBoundingClientRect\(\)\.height\}px`;\s*pane\.querySelectorAll/);
-    assert.match(fnSource('closeOptionsSection'), /pane\.style\.minHeight = '';/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.17\.1\] — 2026-10-14\n\n### Improved\n- \*\*Options fits its list\*\*/);
-  });
-});
-
-describe('v1.17.2 Options polish', () => {
-  const labelConsts = ['OPTIONS_FONT_LABELS', 'OPTIONS_TAG_MODE_LABELS', 'OPTIONS_COMPLETE_STYLE_LABELS', 'OPTIONS_TAG_POSITION_LABELS']
-    .map(n => mainScript.match(new RegExp(`const ${n} = \\{[\\s\\S]*?\\};`))[0]).join('\n');
-  const summary = new Function(`${labelConsts}
-    const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
-    ${fnSource('optionsSummaryText')}
-    return optionsSummaryText;`)();
-
-  it('summaries are short and include the new settings', () => {
-    assert.equal(summary('layout', { sidebarPosition: 'left', showCalLegend: true, showTodayProgress: true }), 'Sidebar left');
-    assert.equal(summary('layout', { sidebarPosition: 'top', showCalLegend: false, showTodayProgress: false }), 'Sidebar top · No legend · No progress');
-    assert.equal(summary('general', { launchDesk: 'personal', startupView: 'today', weekStart: 'monday' }), 'Personal · Today · Mon');
-    assert.equal(summary('general', { launchDesk: 'last' }), 'Last viewed · Sun');
-    assert.equal(summary('insights', { streakSkipWeekends: true }), 'Weekends skipped');
-  });
-
-  it('opens the chosen desk, or the last one used', () => {
-    const fns = new Function(`const LAUNCH_DESK_VALUES = ['last', 'work', 'personal'];
-      ${fnSource('normalizeLaunchDesk')}\n${fnSource('resolveLaunchContext')}
-      return { normalizeLaunchDesk, resolveLaunchContext };`)();
-    assert.equal(fns.normalizeLaunchDesk(null), 'last');
-    assert.equal(fns.normalizeLaunchDesk('bogus'), 'last');
-    assert.equal(fns.resolveLaunchContext('last', 'personal'), 'personal');
-    assert.equal(fns.resolveLaunchContext(null, 'projects'), 'projects');
-    assert.equal(fns.resolveLaunchContext('work', 'personal'), 'work');
-    assert.equal(fns.resolveLaunchContext('personal', 'projects'), 'personal');
-    assert.match(mainScript, /const launchContext = resolveLaunchContext\(localStorage\.getItem\(LAUNCH_DESK_KEY\), getListContext\(\)\);/);
-    assert.ok(mainScript.indexOf('const launchContext') < mainScript.indexOf('const state = {'), 'runs before state reads the desk');
-    assert.match(html, /<select id="launch-desk-select" aria-label="Open desk">/);
-    assert.match(mainScript, /'launch-desk-select': 'last'/);
-    assert.match(fnSource('readLocalPrefs'), /launchDesk: normalizeLaunchDesk/);
-    assert.match(fnSource('applyCloudPrefs'), /prefs\.launchDesk/);
-  });
-
-  it('calendar legend and Today\'s Progress can be hidden, synced, and reset', () => {
-    for (const [id, key, pref, fn] of [
-      ['show-cal-legend-toggle', 'SHOW_CAL_LEGEND_KEY', 'showCalLegend', 'applyShowCalLegend'],
-      ['show-today-progress-toggle', 'SHOW_TODAY_PROGRESS_KEY', 'showTodayProgress', 'applyShowTodayProgress'],
-    ]) {
-      assert.match(html, new RegExp(`<input id="${id}" type="checkbox" checked />`));
-      assert.match(mainScript, new RegExp(`'${id}': true`));
-      assert.match(fnSource('readLocalPrefs'), new RegExp(`${pref}: localStorage\\.getItem\\(${key}\\) !== 'false'`));
-      assert.match(fnSource('applyCloudPrefs'), new RegExp(`${fn}\\(prefs\\.${pref}, \\{ fromSync: true \\}\\)`));
-    }
-    assert.match(html, /\[data-cal-legend="hide"\] \.cal-legend,\s*\[data-today-progress="hide"\] #sidebar-today-glance \{ display: none !important; \}/);
-    const layout = html.slice(html.indexOf('data-options-section="layout"'), html.indexOf('data-options-section="effects"'));
-    assert.match(layout, /show-cal-legend-toggle/);
-    assert.match(layout, /show-today-progress-toggle/);
-  });
-
-  it('New tags hide once their section is opened, per section and version', () => {
-    const store = {};
-    const localStorage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); } };
-    const tag = (newIn, section, row) => ({
-      dataset: { newIn }, hidden: false,
-      closest: (sel) => (sel === '[data-options-section]' && section ? { dataset: { optionsSection: section } }
-        : sel === '[data-options-open]' && row ? { dataset: { optionsOpen: row } } : null),
-    });
-    const tags = [tag('1.17.2', null, 'general'), tag('1.17.0', 'general'), tag('1.17.2', 'layout'), tag('1.16.0', 'tasks')];
-    const document = { querySelectorAll: () => tags };
-    const api = new Function('localStorage', 'document', `const APP_VERSION = '1.17.2'; const SEEN_NEW_TAGS_KEY = 'seen';
-      ${fnSource('isNewInCurrentRelease')}\n${fnSource('newTagKey')}\n${fnSource('readSeenNewTags')}\n${fnSource('markNewTagsSeen')}\n${fnSource('syncNewTags')}
-      return { markNewTagsSeen, syncNewTags };`)(localStorage, document);
-    api.syncNewTags();
-    assert.deepEqual(tags.map(t => t.hidden), [false, false, false, true]);
-    api.markNewTagsSeen('general');
-    assert.deepEqual(tags.map(t => t.hidden), [false, false, false, true], 'stays up during the visit');
-    api.syncNewTags();
-    assert.deepEqual(tags.map(t => t.hidden), [true, true, false, true]);
-    assert.deepEqual(JSON.parse(store.seen).sort(), ['general@1.17.0', 'general@1.17.2']);
-    store.seen = 'not json';
-    api.syncNewTags();
-    assert.equal(tags[0].hidden, false, 'bad storage shows tags again');
-    assert.match(fnSource('openOptionsSection'), /markNewTagsSeen\(id\);/);
-    assert.match(fnSource('closeOptionsSection'), /syncNewTags\(\);/);
-  });
-
-  it('Quieter weekends keeps its New tag inline with a one-line hint', () => {
-    assert.match(html, /\.customize-select-row-sub label > span:first-child \{ display: block; \}/);
-    assert.match(html, /<span class="customize-toggle-sub">Gray Sat\/Sun on the calendar<\/span>/);
-  });
-
-  it('notes no longer carry the 📝 icon', () => {
-    assert.doesNotMatch(html, /note-icon/);
-    assert.doesNotMatch(html, /"icon (tags|content)"/);
-    assert.match(html, /\.item\.note \{ grid-template-areas: "content"; \}/);
-  });
-
-  it('1.17.2 is documented everywhere', () => {
-    const latest = html.match(/version: '1\.17\.2'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    for (const s of ['Open desk', 'calendar legend', 'New tags go away', 'Shorter Options summaries', 'Quieter weekends label', '📝']) assert.ok(latest.includes(s), s);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.17\.2\] — 2026-10-14\n\n### Added\n- \*\*Open desk\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /Open desk/);
-    assert.match(readme, /Calendar legend/);
-    const help = html.slice(html.indexOf('id="help-modal"'), html.indexOf('id="help-modal"') + 60000);
-    assert.match(help, /<strong>Open desk<\/strong>/);
-    assert.match(help, /hide the calendar legend/i);
-    assert.match(help, /New tag/);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// v1.18.0 complete edge + tag position
-// ═══════════════════════════════════════════════════════════════════════
-describe('v1.18.0 complete edge and tag position', () => {
-  const fns = new Function(`
-    const COMPLETE_STYLES = ['label', 'bar', 'raised', 'switch', 'circle', 'square', 'diamond', 'check', 'none', 'checkbox'];
-    const TAG_POSITIONS = ['row', 'slim', 'actions'];
-    ${fnSource('normalizeCompleteStyle')}\n${fnSource('normalizeTagPosition')}
-    return { normalizeCompleteStyle, normalizeTagPosition };`)();
-  const appearance = html.slice(html.indexOf('id="options-pane-appearance"'), html.indexOf('id="options-pane-behavior"'));
-
-  it('defaults to the "Done" label and tags on their own row; junk falls back', () => {
-    assert.equal(fns.normalizeCompleteStyle(null), 'label');
-    assert.equal(fns.normalizeCompleteStyle('bogus'), 'label');
-    assert.equal(fns.normalizeCompleteStyle('checkbox'), 'checkbox');
-    assert.equal(fns.normalizeCompleteStyle('switch'), 'switch');
-    assert.equal(fns.normalizeTagPosition(undefined), 'row');
-    assert.equal(fns.normalizeTagPosition('top'), 'row');
-    assert.equal(fns.normalizeTagPosition('slim'), 'slim');
-    assert.equal(fns.normalizeTagPosition('actions'), 'actions');
-    assert.match(mainScript, /const COMPLETE_STYLES = \['label', 'bar', 'raised', 'switch', 'circle', 'square', 'diamond', 'check', 'none', 'checkbox'\];/);
-    assert.match(mainScript, /const TAG_POSITIONS = \['row', 'slim', 'actions'\];/);
-  });
-
-  it('both selects live in Card layout with every option, a New tag, and reset defaults', () => {
-    const section = appearance.slice(appearance.indexOf('data-options-section="card-layout"'), appearance.indexOf('data-options-section="typography"'));
-    const styles = [...section.matchAll(/<select id="complete-style-select"[\s\S]*?<\/select>/g)][0][0];
-    assert.deepEqual([...styles.matchAll(/value="(\w+)"/g)].map(m => m[1]), ['label', 'bar', 'raised', 'switch', 'circle', 'square', 'diamond', 'check', 'none', 'checkbox']);
-    assert.match(styles, />Checkbox</);
-    const tags = [...section.matchAll(/<select id="tag-position-select"[\s\S]*?<\/select>/g)][0][0];
-    assert.deepEqual([...tags.matchAll(/value="(\w+)"/g)].map(m => m[1]), ['row', 'slim', 'actions']);
-    assert.equal((section.match(/data-new-in="1\.18\.0"/g) || []).length, 2);
-    assert.match(appearance, /Card layout<span class="options-new-tag" data-new-in="1\.18\.0">New<\/span>/);
-    assert.match(mainScript, /'complete-style-select': 'label',\s*'tag-position-select': 'row',/);
-  });
-
-  it('apply sets html attributes, saves, and syncs; only the action-bar switch re-renders', () => {
-    const style = fnSource('applyCompleteStyle');
-    assert.match(style, /dataset\.completeStyle = next/);
-    assert.match(style, /dataset\.completeEdge = next === 'checkbox' \? 'off' : 'on'/);
-    assert.match(style, /localStorage\.setItem\(COMPLETE_STYLE_KEY, next\)/);
-    assert.match(style, /if \(!fromSync\) schedulePrefsPush\(\)/);
-    const pos = fnSource('applyTagPosition');
-    assert.match(pos, /dataset\.tagPosition = next/);
-    assert.match(pos, /const movedBar = \(state\.tagPosition === 'actions'\) !== \(next === 'actions'\)/);
-    assert.match(pos, /if \(movedBar && rerender\) render\(\)/);
-    assert.match(mainScript, /applyTagPosition\(state\.tagPosition, \{ fromSync: true, rerender: false \}\)/);
-    assert.match(fnSource('readLocalPrefs'), /completeStyle: normalizeCompleteStyle\(localStorage\.getItem\(COMPLETE_STYLE_KEY\)\)/);
-    assert.match(fnSource('readLocalPrefs'), /tagPosition: normalizeTagPosition\(localStorage\.getItem\(TAG_POSITION_KEY\)\)/);
-    assert.match(fnSource('applyCloudPrefs'), /COMPLETE_STYLES\.includes\(prefs\.completeStyle\)/);
-    assert.match(fnSource('applyCloudPrefs'), /TAG_POSITIONS\.includes\(prefs\.tagPosition\)/);
-  });
-
-  it('cards wrap the row and action bar so the edge stops above comments; the edge comes first', () => {
-    const src = fnSource('renderItem');
-    assert.match(src, /main\.className = 'card-main';\s*if \(item\.type === 'task'\) main\.appendChild\(buildCompleteEdge\(item\)\);\s*main\.appendChild\(row\);\s*card\.appendChild\(main\);/);
-    assert.match(src, /main\.appendChild\(actionBar\);/);
-    assert.ok(src.indexOf('card.appendChild(renderCommentsPanel(item))') > src.indexOf('main.appendChild(actionBar)'), 'comments stay outside .card-main');
-    assert.match(src, /const tagsInBar = state\.tagPosition === 'actions' && tags\.length > 0 && !isEditing;/);
-    assert.match(src, /actionEnd\.className = 'card-action-end';\s*if \(tagsInBar\) actionEnd\.appendChild\(buildTagChipRow\(item, tags\)\);/);
-    assert.match(src, /actionEnd\.appendChild\(overflowWrap\);\s*actionBar\.appendChild\(actionEnd\);/);
-    assert.match(html, /\.card-main \{ position: relative; \}/);
-    assert.match(html, /html\[data-complete-edge="on"\] \.task-card:has\(\.comments-panel\) \.complete-edge \{ border-bottom-left-radius: 0; \}/);
-  });
-
-  it('the edge toggles the task, labels itself, and ignores a press that turned into a drag', () => {
-    const src = fnSource('buildCompleteEdge');
-    assert.match(src, /edge\.className = `complete-edge\$\{item\.completed \? ' is-done' : ''\}`/);
-    assert.match(src, /const label = item\.completed \? 'Mark incomplete' : 'Mark complete';/);
-    assert.match(src, /edge\.setAttribute\('aria-label', label\)/);
-    assert.match(src, /e\.detail > 0 && Math\.hypot\(e\.clientX - start\.x, e\.clientY - start\.y\) > 4/);
-    assert.match(src, /if \(!moved\) toggleItem\(item\.id\)/);
-  });
-
-  it('CSS: classic hides the edge, the label states, wider edge on touch, slim chips sized to the row', () => {
-    assert.match(html, /\.complete-edge \{ display: none; \}/);
-    assert.match(html, /html\[data-complete-edge="on"\] \.item\.task > \.checkbox \{ display: none; \}/);
-    for (const s of ["content: 'done';", "content: 'done\\200A?';", "content: 'done\\200A!';", "content: 'undo\\200A?';", "content: 'doing';"]) assert.ok(html.includes(s), s);
-    assert.match(html, /html\[data-complete-style="label"\] \.item-card\.dragging \.complete-edge::before/);
-    assert.match(html, /html\[data-complete-style="label"\] \.complete-edge\.is-done::before \{ content: 'done\\200A!'; transform: rotate\(180deg\);/);
-    assert.match(html, /@media \(hover: none\), \(pointer: coarse\) \{\s*html\[data-complete-edge="on"\] \.task-card \.complete-edge \{ width: 40px; \}/);
-    assert.match(html, /grid-template-areas: "tags" "content"; grid-template-rows: 14px auto;/);
-    assert.match(html, /\.item\.task \.tag-chip \{\s*box-sizing: border-box; height: 14px; padding-block: 0;/);
-    assert.match(html, /height: 14px; flex-wrap: nowrap; overflow-x: clip; overflow-y: visible;/);
-    assert.match(html, /\.card-action-end \{ margin-left: auto; display: flex;/);
-  });
-
-  it('summary and docs', () => {
-    const labelConsts = ['OPTIONS_COMPLETE_STYLE_LABELS', 'OPTIONS_TAG_POSITION_LABELS']
-      .map(n => mainScript.match(new RegExp(`const ${n} = \\{[\\s\\S]*?\\};`))[0]).join('\n');
-    const summary = new Function(`${labelConsts}
-      const OPTIONS_FONT_LABELS = {}; const OPTIONS_TAG_MODE_LABELS = {};
-      const capitalize = (s) => s;
-      ${fnSource('optionsSummaryText')}
-      return optionsSummaryText;`)();
-    assert.equal(summary('card-layout', { completeStyle: 'checkbox', tagPosition: 'actions' }), 'Comfortable · Checkbox · Tags in bar');
-    const latest = html.slice(html.indexOf("version: '1.18.0'"), html.indexOf("version: '1.17.2'"));
-    assert.match(latest, /version: '1\.18\.0'/);
-    for (const s of ['Complete button on the card edge', 'DONE?', 'DOING', 'DONE!', 'UNDO?', 'Checkbox', 'Slim headroom', 'Action bar']) assert.ok(latest.includes(s), s);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.18\.0\] — 2026-10-14\n\n### Added\n- \*\*Complete button on the card edge\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /- \*\*Complete button on the card edge\*\*/);
-    assert.match(readme, /- \*\*Tag position\*\*/);
-    const help = html.slice(html.indexOf('id="help-modal"'), html.indexOf('id="help-modal"') + 60000);
-    assert.match(help, /<li><strong>Complete button<\/strong>/);
-    assert.match(help, /<li><strong>Tag position<\/strong>/);
-    assert.match(help, /Tap a task's <strong>left edge<\/strong> to complete it/);
-    assert.doesNotMatch(help, /Tap the <strong>checkbox<\/strong> to complete a task/);
-  });
-});
-
-describe('v1.18.1 calendar legend sample', () => {
-  it('the Left open sample is an empty swatch, not a hard-coded count', () => {
-    assert.match(html, /<span class="cal-legend-badge" aria-hidden="true"><\/span>Left open/);
-    assert.doesNotMatch(html, /<span class="cal-legend-badge">\d+<\/span>/);
-  });
-  it('real per-day badges still count open tasks on past days', () => {
-    assert.match(html, /badge\.className = 'cal-day-badge';\s*badge\.textContent = openCount > 9 \? '9\+' : String\(openCount\);/);
-  });
-  it('1.18.1 has a Fixed note', () => {
-    const entry = html.slice(html.indexOf("version: '1.18.1'"), html.indexOf("version: '1.18.0'"));
-    assert.match(entry, /label: 'Fixed'/);
-    assert.match(entry, /Left open/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.1\]/);
-  });
-});
-
-describe('v1.18.2 Options list descriptions, Back, and spacing', () => {
-  const popout = html.slice(html.indexOf('id="density-popout"'), html.indexOf('<!-- Behavior Tab Pane -->') + 20000);
-  const DESC = {
-    'card-layout': 'Density, complete button, tag spot', typography: 'Text size and font',
-    layout: 'Sidebar side, calendar legend, progress', effects: 'Card glow, gradient header',
-    background: 'Board pattern and strength', tags: 'Tag colors',
-    general: 'Start desk, launch view, week start, weekends', tasks: 'Delete, carry-forward, collapse, confetti',
-    projects: 'Long project notes', insights: 'Streak rules', holidays: 'US and custom holidays',
-  };
-  it('every summary row has a description instead of a value', () => {
-    for (const [id, desc] of Object.entries(DESC)) {
-      const row = popout.match(new RegExp(`<button type="button" class="options-row" data-options-open="${id}">[\\s\\S]*?</button>`))[0];
-      assert.match(row, /<span class="options-row-text"><span class="options-row-name">/, id);
-      assert.ok(row.includes(`<span class="options-row-desc">${desc}</span>`), id);
-      assert.doesNotMatch(row, /options-row-value/, id);
-    }
-    assert.doesNotMatch(html, /data-options-value=/);
-  });
-  it('current settings move to the row tooltip', () => {
-    const fn = fnSource('renderOptionsSummaries');
-    assert.match(fn, /\.options-row\[data-options-open\]/);
-    assert.match(fn, /row\.title = `Current: \$\{text\}`/);
-  });
-  it('every back link reads ‹ Back', () => {
-    assert.equal((html.match(/data-options-back>‹ Back<\/button>/g) || []).length, 11);
-    assert.doesNotMatch(html, /data-options-back>‹ (Appearance|Behavior)</);
-  });
-  it('settings after the first get a little space and a faint divider', () => {
-    assert.match(html, /\.options-section > :is\(\.customize-select-row, \.customize-toggle, \.bg-pattern-controls, \.custom-holidays-section\):not\(\.options-section-head \+ \*\) \{\s*position: relative; margin-top: 9px;/);
-    assert.match(html, /:not\(\.options-section-head \+ \*\)::before \{[^}]*top: -5px; height: 1px;/);
-  });
-  it('1.18.2 is the latest release, documented everywhere', () => {
-    assert.match(html, /const APP_VERSION = '1\.18\.2';/);
-    const entry = html.slice(html.indexOf("version: '1.18.2'"), html.indexOf("version: '1.18.1'"));
-    assert.match(entry, /tag: 'latest'/);
-    assert.match(entry, /‹ Back/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /<strong>‹ Back<\/strong> or <strong>Esc<\/strong> goes back/);
-    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.2\]/);
-    assert.match(readFileSync(join(__dirname, '../README.md'), 'utf8'), /hover it for the current settings/);
+    expect(prev.st).toBeGreaterThan(0);
   });
 });
