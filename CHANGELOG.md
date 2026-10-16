@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.18.3] — 2026-10-15
+
+### Fixed
+- **Completed tasks wobbling while scrolling** — with a long, expanded Completed list, dimmed completed cards could jitter or paint over each other mid-scroll. The board now scrolls on its own layer (`will-change: scroll-position` on the main area) instead of Chrome repainting it on every scroll step
+
 ## [1.18.2] — 2026-10-15
 
 ### Improved
