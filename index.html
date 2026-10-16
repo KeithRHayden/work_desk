@@ -4320,6 +4320,9 @@
       height: 100vh;
       overflow-y: auto;
       scrollbar-gutter: stable;
+      /* Without its own scroll layer Chrome repaints the board on every scroll step, and
+         dimmed completed cards can paint at stale positions (wobble / overlapping cards) */
+      will-change: scroll-position;
       display: flex;
       flex-direction: column;
       /* Set on <body> by renderBgPattern */
@@ -8844,12 +8847,21 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.18.2';
+    const APP_VERSION = '1.18.3';
     const CHANGELOG = [
+      {
+        version: '1.18.3',
+        date: 'Oct 15, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Completed tasks no longer wobble or draw on top of each other while you scroll an expanded Completed list. The board now scrolls on its own layer instead of being repainted on every scroll step',
+          ] },
+        ],
+      },
       {
         version: '1.18.2',
         date: 'Oct 15, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Improved', items: [
             'Options lists say what is inside each row, e.g. Card layout: Density, complete button, tag spot. Hover a row to see its current settings',
