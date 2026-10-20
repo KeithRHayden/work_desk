@@ -3941,10 +3941,11 @@ describe('Tag colors', () => {
   });
 
   it('card tag box closes on outside clicks, not on blur, and wins focus', () => {
-    const box = html.match(/if \(state\.taggingId === item\.id\) \{[\s\S]*?\n        \} else \{/)[0];
+    assert.match(html, /if \(state\.taggingId === item\.id\) \{[\s\S]{0,300}buildTagEntry\(item\.tags,/);
+    const box = fnSource('buildTagEntry');
     assert.doesNotMatch(box, /addEventListener\('blur'/);
     assert.match(box, /setTimeout\(\(\) => setTimeout\(\(\) => \{ if \(tagInput\.isConnected\) tagInput\.focus\(\); \}, 0\), 0\)/);
-    assert.match(html, /if \(!state\.taggingId \|\| e\.target\.closest\?\.\('\.tag-input-wrap'\)\) return;[\s\S]{0,200}state\.taggingId = null;/);
+    assert.match(html, /if \(\(!state\.taggingId && !state\.projectTaggingId\) \|\| e\.target\.closest\?\.\('\.tag-input-wrap'\)\) return;\s*state\.taggingId = null;\s*state\.projectTaggingId = null;/);
   });
 
   it('carry-over weekday dates live inside the bar so bars keep full width', () => {
@@ -4183,7 +4184,8 @@ describe('Deletions stay deleted across devices', () => {
   it('carry-forward and moves only clear the local tombstone; they never count as a restore', () => {
     assert.match(fnSource('restoreDeleted'), /markItemRestored\(undo\.item\.id\)/);
     assert.doesNotMatch(fnSource('carryForwardUnfinished'), /markItemRestored/);
-    assert.equal((mainScript.match(/markItemRestored\(/g) || []).length, 2, 'declaration + Undo only');
+    assert.match(fnSource('sendDeskItemToProject'), /markItemRestored\(itemId, data\)/);
+    assert.equal((mainScript.match(/markItemRestored\(/g) || []).length, 3, 'declaration + delete Undo + send-to-project Undo only');
   });
 
   it('syncRecords keeps recent records, drops expired or malformed ones', () => {
@@ -4842,18 +4844,25 @@ describe('v1.18.4 complete edge on project tasks', () => {
     assert.match(html, /html\[data-complete-edge="on"\] \.project-task-check \{ display: none; \}/);
     assert.match(html, /html\[data-complete-edge="on"\] \.project-task-card \{ padding-left: 52px; \}/);
   });
-  it('1.18.4 is the latest release and documented everywhere', () => {
+  it('1.18.4 is documented everywhere', () => {
     const entry = html.slice(html.indexOf("version: '1.18.4'"), html.indexOf("version: '1.18.3'"));
-    assert.match(entry, /tag: 'latest'/);
     assert.match(entry, /Project tasks now use the same complete button/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /const APP_VERSION = '1\.18\.4';/);
-    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.4\][^#]*### Improved\n- \*\*Complete edge on project tasks/);
+    assert.match(entry, /The project list counts open work/);
+    assert.match(entry, /Deleted projects stay deleted/);
+    assert.match(entry, /Reopening a finished project task moves it out of Archived/);
+    assert.match(entry, /Edit and delete on project comments now show on phones and tablets/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    const mdEntry = md.slice(md.indexOf('## [1.18.4]'), md.indexOf('## [1.18.3]'));
+    assert.match(mdEntry, /### Improved\n- \*\*Project list counts open work/);
+    assert.match(mdEntry, /- \*\*Complete edge on project tasks/);
+    assert.match(mdEntry, /- \*\*Deleted projects coming back/);
+    assert.match(mdEntry, /- \*\*Reopened project tasks stuck in Archived/);
+    assert.match(mdEntry, /- \*\*Project comment actions on touch screens/);
     assert.match(readFileSync(join(__dirname, '../README.md'), 'utf8'), /Project tasks use the same edge/);
     assert.match(html, /Project tasks use the same edge, and finishing one moves it to that project's Archived list/);
   });
   it('importing a projects backup keeps archived notes and tasks archived', () => {
-    const validateImportData = new Function(`${fnSource('validateImportData')}\nreturn validateImportData;`)();
+    const validateImportData = new Function(`${['normalizeTag', 'normalizeTagList', 'tagsField', 'validateImportData'].map(fnSource).join('\n')}\nreturn validateImportData;`)();
     const out = validateImportData({ type: 'projects', projects: [{
       id: 'p1', name: 'P', createdAt: '2026-10-01T00:00:00Z',
       notes: [{ id: 'n1', content: 'old note', archived: true }, { id: 'n2', content: 'live note' }],
@@ -4874,5 +4883,324 @@ describe('v1.18.4 complete edge on project tasks', () => {
     const items = [...list.matchAll(/<li><strong>([^<]+)<\/strong>/g)].map(m => m[1]);
     assert.deepEqual(items, ['Data encryption', 'Local weather', 'Suggested colors for custom themes']);
     assert.doesNotMatch(list, /Google Assistant/);
+  });
+  it('project list counts open tasks and active notes, archived separately', () => {
+    const projectListMeta = new Function(`${fnSource('projectListMeta')}\nreturn projectListMeta;`)();
+    assert.equal(projectListMeta({ notes: [], tasks: [] }), 'Empty');
+    assert.equal(projectListMeta({
+      notes: [{}, { archived: true }],
+      tasks: [{}, {}, { completed: true, archived: true }, { completed: true }],
+    }), '2 open tasks · 1 note');
+    assert.equal(projectListMeta({ notes: [{ archived: true }], tasks: [{ completed: true, archived: true }] }), '2 archived');
+    assert.equal(projectListMeta({ tasks: [{}] }), '1 open task');
+  });
+  it('reopening a finished project task un-archives it', () => {
+    const run = new Function('state', 'saveProjectsData', `${['getProject', 'toggleProjectTaskComplete'].map(fnSource).join('\n')}\nreturn toggleProjectTaskComplete;`);
+    const task = { id: 't1', completed: true, archived: true };
+    const state = { projectsData: { projects: [{ id: 'p1', tasks: [task], notes: [] }] } };
+    const toggle = run(state, () => {});
+    toggle('p1', 't1');
+    assert.deepEqual([task.completed, task.archived], [false, false]);
+    toggle('p1', 't1');
+    assert.deepEqual([task.completed, task.archived], [true, true]);
+  });
+  it('project comment actions are CSS-driven, always shown on touch', () => {
+    assert.equal((mainScript.match(/commentRow\.className = 'project-comment-row';/g) || []).length, 2);
+    assert.equal((mainScript.match(/actions\.className = 'project-comment-actions';/g) || []).length, 2);
+    assert.doesNotMatch(mainScript, /commentRow\.addEventListener\('mouse(enter|leave)'|actions\.style\.opacity/);
+    assert.match(html, /\.project-comment-row:hover \.project-comment-actions,\s*\.project-comment-actions:focus-within \{ opacity: 1; \}/);
+    assert.match(html, /@media \(hover: none\), \(pointer: coarse\) \{\s*\.project-comment-actions \{ opacity: 1; \}\s*\}/);
+  });
+});
+
+describe('v1.19.0 projects: search, send, tags', () => {
+  const stripHtml = (s) => String(s || '').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
+  const plainTextPreview = (h, max = 60) => { const t = stripHtml(h); return t.length > max ? `${t.slice(0, max)}…` : t; };
+  const helpers = ['escapeHtml', 'normalizeTag', 'normalizeTagList', 'generateProjectItemId', 'newId'];
+  const converters = () => new Function('plainTextPreview', `${[...helpers, 'deskItemToProjectItem', 'projectItemToDeskItem'].map(fnSource).join('\n')}\nreturn { deskItemToProjectItem, projectItemToDeskItem };`)(plainTextPreview);
+
+  it('1.19.0 is the latest release and documented everywhere', () => {
+    const entry = html.slice(html.indexOf("version: '1.19.0'"), html.indexOf("version: '1.18.4'"));
+    assert.match(entry, /tag: 'latest'/);
+    assert.match(entry, /Search covers Projects/);
+    assert.match(entry, /Send between your desk and projects/);
+    assert.match(entry, /Tags on project notes and tasks/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /const APP_VERSION = '1\.19\.0';/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.19\.0\][^#]*### Added\n- \*\*Search covers Projects[\s\S]*?- \*\*Send between the desk and projects[\s\S]*?- \*\*Tags on project notes and tasks/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /switch the scope chip to \*All\* for Work, Personal, and Projects/);
+    assert.match(readme, /Project notes and tasks take `#tags`/);
+    assert.match(html, /<li><strong>Send to project…<\/strong>/);
+    assert.match(html, /<li><strong>to desk<\/strong>/);
+    assert.match(html, /<li><strong>Tags<\/strong> — click <em>tag<\/em> on a note or task/);
+    assert.doesNotMatch(html, /Work \/ Personal \/ Both/);
+  });
+
+  it('desk → project keeps type, done state, tags, and comments as plain text', () => {
+    const { deskItemToProjectItem } = converters();
+    const out = deskItemToProjectItem({
+      id: 'd1', type: 'task', content: '<b>Ship</b> it', completed: true, createdAt: '2026-10-01T00:00:00Z',
+      tags: ['Ops', 'ops', 'x y'], comments: [{ id: 'c1', content: 'line one<br>line &lt;two&gt;', createdAt: '2026-10-02T00:00:00Z' }],
+    });
+    assert.notEqual(out.id, 'd1');
+    assert.match(out.id, /^pi_/);
+    assert.equal(out.content, '<b>Ship</b> it');
+    assert.deepEqual([out.type, out.completed, out.archived], ['task', true, true]);
+    assert.deepEqual(out.tags, ['ops', 'xy']);
+    assert.deepEqual(out.comments, [{ id: 'c1', text: 'line one\nline <two>', createdAt: '2026-10-02T00:00:00Z' }]);
+    const note = deskItemToProjectItem({ id: 'd2', type: 'note', content: 'n' });
+    assert.equal('completed' in note, false);
+    assert.equal('tags' in note, false);
+    assert.deepEqual(note.comments, []);
+  });
+
+  it('project → desk lands as a fresh New task with HTML comments', () => {
+    const { projectItemToDeskItem } = converters();
+    const out = projectItemToDeskItem({
+      id: 'pi_1', type: 'task', content: 'Call <i>vendor</i>', completed: false, archived: true,
+      tags: ['q4'], comments: [{ id: 'c1', text: 'a <b>\nb', createdAt: '2026-10-02T00:00:00Z' }],
+    });
+    assert.notEqual(out.id, 'pi_1');
+    assert.deepEqual([out.type, out.completed, out.shelved, out.boardColumn], ['task', false, false, 'new']);
+    assert.equal('archived' in out, false);
+    assert.deepEqual(out.tags, ['q4']);
+    assert.deepEqual(out.comments, [{ id: 'c1', content: 'a &lt;b&gt;<br>b', createdAt: '2026-10-02T00:00:00Z' }]);
+    const note = projectItemToDeskItem({ type: 'note', content: 'x', comments: [] });
+    assert.equal('boardColumn' in note, false);
+    assert.equal('comments' in note, false);
+  });
+
+  it('sending tombstones the original and Undo restores it', () => {
+    const toProject = fnSource('sendDeskItemToProject');
+    assert.match(toProject, /markItemDeleted\(itemId\);/);
+    assert.match(toProject, /markProjectItemDeleted\(projItem\.id\)/);
+    assert.match(toProject, /markItemRestored\(itemId, data\)/);
+    const toDesk = fnSource('sendProjectItemToDesk');
+    assert.match(toDesk, /markProjectItemDeleted\(itemId\)/);
+    assert.match(toDesk, /todayKey\(\)/);
+    assert.match(html, /addMenuItem\('Send to project…', \(\) => openSendToProject\(item\.id\)\)/);
+  });
+
+  it('deleted projects, notes, and tasks are dropped by sync merges', () => {
+    const merge = new Function(`${['pruneDeletedIds', 'withoutDeletedProjectEntries', 'projectGroup', 'orderedProjects', 'sortByReference', 'mergeProjectsData'].map(fnSource).join('\n')}\nreturn mergeProjectsData;`)();
+    const now = new Date().toISOString();
+    const remote = { projects: [
+      { id: 'p1', name: 'Gone', notes: [], tasks: [] },
+      { id: 'p2', name: 'Kept', notes: [{ id: 'n1' }, { id: 'n2' }], tasks: [{ id: 't1' }] },
+    ], deletedIds: {} };
+    const local = { projects: [{ id: 'p2', name: 'Kept', notes: [{ id: 'n2' }], tasks: [{ id: 't1' }] }], deletedIds: { p1: now, n1: now } };
+    const out = merge(local, remote);
+    assert.deepEqual(out.projects.map(p => p.id), ['p2']);
+    assert.deepEqual(out.projects[0].notes.map(n => n.id), ['n2']);
+    assert.ok(out.deletedIds.p1);
+  });
+
+  it('deleting a project records a tombstone, and imports filter through tombstones', () => {
+    assert.match(fnSource('deleteProject'), /markProjectItemDeleted\(projectId\)/);
+    const apply = fnSource('applyProjectsImport');
+    assert.match(apply, /withoutDeletedProjectEntries\(/);
+    assert.match(fnSource('applyImport'), /applyProjectsImport\(/);
+    assert.match(fnSource('applyImportAll'), /applyProjectsImport\(/);
+  });
+
+  it('typed #hashtags on project items become tags unless nothing else is left', () => {
+    const isEmptyHtml = (h) => !stripHtml(h);
+    const fn = new Function('isEmptyHtml', `${['normalizeTag', 'normalizeTagList', 'mergeTags', 'extractHashtags', 'projectContentWithTags'].map(fnSource).join('\n')}\nreturn projectContentWithTags;`)(isEmptyHtml);
+    assert.deepEqual(fn('Call vendor #Ops'), { content: 'Call vendor', tags: ['ops'] });
+    assert.deepEqual(fn('More #q4', ['ops']), { content: 'More', tags: ['ops', 'q4'] });
+    assert.deepEqual(fn('#ops'), { content: '#ops' });
+    assert.deepEqual(fn('plain', ['ops']), { content: 'plain', tags: ['ops'] });
+  });
+
+  const projectOrderFns = () => {
+    const state = { projectsData: { deletedIds: {}, projects: [
+      { id: 'a' }, { id: 'b', pinned: true }, { id: 'c' }, { id: 'd' },
+    ] } };
+    const fns = new Function('state', 'saveProjectsData', `${['getProject', 'findProjectItem', 'projectGroup', 'orderedProjects', 'projectGroupBounds', 'setProjectOrder', 'regroupProject', 'toggleProjectPinned', 'toggleProjectArchived', 'moveProjectTo', 'moveProjectItem', 'projectProgress'].map(fnSource).join('\n')}\nreturn { orderedProjects, toggleProjectPinned, toggleProjectArchived, moveProjectTo, moveProjectItem, projectProgress };`)(state, () => {});
+    return { state, ids: () => state.projectsData.projects.map(p => p.id), ...fns };
+  };
+
+  it('pinned projects come first, each group keeping its order', () => {
+    const { orderedProjects } = projectOrderFns();
+    assert.deepEqual(orderedProjects([{ id: 'a' }, { id: 'b', pinned: true }, { id: 'c' }, { id: 'd', pinned: true }]).map(p => p.id), ['b', 'd', 'a', 'c']);
+  });
+
+  it('pinning moves a project to the very top; unpinning puts it just under the pins', () => {
+    const { state, ids, toggleProjectPinned } = projectOrderFns();
+    toggleProjectPinned('d');
+    assert.deepEqual(ids(), ['d', 'b', 'a', 'c']);
+    assert.ok(state.projectsData.orderUpdatedAt);
+    assert.ok(state.projectsData.projects[0].updatedAt);
+    toggleProjectPinned('d');
+    assert.deepEqual(ids(), ['b', 'd', 'a', 'c']);
+    assert.equal('pinned' in state.projectsData.projects[1], false);
+  });
+
+  it('moving a project stays within its pinned or unpinned group', () => {
+    const { ids, moveProjectTo } = projectOrderFns();
+    assert.equal(moveProjectTo('d', 1), true);
+    assert.deepEqual(ids(), ['b', 'd', 'a', 'c']);
+    assert.equal(moveProjectTo('d', 0), false, 'cannot jump above a pinned project');
+    assert.equal(moveProjectTo('b', 3), false, 'a pinned project cannot drop below the pins');
+    assert.equal(moveProjectTo('a', 99), true);
+    assert.deepEqual(ids(), ['b', 'd', 'c', 'a']);
+    assert.equal(moveProjectTo('missing', 0), false);
+  });
+
+  it('sync keeps the newer name/pin and the more recent reorder', () => {
+    const merge = new Function(`${['pruneDeletedIds', 'withoutDeletedProjectEntries', 'projectGroup', 'orderedProjects', 'sortByReference', 'mergeProjectsData'].map(fnSource).join('\n')}\nreturn mergeProjectsData;`)();
+    const p = (id, extra = {}) => ({ id, name: id.toUpperCase(), notes: [], tasks: [], ...extra });
+    const local = { deletedIds: {}, orderUpdatedAt: '2026-10-20T10:00:00Z', projects: [
+      p('a', { name: 'Old', updatedAt: '2026-10-19T00:00:00Z' }), p('b', { pinned: true, updatedAt: '2026-10-20T12:00:00Z' }), p('c'),
+    ] };
+    const remote = { deletedIds: {}, orderUpdatedAt: '2026-10-20T11:00:00Z', projects: [
+      p('c'), p('a', { name: 'New', pinned: true, updatedAt: '2026-10-20T09:00:00Z' }), p('b', { updatedAt: '2026-10-20T08:00:00Z' }), p('r'),
+    ] };
+    const out = merge(local, remote);
+    const byId = Object.fromEntries(out.projects.map(x => [x.id, x]));
+    assert.equal(byId.a.name, 'New');
+    assert.equal(byId.a.pinned, true);
+    assert.equal(byId.b.pinned, true, 'local pin is newer than the remote unpin');
+    assert.deepEqual(out.projects.map(x => x.id), ['a', 'b', 'c', 'r'], 'pins first, then the remote order');
+    assert.equal(out.orderUpdatedAt, '2026-10-20T11:00:00Z');
+
+    const older = merge({ ...local, orderUpdatedAt: '2026-10-20T12:00:00Z' }, remote);
+    assert.deepEqual(older.projects.filter(x => !x.pinned).map(x => x.id), ['c', 'r']);
+    assert.deepEqual(merge({ projects: [p('x'), p('y')] }, { projects: [p('y'), p('x')] }).projects.map(x => x.id), ['x', 'y'], 'no order stamps: local order stays');
+  });
+
+  it('archiving unpins a project and moves it to the top of the archived group; pinning brings it back', () => {
+    const { state, ids, toggleProjectArchived, toggleProjectPinned, moveProjectTo, orderedProjects } = projectOrderFns();
+    toggleProjectArchived('b');
+    assert.deepEqual(ids(), ['a', 'c', 'd', 'b']);
+    assert.equal(state.projectsData.projects[3].archived, true);
+    assert.equal('pinned' in state.projectsData.projects[3], false);
+    toggleProjectArchived('a');
+    assert.deepEqual(ids(), ['c', 'd', 'a', 'b'], 'newly archived goes first among the archived');
+    assert.equal(moveProjectTo('a', 1), false, 'cannot move above the archived group');
+    assert.equal(moveProjectTo('a', 3), true);
+    assert.deepEqual(ids(), ['c', 'd', 'b', 'a']);
+    toggleProjectPinned('a');
+    assert.deepEqual(ids(), ['a', 'c', 'd', 'b']);
+    assert.equal('archived' in state.projectsData.projects[0], false);
+    toggleProjectArchived('b');
+    assert.deepEqual(orderedProjects(state.projectsData.projects).map(p => p.id), ['a', 'b', 'c', 'd'], 'unarchived goes to the top of the unpinned group');
+  });
+
+  it('notes and tasks reorder among the active ones; archived stay put', () => {
+    const { state, moveProjectItem } = projectOrderFns();
+    state.projectsData.projects[0].tasks = [
+      { id: 't1', type: 'task' }, { id: 't2', type: 'task', archived: true }, { id: 't3', type: 'task' }, { id: 't4', type: 'task' },
+    ];
+    state.projectsData.projects[0].notes = [];
+    assert.equal(moveProjectItem('a', 't4', 0), true);
+    assert.deepEqual(state.projectsData.projects[0].tasks.map(t => t.id), ['t4', 't1', 't3', 't2']);
+    assert.ok(state.projectsData.projects[0].itemOrderUpdatedAt);
+    assert.equal(moveProjectItem('a', 't4', -5), false);
+    assert.equal(moveProjectItem('a', 't2', 0), false, 'archived items do not move');
+    assert.equal(moveProjectItem('a', 't1', 99), true);
+    assert.deepEqual(state.projectsData.projects[0].tasks.filter(t => !t.archived).map(t => t.id), ['t4', 't3', 't1']);
+  });
+
+  it('progress counts every finished task, archived included', () => {
+    const { projectProgress } = projectOrderFns();
+    assert.deepEqual(projectProgress({ tasks: [{ completed: true, archived: true }, { completed: false }, {}] }), { done: 1, total: 3 });
+    assert.deepEqual(projectProgress({}), { done: 0, total: 0 });
+  });
+
+  it('sync keeps the newer archive flag and the more recent note/task order per project', () => {
+    const merge = new Function(`${['pruneDeletedIds', 'withoutDeletedProjectEntries', 'projectGroup', 'orderedProjects', 'sortByReference', 'mergeProjectsData'].map(fnSource).join('\n')}\nreturn mergeProjectsData;`)();
+    const local = { deletedIds: {}, projects: [{ id: 'p', name: 'P', updatedAt: '2026-10-20T01:00:00Z', itemOrderUpdatedAt: '2026-10-20T01:00:00Z',
+      notes: [], tasks: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'local-only' }] }, { id: 'q', name: 'Q', notes: [], tasks: [] }] };
+    const remote = { deletedIds: {}, projects: [{ id: 'p', name: 'P', archived: true, updatedAt: '2026-10-20T02:00:00Z', itemOrderUpdatedAt: '2026-10-20T02:00:00Z',
+      notes: [], tasks: [{ id: 'c' }, { id: 'a' }, { id: 'b' }] }, { id: 'q', name: 'Q', notes: [], tasks: [] }] };
+    const out = merge(local, remote);
+    assert.deepEqual(out.projects.map(p => p.id), ['q', 'p'], 'archived projects sort last');
+    const p = out.projects[1];
+    assert.equal(p.archived, true);
+    assert.deepEqual(p.tasks.map(t => t.id), ['c', 'a', 'b', 'local-only']);
+    assert.equal(p.itemOrderUpdatedAt, '2026-10-20T02:00:00Z');
+    const keep = merge(remote, local).projects.find(x => x.id === 'p');
+    assert.deepEqual(keep.tasks.map(t => t.id).slice(0, 3), ['c', 'a', 'b'], 'older remote order does not win');
+  });
+
+  it('More menu, Markdown copy, and the day picker are wired up', () => {
+    assert.match(html, /<button id="project-more-btn" class="project-action-btn project-text-btn" type="button" aria-haspopup="menu"/);
+    const menu = fnSource('openProjectMoreMenu');
+    for (const label of ['Copy as Markdown', "'Archive project'", "'Unarchive project'", "'Move up'", "'Move down'"]) assert.ok(menu.includes(label), label);
+    assert.match(menu, /index <= lo\);/);
+    assert.match(menu, /index >= hi\);/);
+    const md = fnSource('projectToMarkdown');
+    assert.match(md, /- \[ \] /);
+    assert.match(md, /!t\.archived && !t\.completed/);
+    assert.match(fnSource('openSendToDesk'), /\{ pickDate: true \}/);
+    assert.match(fnSource('sendProjectItemToDesk'), /function sendProjectItemToDesk\(projectId, itemId, ctx, date = todayKey\(\)\)/);
+    assert.match(fnSource('openSendToProject'), /\.filter\(p => !p\.archived\)/);
+  });
+
+  it('project imports keep pins and order stamps', () => {
+    const validateImportData = new Function(`${['normalizeTag', 'normalizeTagList', 'tagsField', 'validateImportData'].map(fnSource).join('\n')}\nreturn validateImportData;`)();
+    const out = validateImportData({ type: 'projects', projects: [
+      { id: 'p1', name: 'P', pinned: true, updatedAt: '2026-10-20T00:00:00Z' }, { id: 'p2', name: 'Q', pinned: 'yes' },
+    ] });
+    assert.deepEqual([out.projects[0].pinned, out.projects[0].updatedAt], [true, '2026-10-20T00:00:00Z']);
+    assert.equal('pinned' in out.projects[1], false);
+    assert.match(fnSource('applyProjectsImport'), /projects: orderedProjects\(incoming\), deletedIds, orderUpdatedAt:/);
+    assert.match(fnSource('loadProjectsData'), /if \(parsed\.orderUpdatedAt\) data\.orderUpdatedAt = parsed\.orderUpdatedAt;/);
+    assert.match(fnSource('renameProject'), /project\.updatedAt = new Date\(\)\.toISOString\(\);/);
+  });
+
+  it('project imports keep tags', () => {
+    const validateImportData = new Function(`${['normalizeTag', 'normalizeTagList', 'tagsField', 'validateImportData'].map(fnSource).join('\n')}\nreturn validateImportData;`)();
+    const out = validateImportData({ type: 'projects', projects: [{
+      id: 'p1', name: 'P', notes: [{ id: 'n1', content: 'a', tags: ['#Ops', 'ops'] }], tasks: [{ id: 't1', content: 'b', tags: 'bad' }],
+    }] });
+    assert.deepEqual(out.projects[0].notes[0].tags, ['ops']);
+    assert.equal('tags' in out.projects[0].tasks[0], false);
+  });
+
+  it('project search matches content, comment text, and #tags', () => {
+    const run = new Function('state', 'searchableText', 'plainTextPreview', `${['escapeHtml', 'normalizeTag', 'normalizeTagList', 'searchItemStatus', 'collectProjectSearchMatches'].map(fnSource).join('\n')}\nreturn collectProjectSearchMatches;`);
+    const state = { projectsData: { projects: [{ id: 'p1', name: 'Launch', notes: [
+      { id: 'n1', type: 'note', content: 'Vendor <b>call</b>', createdAt: '2026-10-05T10:00:00Z', tags: ['ops'] },
+    ], tasks: [
+      { id: 't1', type: 'task', content: 'Ship', completed: true, archived: true, createdAt: '2026-10-04T10:00:00Z', comments: [{ id: 'c1', text: 'vendor said yes' }] },
+    ] }] } };
+    const search = run(state, (h) => stripHtml(h).toLowerCase(), plainTextPreview);
+    const find = (q) => { const r = []; search(q, r); return r; };
+    const hits = find('vendor');
+    assert.deepEqual(hits.map(r => [r.itemId, r.matchType]).sort(), [['n1', 'content'], ['t1', 'comment']]);
+    const comment = hits.find(r => r.matchType === 'comment');
+    assert.deepEqual([comment.listContext, comment.projectId, comment.projectName, comment.archived, comment.status, comment.date],
+      ['projects', 'p1', 'Launch', true, 'done', '2026-10-04']);
+    assert.deepEqual(find('#op').map(r => [r.itemId, r.matchType]), [['n1', 'tag']]);
+    assert.deepEqual(find('#ops call').map(r => r.itemId), ['n1']);
+    assert.deepEqual(find('#ops nope'), []);
+  });
+
+  it('All scope searches Work, Personal, and Projects; project results open the project', () => {
+    const all = fnSource('searchAllDays');
+    assert.match(all, /collectProjectSearchMatches\(q, results\)/);
+    const ui = fnSource('syncSearchUi');
+    assert.match(ui, /'All'/);
+    assert.match(ui, /'Search Work, Personal & Projects…'/);
+    assert.match(mainScript, /r\.projectId\s*\?\s*goToProjectSearchResult\(r\)/);
+    const go = fnSource('goToProjectSearchResult');
+    assert.match(go, /setListContext\('projects'/);
+    assert.match(go, /state\.projectArchiveOpen\[state\.projectViewTab\] = true/);
+    assert.match(go, /classList\.add\('search-highlight'\)/);
+    assert.match(html, /\.project-item-card\.search-highlight/);
+  });
+
+  it('project tags: hashtags on save, add/remove helpers, shared tag box, counted in tag usage', () => {
+    assert.match(fnSource('saveProjectItemContent'), /projectContentWithTags\(html, item\.tags\)/);
+    assert.match(fnSource('addProjectNote'), /\.\.\.projectContentWithTags\(content \|\| ''\)/);
+    assert.match(fnSource('addProjectTask'), /\.\.\.projectContentWithTags\(content \|\| ''\)/);
+    assert.match(fnSource('appendProjectItemExtras'), /buildTagEntry\(/);
+    assert.match(fnSource('appendProjectItemExtras'), /'to desk'/);
+    assert.match(fnSource('collectTagUsage'), /projectsData/);
+    assert.match(mainScript, /state\.projectTaggingId = null/);
   });
 });
