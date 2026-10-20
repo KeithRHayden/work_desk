@@ -23,7 +23,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **Quick notes** — alongside the task board
 - **Rich text** — bold, italic, underline, bullets
-- **Projects** — third context for longer-lived notes and tasks with updates; organized into **Notes | Tasks** tabs per project, with **Rename** and **Delete** buttons in the project header
+- **Projects** — third context for longer-lived notes and tasks with updates; organized into **Notes | Tasks** tabs per project, with **Rename** and **Delete** buttons in the project header. The project list shows open tasks and active notes per project; **pin** a project to keep it at the top and drag to reorder (Alt+↑ / Alt+↓ from the keyboard, or *More → Move up / Move down* on phones). Notes and tasks inside a project reorder the same way. The header shows task progress, and its *More* menu has *Copy as Markdown* and *Archive project* (archived projects collapse into a group at the bottom of the list). Project notes and tasks take `#tags` like desk items, and move between desk and projects: *Send to project…* in a desk card's ⋮ menu, or *to desk* on a project card (lands on the Work or Personal desk on the day you pick, today by default; comments and tags come along, with Undo)
 - **Note preview** — long project notes are truncated to a few lines with a *show more* toggle (configurable in Options → Behavior)
 - **Archive** — archive notes or tasks you're done with; completing a project task auto-archives it; archived items live in a collapsed accordion at the bottom of each tab
 - **Double-click to edit** — double-click any project note, task, or comment to jump into the editor
@@ -38,7 +38,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Tags** — tag a task or note by typing `#word` inline or clicking the `tag` action (which offers your two most-used tags as one-click picks, narrowing as you type); chips render top-right on the card, always uppercase and case-insensitive (`#ACE` == `#ace`)
 - **Tag position** — Options → Appearance → Card layout: *Own row* (default), *Slim headroom* (every task keeps a short tag row so text starts at the same height with or without tags), or *Action bar* (chips beside ⋮; on narrow cards they drop to a second line with ⋮, right-aligned)
 - **Tag colors** — Options → Appearance → Tags: *Single color (accent)* (default, every tag uses the accent), *Shades of accent* (lighter/darker/neighboring shades of the accent), or *Multi-color* (hues spread around the color wheel at the accent's brightness); both follow the theme when you switch and are stable across devices. Each mode has 8 colors, so with more tags some share one. Click any chip on a card, or use the tag list in Options, to pin a custom color that overrides any mode; synced with your other preferences
-- **Search** — floating overlay with a result count; search current list or both Work and Personal, and use `#tagname` to filter by tag; finished tasks are marked `✓ Done` or `Shelved`
+- **Search** — floating overlay with a result count; search the current list or switch the scope chip to *All* for Work, Personal, and Projects together (project results show the project name and open the project with the item outlined), and use `#tagname` to filter by tag; finished tasks are marked `✓ Done` or `Shelved`
 - **Repair duplicates** — cleans same-ID and same-day recurring copies left by sync races
 
 ### Insights
