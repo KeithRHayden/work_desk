@@ -11,7 +11,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Task management
 
 - **Kanban board** — New → Active → Completed / Shelved
-- **Complete button on the card edge** — click a task's left edge to finish it (again to reopen). Choose its look in Options → Appearance → Card layout → *Complete button*: a *"Done" label* (default; DONE? on hover, DOING while dragging, DONE! when finished, UNDO? to reopen), bar, raised bar, switch, circle, square, diamond, faint ✓, plain edge, or *Checkbox*
+- **Complete button on the card edge** — click a task's left edge to finish it (again to reopen). Choose its look in Options → Appearance → Card layout → *Complete button*: a *"Done" label* (default; DONE? on hover, DOING while dragging, DONE! when finished, UNDO? to reopen), bar, raised bar, switch, circle, square, diamond, faint ✓, plain edge, or *Checkbox*. Project tasks use the same edge
 - **Drag and drop** — reorder within a day or move between columns; on desktop, the empty space below a column accepts drops for that column, with a *Drop in …* strip showing where the task will land
 - **Shelving** — park a task without deleting it
 - **Carry forward** — a one-click button that only appears when there's something to carry; enable auto-carry (Options → Behavior) to pull it in every time you open the desk
@@ -23,7 +23,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **Quick notes** — alongside the task board
 - **Rich text** — bold, italic, underline, bullets
-- **Projects** — third context for longer-lived notes and tasks with updates; organized into **Notes | Tasks** tabs per project
+- **Projects** — third context for longer-lived notes and tasks with updates; organized into **Notes | Tasks** tabs per project, with **Rename** and **Delete** buttons in the project header
 - **Note preview** — long project notes are truncated to a few lines with a *show more* toggle (configurable in Options → Behavior)
 - **Archive** — archive notes or tasks you're done with; completing a project task auto-archives it; archived items live in a collapsed accordion at the bottom of each tab
 - **Double-click to edit** — double-click any project note, task, or comment to jump into the editor
