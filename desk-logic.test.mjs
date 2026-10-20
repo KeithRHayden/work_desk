@@ -2363,7 +2363,7 @@ describe('Comments system (HTML invariants)', () => {
 // ═══════════════════════════════════════════════════════════════════════
 const mainScript = extractMainScript(html);
 function fnSource(name) {
-  const m = mainScript.match(new RegExp(`function ${name}\\([^)]*\\)\\s*\\{[\\s\\S]*?\\n    \\}`));
+  const m = mainScript.match(new RegExp(`function ${name}\\((?:[^()]|\\([^()]*\\))*\\)\\s*\\{[\\s\\S]*?\\n    \\}`));
   assert.ok(m, `${name} must be extractable from work-desk.html`);
   return m[0];
 }
@@ -4716,7 +4716,8 @@ describe('v1.18.0 complete edge and tag position', () => {
     assert.match(src, /const label = item\.completed \? 'Mark incomplete' : 'Mark complete';/);
     assert.match(src, /edge\.setAttribute\('aria-label', label\)/);
     assert.match(src, /e\.detail > 0 && Math\.hypot\(e\.clientX - start\.x, e\.clientY - start\.y\) > 4/);
-    assert.match(src, /if \(!moved\) toggleItem\(item\.id\)/);
+    assert.match(src, /onToggle = \(\) => toggleItem\(item\.id\)/);
+    assert.match(src, /if \(!moved\) onToggle\(\)/);
   });
 
   it('CSS: classic hides the edge, the label states, wider edge on touch, slim chips sized to the row', () => {
@@ -4725,7 +4726,7 @@ describe('v1.18.0 complete edge and tag position', () => {
     for (const s of ["content: 'done';", "content: 'done\\200A?';", "content: 'done\\200A!';", "content: 'undo\\200A?';", "content: 'doing';"]) assert.ok(html.includes(s), s);
     assert.match(html, /html\[data-complete-style="label"\] \.item-card\.dragging \.complete-edge::before/);
     assert.match(html, /html\[data-complete-style="label"\] \.complete-edge\.is-done::before \{ content: 'done\\200A!'; transform: rotate\(180deg\);/);
-    assert.match(html, /@media \(hover: none\), \(pointer: coarse\) \{\s*html\[data-complete-edge="on"\] \.task-card \.complete-edge \{ width: 40px; \}/);
+    assert.match(html, /@media \(hover: none\), \(pointer: coarse\) \{\s*html\[data-complete-edge="on"\] :is\(\.task-card, \.project-task-card\) \.complete-edge \{ width: 40px; \}/);
     assert.match(html, /grid-template-areas: "tags" "content"; grid-template-rows: 14px auto;/);
     assert.match(html, /\.item\.task \.tag-chip \{\s*box-sizing: border-box; height: 14px; padding-block: 0;/);
     assert.match(html, /height: 14px; flex-wrap: nowrap; overflow-x: clip; overflow-y: visible;/);
@@ -4813,10 +4814,8 @@ describe('v1.18.2 Options list descriptions, Back, and spacing', () => {
   it('the main area scrolls on its own layer so dimmed completed cards do not wobble', () => {
     assert.match(html, /\.main \{[^}]*will-change: scroll-position;/);
     const entry = html.slice(html.indexOf("version: '1.18.3'"), html.indexOf("version: '1.18.2'"));
-    assert.match(entry, /tag: 'latest'/);
     assert.match(entry, /label: 'Fixed'[\s\S]*wobble/);
     assert.doesNotMatch(html.slice(html.indexOf("version: '1.18.2'"), html.indexOf("version: '1.18.1'")), /wobble/);
-    assert.match(html, /const APP_VERSION = '1\.18\.3';/);
     assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.3\][^#]*### Fixed\n- \*\*Completed tasks wobbling/);
   });
   it('1.18.2 is documented everywhere', () => {
@@ -4826,5 +4825,54 @@ describe('v1.18.2 Options list descriptions, Back, and spacing', () => {
     assert.match(html, /<strong>‹ Back<\/strong> or <strong>Esc<\/strong> goes back/);
     assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.2\]/);
     assert.match(readFileSync(join(__dirname, '../README.md'), 'utf8'), /hover it for the current settings/);
+  });
+});
+
+describe('v1.18.4 complete edge on project tasks', () => {
+  const projectCard = fnSource('createProjectTaskCard');
+  it('project task cards build the shared complete edge with a project toggle', () => {
+    assert.match(fnSource('buildCompleteEdge'), /function buildCompleteEdge\(item, onToggle = \(\) => toggleItem\(item\.id\)\)/);
+    assert.match(fnSource('buildCompleteEdge'), /if \(!moved\) onToggle\(\);/);
+    assert.match(projectCard, /card\.className = 'project-item-card project-task-card';/);
+    assert.match(projectCard, /buildCompleteEdge\(task, \(\) => \{\s*toggleProjectTaskComplete\(projectId, task\.id\);\s*renderProjectDetail\(\);/);
+  });
+  it('edge mode shows the edge and hides the project checkbox; Checkbox mode keeps it', () => {
+    assert.match(html, /html\[data-complete-edge="on"\] :is\(\.task-card, \.project-task-card\) \.complete-edge \{\s*display: grid;/);
+    assert.match(html, /html\[data-complete-edge="on"\] :is\(\.task-card, \.project-task-card\) \.complete-edge\.is-done \{ background: var\(--accent\); \}/);
+    assert.match(html, /html\[data-complete-edge="on"\] \.project-task-check \{ display: none; \}/);
+    assert.match(html, /html\[data-complete-edge="on"\] \.project-task-card \{ padding-left: 52px; \}/);
+  });
+  it('1.18.4 is the latest release and documented everywhere', () => {
+    const entry = html.slice(html.indexOf("version: '1.18.4'"), html.indexOf("version: '1.18.3'"));
+    assert.match(entry, /tag: 'latest'/);
+    assert.match(entry, /Project tasks now use the same complete button/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(html, /const APP_VERSION = '1\.18\.4';/);
+    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.4\][^#]*### Improved\n- \*\*Complete edge on project tasks/);
+    assert.match(readFileSync(join(__dirname, '../README.md'), 'utf8'), /Project tasks use the same edge/);
+    assert.match(html, /Project tasks use the same edge, and finishing one moves it to that project's Archived list/);
+  });
+  it('importing a projects backup keeps archived notes and tasks archived', () => {
+    const validateImportData = new Function(`${fnSource('validateImportData')}\nreturn validateImportData;`)();
+    const out = validateImportData({ type: 'projects', projects: [{
+      id: 'p1', name: 'P', createdAt: '2026-10-01T00:00:00Z',
+      notes: [{ id: 'n1', content: 'old note', archived: true }, { id: 'n2', content: 'live note' }],
+      tasks: [{ id: 't1', content: 'done', completed: true, archived: true }, { id: 't2', content: 'open' }],
+    }] });
+    const [p] = out.projects;
+    assert.deepEqual(p.notes.map(n => [n.id, n.archived]), [['n1', true], ['n2', false]]);
+    assert.deepEqual(p.tasks.map(t => [t.id, t.completed, t.archived]), [['t1', true, true], ['t2', false, false]]);
+  });
+  it('project header Rename and Delete are text buttons, not emoji', () => {
+    assert.match(html, /<button id="project-rename-btn" class="project-action-btn project-text-btn" type="button" title="Rename project">Rename<\/button>/);
+    assert.match(html, /<button id="project-delete-btn" class="project-action-btn project-text-btn project-delete-btn" type="button" title="Delete project">Delete<\/button>/);
+    assert.doesNotMatch(html.slice(html.indexOf('<header class="project-header">'), html.indexOf('<div class="project-body">')), /✏️|🗑️/);
+  });
+  it('Possible future improvements lists encryption, weather, and theme color suggestions only', () => {
+    const start = html.indexOf('<h3>Possible future improvements</h3>');
+    const list = html.slice(start, html.indexOf('</ul>', start));
+    const items = [...list.matchAll(/<li><strong>([^<]+)<\/strong>/g)].map(m => m[1]);
+    assert.deepEqual(items, ['Data encryption', 'Local weather', 'Suggested colors for custom themes']);
+    assert.doesNotMatch(list, /Google Assistant/);
   });
 });
