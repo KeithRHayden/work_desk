@@ -6,15 +6,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.19.0] — 2026-10-20
+
+### Added
+- **Search covers Projects** — the scope chip next to the search box reads *All* (was *Both*) and searches Work, Personal, and Projects together, including project comments and `#tag` searches. Project results show the project's name; clicking one opens the project on the right tab (expanding Archived if needed) and outlines the note or task
+- **Send between the desk and projects** — *Send to project…* in a desk card's ⋮ menu moves the task or note into a project you pick from a list (or *+ New project…*); *to desk* on a project card moves it to the Work or Personal desk (new desk tasks land in New). Comments and tags come along. The moved item gets a new ID and the old one is tombstoned so sync can't restore the original; *Undo* in the toast puts it back
+- **Tags on project notes and tasks** — *tag* on a project card opens the same tag box as the desk (with your most-used tags as one-click picks), and typing `#word` when writing a project note or task turns it into a tag. Chips sit at the top of the card, use your tag colors, and remove with ×. Project tags count toward the most-used tags in Options → Appearance → Tags, and are kept by backup import
+- **Pin and reorder projects** — a pin on each project in the list (shown on hover, always on touch screens and on pinned projects) or *Pin* / *Unpin* in the project header keeps a project at the top, above a thin divider; pinning moves it to the very top. Drag projects to reorder them within their group (pinned or not), in the sidebar or the top/bottom bar; with the keyboard, focus a project and press Alt+↑ / Alt+↓. Pins and order sync, with the most recent reorder winning, and are kept by backup import
+- **Reorder notes and tasks inside a project** — drag a note or task card to move it among the active ones (archived items stay in their accordion), or focus a card and press Alt+↑ / Alt+↓. A card that's being edited can't be dragged, so its text can still be selected. The order syncs, with the most recent reorder of each project winning
+- **Archive finished projects** — the new *More* menu in the project header has *Archive project*, which unpins the project and moves it into a collapsed *Archived projects (n)* group at the bottom of the list (or the end of the top/bottom bar). Archived projects are left out of *Send to project…* but stay in search; the header shows *Archived*, and *Unarchive project* (or pinning it) brings it back. Synced and kept by backup import
+- **Project progress** — the project header shows *3 of 8 tasks done* with a thin accent bar, and each project in the list gets the same bar (hidden in the top/bottom bar). Counts every task, archived ones included
+- **Copy as Markdown** — *More → Copy as Markdown* copies the project's name, progress, open tasks as `- [ ]` checkboxes, and active notes, with comments (dated) and `#tags`. Bold, italics, links, and lists in the text carry over
+- **Pick a day for *to desk*** — the send dialog for a project note or task has a *Day* picker (today by default, with a *Today* button to reset), and each desk option shows the chosen day. The toast names the day too
+- **Move up / Move down** — also in the *More* menu, for reordering projects on touch screens where drag-and-drop isn't available. Each is disabled at the edge of the project's group (pinned, others, or archived)
+
+### Fixed
+- **Project renames lost in sync** — sync always kept this device's copy of a project's name, so another device could put an old name back. Projects now record when they were renamed (or pinned), and the newer change wins
+
 ## [1.18.4] — 2026-10-20
 
 ### Improved
+- **Project list counts open work** — each project shows *2 open tasks · 3 notes*, leaving out archived notes and finished tasks; a project with only archived items shows *N archived*
 - **Complete edge on project tasks** — project tasks use the same left-edge complete button as desk tasks, in whichever style is picked in Options → Appearance → Card layout → *Complete button* (wider on touch screens). Finishing one still moves it to the project's Archived list, where the edge shows as done. *Checkbox* brings back the project checkbox too
 - **Project header buttons** — the ✏️ and 🗑️ emoji are now plain *Rename* and *Delete* text buttons, the same height as the gear beside them (Delete turns red on hover)
 - **Possible future improvements (Help)** — trimmed to data encryption, local weather, and suggested colors for custom themes. Dropped Google Assistant integration
 
 ### Fixed
 - **Archived project items lost on import** — importing a Projects backup, or the projects part of an Import All backup, dropped each note's and task's archived flag, so archived items came back as active ones. They now stay in Archived
+- **Deleted projects coming back** — deleting a whole project left no tombstone, so syncing with another device (or the cloud copy) could restore it. Deletes are now recorded, and sync merges plus Projects backup imports (Replace and Merge, including Import All) skip deleted projects, notes, and tasks
+- **Reopened project tasks stuck in Archived** — un-completing a finished task now un-archives it too, so it returns to the task list
+- **Project comment actions on touch screens** — *edit* / *delete* on project comments were hidden until a mouse hovered them; they're now always shown on touch screens and appear on keyboard focus
 
 ## [1.18.3] — 2026-10-15
 
