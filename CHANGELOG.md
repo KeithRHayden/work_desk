@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.18.4] — 2026-10-20
+
+### Improved
+- **Complete edge on project tasks** — project tasks use the same left-edge complete button as desk tasks, in whichever style is picked in Options → Appearance → Card layout → *Complete button* (wider on touch screens). Finishing one still moves it to the project's Archived list, where the edge shows as done. *Checkbox* brings back the project checkbox too
+- **Project header buttons** — the ✏️ and 🗑️ emoji are now plain *Rename* and *Delete* text buttons, the same height as the gear beside them (Delete turns red on hover)
+- **Possible future improvements (Help)** — trimmed to data encryption, local weather, and suggested colors for custom themes. Dropped Google Assistant integration
+
+### Fixed
+- **Archived project items lost on import** — importing a Projects backup, or the projects part of an Import All backup, dropped each note's and task's archived flag, so archived items came back as active ones. They now stay in Archived
+
 ## [1.18.3] — 2026-10-15
 
 ### Fixed
