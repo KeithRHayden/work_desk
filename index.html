@@ -2307,7 +2307,14 @@
         scrollbar-width: thin;
       }
       [data-sidebar-bar] .project-list-item { padding: 6px 10px; flex-shrink: 0; max-width: 200px; }
-      [data-sidebar-bar] .project-list-meta { display: none; }
+      [data-sidebar-bar] .project-list-meta,
+      [data-sidebar-bar] .project-list-progress { display: none; }
+      [data-sidebar-bar] .project-list-archive-toggle { width: auto; margin: 0 0 0 4px; padding: 6px 10px; border-top: 0; border-left: 1px solid var(--sidebar-btn-border); flex-shrink: 0; white-space: nowrap; }
+      [data-sidebar-bar] .project-list-pin { top: 50%; transform: translateY(-50%); right: 4px; }
+      [data-sidebar-bar] .project-list-item.pinned-last { margin-bottom: 0; margin-right: 5px; }
+      [data-sidebar-bar] .project-list-item.pinned-last::after { left: auto; top: 6px; bottom: 6px; right: -4px; border-bottom: 0; border-right: 1px solid var(--sidebar-btn-border); }
+      [data-sidebar-bar] .project-list-item.drop-before { box-shadow: inset 2px 0 0 var(--accent); }
+      [data-sidebar-bar] .project-list-item.drop-after { box-shadow: inset -2px 0 0 var(--accent); }
 
       [data-sidebar-bar] .sidebar-account {
         margin-left: auto;
@@ -3291,6 +3298,37 @@
     .project-list-item.active {
       background: var(--sidebar-tab-active-bg);
     }
+    .project-list-item { position: relative; }
+    .project-list-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .project-list-item .project-list-name { padding-right: 22px; }
+    .project-list-pin {
+      position: absolute; top: 7px; right: 6px;
+      display: flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; padding: 0; border: none; border-radius: 5px;
+      background: transparent; color: var(--sidebar-muted); cursor: pointer;
+      opacity: 0; transition: opacity 0.12s, color 0.12s, background 0.12s;
+    }
+    .project-list-item:hover .project-list-pin,
+    .project-list-item:focus-within .project-list-pin,
+    .project-list-item.pinned .project-list-pin { opacity: 1; }
+    .project-list-pin:hover { background: var(--sidebar-hover); color: var(--sidebar-active); }
+    .project-list-pin:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
+    .project-list-item.pinned .project-list-pin { color: var(--accent); }
+    @media (hover: none), (pointer: coarse) {
+      .project-list-pin { opacity: 1; }
+    }
+    .project-list-item.pinned-last { margin-bottom: 5px; }
+    .project-list-item.pinned-last::after {
+      content: ''; position: absolute; left: 12px; right: 12px; bottom: -4px;
+      border-bottom: 1px solid var(--sidebar-btn-border);
+    }
+    .project-item-card.dragging { opacity: 0.45; }
+    .project-item-card.drop-before { box-shadow: 0 -3px 0 var(--accent); }
+    .project-item-card.drop-after { box-shadow: 0 3px 0 var(--accent); }
+    .project-item-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .project-list-item.dragging { opacity: 0.45; }
+    .project-list-item.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+    .project-list-item.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
 
     .project-list-name {
       display: block;
@@ -3358,6 +3396,43 @@
       flex-shrink: 0;
     }
 
+    .project-title-wrap { flex: 1; min-width: 0; }
+    .project-progress { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+    .project-progress[hidden] { display: none; }
+    .project-progress-bar { width: 120px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; flex-shrink: 0; }
+    .project-progress-fill { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; }
+    .project-progress-text { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+    @media (max-width: 640px) {
+      .project-header { flex-wrap: wrap; row-gap: 10px; }
+      .project-title-wrap { flex-basis: 100%; }
+    }
+    .project-progress-bar[hidden] { display: none; }
+    .project-more-wrap { position: relative; }
+    .project-more-menu {
+      position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; min-width: 190px;
+      display: flex; flex-direction: column; padding: 4px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    }
+    .project-more-menu.hidden { display: none; }
+    .project-more-menu button {
+      text-align: left; padding: 7px 10px; border: none; border-radius: 5px; background: transparent;
+      font: inherit; font-size: 0.82rem; color: var(--text); cursor: pointer;
+    }
+    .project-more-menu button:hover:not(:disabled), .project-more-menu button:focus-visible { background: var(--input-bg); }
+    .project-more-menu button:disabled { color: var(--text-muted); opacity: 0.55; cursor: default; }
+    .project-more-sep { height: 1px; margin: 4px 6px; background: var(--border); }
+    .project-list-progress { display: block; height: 3px; margin-top: 6px; border-radius: 2px; background: var(--sidebar-btn-border); overflow: hidden; }
+    .project-list-progress > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+    .project-list-archive-toggle {
+      display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 8px; padding: 8px 12px;
+      border: none; border-top: 1px solid var(--sidebar-btn-border); background: transparent;
+      font: inherit; font-size: 0.75rem; color: var(--sidebar-muted); cursor: pointer; text-align: left;
+    }
+    .project-list-archive-toggle:hover { color: var(--sidebar-active); }
+    .project-list-archive-toggle .chev { display: inline-block; transition: transform 0.15s; }
+    .project-list-archive-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
+    .project-list-item.archived .project-list-name { color: var(--sidebar-muted); }
     .project-title {
       flex: 1;
       font-size: 1.4rem;
@@ -3613,6 +3688,36 @@
     }
     .project-item-actions button:hover {
       color: var(--accent);
+    }
+
+    .send-modal-options { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; margin-bottom: 12px; }
+    .send-option {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text); font-size: 0.86rem; text-align: left; cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .send-option:hover, .send-option:focus-visible { border-color: var(--accent); background: var(--accent-light); outline: none; }
+    .send-option-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .send-option-sub { flex-shrink: 0; font-size: 0.74rem; color: var(--text-muted); }
+    .project-item-card .tag-chip-row.project-tag-row { justify-content: flex-end; margin: 0 0 6px; }
+    .send-modal-date-row { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px; font-size: 0.8rem; color: var(--text-muted); }
+    .send-modal-date-row[hidden] { display: none; }
+    .send-modal-date-row input {
+      padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--input-bg); color: var(--text); font: inherit; font-size: 0.82rem; color-scheme: light dark;
+    }
+    .send-modal-today {
+      padding: 5px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+      font: inherit; font-size: 0.75rem; color: var(--text-muted); cursor: pointer;
+    }
+    .send-modal-today:hover { color: var(--text); border-color: var(--accent); }
+
+    .project-comment-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+    .project-comment-row:hover .project-comment-actions,
+    .project-comment-actions:focus-within { opacity: 1; }
+    @media (hover: none), (pointer: coarse) {
+      .project-comment-actions { opacity: 1; }
     }
 
     .project-task-row {
@@ -4265,7 +4370,8 @@
       opacity: 0.9;
     }
 
-    .item-card.search-highlight {
+    .item-card.search-highlight,
+    .project-item-card.search-highlight {
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
@@ -7959,7 +8065,7 @@
           <div class="search-section desk-only">
             <div id="search-wrap" class="search-wrap">
               <input id="search-input" class="search-input" type="search" placeholder="Search tasks & notes…" />
-              <button id="search-scope-chip" type="button" class="search-scope-chip" title="Search current list only — click to search both">Work</button>
+              <button id="search-scope-chip" type="button" class="search-scope-chip" title="Search current list only — click to search Work, Personal, and Projects">Work</button>
             </div>
             <div id="search-overlay" class="search-overlay hidden">
               <div class="search-overlay-header">
@@ -8495,9 +8601,20 @@
         </div>
         <div id="project-detail" class="project-detail hidden">
           <header class="project-header">
-            <h2 id="project-title" class="project-title" contenteditable="false"></h2>
+            <div class="project-title-wrap">
+              <h2 id="project-title" class="project-title" contenteditable="false"></h2>
+              <div id="project-progress" class="project-progress" hidden>
+                <span class="project-progress-bar"><span id="project-progress-fill" class="project-progress-fill"></span></span>
+                <span id="project-progress-text" class="project-progress-text"></span>
+              </div>
+            </div>
             <div class="project-actions">
+              <button id="project-pin-btn" class="project-action-btn project-text-btn" type="button" title="Pin to the top of the project list" aria-pressed="false">Pin</button>
               <button id="project-rename-btn" class="project-action-btn project-text-btn" type="button" title="Rename project">Rename</button>
+              <div class="project-more-wrap">
+                <button id="project-more-btn" class="project-action-btn project-text-btn" type="button" aria-haspopup="menu" aria-expanded="false" title="Copy, archive, or move this project">More</button>
+                <div id="project-more-menu" class="project-more-menu hidden" role="menu"></div>
+              </div>
               <button id="project-delete-btn" class="project-action-btn project-text-btn project-delete-btn" type="button" title="Delete project">Delete</button>
               <div class="density-wrap">
                 <button id="project-customize-btn" class="project-action-btn" type="button" title="Settings" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
@@ -8571,7 +8688,7 @@
           <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
           <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card — your two most-used tags appear next to the box as one-click picks (they narrow as you type, and skip tags the card already has); the box stays open until you add a tag, press Esc, or click outside it; tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
           <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
-          <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / Both</strong> chip to change scope, or search <code>#tagname</code> to filter by tag. Words on separate lines of a task still match (e.g. "vendor about" finds "Call vendor ↵ about the renewal"). Finished tasks are marked <strong>✓ Done</strong> or <strong>Shelved</strong></li>
+          <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / All</strong> chip to change scope (<strong>All</strong> also searches Projects — clicking a project result opens that project with the item outlined), or search <code>#tagname</code> to filter by tag. Words on separate lines of a task still match (e.g. "vendor about" finds "Call vendor ↵ about the renewal"). Finished tasks are marked <strong>✓ Done</strong> or <strong>Shelved</strong></li>
           <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define; optionally skip holidays</li>
           <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
@@ -8594,6 +8711,7 @@
           <li><strong>Shelving</strong> — move a task to Shelved when it isn't done but isn't today's focus; unshelf it later from the Done/Shelved column</li>
           <li><strong>Move to another day</strong> — reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
           <li><strong>Send to Work / Personal</strong> — moves a task or note to the other context list</li>
+          <li><strong>Send to project…</strong> — moves a task or note into a project you pick (or <em>+ New project…</em>), keeping its comments and tags; Undo in the toast puts it back</li>
           <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough (toggle this off in Options → Behavior → Tasks); hover to see them clearly</li>
         </ul>
 
@@ -8626,9 +8744,16 @@
           <li><strong>Create a project</strong> — click the <strong>Projects</strong> tab in the sidebar, then click <strong>+</strong> to add a new project</li>
           <li><strong>Notes | Tasks tabs</strong> — each project organizes content into two tabs so you're never scrolling through both at once</li>
           <li><strong>Note preview</strong> — long notes are truncated to a few lines with a <em>show more</em> toggle; turn this off in Options → Behavior → <strong>Truncate long notes</strong></li>
-          <li><strong>Archive</strong> — click <em>archive</em> on any note or task to move it into a collapsed <strong>Archived (n)</strong> section at the bottom of its tab; completing a task automatically archives it</li>
+          <li><strong>Archive</strong> — click <em>archive</em> on any note or task to move it into a collapsed <strong>Archived (n)</strong> section at the bottom of its tab; completing a task automatically archives it, and reopening it puts it back in the list</li>
           <li><strong>Double-click to edit</strong> — double-click a note's content or a task's text to jump straight into the editor</li>
           <li><strong>Rename / Delete</strong> — the <strong>Rename</strong> and <strong>Delete</strong> buttons in the project header; Delete asks before removing the project and everything in it</li>
+          <li><strong>Project list counts</strong> — each project shows its open tasks and active notes; archived notes and finished tasks aren't counted</li>
+          <li><strong>Pin and reorder</strong> — click the pin on a project in the list (or <strong>Pin</strong> in the project header) to keep it at the top, above a thin line; drag projects to put them in any order within the pinned or unpinned group. Keyboard: focus a project and press <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>. On phones, use <strong>More → Move up / Move down</strong> in the project header</li>
+          <li><strong>Reorder notes and tasks</strong> — drag a card up or down, or focus it and press <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>; archived items keep their own list</li>
+          <li><strong>Progress</strong> — the header shows how many of the project's tasks are done, with a thin bar; the project list shows the same bar</li>
+          <li><strong>More menu</strong> — in the project header: <strong>Copy as Markdown</strong> (open tasks as checkboxes plus notes, with comments and tags, ready for Jira, Confluence, or Slack), <strong>Archive project</strong> (moves it into a collapsed <em>Archived projects</em> group at the bottom of the list; <strong>Unarchive</strong> brings it back), and <strong>Move up / Move down</strong></li>
+          <li><strong>Tags</strong> — click <em>tag</em> on a note or task, or type <code>#word</code> while writing one; chips sit at the top of the card and remove with ×. Search <code>#tagname</code> with the scope chip on <strong>All</strong> to find tagged project items</li>
+          <li><strong>to desk</strong> — moves a note or task to your Work or Personal desk on the day you pick (today by default), with its comments and tags; Undo in the toast puts it back</li>
           <li><strong>Customize button</strong> — the gear icon in the project header opens the same Themes / Appearance / Behavior options available on the desk</li>
           <li><strong>Cloud sync</strong> — projects sync to the cloud alongside your Work and Personal data</li>
         </ul>
@@ -8673,7 +8798,7 @@
         <ul>
           <li>Click into the sidebar search box to open a floating results overlay that stays clear of the input so you can keep typing</li>
           <li>Matches task/note text, comments, and — with <code>#tagname</code> — tags, across every day</li>
-          <li>Use the <strong>Work / Personal / Both</strong> chip next to the box to search one context or both together</li>
+          <li>Use the <strong>Work / Personal / All</strong> chip next to the box to search one context, or Work, Personal, and Projects together</li>
           <li>Click a result to jump straight to that day and item; press <strong>Escape</strong> or the <strong>×</strong> to close, or click outside the overlay</li>
         </ul>
 
@@ -8784,6 +8909,22 @@
     </div>
   </div>
 
+  <div id="send-modal" class="modal hidden" role="dialog" aria-labelledby="send-modal-title">
+    <div class="modal-box">
+      <p id="send-modal-title" class="modal-title">Send to</p>
+      <p id="send-modal-text" class="modal-text"></p>
+      <div id="send-modal-date-row" class="send-modal-date-row" hidden>
+        <label for="send-modal-date">Day</label>
+        <input id="send-modal-date" type="date" />
+        <button id="send-modal-today" class="send-modal-today" type="button">Today</button>
+      </div>
+      <div id="send-modal-options" class="send-modal-options"></div>
+      <div class="modal-actions">
+        <button id="send-modal-cancel" class="modal-btn ghost" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <div id="import-modal" class="modal hidden">
     <div class="modal-box">
       <p class="modal-title">Import backup</p>
@@ -8862,20 +9003,45 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.18.4';
+    const APP_VERSION = '1.19.0';
     const CHANGELOG = [
       {
-        version: '1.18.4',
+        version: '1.19.0',
         date: 'Oct 20, 2026',
         tag: 'latest',
         sections: [
+          { label: 'Added', items: [
+            'Search covers Projects: the scope chip next to the search box now reads All instead of Both, and searches Work, Personal, and Projects together. Click a project result to open that project with the note or task outlined',
+            'Send between your desk and projects: Send to project… in a desk card\'s ⋮ menu moves the task or note into a project you pick (or a new one), and to desk on a project card moves it to your Work or Personal desk. Comments and tags come along, and Undo in the toast puts it back',
+            'Tags on project notes and tasks: click tag on a project card, or type #word when writing it. Chips show at the top of the card and work with tag colors and #tag search',
+            'Pin and reorder projects: click the pin on a project in the list (or Pin in the project header) to keep it at the top, and drag projects to put them in any order. With the keyboard, Alt+↑ / Alt+↓ moves the selected project. Pins and order sync across devices',
+            'Reorder notes and tasks inside a project: drag a card, or focus it and press Alt+↑ / Alt+↓',
+            'Archive finished projects: More → Archive project tucks it into a collapsed Archived projects group at the bottom of the list. Its notes and tasks stay searchable, and Unarchive brings it back',
+            'Project progress: the project header shows 3 of 8 tasks done with a thin bar, and the project list shows the same bar under each project',
+            'Copy a project as Markdown: More → Copy as Markdown copies its open tasks (as checkboxes) and notes, with comments and tags, ready to paste into Jira, Confluence, or Slack',
+            'Pick the day when sending a project item to your desk: the to desk dialog has a date (today by default) and a Today button',
+            'Move up / Move down in the project header\'s More menu reorder projects on phones and tablets, where dragging doesn\'t work',
+          ] },
+          { label: 'Fixed', items: [
+            'Renaming a project now syncs to your other devices. Before, another device could keep the old name and put it back',
+          ] },
+        ],
+      },
+      {
+        version: '1.18.4',
+        date: 'Oct 20, 2026',
+        sections: [
           { label: 'Improved', items: [
+            'The project list counts open work: 2 open tasks · 3 notes, leaving out archived and finished items. A project with only archived items says so',
             'Project tasks now use the same complete button as desk tasks: click the card\'s left edge to finish or reopen it, in whichever style you picked in Options → Appearance → Card layout. Checkbox still brings back the checkbox',
             'The project header\'s pencil and trash emoji are now plain Rename and Delete buttons that match the gear next to them',
             'Help: trimmed the Possible future improvements list to data encryption, local weather, and suggested colors for custom themes',
           ] },
           { label: 'Fixed', items: [
             'Importing a Projects backup (or the projects in an Import All backup) keeps archived notes and tasks in Archived. They used to come back as active items',
+            'Deleted projects stay deleted: deleting a whole project wasn\'t recorded, so a sync with another device or the cloud could bring it back. Importing a backup also no longer brings back project notes or tasks you\'ve deleted',
+            'Reopening a finished project task moves it out of Archived and back into the task list, instead of leaving it hidden there',
+            'Edit and delete on project comments now show on phones and tablets. They only appeared when a mouse hovered the comment',
           ] },
         ],
       },
@@ -9718,6 +9884,8 @@
       editingComment: null,
       addingInColumn: null,
       taggingId: null,
+      projectTaggingId: null,
+      projectsListArchiveOpen: undefined,
       expandedTaskIds: loadExpandedComments(getListContext()),
       keepCommentsOpen: localStorage.getItem('work-desk-keep-comments-open') === 'true',
       // Default on — toggle off in Customize if you want Completed always expanded
@@ -9856,6 +10024,12 @@
       projectEmpty: document.getElementById('project-empty'),
       projectDetail: document.getElementById('project-detail'),
       projectTitle: document.getElementById('project-title'),
+      projectPinBtn: document.getElementById('project-pin-btn'),
+      projectMoreBtn: document.getElementById('project-more-btn'),
+      projectMoreMenu: document.getElementById('project-more-menu'),
+      projectProgress: document.getElementById('project-progress'),
+      projectProgressFill: document.getElementById('project-progress-fill'),
+      projectProgressText: document.getElementById('project-progress-text'),
       projectRenameBtn: document.getElementById('project-rename-btn'),
       projectDeleteBtn: document.getElementById('project-delete-btn'),
       projectAddNoteBtn: document.getElementById('project-add-note-btn'),
@@ -11813,13 +11987,13 @@
 
     function syncSearchUi() {
       els.searchInput.placeholder = state.searchAllContexts
-        ? 'Search Work & Personal…'
+        ? 'Search Work, Personal & Projects…'
         : `Search ${getContextLabel()}…`;
-      els.searchScopeChip.textContent = state.searchAllContexts ? 'Both' : getContextLabel();
+      els.searchScopeChip.textContent = state.searchAllContexts ? 'All' : getContextLabel();
       els.searchScopeChip.classList.toggle('active', state.searchAllContexts);
       els.searchScopeChip.title = state.searchAllContexts
-        ? 'Searching both lists — click for current list only'
-        : `Searching ${getContextLabel()} only — click to search both`;
+        ? 'Searching Work, Personal, and Projects — click for current list only'
+        : `Searching ${getContextLabel()} only — click to search Work, Personal, and Projects`;
       els.searchWrap.classList.toggle('scope-both', state.searchAllContexts);
       els.searchWrap.classList.toggle('has-query', !!state.searchQuery.trim());
     }
@@ -13384,6 +13558,11 @@
           for (const tag of normalizeTagList(item.tags)) counts.set(tag, (counts.get(tag) || 0) + 1);
         }
       }
+      for (const project of state.projectsData?.projects || []) {
+        for (const item of [...(project.notes || []), ...(project.tasks || [])]) {
+          for (const tag of normalizeTagList(item.tags)) counts.set(tag, (counts.get(tag) || 0) + 1);
+        }
+      }
       for (const t of loadRecurringTemplates()) {
         for (const tag of normalizeTagList(t.tags)) if (!counts.has(tag)) counts.set(tag, 0);
       }
@@ -13932,26 +14111,26 @@
       return { purgedIds: pick('purgedIds'), restoredIds: pick('restoredIds') };
     }
 
-    function markItemDeleted(id) {
+    function markItemDeleted(id, data = state.data) {
       if (!id) return;
       const ts = new Date().toISOString();
-      if (!state.data.deletedIds) state.data.deletedIds = {};
-      if (!state.data.purgedIds) state.data.purgedIds = {};
-      state.data.deletedIds[id] = ts;
-      state.data.purgedIds[id] = ts;
+      if (!data.deletedIds) data.deletedIds = {};
+      if (!data.purgedIds) data.purgedIds = {};
+      data.deletedIds[id] = ts;
+      data.purgedIds[id] = ts;
     }
 
-    function clearItemDeleted(id) {
-      if (!id || !state.data.deletedIds) return;
-      delete state.data.deletedIds[id];
+    function clearItemDeleted(id, data = state.data) {
+      if (!id || !data.deletedIds) return;
+      delete data.deletedIds[id];
     }
 
-    function markItemRestored(id) {
+    function markItemRestored(id, data = state.data) {
       if (!id) return;
-      clearItemDeleted(id);
-      if (state.data.purgedIds) delete state.data.purgedIds[id];
-      if (!state.data.restoredIds) state.data.restoredIds = {};
-      state.data.restoredIds[id] = new Date().toISOString();
+      clearItemDeleted(id, data);
+      if (data.purgedIds) delete data.purgedIds[id];
+      if (!data.restoredIds) data.restoredIds = {};
+      data.restoredIds[id] = new Date().toISOString();
     }
 
     function pruneDeletedIds(deletedIds) {
@@ -13970,7 +14149,9 @@
         const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          return { projects: parsed.projects || [], deletedIds: parsed.deletedIds || {} };
+          const data = { projects: parsed.projects || [], deletedIds: parsed.deletedIds || {} };
+          if (parsed.orderUpdatedAt) data.orderUpdatedAt = parsed.orderUpdatedAt;
+          return data;
         }
       } catch (_) {}
       return { projects: [], deletedIds: {} };
@@ -14020,6 +14201,7 @@
       const project = getProject(projectId);
       if (project && newName && newName.trim()) {
         project.name = newName.trim();
+        project.updatedAt = new Date().toISOString();
         saveProjectsData();
         renderProjectsList();
         return true;
@@ -14027,10 +14209,244 @@
       return false;
     }
 
+    // List groups, top to bottom: pinned, the rest, archived
+    function projectGroup(project) {
+      return project.archived ? 2 : project.pinned ? 0 : 1;
+    }
+
+    // Stored order is the list order: each group in the user's order
+    function orderedProjects(projects) {
+      const list = projects || [];
+      return [0, 1, 2].flatMap(g => list.filter(p => projectGroup(p) === g));
+    }
+
+    function projectGroupBounds(list, project) {
+      const g = projectGroup(project);
+      const lo = list.filter(p => projectGroup(p) < g).length;
+      return [lo, lo + list.filter(p => projectGroup(p) === g).length - 1];
+    }
+
+    function setProjectOrder(projects) {
+      state.projectsData.projects = projects;
+      state.projectsData.orderUpdatedAt = new Date().toISOString();
+      saveProjectsData();
+    }
+
+    // A project that changes group goes to the top of its new group
+    function regroupProject(project, change) {
+      const rest = orderedProjects(state.projectsData.projects).filter(p => p.id !== project.id);
+      change();
+      project.updatedAt = new Date().toISOString();
+      rest.splice(rest.filter(p => projectGroup(p) < projectGroup(project)).length, 0, project);
+      setProjectOrder(rest);
+    }
+
+    // Pinning an archived project brings it back too
+    function toggleProjectPinned(projectId) {
+      const project = getProject(projectId);
+      if (!project) return false;
+      regroupProject(project, () => {
+        if (project.pinned) delete project.pinned;
+        else { project.pinned = true; delete project.archived; }
+      });
+      return true;
+    }
+
+    function toggleProjectArchived(projectId) {
+      const project = getProject(projectId);
+      if (!project) return false;
+      regroupProject(project, () => {
+        if (project.archived) delete project.archived;
+        else { project.archived = true; delete project.pinned; }
+      });
+      return true;
+    }
+
+    // Moves within the project's own group; returns whether anything moved
+    function moveProjectTo(projectId, targetIndex) {
+      const list = orderedProjects(state.projectsData.projects);
+      const from = list.findIndex(p => p.id === projectId);
+      if (from === -1) return false;
+      const [lo, hi] = projectGroupBounds(list, list[from]);
+      const to = Math.max(lo, Math.min(hi, targetIndex));
+      if (to === from) return false;
+      const [moved] = list.splice(from, 1);
+      list.splice(to, 0, moved);
+      setProjectOrder(list);
+      return true;
+    }
+
+    // Reorders among the active (not archived) notes or tasks; archived ones stay in their accordion
+    function moveProjectItem(projectId, itemId, targetIndex) {
+      const project = getProject(projectId);
+      const item = findProjectItem(projectId, itemId);
+      if (!project || !item || item.archived) return false;
+      const key = item.type === 'note' ? 'notes' : 'tasks';
+      const active = project[key].filter(i => !i.archived);
+      const from = active.indexOf(item);
+      const to = Math.max(0, Math.min(active.length - 1, targetIndex));
+      if (from === -1 || to === from) return false;
+      active.splice(from, 1);
+      active.splice(to, 0, item);
+      project[key] = [...active, ...project[key].filter(i => i.archived)];
+      project.itemOrderUpdatedAt = new Date().toISOString();
+      saveProjectsData();
+      return true;
+    }
+
+    function projectProgress(project) {
+      const tasks = project.tasks || [];
+      return { done: tasks.filter(t => t.completed).length, total: tasks.length };
+    }
+
+    // Card HTML → Markdown lines: bold, italics, links, lists, and line breaks survive
+    function htmlToMarkdown(html) {
+      const root = document.createElement('div');
+      root.innerHTML = String(html || '');
+      const walk = (node, listDepth = 0) => {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\s+/g, ' ');
+        if (node.nodeType !== Node.ELEMENT_NODE) return '';
+        const tag = node.tagName;
+        const inner = () => Array.from(node.childNodes).map(c => walk(c, listDepth)).join('');
+        switch (tag) {
+          case 'BR': return '\n';
+          case 'B': case 'STRONG': { const t = inner().trim(); return t ? `**${t}**` : ''; }
+          case 'I': case 'EM': { const t = inner().trim(); return t ? `*${t}*` : ''; }
+          case 'S': case 'DEL': { const t = inner().trim(); return t ? `~~${t}~~` : ''; }
+          case 'A': { const t = inner().trim(); const href = node.getAttribute('href'); return href ? `[${t || href}](${href})` : t; }
+          case 'UL': case 'OL': {
+            const ordered = tag === 'OL';
+            return '\n' + Array.from(node.children).filter(li => li.tagName === 'LI').map((li, i) => {
+              const text = Array.from(li.childNodes).map(c => walk(c, listDepth + 1)).join('').trim();
+              return `${'  '.repeat(listDepth)}${ordered ? `${i + 1}.` : '-'} ${text}`;
+            }).join('\n') + '\n';
+          }
+          case 'DIV': case 'P': return `\n${inner()}\n`;
+          default: return inner();
+        }
+      };
+      return walk(root)
+        .split('\n')
+        .map(line => line.replace(/[ \t]+$/g, '').replace(/^ (?=\S)/, ''))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
+    // Open tasks, then active notes; archived and finished items are left out
+    function projectToMarkdown(project) {
+      const indent = (text, prefix) => text.split('\n').map((line, i) => (i === 0 ? line : `${prefix}${line}`)).join('\n');
+      const tagText = (item) => normalizeTagList(item.tags).map(t => ` #${t}`).join('');
+      const commentLines = (item) => (item.comments || []).map(c => {
+        const when = c.createdAt ? `${new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ` : '';
+        return `  - ${indent(`${when}${String(c.text || '').trim()}`, '    ')}`;
+      });
+      const lines = [`# ${project.name}`];
+      const { done, total } = projectProgress(project);
+      if (total) lines.push('', `${done} of ${total} task${total === 1 ? '' : 's'} done`);
+      const openTasks = (project.tasks || []).filter(t => !t.archived && !t.completed);
+      if (openTasks.length) {
+        lines.push('', '## Tasks');
+        for (const task of openTasks) {
+          lines.push(`- [ ] ${indent(htmlToMarkdown(task.content), '      ')}${tagText(task)}`, ...commentLines(task));
+        }
+      }
+      const notes = (project.notes || []).filter(n => !n.archived);
+      if (notes.length) {
+        lines.push('', '## Notes');
+        for (const note of notes) {
+          lines.push(`- ${indent(htmlToMarkdown(note.content), '  ')}${tagText(note)}`, ...commentLines(note));
+        }
+      }
+      return lines.join('\n') + '\n';
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_) {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (_) {}
+        area.remove();
+        return ok;
+      }
+    }
+
+    async function copyProjectMarkdown(projectId) {
+      const project = getProject(projectId);
+      if (!project) return;
+      const ok = await copyText(projectToMarkdown(project));
+      showToast(ok ? `Copied ${project.name} as Markdown` : 'Couldn\'t copy — your browser blocked the clipboard');
+    }
+
+    function closeProjectMoreMenu() {
+      els.projectMoreMenu.classList.add('hidden');
+      els.projectMoreBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    // Rebuilt on each open so labels and Move up / down limits match the project's current place
+    function openProjectMoreMenu() {
+      const project = getProject(state.selectedProjectId);
+      if (!project) return;
+      const menu = els.projectMoreMenu;
+      menu.innerHTML = '';
+      const ordered = orderedProjects(state.projectsData.projects);
+      const index = ordered.indexOf(project);
+      const [lo, hi] = projectGroupBounds(ordered, project);
+      const add = (label, onClick, disabled = false) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'menuitem');
+        btn.textContent = label;
+        btn.disabled = disabled;
+        btn.addEventListener('click', () => {
+          closeProjectMoreMenu();
+          onClick();
+        });
+        menu.appendChild(btn);
+      };
+      const sep = () => {
+        const div = document.createElement('div');
+        div.className = 'project-more-sep';
+        div.setAttribute('role', 'separator');
+        menu.appendChild(div);
+      };
+      add('Copy as Markdown', () => copyProjectMarkdown(project.id));
+      add(project.archived ? 'Unarchive project' : 'Archive project', () => {
+        toggleProjectArchived(project.id);
+        if (project.archived) state.projectsListArchiveOpen = true;
+        renderProjectDetail();
+        showToast(project.archived ? `Archived ${project.name}` : `Unarchived ${project.name}`);
+      });
+      sep();
+      add('Move up', () => { moveProjectTo(project.id, index - 1); renderProjectsList(); }, index <= lo);
+      add('Move down', () => { moveProjectTo(project.id, index + 1); renderProjectsList(); }, index >= hi);
+      menu.classList.remove('hidden');
+      els.projectMoreBtn.setAttribute('aria-expanded', 'true');
+      menu.querySelector('button:not(:disabled)')?.focus();
+    }
+
+    // Stable sort by each id's position in `reference`; ids it doesn't have keep their order at the end
+    function sortByReference(list, reference) {
+      const rank = new Map((reference || []).map((x, i) => [x.id, i]));
+      return list
+        .map((x, i) => ({ x, i, key: rank.has(x.id) ? rank.get(x.id) : Infinity }))
+        .sort((a, b) => (a.key - b.key) || (a.i - b.i))
+        .map(o => o.x);
+    }
+
     function deleteProject(projectId) {
       const idx = state.projectsData.projects.findIndex(p => p.id === projectId);
       if (idx !== -1) {
         state.projectsData.projects.splice(idx, 1);
+        markProjectItemDeleted(projectId);
         saveProjectsData();
         if (state.selectedProjectId === projectId) {
           state.selectedProjectId = null;
@@ -14049,7 +14465,7 @@
       const note = {
         id: generateProjectItemId(),
         type: 'note',
-        content: content || '',
+        ...projectContentWithTags(content || ''),
         createdAt: new Date().toISOString(),
         comments: [],
       };
@@ -14064,7 +14480,7 @@
       const task = {
         id: generateProjectItemId(),
         type: 'task',
-        content: content || '',
+        ...projectContentWithTags(content || ''),
         completed: false,
         createdAt: new Date().toISOString(),
         comments: [],
@@ -14112,7 +14528,7 @@
       const task = project.tasks.find(t => t.id === taskId);
       if (task) {
         task.completed = !task.completed;
-        if (task.completed) task.archived = true;
+        task.archived = task.completed;
         saveProjectsData();
         return true;
       }
@@ -14180,6 +14596,276 @@
         return true;
       }
       return false;
+    }
+
+    function findProjectItem(projectId, itemId) {
+      const project = getProject(projectId);
+      if (!project) return null;
+      return (project.notes || []).find(n => n.id === itemId)
+        || (project.tasks || []).find(t => t.id === itemId) || null;
+    }
+
+    // Same rule as desk edits: #words become tags unless that would leave the text empty
+    // A lone hashtag with no other text stays as text, same as desk items
+    function projectContentWithTags(html, existingTags) {
+      const extracted = extractHashtags(html);
+      if (!extracted.tags.length || isEmptyHtml(extracted.content)) {
+        return existingTags ? { content: html, tags: existingTags } : { content: html };
+      }
+      const tags = mergeTags(existingTags, extracted.tags);
+      return tags ? { content: extracted.content, tags } : { content: extracted.content };
+    }
+
+    function saveProjectItemContent(projectId, itemId, html) {
+      const item = findProjectItem(projectId, itemId);
+      if (!item) return;
+      const updates = projectContentWithTags(html, item.tags);
+      if (!updates.tags) delete updates.tags;
+      updateProjectItem(projectId, itemId, updates);
+    }
+
+    function addProjectItemTag(projectId, itemId, rawTag) {
+      const tag = normalizeTag(rawTag);
+      const item = findProjectItem(projectId, itemId);
+      if (!tag || !item) return false;
+      const existing = normalizeTagList(item.tags);
+      if (existing.includes(tag)) return false;
+      item.tags = [...existing, tag];
+      saveProjectsData();
+      return true;
+    }
+
+    function removeProjectItemTag(projectId, itemId, tag) {
+      const item = findProjectItem(projectId, itemId);
+      if (!item) return;
+      const next = normalizeTagList(item.tags).filter(t => t !== tag);
+      if (next.length) item.tags = next;
+      else delete item.tags;
+      saveProjectsData();
+    }
+
+    // Desk comments hold HTML in `content`; project comments hold plain text in `text`
+    function deskItemToProjectItem(item) {
+      const out = {
+        id: generateProjectItemId(),
+        type: item.type === 'note' ? 'note' : 'task',
+        content: item.content || '',
+        createdAt: item.createdAt || new Date().toISOString(),
+        comments: (item.comments || []).map(c => ({
+          id: c.id || newId(),
+          text: plainTextPreview(String(c.content || '').replace(/<br\s*\/?>|<\/(p|div|li)>/gi, '\n'), Infinity),
+          createdAt: c.createdAt || new Date().toISOString(),
+        })),
+      };
+      if (out.type === 'task') {
+        out.completed = !!item.completed;
+        out.archived = out.completed;
+      }
+      const tags = normalizeTagList(item.tags);
+      if (tags.length) out.tags = tags;
+      return out;
+    }
+
+    function projectItemToDeskItem(item) {
+      const type = item.type === 'note' ? 'note' : 'task';
+      const out = {
+        id: newId(),
+        type,
+        content: item.content || '',
+        completed: type === 'task' && !!item.completed,
+        createdAt: new Date().toISOString(),
+      };
+      if (type === 'task') {
+        out.shelved = false;
+        out.boardColumn = 'new';
+      }
+      const comments = (item.comments || []).map(c => ({
+        id: c.id || newId(),
+        content: escapeHtml(c.text || '').replace(/\n/g, '<br>'),
+        createdAt: c.createdAt || new Date().toISOString(),
+      }));
+      if (comments.length) out.comments = comments;
+      const tags = normalizeTagList(item.tags);
+      if (tags.length) out.tags = tags;
+      return out;
+    }
+
+    // Edits a desk's stored data even when another desk (or Projects) is on screen
+    function editDeskData(ctx, edit) {
+      const onScreen = state.listContext === ctx;
+      const data = onScreen ? state.data : loadData(ctx);
+      edit(data);
+      if (onScreen) {
+        saveData();
+        return;
+      }
+      localStorage.setItem(getStorageKey(ctx), JSON.stringify(data));
+      localStorage.setItem(SB_TS_KEY, new Date().toISOString());
+      if (getStorageKey() === getStorageKey(ctx)) state.data = data;
+      if (sbSynced) sbSchedulePush();
+    }
+
+    // Moves get a fresh ID and tombstone the old one, so neither side's sync can bring the original back
+    function sendDeskItemToProject(itemId, projectId) {
+      const found = findItem(itemId);
+      const project = getProject(projectId);
+      if (!found || !project) return;
+      const ctx = state.listContext;
+      const { date, idx: index } = found;
+      const original = cloneData(found.item);
+      const projItem = deskItemToProjectItem(original);
+      const list = projItem.type === 'note' ? 'notes' : 'tasks';
+      project[list].push(projItem);
+      saveProjectsData();
+
+      for (const d of Object.keys(state.data.days)) {
+        const day = state.data.days[d];
+        if (!day.items.some(i => i.id === itemId)) continue;
+        const items = day.items.filter(i => i.id !== itemId);
+        if (items.length) state.data.days[d] = { ...day, items };
+        else delete state.data.days[d];
+      }
+      markItemDeleted(itemId);
+      if (original.recurringTemplateId) markTemplateInjectedForDate(original.recurringTemplateId, date);
+      if (state.expandedTaskIds.has(itemId)) {
+        state.expandedTaskIds.delete(itemId);
+        saveExpandedComments();
+      }
+      saveData();
+      clearPendingUndo();
+      render();
+      showToast(`Sent to ${project.name}`, { undo: () => {
+        const p = getProject(projectId);
+        if (p) {
+          p[list] = p[list].filter(i => i.id !== projItem.id);
+          markProjectItemDeleted(projItem.id);
+          saveProjectsData();
+        }
+        editDeskData(ctx, data => {
+          const day = data.days[date] || { date, items: [] };
+          const items = [...day.items];
+          items.splice(Math.min(index, items.length), 0, original);
+          data.days[date] = { date, items };
+          markItemRestored(itemId, data);
+        });
+        render();
+      } });
+    }
+
+    function sendProjectItemToDesk(projectId, itemId, ctx, date = todayKey()) {
+      const project = getProject(projectId);
+      const item = findProjectItem(projectId, itemId);
+      if (!project || !item) return;
+      const list = item.type === 'note' ? 'notes' : 'tasks';
+      const index = project[list].indexOf(item);
+      const original = cloneData(item);
+      const deskItem = projectItemToDeskItem(original);
+      editDeskData(ctx, data => {
+        const day = data.days[date] || { date, items: [] };
+        data.days[date] = { date, items: [...day.items, deskItem] };
+      });
+      project[list].splice(index, 1);
+      markProjectItemDeleted(itemId);
+      saveProjectsData();
+      clearPendingUndo();
+      render();
+      showToast(`Sent to ${getContextLabel(ctx)} desk · ${formatSidebarLabel(date)}`, { undo: () => {
+        editDeskData(ctx, data => {
+          const day = data.days[date];
+          if (day) {
+            const items = day.items.filter(i => i.id !== deskItem.id);
+            if (items.length) data.days[date] = { date, items };
+            else delete data.days[date];
+          }
+          markItemDeleted(deskItem.id, data);
+        });
+        const p = getProject(projectId);
+        if (p) {
+          p[list].splice(Math.min(index, p[list].length), 0, original);
+          delete state.projectsData.deletedIds[itemId];
+          saveProjectsData();
+        }
+        render();
+      } });
+    }
+
+    // With pickDate, options get the chosen day: `sub` may be a function of it, and onPick receives it
+    function openSendModal(text, options, { pickDate = false } = {}) {
+      const modal = document.getElementById('send-modal');
+      const host = document.getElementById('send-modal-options');
+      const dateRow = document.getElementById('send-modal-date-row');
+      const dateInput = document.getElementById('send-modal-date');
+      document.getElementById('send-modal-text').textContent = text;
+      dateRow.hidden = !pickDate;
+      dateInput.value = todayKey();
+      const pickedDate = () => (/^\d{4}-\d{2}-\d{2}$/.test(dateInput.value) ? dateInput.value : todayKey());
+      host.innerHTML = '';
+      const subs = [];
+      for (const opt of options) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'send-option';
+        const name = document.createElement('span');
+        name.className = 'send-option-name';
+        name.textContent = opt.label;
+        btn.appendChild(name);
+        if (opt.sub) {
+          const sub = document.createElement('span');
+          sub.className = 'send-option-sub';
+          btn.appendChild(sub);
+          subs.push(() => { sub.textContent = typeof opt.sub === 'function' ? opt.sub(pickedDate()) : opt.sub; });
+        }
+        btn.addEventListener('click', () => {
+          const date = pickedDate();
+          closeSendModal();
+          opt.onPick(date);
+        });
+        host.appendChild(btn);
+      }
+      const refreshSubs = () => subs.forEach(fn => fn());
+      refreshSubs();
+      dateInput.oninput = refreshSubs;
+      document.getElementById('send-modal-today').onclick = () => {
+        dateInput.value = todayKey();
+        refreshSubs();
+      };
+      modal.classList.remove('hidden');
+      host.querySelector('button')?.focus();
+    }
+
+    function closeSendModal() {
+      document.getElementById('send-modal').classList.add('hidden');
+    }
+
+    function openSendToProject(itemId) {
+      const found = findItem(itemId);
+      if (!found) return;
+      const label = found.item.type === 'note' ? 'note' : 'task';
+      const options = orderedProjects(state.projectsData?.projects).filter(p => !p.archived).map(p => ({
+        label: p.name,
+        sub: projectListMeta(p),
+        onPick: () => sendDeskItemToProject(itemId, p.id),
+      }));
+      options.push({
+        label: '+ New project…',
+        onPick: () => {
+          const name = prompt('Project name:');
+          if (!name || !name.trim()) return;
+          sendDeskItemToProject(itemId, createProject(name.trim()).id);
+        },
+      });
+      openSendModal(`Move this ${label} to a project: "${plainTextPreview(found.item.content)}"`, options);
+    }
+
+    function openSendToDesk(projectId, itemId) {
+      const item = findProjectItem(projectId, itemId);
+      if (!item) return;
+      const label = item.type === 'note' ? 'note' : 'task';
+      openSendModal(`Move this ${label} to a desk: "${plainTextPreview(item.content)}"`, ['work', 'personal'].map(ctx => ({
+        label: `${getContextLabel(ctx)} desk`,
+        sub: (date) => formatSidebarLabel(date),
+        onPick: (date) => sendProjectItemToDesk(projectId, itemId, ctx, date),
+      })), { pickDate: true });
     }
 
     // Scan all contexts, remove duplicates in-place (same-day and cross-day), and re-save
@@ -14696,12 +15382,44 @@
           }
           existing.tasks = Array.from(taskMap.values()).filter(t => !deletedIds[t.id]);
 
+          // Name, pin, and archive: the side changed most recently wins
+          if ((remoteProj.updatedAt || '') > (existing.updatedAt || '')) {
+            existing.name = remoteProj.name;
+            for (const flag of ['pinned', 'archived']) {
+              if (remoteProj[flag]) existing[flag] = true;
+              else delete existing[flag];
+            }
+            existing.updatedAt = remoteProj.updatedAt;
+          }
+
+          if ((remoteProj.itemOrderUpdatedAt || '') > (existing.itemOrderUpdatedAt || '')) {
+            existing.notes = sortByReference(existing.notes, remoteProj.notes);
+            existing.tasks = sortByReference(existing.tasks, remoteProj.tasks);
+            existing.itemOrderUpdatedAt = remoteProj.itemOrderUpdatedAt;
+          }
+
           projectMap.set(remoteProj.id, existing);
         }
       }
 
-      merged.projects = Array.from(projectMap.values());
+      // Order: the side reordered most recently wins; projects it doesn't know keep their place at the end
+      const localOrderAt = local?.orderUpdatedAt || '';
+      const remoteOrderAt = remote?.orderUpdatedAt || '';
+      let projects = Array.from(projectMap.values());
+      if (remoteOrderAt > localOrderAt) projects = sortByReference(projects, remote.projects);
+      const orderUpdatedAt = remoteOrderAt > localOrderAt ? remoteOrderAt : localOrderAt;
+      if (orderUpdatedAt) merged.orderUpdatedAt = orderUpdatedAt;
+
+      merged.projects = orderedProjects(withoutDeletedProjectEntries(projects, deletedIds));
       return merged;
+    }
+
+    function withoutDeletedProjectEntries(projects, deletedIds) {
+      return (projects || []).filter(p => p && !deletedIds[p.id]).map(p => ({
+        ...p,
+        notes: (p.notes || []).filter(n => !deletedIds[n.id]),
+        tasks: (p.tasks || []).filter(t => !deletedIds[t.id]),
+      }));
     }
 
     let lastSyncTime = 0;
@@ -15094,6 +15812,45 @@
       }
     }
 
+    // Same query rules as desk search; project comments are plain text in `text`
+    function collectProjectSearchMatches(q, results) {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const tagTokenIdx = tokens.findIndex(t => t.length > 1 && t.startsWith('#'));
+      const tagQuery = tagTokenIdx !== -1 ? tokens[tagTokenIdx].slice(1) : null;
+      const textWords = tagQuery ? tokens.filter((_, i) => i !== tagTokenIdx) : [];
+      for (const project of state.projectsData?.projects || []) {
+        for (const item of [...(project.tasks || []), ...(project.notes || [])]) {
+          const base = {
+            date: String(item.createdAt || '').slice(0, 10),
+            itemId: item.id,
+            itemType: item.type === 'note' ? 'note' : 'task',
+            status: searchItemStatus(item),
+            listContext: 'projects',
+            projectId: project.id,
+            projectName: project.name,
+            archived: !!item.archived,
+          };
+          if (tagQuery) {
+            if (!normalizeTagList(item.tags).some(t => t.includes(tagQuery))) continue;
+            if (textWords.length) {
+              const haystack = [searchableText(item.content), ...(item.comments || []).map(c => searchableText(escapeHtml(c.text)))].join(' ');
+              if (!textWords.every(w => haystack.includes(w))) continue;
+            }
+            results.push({ ...base, matchType: 'tag', preview: plainTextPreview(item.content, 100) });
+            continue;
+          }
+          if (searchableText(item.content).includes(q)) {
+            results.push({ ...base, matchType: 'content', preview: plainTextPreview(item.content, 100) });
+          }
+          for (const c of item.comments || []) {
+            if (searchableText(escapeHtml(c.text)).includes(q)) {
+              results.push({ ...base, matchType: 'comment', preview: plainTextPreview(escapeHtml(c.text), 100) });
+            }
+          }
+        }
+      }
+    }
+
     function searchAllDays(query) {
       const q = query.replace(/\s+/g, ' ').trim().toLowerCase();
       if (!q) return [];
@@ -15102,6 +15859,7 @@
       if (state.searchAllContexts) {
         collectSearchMatches(loadData('work'), 'work', q, results);
         collectSearchMatches(loadData('personal'), 'personal', q, results);
+        collectProjectSearchMatches(q, results);
         results.sort((a, b) => b.date.localeCompare(a.date));
       } else {
         collectSearchMatches(state.data, state.listContext, q, results);
@@ -15187,8 +15945,9 @@
             : r.itemType === 'note'
               ? (r.matchType === 'comment' ? 'Note comment' : 'Note')
               : r.matchType === 'comment' ? 'Task comment' : 'Task';
+          const where = r.projectName || formatSidebarLabel(r.date);
           let html = `<div class="search-result-top">` +
-            `<span class="search-result-date">${escapeHtml(formatSidebarLabel(r.date))}</span>`;
+            `<span class="search-result-date">${escapeHtml(where)}</span>`;
           if (state.searchAllContexts) {
             html += `<span class="search-result-context">${escapeHtml(getContextLabel(r.listContext))}</span>`;
           }
@@ -15198,7 +15957,9 @@
             (r.status ? ` <span class="search-result-status ${r.status}">${r.status === 'done' ? '✓ Done' : 'Shelved'}</span>` : '') +
             `</div>`;
           btn.innerHTML = html;
-          btn.addEventListener('click', () => goToSearchResult(r.date, r.itemId, r.listContext));
+          btn.addEventListener('click', () => (r.projectId
+            ? goToProjectSearchResult(r)
+            : goToSearchResult(r.date, r.itemId, r.listContext)));
           li.appendChild(btn);
           els.searchResults.appendChild(li);
         });
@@ -15206,6 +15967,25 @@
 
       els.searchOverlay.classList.remove('hidden');
       positionSearchOverlay();
+    }
+
+    function goToProjectSearchResult(r) {
+      state.searchQuery = '';
+      els.searchInput.value = '';
+      renderSearchResults();
+      setListContext('projects', { preserveSearch: true });
+      state.selectedProjectId = r.projectId;
+      localStorage.setItem(SELECTED_PROJECT_KEY, r.projectId);
+      state.projectViewTab = r.itemType === 'note' ? 'notes' : 'tasks';
+      if (r.archived) state.projectArchiveOpen[state.projectViewTab] = true;
+      renderProjectDetail();
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`#project-detail .project-item-card[data-item-id="${CSS.escape(r.itemId)}"]`);
+        if (!el) return;
+        el.classList.add('search-highlight');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => el.classList.remove('search-highlight'), 2500);
+      });
     }
 
     function goToSearchResult(date, itemId, listContext = state.listContext) {
@@ -15392,6 +16172,11 @@
       return { days, items };
     }
 
+    function tagsField(tags) {
+      const list = normalizeTagList(tags);
+      return list.length ? { tags: list } : {};
+    }
+
     function validateImportData(raw) {
       // Check if this is a projects backup
       if (raw.type === 'projects' && Array.isArray(raw.projects)) {
@@ -15405,6 +16190,9 @@
             notes: [],
             tasks: [],
           };
+          if (project.pinned === true) cleanedProject.pinned = true;
+          if (project.archived === true) cleanedProject.archived = true;
+          if (typeof project.updatedAt === 'string') cleanedProject.updatedAt = project.updatedAt;
           if (Array.isArray(project.notes)) {
             cleanedProject.notes = project.notes.filter(n => n && typeof n.id === 'string').map(n => ({
               id: n.id,
@@ -15413,6 +16201,7 @@
               createdAt: n.createdAt || new Date().toISOString(),
               archived: !!n.archived,
               comments: Array.isArray(n.comments) ? n.comments : [],
+              ...tagsField(n.tags),
             }));
           }
           if (Array.isArray(project.tasks)) {
@@ -15424,6 +16213,7 @@
               createdAt: t.createdAt || new Date().toISOString(),
               archived: !!t.archived,
               comments: Array.isArray(t.comments) ? t.comments : [],
+              ...tagsField(t.tags),
             }));
           }
           cleaned.projects.push(cleanedProject);
@@ -16373,23 +17163,7 @@
         }
       }
 
-      // Import Projects
-      if (projects) {
-        if (mode === 'replace') {
-          state.projectsData = {
-            projects: projects.projects,
-            deletedIds: state.projectsData.deletedIds || {},
-          };
-        } else {
-          const existingIds = new Set(state.projectsData.projects.map(p => p.id));
-          for (const proj of projects.projects) {
-            if (!existingIds.has(proj.id)) {
-              state.projectsData.projects.push(proj);
-            }
-          }
-        }
-        saveProjectsData();
-      }
+      if (projects) applyProjectsImport(projects.projects, mode);
 
       // Reload active context
       state.data = loadData(state.listContext === 'projects' ? 'work' : state.listContext);
@@ -16508,6 +17282,22 @@
       return { days, deletedIds: pruneDeletedIds(deletedIds), ...syncRecords(state.data) };
     }
 
+    // Replace keeps current tombstones, so an older backup can't resurrect deleted projects or items
+    function applyProjectsImport(projects, mode) {
+      const deletedIds = state.projectsData.deletedIds || {};
+      const incoming = withoutDeletedProjectEntries(projects, deletedIds);
+      if (mode === 'replace') {
+        state.projectsData = { projects: orderedProjects(incoming), deletedIds, orderUpdatedAt: new Date().toISOString() };
+      } else {
+        const existingIds = new Set(state.projectsData.projects.map(p => p.id));
+        for (const proj of incoming) {
+          if (!existingIds.has(proj.id)) state.projectsData.projects.push(proj);
+        }
+        state.projectsData.projects = orderedProjects(state.projectsData.projects);
+      }
+      saveProjectsData();
+    }
+
     function applyImport(mode) {
       // Handle Import All
       if (state.pendingImportAll) {
@@ -16519,23 +17309,7 @@
 
       // Handle projects import
       if (state.pendingImport.type === 'projects') {
-        if (mode === 'replace') {
-          // Keep current tombstones so replace can't resurrect items that were
-          // already deleted, just because an older backup still has them.
-          state.projectsData = {
-            projects: state.pendingImport.projects,
-            deletedIds: state.projectsData.deletedIds || {},
-          };
-        } else {
-          // Merge: add projects that don't exist by ID
-          const existingIds = new Set(state.projectsData.projects.map(p => p.id));
-          for (const proj of state.pendingImport.projects) {
-            if (!existingIds.has(proj.id)) {
-              state.projectsData.projects.push(proj);
-            }
-          }
-        }
-        saveProjectsData();
+        applyProjectsImport(state.pendingImport.projects, mode);
         state.pendingImport = null;
         els.importModal.classList.add('hidden');
         els.importFile.value = '';
@@ -17940,7 +18714,54 @@
       return panel;
     }
 
-    function buildTagChipRow(item, tags) {
+    // onAdd returns true when it added the tag (and re-rendered); otherwise onClose runs
+    function buildTagEntry(currentTags, onAdd, onClose) {
+      const tagInputWrap = document.createElement('span');
+      tagInputWrap.className = 'tag-input-wrap';
+      const tagInput = document.createElement('input');
+      tagInput.type = 'text';
+      tagInput.className = 'tag-input-inline';
+      tagInput.placeholder = 'tag name';
+      const commit = (val) => { if (!val || !onAdd(val)) onClose(); };
+      tagInput.addEventListener('click', (e) => e.stopPropagation());
+      tagInput.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); commit(tagInput.value.trim()); }
+        else if (e.key === 'Escape') onClose();
+      });
+      tagInputWrap.appendChild(tagInput);
+
+      const usage = collectTagUsage();
+      const itemTags = normalizeTagList(currentTags);
+      const suggestWrap = document.createElement('span');
+      suggestWrap.className = 'tag-suggestions';
+      const renderSuggestions = () => {
+        suggestWrap.innerHTML = '';
+        for (const tag of topTagSuggestions(usage, itemTags, tagInput.value)) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'tag-chip tag-suggestion';
+          btn.title = `Add #${tag}`;
+          decorateTagChip(btn, tag);
+          btn.appendChild(tagChipLabel(tag));
+          // Keep focus in the input so its blur handler doesn't close the picker first
+          btn.addEventListener('mousedown', (e) => e.preventDefault());
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            commit(tag);
+          });
+          suggestWrap.appendChild(btn);
+        }
+      };
+      tagInput.addEventListener('input', renderSuggestions);
+      renderSuggestions();
+      tagInputWrap.appendChild(suggestWrap);
+      // Double-deferred so it lands after comment drafts and inline add boxes refocus themselves
+      setTimeout(() => setTimeout(() => { if (tagInput.isConnected) tagInput.focus(); }, 0), 0);
+      return tagInputWrap;
+    }
+
+    function buildTagChipRow(item, tags, onRemove = (tag) => removeTagFromItem(item.id, tag)) {
       const wrap = document.createElement('div');
       wrap.className = 'tag-chip-row';
       tags.forEach(tag => {
@@ -17961,7 +18782,7 @@
         removeBtn.textContent = '\u00d7';
         removeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          removeTagFromItem(item.id, tag);
+          onRemove(tag);
         });
         chip.appendChild(removeBtn);
         wrap.appendChild(chip);
@@ -18125,55 +18946,11 @@
         addSep();
 
         if (state.taggingId === item.id) {
-          const tagInputWrap = document.createElement('span');
-          tagInputWrap.className = 'tag-input-wrap';
-          const tagInput = document.createElement('input');
-          tagInput.type = 'text';
-          tagInput.className = 'tag-input-inline';
-          tagInput.placeholder = 'tag name';
-          const commitTag = () => {
-            const val = tagInput.value.trim();
-            if (val) addTagToItem(item.id, val);
+          const closeTagging = () => { state.taggingId = null; render(); };
+          actionBar.appendChild(buildTagEntry(item.tags, (tag) => {
             state.taggingId = null;
-            render();
-          };
-          tagInput.addEventListener('click', (e) => e.stopPropagation());
-          tagInput.addEventListener('keydown', (e) => {
-            e.stopPropagation();
-            if (e.key === 'Enter') { e.preventDefault(); commitTag(); }
-            else if (e.key === 'Escape') { state.taggingId = null; render(); }
-          });
-          tagInputWrap.appendChild(tagInput);
-
-          const usage = collectTagUsage();
-          const itemTags = normalizeTagList(item.tags);
-          const suggestWrap = document.createElement('span');
-          suggestWrap.className = 'tag-suggestions';
-          const renderSuggestions = () => {
-            suggestWrap.innerHTML = '';
-            for (const tag of topTagSuggestions(usage, itemTags, tagInput.value)) {
-              const btn = document.createElement('button');
-              btn.type = 'button';
-              btn.className = 'tag-chip tag-suggestion';
-              btn.title = `Add #${tag}`;
-              decorateTagChip(btn, tag);
-              btn.appendChild(tagChipLabel(tag));
-              // Keep focus in the input so its blur handler doesn't close the picker first
-              btn.addEventListener('mousedown', (e) => e.preventDefault());
-              btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                state.taggingId = null;
-                if (!addTagToItem(item.id, tag)) render();
-              });
-              suggestWrap.appendChild(btn);
-            }
-          };
-          tagInput.addEventListener('input', renderSuggestions);
-          renderSuggestions();
-          tagInputWrap.appendChild(suggestWrap);
-          actionBar.appendChild(tagInputWrap);
-          // Double-deferred so it lands after comment drafts and inline add boxes refocus themselves
-          setTimeout(() => setTimeout(() => { if (tagInput.isConnected) tagInput.focus(); }, 0), 0);
+            return addTagToItem(item.id, tag);
+          }, closeTagging));
         } else {
           addAction('tag', () => {
             state.taggingId = item.id;
@@ -18236,6 +19013,7 @@
           addMenuItem(item.shelved ? 'Unshelve' : 'Shelve', () => toggleShelf(item.id));
         }
         addMenuItem('Send to ' + (state.listContext === 'work' ? 'Personal' : 'Work'), () => sendItemToOtherContext(item.id));
+        addMenuItem('Send to project…', () => openSendToProject(item.id));
         addMenuItem(item.type === 'task' ? 'Convert to note' : 'Convert to task', () => convertItem(item.id));
         addMenuItem('Delete', () => deleteItem(item.id), true);
 
@@ -20378,6 +21156,20 @@
       }
     }
 
+    // Archived items don't count as open work; a project holding only archived items says so
+    function projectListMeta(project) {
+      const notes = project.notes || [];
+      const tasks = project.tasks || [];
+      const activeNotes = notes.filter(n => !n.archived).length;
+      const openTasks = tasks.filter(t => !t.archived && !t.completed).length;
+      const archived = notes.length + tasks.length - activeNotes - openTasks;
+      const parts = [];
+      if (openTasks > 0) parts.push(`${openTasks} open task${openTasks !== 1 ? 's' : ''}`);
+      if (activeNotes > 0) parts.push(`${activeNotes} note${activeNotes !== 1 ? 's' : ''}`);
+      if (parts.length > 0) return parts.join(' · ');
+      return archived > 0 ? `${archived} archived` : 'Empty';
+    }
+
     function renderProjectsList() {
       const projects = state.projectsData?.projects || [];
       els.projectsList.innerHTML = '';
@@ -20390,33 +21182,154 @@
         return;
       }
 
-      projects.forEach(project => {
-        const li = document.createElement('li');
-        li.className = 'project-list-item';
-        if (project.id === state.selectedProjectId) {
-          li.classList.add('active');
-        }
-        li.dataset.projectId = project.id;
-
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'project-list-name';
-        nameSpan.textContent = project.name;
-
-        const metaSpan = document.createElement('span');
-        metaSpan.className = 'project-list-meta';
-        const notesCount = project.notes?.length || 0;
-        const tasksCount = project.tasks?.length || 0;
-        const parts = [];
-        if (notesCount > 0) parts.push(`${notesCount} note${notesCount !== 1 ? 's' : ''}`);
-        if (tasksCount > 0) parts.push(`${tasksCount} task${tasksCount !== 1 ? 's' : ''}`);
-        metaSpan.textContent = parts.length > 0 ? parts.join(' · ') : 'Empty';
-
-        li.appendChild(nameSpan);
-        li.appendChild(metaSpan);
-
-        li.addEventListener('click', () => selectProject(project.id));
+      const ordered = orderedProjects(projects);
+      const current = ordered.filter(p => !p.archived);
+      const archived = ordered.filter(p => p.archived);
+      const lastPinned = current.filter(p => p.pinned).pop();
+      for (const project of current) {
+        const li = buildProjectListItem(project, ordered);
+        if (project === lastPinned && lastPinned !== current[current.length - 1]) li.classList.add('pinned-last');
         els.projectsList.appendChild(li);
+      }
+
+      if (archived.length) {
+        const open = state.projectsListArchiveOpen ?? archived.some(p => p.id === state.selectedProjectId);
+        const toggleLi = document.createElement('li');
+        toggleLi.className = 'project-list-archive';
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'project-list-archive-toggle';
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.innerHTML = `<span class="chev" aria-hidden="true">›</span>Archived projects (${archived.length})`;
+        toggle.addEventListener('click', () => {
+          state.projectsListArchiveOpen = !open;
+          renderProjectsList();
+          els.projectsList.querySelector('.project-list-archive-toggle')?.focus();
+        });
+        toggleLi.appendChild(toggle);
+        els.projectsList.appendChild(toggleLi);
+        if (open) for (const project of archived) els.projectsList.appendChild(buildProjectListItem(project, ordered));
+      }
+    }
+
+    const PIN_ICON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M9.8 1.5 14.5 6.2l-1.2 1.2-.9-.4-2.6 2.6.3 2.7-1.2 1.2-2.6-2.6-3.3 3.3-.9-.9 3.3-3.3L2.8 7.4 4 6.2l2.7.3L9.3 3.9l-.4-.9z" fill="currentColor"/></svg>';
+
+    // Native drag-to-reorder within one `scope` (the project list, or one project's notes or tasks).
+    // indexOf(id) gives positions in the same list onMove(id, toIndex) moves within.
+    let reorderDrag = null;
+    function wireDragReorder(el, scope, id, { indexOf, onMove, sameGroup = () => true, across = () => false }) {
+      el.draggable = true;
+      const accepts = () => reorderDrag && reorderDrag.scope === scope && reorderDrag.id !== id && sameGroup(reorderDrag.id);
+      const dropAfter = (e) => {
+        const rect = el.getBoundingClientRect();
+        return across() ? e.clientX > rect.left + rect.width / 2 : e.clientY > rect.top + rect.height / 2;
+      };
+      el.addEventListener('dragstart', (e) => {
+        if (e.target !== el) return;
+        reorderDrag = { scope, id };
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+        requestAnimationFrame(() => el.classList.add('dragging'));
       });
+      el.addEventListener('dragend', () => {
+        reorderDrag = null;
+        clearDropMarks();
+        el.classList.remove('dragging');
+      });
+      el.addEventListener('dragover', (e) => {
+        if (!accepts()) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        clearDropMarks();
+        el.classList.add(dropAfter(e) ? 'drop-after' : 'drop-before');
+      });
+      el.addEventListener('drop', (e) => {
+        if (!accepts()) return;
+        e.preventDefault();
+        const dragged = reorderDrag.id;
+        reorderDrag = null;
+        const from = indexOf(dragged);
+        let to = indexOf(id) + (dropAfter(e) ? 1 : 0);
+        if (from < to) to -= 1;
+        clearDropMarks();
+        onMove(dragged, to);
+      });
+    }
+
+    function clearDropMarks() {
+      document.querySelectorAll('.drop-before, .drop-after').forEach(el => el.classList.remove('drop-before', 'drop-after'));
+    }
+
+    function buildProjectListItem(project, ordered) {
+      const li = document.createElement('li');
+      li.className = 'project-list-item';
+      if (project.id === state.selectedProjectId) li.classList.add('active');
+      if (project.pinned) li.classList.add('pinned');
+      if (project.archived) li.classList.add('archived');
+      li.dataset.projectId = project.id;
+      li.tabIndex = 0;
+      li.title = 'Drag to reorder (or Alt+↑ / Alt+↓)';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'project-list-name';
+      nameSpan.textContent = project.name;
+
+      const metaSpan = document.createElement('span');
+      metaSpan.className = 'project-list-meta';
+      metaSpan.textContent = projectListMeta(project);
+
+      const pinBtn = document.createElement('button');
+      pinBtn.type = 'button';
+      pinBtn.className = 'project-list-pin';
+      pinBtn.setAttribute('aria-pressed', project.pinned ? 'true' : 'false');
+      pinBtn.setAttribute('aria-label', project.pinned ? `Unpin ${project.name}` : `Pin ${project.name}`);
+      pinBtn.title = project.pinned ? 'Unpin' : 'Pin to top';
+      pinBtn.innerHTML = PIN_ICON_SVG;
+      pinBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleProjectPinned(project.id);
+        renderProjectDetail();
+        renderProjectsList();
+        els.projectsList.querySelector(`[data-project-id="${CSS.escape(project.id)}"] .project-list-pin`)?.focus();
+      });
+
+      li.appendChild(pinBtn);
+      li.appendChild(nameSpan);
+      li.appendChild(metaSpan);
+
+      const { done, total } = projectProgress(project);
+      if (total > 0) {
+        const bar = document.createElement('span');
+        bar.className = 'project-list-progress';
+        bar.title = `${done} of ${total} tasks done`;
+        const fill = document.createElement('span');
+        fill.style.width = `${Math.round((done / total) * 100)}%`;
+        bar.appendChild(fill);
+        li.appendChild(bar);
+      }
+
+      const indexOf = (id) => ordered.findIndex(p => p.id === id);
+      li.addEventListener('click', () => selectProject(project.id));
+      li.addEventListener('keydown', (e) => {
+        if (e.target !== li) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectProject(project.id);
+        } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+          e.preventDefault();
+          if (moveProjectTo(project.id, indexOf(project.id) + (e.key === 'ArrowUp' ? -1 : 1))) {
+            renderProjectsList();
+            els.projectsList.querySelector(`[data-project-id="${CSS.escape(project.id)}"]`)?.focus();
+          }
+        }
+      });
+      wireDragReorder(li, 'projects', project.id, {
+        indexOf,
+        sameGroup: (id) => { const p = getProject(id); return !!p && projectGroup(p) === projectGroup(project); },
+        across: () => getComputedStyle(els.projectsList).flexDirection === 'row',
+        onMove: (id, to) => { if (moveProjectTo(id, to)) renderProjectsList(); },
+      });
+      return li;
     }
 
     function selectProject(projectId) {
@@ -20457,6 +21370,17 @@
       els.projectDetail.classList.remove('hidden');
 
       els.projectTitle.textContent = project.name;
+      els.projectPinBtn.textContent = project.pinned ? 'Unpin' : 'Pin';
+      els.projectPinBtn.setAttribute('aria-pressed', project.pinned ? 'true' : 'false');
+      els.projectPinBtn.title = project.pinned ? 'Unpin from the top of the project list' : 'Pin to the top of the project list';
+      const { done, total } = projectProgress(project);
+      const status = [];
+      if (total) status.push(`${done} of ${total} task${total === 1 ? '' : 's'} done`);
+      if (project.archived) status.push('Archived');
+      els.projectProgress.hidden = status.length === 0;
+      els.projectProgress.querySelector('.project-progress-bar').hidden = total === 0;
+      els.projectProgressFill.style.width = `${total ? Math.round((done / total) * 100) : 0}%`;
+      els.projectProgressText.textContent = status.join(' · ');
       els.projectTitle.contentEditable = 'false';
 
       // Sync tab bar active state
@@ -20470,6 +21394,29 @@
 
       renderProjectNotes(project);
       renderProjectTasks(project);
+    }
+
+    // Cards being edited stay put so text inside them can still be selected with the mouse
+    function wireProjectItemReorder(card, project, item, active) {
+      const editing = state.editingProjectItemId === item.id || state.editingProjectComment?.itemId === item.id;
+      if (editing || active.length < 2) return;
+      const scope = `${project.id}:${item.type}`;
+      const indexOf = (id) => active.findIndex(i => i.id === id);
+      const moved = (id) => {
+        renderProjectDetail();
+        document.querySelector(`#project-detail .project-item-card[data-item-id="${CSS.escape(id)}"]`)?.focus();
+      };
+      card.tabIndex = 0;
+      card.title = 'Drag to reorder (or Alt+↑ / Alt+↓)';
+      card.addEventListener('keydown', (e) => {
+        if (e.target !== card || !e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+        e.preventDefault();
+        if (moveProjectItem(project.id, item.id, indexOf(item.id) + (e.key === 'ArrowUp' ? -1 : 1))) moved(item.id);
+      });
+      wireDragReorder(card, scope, item.id, {
+        indexOf,
+        onMove: (id, to) => { if (moveProjectItem(project.id, id, to)) moved(id); },
+      });
     }
 
     function renderProjectNotes(project) {
@@ -20488,6 +21435,7 @@
       } else {
         active.forEach(note => {
           const card = createProjectNoteCard(project.id, note);
+          wireProjectItemReorder(card, project, note, active);
           els.projectNotesList.appendChild(card);
         });
       }
@@ -20513,6 +21461,7 @@
       } else {
         active.forEach(task => {
           const card = createProjectTaskCard(project.id, task);
+          wireProjectItemReorder(card, project, task, active);
           els.projectTasksList.appendChild(card);
         });
       }
@@ -20548,6 +21497,44 @@
       container.appendChild(list);
     }
 
+    function appendProjectItemExtras(actions, projectId, item) {
+      if (state.projectTaggingId === item.id) {
+        const close = () => { state.projectTaggingId = null; renderProjectDetail(); };
+        actions.appendChild(buildTagEntry(item.tags, (tag) => {
+          state.projectTaggingId = null;
+          if (!addProjectItemTag(projectId, item.id, tag)) return false;
+          renderProjectDetail();
+          return true;
+        }, close));
+      } else {
+        const tagBtn = document.createElement('button');
+        tagBtn.type = 'button';
+        tagBtn.textContent = 'tag';
+        tagBtn.addEventListener('click', () => {
+          state.projectTaggingId = item.id;
+          renderProjectDetail();
+        });
+        actions.appendChild(tagBtn);
+      }
+      const deskBtn = document.createElement('button');
+      deskBtn.type = 'button';
+      deskBtn.textContent = 'to desk';
+      deskBtn.title = 'Move to today on your Work or Personal desk';
+      deskBtn.addEventListener('click', () => openSendToDesk(projectId, item.id));
+      actions.appendChild(deskBtn);
+    }
+
+    function buildProjectTagRow(projectId, item) {
+      const tags = normalizeTagList(item.tags);
+      if (!tags.length) return null;
+      const row = buildTagChipRow(item, tags, (tag) => {
+        removeProjectItemTag(projectId, item.id, tag);
+        renderProjectDetail();
+      });
+      row.classList.add('project-tag-row');
+      return row;
+    }
+
     function createProjectNoteCard(projectId, note) {
       const card = document.createElement('div');
       card.className = 'project-item-card note-card';
@@ -20573,7 +21560,7 @@
             // drop the shell instead of persisting a blank note card.
             deleteProjectItem(projectId, note.id);
           } else {
-            updateProjectItem(projectId, note.id, { content: newContent });
+            saveProjectItemContent(projectId, note.id, newContent);
           }
           state.editingProjectItemId = null;
           state.editingProjectItemOriginalContent = null;
@@ -20693,12 +21680,15 @@
 
         actions.appendChild(editBtn);
         actions.appendChild(addUpdateBtn);
+        appendProjectItemExtras(actions, projectId, note);
         actions.appendChild(archiveBtn);
         actions.appendChild(deleteBtn);
 
         meta.appendChild(dateSpan);
         meta.appendChild(actions);
 
+        const tagRow = buildProjectTagRow(projectId, note);
+        if (tagRow) card.appendChild(tagRow);
         card.appendChild(content);
         card.appendChild(showMoreBtn);
         card.appendChild(meta);
@@ -20767,6 +21757,7 @@
               setTimeout(() => editor.focus(), 0);
             } else {
               const commentRow = document.createElement('div');
+              commentRow.className = 'project-comment-row';
               commentRow.style.display = 'flex';
               commentRow.style.alignItems = 'flex-start';
               commentRow.style.gap = '8px';
@@ -20791,10 +21782,7 @@
               });
 
               const actions = document.createElement('div');
-              actions.style.display = 'flex';
-              actions.style.gap = '4px';
-              actions.style.opacity = '0';
-              actions.style.transition = 'opacity 0.15s';
+              actions.className = 'project-comment-actions';
 
               const editBtn = document.createElement('button');
               editBtn.type = 'button';
@@ -20821,9 +21809,6 @@
 
               actions.appendChild(editBtn);
               actions.appendChild(deleteBtn);
-
-              commentRow.addEventListener('mouseenter', () => actions.style.opacity = '1');
-              commentRow.addEventListener('mouseleave', () => actions.style.opacity = '0');
 
               commentRow.appendChild(textDiv);
               commentRow.appendChild(actions);
@@ -20884,7 +21869,7 @@
             // drop the shell instead of persisting a blank task card.
             deleteProjectItem(projectId, task.id);
           } else {
-            updateProjectItem(projectId, task.id, { content: newContent });
+            saveProjectItemContent(projectId, task.id, newContent);
           }
           state.editingProjectItemId = null;
           state.editingProjectItemOriginalContent = null;
@@ -20978,10 +21963,13 @@
 
         actions.appendChild(editBtn);
         actions.appendChild(commentBtn);
+        appendProjectItemExtras(actions, projectId, task);
         actions.appendChild(archiveBtn);
         actions.appendChild(deleteBtn);
         meta.appendChild(actions);
 
+        const tagRow = buildProjectTagRow(projectId, task);
+        if (tagRow) contentDiv.appendChild(tagRow);
         contentDiv.appendChild(textSpan);
         contentDiv.appendChild(meta);
 
@@ -21048,6 +22036,7 @@
               setTimeout(() => editor.focus(), 0);
             } else {
               const commentRow = document.createElement('div');
+              commentRow.className = 'project-comment-row';
               commentRow.style.display = 'flex';
               commentRow.style.alignItems = 'flex-start';
               commentRow.style.gap = '8px';
@@ -21071,10 +22060,7 @@
               });
 
               const actions = document.createElement('div');
-              actions.style.display = 'flex';
-              actions.style.gap = '4px';
-              actions.style.opacity = '0';
-              actions.style.transition = 'opacity 0.15s';
+              actions.className = 'project-comment-actions';
 
               const editBtn = document.createElement('button');
               editBtn.type = 'button';
@@ -21101,9 +22087,6 @@
 
               actions.appendChild(editBtn);
               actions.appendChild(deleteBtn);
-
-              commentRow.addEventListener('mouseenter', () => actions.style.opacity = '1');
-              commentRow.addEventListener('mouseleave', () => actions.style.opacity = '0');
 
               commentRow.appendChild(textDiv);
               commentRow.appendChild(actions);
@@ -21411,10 +22394,11 @@
 
     // Closed by outside clicks, not blur: open comment drafts and inline add boxes refocus themselves on every render
     document.addEventListener('click', (e) => {
-      if (!state.taggingId || e.target.closest?.('.tag-input-wrap')) return;
+      if ((!state.taggingId && !state.projectTaggingId) || e.target.closest?.('.tag-input-wrap')) return;
       state.taggingId = null;
+      state.projectTaggingId = null;
       setTimeout(() => {
-        if (!state.taggingId && document.querySelector('.tag-input-wrap')) render();
+        if (!state.taggingId && !state.projectTaggingId && document.querySelector('.tag-input-wrap')) render();
       }, 0);
     }, true);
 
@@ -21598,7 +22582,10 @@
       if (e.key === 'Escape' && !els.helpModal.classList.contains('hidden')) closeHelpModal();
       if (e.key === 'Escape' && !changelogModal.classList.contains('hidden')) closeChangelog();
       if (e.key === 'Escape' && openMenuId) closeItemMenu();
+      if (e.key === 'Escape' && !document.getElementById('send-modal').classList.contains('hidden')) closeSendModal();
     });
+
+    document.getElementById('send-modal-cancel').addEventListener('click', closeSendModal);
 
     document.addEventListener('click', (e) => {
       if (!openMenuId) return;
@@ -21825,6 +22812,33 @@
         const project = createProject(name.trim());
         selectProject(project.id);
       }
+    });
+
+    els.projectPinBtn.addEventListener('click', () => {
+      if (toggleProjectPinned(state.selectedProjectId)) renderProjectDetail();
+    });
+
+    els.projectMoreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (els.projectMoreMenu.classList.contains('hidden')) openProjectMoreMenu();
+      else closeProjectMoreMenu();
+    });
+    els.projectMoreMenu.addEventListener('click', (e) => e.stopPropagation());
+    els.projectMoreMenu.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeProjectMoreMenu();
+        els.projectMoreBtn.focus();
+        return;
+      }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      const items = [...els.projectMoreMenu.querySelectorAll('button:not(:disabled)')];
+      const i = items.indexOf(document.activeElement);
+      items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
+    });
+    document.addEventListener('click', (e) => {
+      if (!els.projectMoreMenu.classList.contains('hidden') && !e.target.closest?.('.project-more-wrap')) closeProjectMoreMenu();
     });
 
     els.projectRenameBtn.addEventListener('click', () => {
