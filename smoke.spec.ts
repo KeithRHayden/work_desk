@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 const DESK_URL = '/work-desk.html';
 const WORK_KEY = 'work-desk-data-work';
@@ -5448,5 +5449,230 @@ test.describe('Expanded Completed list scrolling 1.18.2', { tag: ['@board'] }, (
       prev = now;
     }
     expect(prev.st).toBeGreaterThan(0);
+  });
+});
+
+test.describe('Complete edge on project tasks 1.18.4', { tag: ['@projects', '@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  async function openProjectTasks(page: Page, stored: Record<string, string> = {}) {
+    await page.addInitScript((s) => {
+      if (localStorage.getItem('v1184-seeded')) return;
+      localStorage.setItem('v1184-seeded', '1');
+      const t = (id: string, content: string, extra: Record<string, unknown> = {}) => ({ id, type: 'task', content, completed: false, archived: false, comments: [], createdAt: '2026-10-13T09:00:00', ...extra });
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+        { id: 'p1', name: 'Edge Project', createdAt: '2026-10-13T09:00:00', notes: [], tasks: [
+          t('pt1', 'Open project task'),
+          t('pt2', 'Commented project task', { comments: [{ id: 'c1', text: 'Waiting on vendor', createdAt: '2026-10-13T09:30:00' }] }),
+        ] },
+      ] }));
+      for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v);
+    }, stored);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('.project-list-item', { hasText: 'Edge Project' }).click();
+    await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
+    await expect(page.locator('#project-detail')).toBeVisible();
+  }
+  const projectTask = (page: Page, text: string) => page.locator('.project-task-card', { hasText: text });
+
+  test('the edge completes a project task into Archived, and reopens it there', async ({ page }) => {
+    await openProjectTasks(page);
+    const card = projectTask(page, 'Open project task');
+    const edge = card.locator('.complete-edge');
+    await expect(edge).toBeVisible();
+    await expect(card.locator('.project-task-check')).toBeHidden();
+    await expect(edge).toHaveAttribute('aria-label', 'Mark complete');
+    expect(await beforeContent(edge)).toBe('"done"');
+    await edge.hover();
+    expect(await beforeContent(edge)).toBe('"done\u200A?"');
+    await edge.click();
+
+    await expect(page.locator('#project-detail')).toBeVisible();
+    await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Open project task' })).toHaveCount(0);
+    await page.locator('.project-archive-toggle').click();
+    const archived = page.locator('#project-tasks-archive-wrap .project-task-card', { hasText: 'Open project task' });
+    await expect(archived).toBeVisible();
+    await expect(archived.locator('.project-task-text')).toHaveClass(/completed/);
+    const doneEdge = archived.locator('.complete-edge');
+    await expect(doneEdge).toHaveClass(/is-done/);
+    await expect(doneEdge).toHaveAttribute('aria-label', 'Mark incomplete');
+
+    await doneEdge.click();
+    await expect(page.locator('#project-detail')).toBeVisible();
+    const reopened = page.locator('.project-task-card', { hasText: 'Open project task' });
+    await expect(reopened.locator('.project-task-text')).not.toHaveClass(/completed/);
+    await expect(reopened.locator('.complete-edge')).not.toHaveClass(/is-done/);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-projects')!).projects[0].tasks.find((t: { id: string }) => t.id === 'pt1'));
+    expect(saved.completed).toBe(false);
+  });
+
+  test('keyboard: Enter on the focused edge completes the project task', async ({ page }) => {
+    await openProjectTasks(page);
+    await projectTask(page, 'Open project task').locator('.complete-edge').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Open project task' })).toHaveCount(0);
+    await expect(page.locator('.project-archive-toggle')).toContainText('Archived (1)');
+  });
+
+  test('a press that moves like a drag does not complete the project task', async ({ page }) => {
+    await openProjectTasks(page);
+    const card = projectTask(page, 'Open project task');
+    const box = (await card.locator('.complete-edge').boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + 40, { steps: 5 });
+    await page.mouse.up();
+    await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Open project task' })).toBeVisible();
+    await expect(card.locator('.project-task-text')).not.toHaveClass(/completed/);
+  });
+
+  test('the edge spans the whole card, comments included, and text clears it', async ({ page }) => {
+    await openProjectTasks(page);
+    const card = projectTask(page, 'Commented project task');
+    const cardBox = (await card.boundingBox())!;
+    const edgeBox = (await card.locator('.complete-edge').boundingBox())!;
+    expect(Math.abs(edgeBox.y - (cardBox.y + 1))).toBeLessThan(1.5);
+    expect(Math.abs(edgeBox.y + edgeBox.height - (cardBox.y + cardBox.height - 1))).toBeLessThan(1.5);
+    expect(edgeBox.width).toBe(18);
+    const textBox = (await card.locator('.project-task-text').boundingBox())!;
+    expect(textBox.x).toBeGreaterThan(edgeBox.x + edgeBox.width + 6);
+  });
+
+  test('Checkbox style keeps the project checkbox, which still completes the task', async ({ page }) => {
+    await openProjectTasks(page, { 'work-desk-complete-style': 'checkbox' });
+    const card = projectTask(page, 'Open project task');
+    await expect(card.locator('.complete-edge')).toBeHidden();
+    const check = card.locator('.project-task-check');
+    await expect(check).toBeVisible();
+    await check.click();
+    await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Open project task' })).toHaveCount(0);
+    await expect(page.locator('.project-archive-toggle')).toContainText('Archived (1)');
+  });
+
+  test('switching the Complete button style in Options updates project cards live', async ({ page }) => {
+    await openProjectTasks(page);
+    const card = projectTask(page, 'Open project task');
+    await openAccountMenu(page);
+    await page.locator('#account-menu-options').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await openOptionsSectionFor(page, '#complete-style-select');
+    await page.locator('#complete-style-select').selectOption('checkbox');
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(card.locator('.project-task-check')).toBeVisible();
+    await expect(card.locator('.complete-edge')).toBeHidden();
+    await page.locator('#complete-style-select').selectOption('circle');
+    await expect(card.locator('.complete-edge')).toBeVisible();
+    await expect(card.locator('.project-task-check')).toBeHidden();
+  });
+});
+
+test.describe('Project header and backup import 1.18.4', { tag: ['@projects'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  async function openSeededProject(page: Page) {
+    await page.addInitScript(() => {
+      if (localStorage.getItem('v1184h-seeded')) return;
+      localStorage.setItem('v1184h-seeded', '1');
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+        { id: 'p1', name: 'Header Project', createdAt: '2026-10-13T09:00:00', notes: [], tasks: [] },
+      ] }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('.project-list-item', { hasText: 'Header Project' }).click();
+    await expect(page.locator('#project-title')).toHaveText('Header Project');
+  }
+
+  const backup = JSON.stringify({ type: 'projects', context: 'projects', projects: [
+    { id: 'imp1', name: 'Imported Project', createdAt: '2026-10-01T09:00:00', notes: [
+      { id: 'in1', type: 'note', content: 'Live note', createdAt: '2026-10-01T09:00:00', comments: [] },
+      { id: 'in2', type: 'note', content: 'Archived note', createdAt: '2026-10-01T09:00:00', archived: true, comments: [] },
+    ], tasks: [
+      { id: 'it1', type: 'task', content: 'Open imported task', completed: false, createdAt: '2026-10-01T09:00:00', comments: [] },
+      { id: 'it2', type: 'task', content: 'Finished imported task', completed: true, archived: true, createdAt: '2026-10-01T09:00:00', comments: [] },
+    ] },
+  ] });
+
+  test('Rename and Delete are text buttons that still rename and delete the project', async ({ page }) => {
+    await openSeededProject(page);
+    const rename = page.locator('#project-rename-btn');
+    const del = page.locator('#project-delete-btn');
+    await expect(rename).toHaveText('Rename');
+    await expect(del).toHaveText('Delete');
+    const gear = (await page.locator('#project-customize-btn').boundingBox())!;
+    for (const btn of [rename, del]) expect((await btn.boundingBox())!.height).toBeCloseTo(gear.height, 0);
+
+    page.once('dialog', d => d.accept('Renamed Project'));
+    await rename.click();
+    await expect(page.locator('#project-title')).toHaveText('Renamed Project');
+
+    await del.hover();
+    await expect(del).toHaveCSS('color', 'rgb(239, 68, 68)');
+    page.once('dialog', d => d.accept());
+    await del.click();
+    await expect(page.locator('.project-list-item', { hasText: 'Renamed Project' })).toHaveCount(0);
+  });
+
+  for (const mode of ['replace', 'merge'] as const) {
+    test(`importing a projects backup (${mode}) keeps archived notes and tasks in Archived`, async ({ page }) => {
+      await openSeededProject(page);
+      page.on('dialog', d => d.accept());
+      await page.locator('#import-file').setInputFiles({ name: 'work-desk-backup-projects.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
+      await expect(page.locator('#import-modal')).toBeVisible();
+      await page.locator(`#import-${mode}`).click();
+      await expect(page.locator('#import-modal')).toBeHidden();
+
+      await page.locator('.project-list-item', { hasText: 'Imported Project' }).click();
+      await expect(page.locator('#project-notes-list .project-item-card', { hasText: 'Live note' })).toBeVisible();
+      await expect(page.locator('#project-notes-list .project-item-card', { hasText: 'Archived note' })).toHaveCount(0);
+      await expect(page.locator('#project-notes-archive-wrap .project-archive-toggle')).toContainText('Archived (1)');
+
+      await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
+      await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Open imported task' })).toBeVisible();
+      await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Finished imported task' })).toHaveCount(0);
+      await page.locator('#project-tasks-archive-wrap .project-archive-toggle').click();
+      const finished = page.locator('#project-tasks-archive-wrap .project-task-card', { hasText: 'Finished imported task' });
+      await expect(finished).toBeVisible();
+      await expect(finished.locator('.complete-edge')).toHaveClass(/is-done/);
+    });
+  }
+});
+
+test.describe('Complete edge on project tasks, touch 1.18.4', { tag: ['@projects', '@phone'] }, () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('the edge is wider on touch screens and a tap completes the task', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (localStorage.getItem('v1184t-seeded')) return;
+      localStorage.setItem('v1184t-seeded', '1');
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+        { id: 'p1', name: 'Phone Project', createdAt: '2026-10-13T09:00:00', notes: [], tasks: [
+          { id: 'pt1', type: 'task', content: 'Tap me done', completed: false, archived: false, comments: [], createdAt: '2026-10-13T09:00:00' },
+        ] },
+      ] }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('.project-list-item', { hasText: 'Phone Project' }).click();
+    await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
+    const edge = page.locator('.project-task-card', { hasText: 'Tap me done' }).locator('.complete-edge');
+    expect((await edge.boundingBox())!.width).toBe(40);
+    await edge.tap();
+    await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Tap me done' })).toHaveCount(0);
+    await expect(page.locator('.project-archive-toggle')).toContainText('Archived (1)');
   });
 });
