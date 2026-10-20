@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 
 const DESK_URL = '/work-desk.html';
@@ -4535,18 +4535,14 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
     await expect(page.locator('#card-glow-toggle')).not.toBeChecked();
   });
 
-  test('New tags mark Card layout and its two new settings in this release', async ({ page }) => {
+  test('1.19.0 adds no Options settings, so no New tags show', async ({ page }) => {
     await open117(page);
     await openTab(page, 'appearance');
-    await expect(page.locator('[data-options-open="card-layout"] .options-new-tag')).toBeVisible();
-    await expect(page.locator('#options-pane-appearance [data-options-open="layout"] .options-new-tag')).toBeHidden();
-    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
-    await expect(page.locator('#options-pane-behavior .options-new-tag:not([hidden])')).toHaveCount(0);
-    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('[data-options-open="card-layout"] .options-new-tag')).toBeHidden();
+    await expect(page.locator('#density-popout .options-new-tag:not([hidden])')).toHaveCount(0);
     await page.locator('[data-options-open="card-layout"]').click();
     for (const id of ['complete-style-select', 'tag-position-select']) {
-      await expect(page.locator(`label[for="${id}"] .options-new-tag`)).toBeVisible();
-      await expect(page.locator(`label[for="${id}"] .options-new-tag`)).toHaveText(/new/i);
+      await expect(page.locator(`label[for="${id}"] .options-new-tag`)).toBeHidden();
     }
   });
   test('phone: sections and back work in the Options sheet', async ({ page }) => {
@@ -4581,8 +4577,15 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
     await expect(page.locator(`[data-options-section="${id}"]`)).toBeVisible();
   }
 
+  // Release-independent: treat the Card layout tags as new in whatever version is running
+  const markCardLayoutNew = (page: Page) => page.evaluate(() => {
+    document.querySelectorAll('[data-new-in="1.18.0"]').forEach(el => { (el as HTMLElement).dataset.newIn = APP_VERSION; });
+    syncNewTags();
+  });
+
   test('New tags stay up while a section is open, then are gone for good (per section)', async ({ page }) => {
     await open117(page);
+    await markCardLayoutNew(page);
     const rowTag = page.locator('[data-options-open="card-layout"] .options-new-tag');
     await page.locator('#density-toggle').click();
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
@@ -4601,14 +4604,17 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
 
     await page.reload();
     await dismissAuthModal(page);
+    await markCardLayoutNew(page);
     await page.locator('#density-toggle').click();
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
     await expect(rowTag).toBeHidden();
-    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('work-desk-seen-new-tags')))!)).toEqual(['card-layout@1.18.0']);
+    const version = await page.evaluate(() => APP_VERSION);
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('work-desk-seen-new-tags')))!)).toEqual([`card-layout@${version}`]);
   });
 
   test('Complete button name stays on one line with its New tag inline', async ({ page }) => {
     await open117(page);
+    await markCardLayoutNew(page);
     await openSection(page, 'appearance', 'card-layout');
     const name = page.locator('label[for="complete-style-select"] > span:first-child');
     const tag = name.locator('.options-new-tag');
@@ -4834,7 +4840,8 @@ test.describe('Account menu 1.17.0', { tag: ['@sidebar'] }, () => {
     await page.locator('#account-menu-whatsnew').click();
     await expect(menu(page)).toBeHidden();
     await expect(page.locator('#changelog-modal')).toBeVisible();
-    await expect(page.locator('#changelog-body')).toContainText('Account menu');
+    const version = await page.evaluate(() => APP_VERSION);
+    await expect(page.locator('#changelog-body')).toContainText(`v${version}`);
     await page.locator('#changelog-modal-dismiss').click();
     await expect(page.locator('#account-menu-btn-dot')).toBeHidden();
     await openAccountMenu(page);
@@ -5504,11 +5511,13 @@ test.describe('Complete edge on project tasks 1.18.4', { tag: ['@projects', '@bo
 
     await doneEdge.click();
     await expect(page.locator('#project-detail')).toBeVisible();
-    const reopened = page.locator('.project-task-card', { hasText: 'Open project task' });
+    const reopened = page.locator('#project-tasks-list .project-task-card', { hasText: 'Open project task' });
     await expect(reopened.locator('.project-task-text')).not.toHaveClass(/completed/);
     await expect(reopened.locator('.complete-edge')).not.toHaveClass(/is-done/);
+    await expect(page.locator('#project-tasks-archive-wrap .project-task-card', { hasText: 'Open project task' })).toHaveCount(0);
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-projects')!).projects[0].tasks.find((t: { id: string }) => t.id === 'pt1'));
     expect(saved.completed).toBe(false);
+    expect(saved.archived).toBe(false);
   });
 
   test('keyboard: Enter on the focused edge completes the project task', async ({ page }) => {
@@ -5674,5 +5683,705 @@ test.describe('Complete edge on project tasks, touch 1.18.4', { tag: ['@projects
     await edge.tap();
     await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Tap me done' })).toHaveCount(0);
     await expect(page.locator('.project-archive-toggle')).toContainText('Archived (1)');
+  });
+});
+
+async function seedProjectSpace(page: Page) {
+  await page.addInitScript(() => {
+    if (localStorage.getItem('v119-seeded')) return;
+    localStorage.setItem('v119-seeded', '1');
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const at = `${today}T09:00:00.000Z`;
+    localStorage.setItem('work-desk-list-context', 'work');
+    localStorage.setItem('work-desk-data-work', JSON.stringify({ deletedIds: {}, days: { [today]: { date: today, items: [
+      { id: 'd1', type: 'task', content: 'Desk task to send', completed: false, shelved: false, boardColumn: 'new', createdAt: at, tags: ['q4'],
+        comments: [{ id: 'dc1', content: 'desk <b>comment</b>', createdAt: at }] },
+      { id: 'd2', type: 'note', content: 'Desk note to send', completed: false, createdAt: at },
+    ] } } }));
+    localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+      { id: 'p1', name: 'Alpha Project', createdAt: '2026-10-01T09:00:00', notes: [
+        { id: 'pn1', type: 'note', content: 'Alpha note', createdAt: '2026-10-02T09:00:00', tags: ['ops'], comments: [{ id: 'pc1', text: 'note comment', createdAt: '2026-10-02T10:00:00' }] },
+      ], tasks: [
+        { id: 'pt1', type: 'task', content: 'Alpha task', completed: false, createdAt: '2026-10-03T09:00:00', comments: [{ id: 'pc2', text: 'line one\nline two', createdAt: '2026-10-03T10:00:00' }] },
+        { id: 'pt2', type: 'task', content: 'Finished alpha task', completed: true, archived: true, createdAt: '2026-10-04T09:00:00', comments: [] },
+      ] },
+      { id: 'p2', name: 'Beta Project', createdAt: '2026-10-01T09:00:00', notes: [
+        { id: 'pn2', type: 'note', content: 'Shelved beta note', archived: true, createdAt: '2026-10-01T09:00:00', comments: [] },
+      ], tasks: [] },
+      { id: 'p3', name: 'Gamma Project', createdAt: '2026-10-01T09:00:00', notes: [], tasks: [] },
+    ] }));
+  });
+  await page.goto(DESK_URL);
+  await dismissAuthModal(page);
+}
+
+async function openSeededProjectTab(page: Page, name: string, tab: 'notes' | 'tasks') {
+  await page.locator('#tab-projects').click();
+  await page.locator('.project-list-item', { hasText: name }).click();
+  await expect(page.locator('#project-title')).toHaveText(name);
+  await page.locator(`.project-tab-btn[data-project-tab="${tab}"]`).click();
+}
+
+const storedProjects = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-projects')!));
+const projectCard = (page: Page, text: string) => page.locator(':is(#project-notes-list, #project-tasks-list) .project-item-card', { hasText: text });
+const cardButton = (card: Locator, name: string) => card.locator('.project-item-actions').getByRole('button', { name, exact: true });
+
+test.describe('Project list counts 1.18.4', { tag: ['@projects'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('each project shows open tasks and active notes, or archived / empty', async ({ page }) => {
+    await seedProjectSpace(page);
+    await page.locator('#tab-projects').click();
+    const meta = (name: string) => page.locator('.project-list-item', { hasText: name }).locator('.project-list-meta');
+    await expect(meta('Alpha Project')).toHaveText('1 open task · 1 note');
+    await expect(meta('Beta Project')).toHaveText('1 archived');
+    await expect(meta('Gamma Project')).toHaveText('Empty');
+
+    await page.locator('.project-list-item', { hasText: 'Alpha Project' }).click();
+    await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
+    await projectCard(page, 'Alpha task').locator('.complete-edge').click();
+    await expect(meta('Alpha Project')).toHaveText('1 note');
+  });
+});
+
+test.describe('Project fixes 1.18.4', { tag: ['@projects'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('comment edit/delete appear on hover with a mouse', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    const row = projectCard(page, 'Alpha note').locator('.project-comment-row');
+    const actions = row.locator('.project-comment-actions');
+    await expect(actions).toHaveCSS('opacity', '0');
+    await row.hover();
+    await expect(actions).toHaveCSS('opacity', '1');
+    await actions.getByRole('button', { name: 'edit', exact: true }).click();
+    await expect(projectCard(page, 'Alpha note').locator('.project-comment-row')).toHaveCount(0);
+  });
+
+  test('a deleted project is not brought back by a Replace import of an older backup', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Gamma Project', 'notes');
+    page.on('dialog', d => d.accept());
+    await page.locator('#project-delete-btn').click();
+    await expect(page.locator('.project-list-item', { hasText: 'Gamma Project' })).toHaveCount(0);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    await cardButton(projectCard(page, 'Alpha note'), 'delete').click();
+    await expect(projectCard(page, 'Alpha note')).toHaveCount(0);
+
+    const before = await storedProjects(page);
+    const old = JSON.stringify({ type: 'projects', context: 'projects', projects: [
+      { id: 'p1', name: 'Alpha Project', createdAt: '2026-10-01T09:00:00', notes: [
+        { id: 'pn1', type: 'note', content: 'Alpha note', createdAt: '2026-10-02T09:00:00', comments: [] },
+      ], tasks: [] },
+      { id: 'p3', name: 'Gamma Project', createdAt: '2026-10-01T09:00:00', notes: [], tasks: [] },
+    ] });
+    await page.locator('#import-file').setInputFiles({ name: 'work-desk-backup-projects.json', mimeType: 'application/json', buffer: Buffer.from(old) });
+    await page.locator('#import-replace').click();
+    await expect(page.locator('#import-modal')).toBeHidden();
+    await expect(page.locator('.project-list-item', { hasText: 'Gamma Project' })).toHaveCount(0);
+    await page.locator('.project-list-item', { hasText: 'Alpha Project' }).click();
+    await expect(projectCard(page, 'Alpha note')).toHaveCount(0);
+    const after = await storedProjects(page);
+    expect(after.projects.map((p: { id: string }) => p.id)).toEqual(['p1']);
+    expect(Object.keys(after.deletedIds)).toEqual(expect.arrayContaining(Object.keys(before.deletedIds)));
+  });
+});
+
+test.describe('Project comment actions, touch 1.18.4', { tag: ['@projects', '@phone'] }, () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('comment edit/delete are visible without hovering', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    const actions = projectCard(page, 'Alpha note').locator('.project-comment-actions');
+    await expect(actions).toHaveCSS('opacity', '1');
+    page.once('dialog', d => d.accept());
+    await actions.getByRole('button', { name: 'delete', exact: true }).tap();
+    await expect(projectCard(page, 'Alpha note').locator('.project-comment-row')).toHaveCount(0);
+  });
+});
+
+test.describe('Project tags 1.19.0', { tag: ['@projects', '@tags'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('tag button: suggestion, typed tag, Escape, outside click, remove ×, and reload', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    const card = projectCard(page, 'Alpha note');
+    const chips = card.locator('.project-tag-row .tag-chip');
+    await expect(chips).toHaveCount(1);
+    await expect(chips.first()).toContainText(/ops/i);
+
+    await cardButton(card, 'tag').click();
+    const input = card.locator('.tag-input-inline');
+    await expect(input).toBeFocused();
+    const pick = card.locator('.tag-suggestion', { hasText: 'q4' });
+    await expect(pick).toBeVisible();
+    await expect(card.locator('.tag-suggestion', { hasText: 'ops' })).toHaveCount(0);
+    await pick.click();
+    await expect(page.locator('#project-detail')).toBeVisible();
+    await expect(card.locator('.tag-input-inline')).toHaveCount(0);
+    await expect(chips).toHaveCount(2);
+
+    await cardButton(card, 'tag').click();
+    await card.locator('.tag-input-inline').fill('Launch');
+    await card.locator('.tag-input-inline').press('Enter');
+    await expect(chips).toHaveCount(3);
+    await expect(card.locator('.tag-input-inline')).toHaveCount(0);
+
+    await cardButton(card, 'tag').click();
+    await card.locator('.tag-input-inline').press('Escape');
+    await expect(card.locator('.tag-input-inline')).toHaveCount(0);
+
+    await cardButton(card, 'tag').click();
+    await expect(card.locator('.tag-input-inline')).toBeVisible();
+    await page.locator('#project-title').click();
+    await expect(card.locator('.tag-input-inline')).toHaveCount(0);
+
+    await card.locator('.project-tag-row .tag-chip', { hasText: /ops/i }).locator('.tag-chip-remove').click();
+    await expect(chips).toHaveCount(2);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    const saved = (await storedProjects(page)).projects[0].notes[0];
+    expect(saved.tags).toEqual(['q4', 'launch']);
+  });
+
+  test('typing #word while editing a project task turns it into a tag', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    const card = projectCard(page, 'Alpha task');
+    await cardButton(card, 'edit').click();
+    const editor = page.locator('#project-tasks-list .project-item-editor');
+    await editor.click();
+    await page.keyboard.press('End');
+    await editor.pressSequentially(' #urgent', { delay: 10 });
+    await page.locator('#project-tasks-list button', { hasText: 'Save' }).click();
+    await expect(card.locator('.project-task-text')).toHaveText('Alpha task');
+    await expect(card.locator('.project-tag-row .tag-chip')).toContainText(/urgent/i);
+  });
+});
+
+test.describe('Send between desk and projects 1.19.0', { tag: ['@projects', '@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const deskCard = (page: Page, text: string) => page.locator('.item-card', { hasText: text });
+  const sendOption = (page: Page, name: string) => page.locator('#send-modal .send-option', { hasText: name });
+
+  async function openSendToProject(page: Page, text: string) {
+    const card = deskCard(page, text);
+    await card.locator('.card-overflow-btn').click();
+    await card.locator('.card-overflow-menu button', { hasText: 'Send to project…' }).click();
+    await expect(page.locator('#send-modal')).toBeVisible();
+  }
+
+  test('desk ⋮ Send to project… lists projects; Cancel and Escape change nothing', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSendToProject(page, 'Desk task to send');
+    await expect(page.locator('#send-modal-text')).toContainText('Move this task to a project: "Desk task to send"');
+    await expect(page.locator('#send-modal .send-option-name')).toHaveText(['Alpha Project', 'Beta Project', 'Gamma Project', '+ New project…']);
+    await expect(sendOption(page, 'Alpha Project').locator('.send-option-sub')).toHaveText('1 open task · 1 note');
+    await page.locator('#send-modal-cancel').click();
+    await expect(page.locator('#send-modal')).toBeHidden();
+
+    await openSendToProject(page, 'Desk task to send');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#send-modal')).toBeHidden();
+    await expect(deskCard(page, 'Desk task to send')).toBeVisible();
+  });
+
+  test('sending a desk task to a project moves it with comments and tags; Undo brings it back', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSendToProject(page, 'Desk task to send');
+    await sendOption(page, 'Alpha Project').click();
+    await expect(page.locator('#send-modal')).toBeHidden();
+    await expect(deskCard(page, 'Desk task to send')).toHaveCount(0);
+    await expect(page.getByText('Sent to Alpha Project')).toBeVisible();
+    await page.locator('.toast-undo-btn').click();
+    await expect(deskCard(page, 'Desk task to send')).toBeVisible();
+    let projects = await storedProjects(page);
+    expect(projects.projects[0].tasks.map((t: { content: string }) => t.content)).not.toContain('Desk task to send');
+
+    await openSendToProject(page, 'Desk task to send');
+    await sendOption(page, 'Alpha Project').click();
+    await expect(deskCard(page, 'Desk task to send')).toHaveCount(0);
+    const work = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!));
+    expect(work.deletedIds.d1).toBeTruthy();
+
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    const moved = projectCard(page, 'Desk task to send');
+    await expect(moved).toBeVisible();
+    await expect(moved.locator('.project-tag-row .tag-chip')).toContainText(/q4/i);
+    await expect(moved).toContainText('desk comment');
+    projects = await storedProjects(page);
+    const task = projects.projects[0].tasks.find((t: { content: string }) => t.content === 'Desk task to send');
+    expect(task.comments[0].text).toBe('desk comment');
+  });
+
+  test('+ New project… creates the project and sends the note there', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSendToProject(page, 'Desk note to send');
+    await expect(page.locator('#send-modal-text')).toContainText('Move this note to a project');
+    page.once('dialog', d => d.accept('Fresh Project'));
+    await sendOption(page, '+ New project…').click();
+    await expect(page.locator('#send-modal')).toBeHidden();
+    await expect(deskCard(page, 'Desk note to send')).toHaveCount(0);
+    await openSeededProjectTab(page, 'Fresh Project', 'notes');
+    await expect(projectCard(page, 'Desk note to send')).toBeVisible();
+  });
+
+  test('to desk on a project task moves it to today on the chosen desk; Undo puts it back', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    await cardButton(projectCard(page, 'Alpha task'), 'to desk').click();
+    await expect(page.locator('#send-modal')).toBeVisible();
+    await expect(page.locator('#send-modal-text')).toContainText('Move this task to a desk: "Alpha task"');
+    await expect(page.locator('#send-modal-date')).toBeVisible();
+    await expect(page.locator('#send-modal .send-option-sub')).toHaveText(['Today', 'Today']);
+    await expect(page.locator('#send-modal .send-option-name')).toHaveText(['Work desk', 'Personal desk']);
+    await page.locator('#send-modal-cancel').click();
+    await expect(page.locator('#send-modal')).toBeHidden();
+
+    await cardButton(projectCard(page, 'Alpha task'), 'to desk').click();
+    await sendOption(page, 'Personal desk').click();
+    await expect(page.locator('#send-modal')).toBeHidden();
+    await expect(projectCard(page, 'Alpha task')).toHaveCount(0);
+    await expect(page.getByText('Sent to Personal desk · today')).toBeVisible();
+    await page.locator('.toast-undo-btn').click();
+    await expect(projectCard(page, 'Alpha task')).toBeVisible();
+    const personal = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-personal')!));
+    expect(Object.values(personal.days).flatMap((d: any) => d.items)).toHaveLength(0);
+
+    await cardButton(projectCard(page, 'Alpha task'), 'to desk').click();
+    await sendOption(page, 'Work desk').click();
+    await expect(projectCard(page, 'Alpha task')).toHaveCount(0);
+    expect((await storedProjects(page)).deletedIds.pt1).toBeTruthy();
+    await page.locator('#tab-work').click();
+    const card = deskCard(page, 'Alpha task');
+    await expect(card).toBeVisible();
+    const work = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!));
+    const item = Object.values(work.days).flatMap((d: any) => d.items).find((i: any) => i.content === 'Alpha task');
+    expect(item.boardColumn).toBe('new');
+    expect(item.comments[0].content).toBe('line one<br>line two');
+  });
+
+  test('to desk on a project note works from the Notes tab', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    await cardButton(projectCard(page, 'Alpha note'), 'to desk').click();
+    await expect(page.locator('#send-modal-text')).toContainText('Move this note to a desk');
+    await sendOption(page, 'Work desk').click();
+    await expect(projectCard(page, 'Alpha note')).toHaveCount(0);
+    await page.locator('#tab-work').click();
+    const card = deskCard(page, 'Alpha note');
+    await expect(card).toBeVisible();
+    await expect(card.locator('.tag-chip')).toContainText(/ops/i);
+  });
+});
+
+test.describe('Pin and reorder projects 1.19.0', { tag: ['@projects', '@sidebar'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const names = (page: Page) => page.locator('#projects-list .project-list-name');
+  const item = (page: Page, name: string) => page.locator('.project-list-item', { hasText: name });
+  const order = async (page: Page) => (await storedProjects(page)).projects.map((p: { id: string }) => p.id);
+
+  test('the list pin toggles a pin without opening the project, and the divider follows the pins', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    await expect(names(page)).toHaveText(['Alpha Project', 'Beta Project', 'Gamma Project']);
+    const pin = item(page, 'Gamma Project').locator('.project-list-pin');
+    await expect(pin).toHaveCSS('opacity', '0');
+    await item(page, 'Gamma Project').hover();
+    await expect(pin).toHaveCSS('opacity', '1');
+    await expect(pin).toHaveAttribute('aria-pressed', 'false');
+    await pin.click();
+
+    await expect(names(page)).toHaveText(['Gamma Project', 'Alpha Project', 'Beta Project']);
+    await expect(page.locator('#project-title')).toHaveText('Alpha Project');
+    await expect(page.locator('#project-detail')).toBeVisible();
+    const pinned = item(page, 'Gamma Project');
+    await expect(pinned).toHaveClass(/pinned/);
+    await expect(pinned).toHaveClass(/pinned-last/);
+    await expect(pinned.locator('.project-list-pin')).toHaveAttribute('aria-pressed', 'true');
+    await page.mouse.move(900, 600);
+    await expect(pinned.locator('.project-list-pin')).toHaveCSS('opacity', '1');
+    expect(await order(page)).toEqual(['p3', 'p1', 'p2']);
+
+    await pinned.locator('.project-list-pin').click();
+    await expect(names(page)).toHaveText(['Gamma Project', 'Alpha Project', 'Beta Project']);
+    await expect(page.locator('.project-list-item.pinned')).toHaveCount(0);
+    await expect(page.locator('.project-list-item.pinned-last')).toHaveCount(0);
+  });
+
+  test('Pin / Unpin in the project header, kept after a reload, and the send dialog follows the order', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Beta Project', 'notes');
+    const btn = page.locator('#project-pin-btn');
+    await expect(btn).toHaveText('Pin');
+    await btn.click();
+    await expect(btn).toHaveText('Unpin');
+    await expect(btn).toHaveAttribute('aria-pressed', 'true');
+    await expect(names(page)).toHaveText(['Beta Project', 'Alpha Project', 'Gamma Project']);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.locator('#tab-projects').click();
+    await expect(names(page)).toHaveText(['Beta Project', 'Alpha Project', 'Gamma Project']);
+    await item(page, 'Beta Project').click();
+    await expect(page.locator('#project-pin-btn')).toHaveText('Unpin');
+
+    await page.locator('#tab-work').click();
+    const card = page.locator('.item-card', { hasText: 'Desk task to send' });
+    await card.locator('.card-overflow-btn').click();
+    await card.locator('.card-overflow-menu button', { hasText: 'Send to project…' }).click();
+    await expect(page.locator('#send-modal .send-option-name')).toHaveText(['Beta Project', 'Alpha Project', 'Gamma Project', '+ New project…']);
+    await page.locator('#send-modal-cancel').click();
+
+    await page.locator('#tab-projects').click();
+    await item(page, 'Beta Project').click();
+    await page.locator('#project-pin-btn').click();
+    await expect(page.locator('#project-pin-btn')).toHaveText('Pin');
+    await expect(page.locator('.project-list-item.pinned')).toHaveCount(0);
+  });
+
+  test('dragging reorders projects, but not across the pinned divider', async ({ page }) => {
+    await seedProjectSpace(page);
+    await page.locator('#tab-projects').click();
+    await item(page, 'Gamma Project').dragTo(item(page, 'Alpha Project'), { targetPosition: { x: 20, y: 4 } });
+    await expect(names(page)).toHaveText(['Gamma Project', 'Alpha Project', 'Beta Project']);
+    const beta = (await item(page, 'Beta Project').boundingBox())!;
+    await item(page, 'Gamma Project').dragTo(item(page, 'Beta Project'), { targetPosition: { x: 20, y: beta.height - 4 } });
+    await expect(names(page)).toHaveText(['Alpha Project', 'Beta Project', 'Gamma Project']);
+    expect(await order(page)).toEqual(['p1', 'p2', 'p3']);
+
+    await item(page, 'Beta Project').hover();
+    await item(page, 'Beta Project').locator('.project-list-pin').click();
+    await expect(names(page)).toHaveText(['Beta Project', 'Alpha Project', 'Gamma Project']);
+    await item(page, 'Gamma Project').dragTo(item(page, 'Beta Project'), { targetPosition: { x: 20, y: 4 } });
+    await expect(names(page)).toHaveText(['Beta Project', 'Alpha Project', 'Gamma Project']);
+    await expect(page.locator('.project-list-item.drop-before, .project-list-item.drop-after')).toHaveCount(0);
+  });
+
+  test('keyboard: Enter opens a project, Alt+↑ / Alt+↓ move it and keep focus', async ({ page }) => {
+    await seedProjectSpace(page);
+    await page.locator('#tab-projects').click();
+    await item(page, 'Gamma Project').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#project-title')).toHaveText('Gamma Project');
+    await item(page, 'Gamma Project').focus();
+    await page.keyboard.press('Alt+ArrowUp');
+    await expect(names(page)).toHaveText(['Alpha Project', 'Gamma Project', 'Beta Project']);
+    await expect(item(page, 'Gamma Project')).toBeFocused();
+    await page.keyboard.press('Alt+ArrowUp');
+    await page.keyboard.press('Alt+ArrowUp');
+    await expect(names(page)).toHaveText(['Gamma Project', 'Alpha Project', 'Beta Project']);
+    await page.keyboard.press('Alt+ArrowDown');
+    await expect(names(page)).toHaveText(['Alpha Project', 'Gamma Project', 'Beta Project']);
+    expect(await order(page)).toEqual(['p1', 'p3', 'p2']);
+  });
+
+  test('top bar: projects drag left and right', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('work-desk-sidebar-position', 'top'));
+    await seedProjectSpace(page);
+    await page.locator('#tab-projects').click();
+    const alpha = (await item(page, 'Alpha Project').boundingBox())!;
+    const gamma = (await item(page, 'Gamma Project').boundingBox())!;
+    expect(Math.abs(alpha.y - gamma.y)).toBeLessThan(2);
+    await item(page, 'Gamma Project').dragTo(item(page, 'Alpha Project'), { targetPosition: { x: 4, y: alpha.height / 2 } });
+    await expect(names(page)).toHaveText(['Gamma Project', 'Alpha Project', 'Beta Project']);
+  });
+});
+
+test.describe('Project More menu, archive, progress, Markdown 1.19.0', { tag: ['@projects', '@sidebar'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const names = (page: Page) => page.locator('#projects-list .project-list-name');
+  const menu = (page: Page) => page.locator('#project-more-menu');
+  const menuItem = (page: Page, name: string) => menu(page).getByRole('menuitem', { name, exact: true });
+  async function openMore(page: Page) {
+    await page.locator('#project-more-btn').click();
+    await expect(menu(page)).toBeVisible();
+    await expect(page.locator('#project-more-btn')).toHaveAttribute('aria-expanded', 'true');
+  }
+
+  test('More opens and closes with a second click, an outside click, and Escape; arrows move focus', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    await openMore(page);
+    await expect(menu(page).getByRole('menuitem')).toHaveText(['Copy as Markdown', 'Archive project', 'Move up', 'Move down']);
+    await expect(menuItem(page, 'Copy as Markdown')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(menuItem(page, 'Archive project')).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await expect(menuItem(page, 'Move down')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#project-more-btn')).toBeFocused();
+    await expect(page.locator('#project-detail')).toBeVisible();
+
+    await openMore(page);
+    await page.locator('#project-more-btn').click();
+    await expect(menu(page)).toBeHidden();
+    await openMore(page);
+    await page.locator('#project-title').click();
+    await expect(menu(page)).toBeHidden();
+  });
+
+  test('Move up / Move down reorder the project and are disabled at the ends of its group', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    await openMore(page);
+    await expect(menuItem(page, 'Move up')).toBeDisabled();
+    await menuItem(page, 'Move down').click();
+    await expect(menu(page)).toBeHidden();
+    await expect(names(page)).toHaveText(['Beta Project', 'Alpha Project', 'Gamma Project']);
+    await openMore(page);
+    await menuItem(page, 'Move down').click();
+    await expect(names(page)).toHaveText(['Beta Project', 'Gamma Project', 'Alpha Project']);
+    await openMore(page);
+    await expect(menuItem(page, 'Move down')).toBeDisabled();
+    await menuItem(page, 'Move up').click();
+    await expect(names(page)).toHaveText(['Beta Project', 'Alpha Project', 'Gamma Project']);
+    await expect(page.locator('#project-title')).toHaveText('Alpha Project');
+  });
+
+  test('Archive moves the project into a collapsed group; the toggle, send dialog, and Unarchive all follow', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    await openMore(page);
+    await menuItem(page, 'Archive project').click();
+    await expect(page.getByText('Archived Alpha Project')).toBeVisible();
+    const toggle = page.locator('.project-list-archive-toggle');
+    await expect(toggle).toHaveText(/Archived projects \(1\)/);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(names(page)).toHaveText(['Beta Project', 'Gamma Project', 'Alpha Project']);
+    await expect(page.locator('.project-list-item.archived')).toHaveText(/Alpha Project/);
+    await expect(page.locator('#project-progress-text')).toHaveText('1 of 2 tasks done · Archived');
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(names(page)).toHaveText(['Beta Project', 'Gamma Project']);
+    await expect(page.locator('#project-detail')).toBeVisible();
+    await toggle.click();
+    await expect(names(page)).toHaveText(['Beta Project', 'Gamma Project', 'Alpha Project']);
+
+    await page.locator('#tab-work').click();
+    const card = page.locator('.item-card', { hasText: 'Desk task to send' });
+    await card.locator('.card-overflow-btn').click();
+    await card.locator('.card-overflow-menu button', { hasText: 'Send to project…' }).click();
+    await expect(page.locator('#send-modal .send-option-name')).toHaveText(['Beta Project', 'Gamma Project', '+ New project…']);
+    await page.keyboard.press('Escape');
+
+    await page.locator('#tab-projects').click();
+    await page.locator('.project-list-item', { hasText: 'Alpha Project' }).click();
+    await openMore(page);
+    await menuItem(page, 'Unarchive project').click();
+    await expect(page.locator('.project-list-archive-toggle')).toHaveCount(0);
+    await expect(names(page)).toHaveText(['Alpha Project', 'Beta Project', 'Gamma Project']);
+    await expect(page.locator('#project-progress-text')).toHaveText('1 of 2 tasks done');
+  });
+
+  test('progress shows in the header and the list, and updates as tasks finish', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    await expect(page.locator('#project-progress-text')).toHaveText('1 of 2 tasks done');
+    await expect(page.locator('#project-progress-fill')).toHaveAttribute('style', /width: 50%/);
+    const listBar = page.locator('.project-list-item', { hasText: 'Alpha Project' }).locator('.project-list-progress');
+    await expect(listBar).toHaveAttribute('title', '1 of 2 tasks done');
+    await expect(page.locator('.project-list-item', { hasText: 'Gamma Project' }).locator('.project-list-progress')).toHaveCount(0);
+    await projectCard(page, 'Alpha task').locator('.complete-edge').click();
+    await expect(page.locator('#project-progress-text')).toHaveText('2 of 2 tasks done');
+    await expect(listBar.locator('span')).toHaveAttribute('style', /width: 100%/);
+    await page.locator('.project-list-item', { hasText: 'Gamma Project' }).click();
+    await expect(page.locator('#project-progress')).toBeHidden();
+  });
+
+  test('Copy as Markdown puts open tasks, notes, comments, and tags on the clipboard', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    await openMore(page);
+    await menuItem(page, 'Copy as Markdown').click();
+    await expect(page.getByText('Copied Alpha Project as Markdown')).toBeVisible();
+    const md = (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n');
+    expect(md).toBe([
+      '# Alpha Project', '', '1 of 2 tasks done', '',
+      '## Tasks', '- [ ] Alpha task', '  - Oct 3: line one', '    line two', '',
+      '## Notes', '- Alpha note #ops', '  - Oct 2: note comment', '',
+    ].join('\n'));
+  });
+});
+
+test.describe('Reorder project notes and tasks 1.19.0', { tag: ['@projects', '@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const texts = (page: Page) => page.locator('#project-tasks-list .project-task-text');
+
+  async function openThreeTasks(page: Page) {
+    await page.addInitScript(() => {
+      if (localStorage.getItem('v119r-seeded')) return;
+      localStorage.setItem('v119r-seeded', '1');
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+        { id: 'p1', name: 'Order Project', createdAt: '2026-10-01T09:00:00', notes: [
+          { id: 'n1', type: 'note', content: 'First note', createdAt: '2026-10-01T09:00:00', comments: [] },
+          { id: 'n2', type: 'note', content: 'Second note', createdAt: '2026-10-01T09:00:00', comments: [] },
+        ], tasks: [
+          { id: 't1', type: 'task', content: 'One', completed: false, createdAt: '2026-10-01T09:00:00', comments: [] },
+          { id: 't2', type: 'task', content: 'Two', completed: false, createdAt: '2026-10-01T09:00:00', comments: [] },
+          { id: 't3', type: 'task', content: 'Three', completed: false, createdAt: '2026-10-01T09:00:00', comments: [] },
+        ] },
+      ] }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await openSeededProjectTab(page, 'Order Project', 'tasks');
+  }
+  const taskCard = (page: Page, text: string) => page.locator('#project-tasks-list .project-item-card', { has: page.locator('.project-task-text', { hasText: new RegExp(`^${text}$`) }) });
+
+  test('dragging a task card reorders tasks and persists', async ({ page }) => {
+    await openThreeTasks(page);
+    await expect(texts(page)).toHaveText(['One', 'Two', 'Three']);
+    await taskCard(page, 'Three').dragTo(taskCard(page, 'One'), { targetPosition: { x: 200, y: 4 } });
+    await expect(texts(page)).toHaveText(['Three', 'One', 'Two']);
+    await expect(page.locator('#project-detail')).toBeVisible();
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
+    await expect(texts(page)).toHaveText(['Three', 'One', 'Two']);
+  });
+
+  test('Alt+↑ / Alt+↓ on a focused card move it and keep focus; notes reorder too', async ({ page }) => {
+    await openThreeTasks(page);
+    await taskCard(page, 'One').focus();
+    await page.keyboard.press('Alt+ArrowDown');
+    await expect(texts(page)).toHaveText(['Two', 'One', 'Three']);
+    await expect(taskCard(page, 'One')).toBeFocused();
+    await page.keyboard.press('Alt+ArrowDown');
+    await page.keyboard.press('Alt+ArrowDown');
+    await expect(texts(page)).toHaveText(['Two', 'Three', 'One']);
+
+    await page.locator('.project-tab-btn[data-project-tab="notes"]').click();
+    const notes = page.locator('#project-notes-list .project-item-card');
+    await notes.filter({ hasText: 'Second note' }).dragTo(notes.filter({ hasText: 'First note' }), { targetPosition: { x: 200, y: 4 } });
+    await expect(notes.first()).toContainText('Second note');
+  });
+
+  test('a card being edited is not draggable', async ({ page }) => {
+    await openThreeTasks(page);
+    await taskCard(page, 'Two').locator('.project-item-actions').getByRole('button', { name: 'edit', exact: true }).click();
+    await expect(page.locator('#project-tasks-list .project-item-editor')).toBeVisible();
+    await expect(page.locator('#project-tasks-list .project-item-card').nth(1)).not.toHaveAttribute('draggable', 'true');
+    await expect(taskCard(page, 'One')).toHaveAttribute('draggable', 'true');
+  });
+});
+
+test.describe('to desk day picker 1.19.0', { tag: ['@projects', '@calendar'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('pick a later day: labels follow, the item lands on that day, and Today resets', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    await projectCard(page, 'Alpha task').locator('.project-item-actions').getByRole('button', { name: 'to desk', exact: true }).click();
+    const date = page.locator('#send-modal-date');
+    const today = await page.evaluate(() => todayKey());
+    await expect(date).toHaveValue(today);
+    const later = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 3); return formatDateKey(d); });
+    const laterLabel = await page.evaluate((k) => formatSidebarLabel(k), later);
+    await date.fill(later);
+    await expect(page.locator('#send-modal .send-option-sub')).toHaveText([laterLabel, laterLabel]);
+    await page.locator('#send-modal-today').click();
+    await expect(date).toHaveValue(today);
+    await expect(page.locator('#send-modal .send-option-sub')).toHaveText(['Today', 'Today']);
+    await expect(page.locator('#send-modal')).toBeVisible();
+
+    await date.fill(later);
+    await page.locator('#send-modal .send-option', { hasText: 'Work desk' }).click();
+    await expect(page.getByText(`Sent to Work desk · ${laterLabel}`)).toBeVisible();
+    const work = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!));
+    expect(work.days[later].items.map((i: { content: string }) => i.content)).toContain('Alpha task');
+  });
+
+  test('the desk → project dialog has no day picker', async ({ page }) => {
+    await seedProjectSpace(page);
+    const card = page.locator('.item-card', { hasText: 'Desk task to send' });
+    await card.locator('.card-overflow-btn').click();
+    await card.locator('.card-overflow-menu button', { hasText: 'Send to project…' }).click();
+    await expect(page.locator('#send-modal')).toBeVisible();
+    await expect(page.locator('#send-modal-date-row')).toBeHidden();
+  });
+});
+
+test.describe('Pin projects, touch 1.19.0', { tag: ['@projects', '@phone'] }, () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('the pin shows without hovering and a tap pins the project', async ({ page }) => {
+    await seedProjectSpace(page);
+    await page.locator('#tab-projects').click();
+    const pin = page.locator('.project-list-item', { hasText: 'Beta Project' }).locator('.project-list-pin');
+    await expect(pin).toHaveCSS('opacity', '1');
+    await pin.tap();
+    await expect(page.locator('#projects-list .project-list-name').first()).toHaveText('Beta Project');
+  });
+
+  test('More → Move down reorders projects by tap', async ({ page }) => {
+    await seedProjectSpace(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('.project-list-item', { hasText: 'Alpha Project' }).tap();
+    await page.locator('#project-more-btn').tap();
+    await page.locator('#project-more-menu').getByRole('menuitem', { name: 'Move down', exact: true }).tap();
+    await expect(page.locator('#projects-list .project-list-name')).toHaveText(['Beta Project', 'Alpha Project', 'Gamma Project']);
+  });
+});
+
+test.describe('Search covers projects 1.19.0', { tag: ['@search', '@projects'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  async function searchAll(page: Page, q: string) {
+    const chip = page.locator('#search-scope-chip');
+    await expect(chip).toHaveText('Work');
+    await page.locator('#search-input').click();
+    await chip.click();
+    await expect(chip).toHaveText('All');
+    await expect(page.locator('#search-input')).toHaveAttribute('placeholder', 'Search Work, Personal & Projects…');
+    await page.locator('#search-input').fill(q);
+  }
+
+  test('All scope finds project items; a click opens the project with the item outlined', async ({ page }) => {
+    await seedProjectSpace(page);
+    await searchAll(page, 'alpha');
+    const result = page.locator('.search-result', { hasText: 'Finished alpha task' });
+    await expect(result).toBeVisible();
+    await expect(result.locator('.search-result-date')).toHaveText('Alpha Project');
+    await expect(page.locator('.search-result', { hasText: 'Alpha note' })).toBeVisible();
+    await result.click();
+    await expect(page.locator('#project-title')).toHaveText('Alpha Project');
+    await expect(page.locator('.project-tab-btn[data-project-tab="tasks"]')).toHaveClass(/active/);
+    const card = page.locator('#project-tasks-archive-wrap .project-item-card', { hasText: 'Finished alpha task' });
+    await expect(card).toBeVisible();
+    await expect(card).toHaveClass(/search-highlight/);
+  });
+
+  test('#tag and comment searches reach project notes', async ({ page }) => {
+    await seedProjectSpace(page);
+    await searchAll(page, '#ops');
+    await expect(page.locator('.search-result')).toHaveCount(1);
+    await page.locator('.search-result', { hasText: 'Alpha note' }).click();
+    await expect(page.locator('.project-tab-btn[data-project-tab="notes"]')).toHaveClass(/active/);
+    await expect(projectCard(page, 'Alpha note')).toHaveClass(/search-highlight/);
+
+    await page.locator('#tab-work').click();
+    await page.locator('#search-input').fill('note comment');
+    await expect(page.locator('.search-result')).toHaveCount(1);
+    await expect(page.locator('.search-result')).toContainText('note comment');
+  });
+
+  test('the current-list scope leaves projects out', async ({ page }) => {
+    await seedProjectSpace(page);
+    await page.locator('#search-input').fill('alpha');
+    await expect(page.locator('#search-overlay-count')).toHaveText('No matches');
   });
 });
