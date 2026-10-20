@@ -3397,9 +3397,18 @@
       background: var(--panel-bg);
       border-color: var(--text-muted);
     }
+    .project-text-btn {
+      width: auto;
+      padding: 0 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .project-text-btn:hover { color: var(--text); }
     .project-delete-btn:hover {
       background: var(--delete-hover-bg);
       border-color: var(--danger);
+      color: var(--danger);
     }
 
     .project-body {
@@ -6977,7 +6986,7 @@
     .card-action-end { margin-left: auto; display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; max-width: 100%; }
     .card-action-end > .tag-chip-row { margin: 0; flex-wrap: wrap; justify-content: flex-end; }
     .complete-edge { display: none; }
-    html[data-complete-edge="on"] .task-card .complete-edge {
+    html[data-complete-edge="on"] :is(.task-card, .project-task-card) .complete-edge {
       display: grid;
       position: absolute; left: 0; top: 0; bottom: 0; z-index: 3;
       width: 18px; place-items: center; padding: 0; border: 0;
@@ -6991,6 +7000,9 @@
     html[data-complete-edge="on"] .item-card.task-card .item.task { padding-left: 28px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "content"; }
     html[data-complete-edge="on"] .item-card.task-card .item.task.has-tags:not(:has(.edit-wrap)) { grid-template-areas: "tags" "content"; }
     html[data-complete-edge="on"] .item-card.task-card .card-action-bar { padding-left: 24px; }
+    html[data-complete-edge="on"] .project-task-card .complete-edge { border-radius: calc(var(--radius) - 1px) 0 0 calc(var(--radius) - 1px); }
+    html[data-complete-edge="on"] .project-task-check { display: none; }
+    html[data-complete-edge="on"] .project-task-card { padding-left: 30px; }
     .complete-edge::before {
       content: ''; box-sizing: border-box; width: 10px; height: 10px; border-radius: 50%;
       border: 1.5px solid color-mix(in srgb, var(--text) 45%, transparent);
@@ -6999,7 +7011,7 @@
     .complete-edge:hover::before { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 25%, transparent); }
     .complete-edge:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     .complete-edge:active { filter: brightness(1.25); }
-    html[data-complete-edge="on"] .task-card .complete-edge.is-done { background: var(--accent); }
+    html[data-complete-edge="on"] :is(.task-card, .project-task-card) .complete-edge.is-done { background: var(--accent); }
     .complete-edge.is-done::before {
       content: '✓'; width: auto; height: auto; border: 0; background: none !important; box-shadow: none !important; transform: none;
       font-size: 11px; font-weight: 700; color: var(--surface);
@@ -7062,8 +7074,9 @@
     html[data-complete-edge="on"][data-tag-position="slim"] #desk-view:not([data-density="compact"]) .item.task .tag-chip-remove { line-height: 1; }
 
     @media (hover: none), (pointer: coarse) {
-      html[data-complete-edge="on"] .task-card .complete-edge { width: 40px; }
+      html[data-complete-edge="on"] :is(.task-card, .project-task-card) .complete-edge { width: 40px; }
       html[data-complete-edge="on"] .item-card.task-card .item.task { padding-left: 52px; }
+      html[data-complete-edge="on"] .project-task-card { padding-left: 52px; }
       html[data-complete-edge="on"] .item-card.task-card .card-action-bar { padding-left: 48px; }
       .complete-edge::before { width: 16px; height: 16px; border-width: 2px; }
       .complete-edge.is-done::before { font-size: 16px; }
@@ -8484,8 +8497,8 @@
           <header class="project-header">
             <h2 id="project-title" class="project-title" contenteditable="false"></h2>
             <div class="project-actions">
-              <button id="project-rename-btn" class="project-action-btn" type="button" title="Rename project">✏️</button>
-              <button id="project-delete-btn" class="project-action-btn project-delete-btn" type="button" title="Delete project">🗑️</button>
+              <button id="project-rename-btn" class="project-action-btn project-text-btn" type="button" title="Rename project">Rename</button>
+              <button id="project-delete-btn" class="project-action-btn project-text-btn project-delete-btn" type="button" title="Delete project">Delete</button>
               <div class="density-wrap">
                 <button id="project-customize-btn" class="project-action-btn" type="button" title="Settings" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
                   <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:14px;height:14px;">
@@ -8573,7 +8586,7 @@
 
         <h3>Task &amp; note cards</h3>
         <ul>
-          <li><strong>Complete button</strong> — click (or tap) a task's left edge to finish it; click it again to reopen. Dragging that starts on the edge doesn't count as a click</li>
+          <li><strong>Complete button</strong> — click (or tap) a task's left edge to finish it; click it again to reopen. Dragging that starts on the edge doesn't count as a click. Project tasks use the same edge, and finishing one moves it to that project's Archived list</li>
           <li><strong>Edge styles</strong> — Options → Appearance → Card layout → <em>Complete button</em>. The <strong>"Done" label</strong> (default) reads DONE, then DONE? on hover, DOING while you drag the card, DONE! once finished, and UNDO? when you hover a finished card. Other choices are Bar, Raised bar, Switch, Circle, Square, Diamond, Faint ✓, and Plain edge; <strong>Checkbox</strong> brings back the checkbox. Compact cards are too short for the label, so it shows a bar there</li>
           <li><strong>Action bar</strong> — common actions sit along the bottom of each card: <em>edit</em>, <em>move</em>, <em>comment</em> / <em>add update</em>, and <em>tag</em></li>
           <li><strong>Overflow menu (⋮)</strong> — less common actions live here: delete, convert, send to Work/Personal, shelve/unshelve, and start (move to Active)</li>
@@ -8615,6 +8628,7 @@
           <li><strong>Note preview</strong> — long notes are truncated to a few lines with a <em>show more</em> toggle; turn this off in Options → Behavior → <strong>Truncate long notes</strong></li>
           <li><strong>Archive</strong> — click <em>archive</em> on any note or task to move it into a collapsed <strong>Archived (n)</strong> section at the bottom of its tab; completing a task automatically archives it</li>
           <li><strong>Double-click to edit</strong> — double-click a note's content or a task's text to jump straight into the editor</li>
+          <li><strong>Rename / Delete</strong> — the <strong>Rename</strong> and <strong>Delete</strong> buttons in the project header; Delete asks before removing the project and everything in it</li>
           <li><strong>Customize button</strong> — the gear icon in the project header opens the same Themes / Appearance / Behavior options available on the desk</li>
           <li><strong>Cloud sync</strong> — projects sync to the cloud alongside your Work and Personal data</li>
         </ul>
@@ -8746,8 +8760,9 @@
 
         <h3>Possible future improvements</h3>
         <ul>
-          <li><strong>Google Assistant integration</strong> — "Hey Google, what are my tasks for today?" / "Hey Google, add a task to do xyz" via a Google Actions webhook connected to the Supabase backend</li>
           <li><strong>Data encryption</strong> — opt-in PIN or passphrase-based AES-256 encryption of stored data so the Supabase DB owner cannot read tasks in plain text; PIN (4–6 digits) blocks casual viewing, a full passphrase blocks determined attacks</li>
+          <li><strong>Local weather</strong> — an opt-in, small readout like 72°F ☀️ in the header or sidebar, using Open-Meteo (free, no API key). Off by default because turning it on asks for your location</li>
+          <li><strong>Suggested colors for custom themes</strong> — pick one color or a mood (or use a color wheel or hex code) and let the app fill in the rest of the theme, plus a <em>Surprise me</em> option</li>
         </ul>
       </div>
       <div class="help-modal-footer">
@@ -8847,12 +8862,26 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.18.3';
+    const APP_VERSION = '1.18.4';
     const CHANGELOG = [
+      {
+        version: '1.18.4',
+        date: 'Oct 20, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'Project tasks now use the same complete button as desk tasks: click the card\'s left edge to finish or reopen it, in whichever style you picked in Options → Appearance → Card layout. Checkbox still brings back the checkbox',
+            'The project header\'s pencil and trash emoji are now plain Rename and Delete buttons that match the gear next to them',
+            'Help: trimmed the Possible future improvements list to data encryption, local weather, and suggested colors for custom themes',
+          ] },
+          { label: 'Fixed', items: [
+            'Importing a Projects backup (or the projects in an Import All backup) keeps archived notes and tasks in Archived. They used to come back as active items',
+          ] },
+        ],
+      },
       {
         version: '1.18.3',
         date: 'Oct 15, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'Completed tasks no longer wobble or draw on top of each other while you scroll an expanded Completed list. The board now scrolls on its own layer instead of being repainted on every scroll step',
@@ -15382,6 +15411,7 @@
               type: 'note',
               content: n.content || '',
               createdAt: n.createdAt || new Date().toISOString(),
+              archived: !!n.archived,
               comments: Array.isArray(n.comments) ? n.comments : [],
             }));
           }
@@ -15392,6 +15422,7 @@
               content: t.content || '',
               completed: !!t.completed,
               createdAt: t.createdAt || new Date().toISOString(),
+              archived: !!t.archived,
               comments: Array.isArray(t.comments) ? t.comments : [],
             }));
           }
@@ -17939,7 +17970,7 @@
     }
 
     // Hidden by CSS when Options → Card layout → Complete button is "Checkbox"
-    function buildCompleteEdge(item) {
+    function buildCompleteEdge(item, onToggle = () => toggleItem(item.id)) {
       const edge = document.createElement('button');
       edge.type = 'button';
       edge.className = `complete-edge${item.completed ? ' is-done' : ''}`;
@@ -17953,7 +17984,7 @@
         e.stopPropagation();
         const moved = start && e.detail > 0 && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4;
         start = null;
-        if (!moved) toggleItem(item.id);
+        if (!moved) onToggle();
       });
       return edge;
     }
@@ -20811,8 +20842,12 @@
 
     function createProjectTaskCard(projectId, task) {
       const card = document.createElement('div');
-      card.className = 'project-item-card';
+      card.className = 'project-item-card project-task-card';
       card.dataset.itemId = task.id;
+      card.appendChild(buildCompleteEdge(task, () => {
+        toggleProjectTaskComplete(projectId, task.id);
+        renderProjectDetail();
+      }));
 
       const row = document.createElement('div');
       row.className = 'project-task-row';
