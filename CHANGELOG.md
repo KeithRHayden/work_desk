@@ -6,6 +6,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.20.0] — 2026-10-21
+
+### Added
+- **Storage warning** — the desk lives in this browser's storage (about 5 MB per site, shared with any other app on the same address). From 50% full, the account menu shows *Browser storage N% used*; from 80%, a banner at the top suggests **Export All** for a backup, plus **Sign in** when you're not signed in. × hides it for the rest of the browser session unless usage climbs another 5%. If storage fills up, the banner says new changes can't be saved on this device
+
+### Improved
+- **Lighter cloud sync** — the 5-minute and tab-focus checks now read only the cloud row's last-updated time. When it matches what this device last saw, there's no download: the device just runs the daily jobs (auto carry, recurring tasks) and uploads only if its own data changed. A full download-and-merge runs when another device or the add-task shortcut has saved, when the app opens, after signing in to a different account, and at least every 4 hours. Uploads are skipped when the data matches what's already in the cloud (compared with key order ignored, since the database reorders keys). Most of the savings show once every device is on 1.20.0
+- **Several tabs** — a change saved in one tab reloads into your other open tabs right away, so a background tab no longer saves its older copy over it
+- Sync and upload never run at the same time; an upload first checks whether another device saved and merges that in before sending
+
+### Fixed
+- **Sync no longer interrupts typing** — every sync redrew the whole board (with Auto carry on, even when nothing moved), which could reset a comment mid-sentence, move the cursor to the start, or drop text typed into a task edit or a column add box. Now a sync or another tab's change redraws only when the desk actually changed, and while you're typing on the desk that redraw waits until you click or tab away (after the click lands, so the button you clicked still works). Redraws also keep the cursor where it was, keep every open comment box rather than just the first, keep the text of task edits and column add boxes, and hold on to a comment draft whose card isn't on screen until it is
+- **History is no longer trimmed** — startup used to delete days older than 12 months from the desk (a leftover from before cloud sync). Every day now stays, so Search, Insights, and the calendar reach all of it. Days a signed-in device trimmed earlier come back on its next full sync wherever the cloud still has them
+- **Full browser storage** — a save that hit the storage limit used to throw mid-edit and could lose the change. Edits now stay on screen, are included in the next cloud upload and in Export All, and are written to storage as soon as space frees up
+- **Failed downloads** — if the cloud download failed, the sync could carry on and upload this device's copy over newer cloud data; it now stops and tries again on the next check
+
 ## [1.19.1] — 2026-10-21
 
 ### Improved
