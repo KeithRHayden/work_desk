@@ -4161,6 +4161,37 @@
     }
     .toast-undo-btn:hover { background: rgba(255, 255, 255, 0.2); }
 
+    .storage-banner {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 210; display: flex; align-items: center; gap: 12px;
+      width: max-content; max-width: min(640px, calc(100vw - 24px));
+      padding: 10px 12px 10px 16px; border-radius: 8px;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-left: 4px solid #d97706;
+      box-shadow: var(--shadow); font-size: 0.86rem; line-height: 1.4;
+    }
+    .storage-banner[data-level="full"] { border-left-color: var(--danger); }
+    .storage-banner.hidden { display: none; }
+    .storage-banner-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .storage-banner-btn {
+      padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+    }
+    .storage-banner-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .storage-banner-close {
+      width: 28px; height: 28px; border: none; border-radius: 6px;
+      background: transparent; color: var(--text-muted); font-size: 1.1rem; line-height: 1;
+    }
+    .storage-banner-close:hover { color: var(--text); background: var(--accent-light); }
+    @media (max-width: 640px) {
+      .storage-banner { flex-wrap: wrap; top: 8px; }
+      .storage-banner-actions { width: 100%; justify-content: flex-end; }
+    }
+    .storage-usage { margin: 4px 0 0; padding: 0 6px; font-size: 0.72rem; color: var(--sidebar-muted); }
+    #account-menu .storage-usage { padding: 0 8px; color: var(--text-muted); }
+    .storage-usage[data-level="warn"], #account-menu .storage-usage[data-level="warn"] { color: #d97706; font-weight: 600; }
+    .storage-usage[data-level="full"], #account-menu .storage-usage[data-level="full"] { color: var(--danger); font-weight: 600; }
+
     .search-section { display: flex; flex-direction: column; gap: 8px; }
 
     .search-wrap {
@@ -8157,6 +8188,7 @@
             </div>
           </div>
           <button id="repair-btn" class="sidebar-repair-link" type="button" title="Scan for and remove duplicate tasks (same ID or recurring template)"><span class="account-menu-ic" aria-hidden="true">🔧</span>Repair duplicates</button>
+          <p id="storage-usage" class="storage-usage hidden" data-level="ok" title="Work Desk keeps your desks in this browser's storage, which holds about 5 MB per site"></p>
           <input id="import-file" class="import-file" type="file" accept=".json,application/json" />
           <input id="import-all-file" class="import-file" type="file" accept=".json,application/json" />
         </div>
@@ -8710,7 +8742,7 @@
           <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define; optionally skip holidays</li>
           <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
-          <li><strong>Auto-pruning</strong> — days older than 1 year are automatically removed from the local cache on startup to keep the app fast; your full history is always preserved in the cloud</li>
+          <li><strong>Full history</strong> — every day you've used stays on your desk, in Search, and in Insights; nothing is trimmed after a year</li>
           <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark, including Retro, Dot Matrix, and Phosphor) with mini wireframe previews in Options → Themes, filterable by Light/Med/Dark. The four Unit themes (Zero, One, Two, Eight) come in every tier, each with a thin color stripe across the top header; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
           <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically. Deleting a task or note removes it from every device; <strong>Undo</strong> brings it back everywhere</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
@@ -8858,10 +8890,14 @@
           <li><strong>Account menu</strong> — the button at the bottom of the sidebar shows your email and sync status (☁️ / 🔄 / ✓ / ! with <em>Synced</em>, <em>Syncing…</em>, or <em>Sync error</em>). Click it for Options, Help, What's new, Export, Import, Repair duplicates, Sign in / Sign out, and the version</li>
           <li>Use <strong>Sign out</strong> in the account menu to switch accounts</li>
           <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
+          <li><strong>Light sync checks</strong> — between edits, the app only asks the cloud whether anything changed and downloads your data only when another device (or an add-task shortcut) saved something; it also does a full sync each time it opens and at least every 4 hours. Uploads are skipped when nothing changed</li>
+          <li><strong>Several tabs</strong> — with the desk open in more than one tab, a change saved in one tab shows up in the others right away</li>
+          <li><strong>Typing comes first</strong> — while you're writing a comment, editing a task, or adding to a column, updates from the cloud or another tab wait until you click away, so nothing you're typing is reset</li>
           <li>Opening on a new device: sign in and your history loads automatically (devices merge rather than overwrite)</li>
           <li><strong>Backup / restore</strong> — <em>Export/Import Desk</em> saves or restores the current tab (Work, Personal, or Projects) individually; <em>Export/Import All</em> bundles every desk into a single file for a complete backup; importing a file from a different desk shows a confirmation warning before proceeding</li>
           <li><strong>Repair duplicates</strong> — cleans duplicate task IDs within a day and across days, and collapses same-day copies of the same recurring task if sync ever left extras behind</li>
-          <li><strong>Auto-pruning</strong> — on each app startup, days older than 1 year are silently removed from the local cache; full history remains in the cloud</li>
+          <li><strong>Full history</strong> — all of your days are kept on this device and in the cloud; older days are no longer removed after a year</li>
+          <li><strong>Browser storage</strong> — the desk lives in this browser's storage, which holds about 5 MB per site. From half full, the account menu shows how much is used; at 80% a banner suggests <strong>Export All</strong> (and <strong>Sign in</strong> if you're not signed in). If storage fills up, new changes stay on screen and still sync when signed in, and the banner says so. × hides the banner for the rest of the browser session unless usage climbs another 5%</li>
         </ul>
 
         <h3>Mobile &amp; PWA</h3>
@@ -8969,6 +9005,14 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
+  <div id="storage-banner" class="storage-banner hidden" role="alert" data-level="warn">
+    <span id="storage-banner-text" class="storage-banner-text"></span>
+    <span class="storage-banner-actions">
+      <button id="storage-banner-export" class="storage-banner-btn" type="button">Export All</button>
+      <button id="storage-banner-signin" class="storage-banner-btn hidden" type="button">Sign in</button>
+      <button id="storage-banner-dismiss" class="storage-banner-close" type="button" aria-label="Dismiss storage warning" title="Dismiss">&times;</button>
+    </span>
+  </div>
 
   <script>
     const LEGACY_STORAGE_KEY = 'work-desk-data';
@@ -8979,6 +9023,13 @@
     const AUTO_CARRY_FORWARD_KEY = 'work-desk-auto-carry-forward';
     const AUTO_CARRY_LAST_KEY = 'work-desk-auto-carry-last';
     const PROJECTS_STORAGE_KEY = 'work-desk-projects';
+    // Desk data keys whose last save hit a full browser storage; their latest copy lives only in memory
+    // Values a full browser storage refused, by key; reads prefer these so no edit is lost in memory
+    const unsavedStorage = new Map();
+    const STORAGE_BANNER_DISMISSED_KEY = 'work-desk-storage-banner-dismissed';
+    // Browsers cap localStorage at about 5 MB per site, counted in characters and shared by every app on the origin
+    const STORAGE_BUDGET_CHARS = 5 * 1024 * 1024;
+    let lastStorageCheck = 0;
     const SELECTED_PROJECT_KEY = 'work-desk-selected-project';
     const ACTIVE_TAB_KEY = 'work-desk-active-tab';
     const SELECTED_DATE_KEY = 'work-desk-selected-date';
@@ -9021,12 +9072,31 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.19.1';
+    const APP_VERSION = '1.20.0';
     const CHANGELOG = [
+      {
+        version: '1.20.0',
+        date: 'Oct 21, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Storage warning: when this browser\'s storage passes 80% full, a banner suggests Export All for a backup, plus Sign in if you use the desk without an account. The account menu shows how much storage is used from 50%',
+          ] },
+          { label: 'Improved', items: [
+            'Lighter cloud sync: the regular check now asks only whether anything changed and downloads your data only when another device saved something, and uploads are skipped when nothing changed. A full sync still runs when the app opens and at least every 4 hours',
+            'Several tabs: a change saved in one tab now shows up right away in your other open tabs, so one tab no longer saves its older copy over another\'s change',
+          ] },
+          { label: 'Fixed', items: [
+            'Sync no longer interrupts typing: while you\'re writing a comment, editing a task, or adding to a column, updates from the cloud or another tab wait until you click away, and syncs that bring nothing new don\'t redraw the board at all. Redraws also keep your cursor in place, keep every open comment box, and hold on to a draft whose card moved until it\'s back on screen',
+            'History older than a year is no longer removed from the desk on startup; Search, Insights, and the calendar now reach every day you\'ve used',
+            'If browser storage is full, edits stay on screen, sync to the cloud when signed in, and are included in Export All instead of failing silently',
+            'A failed download no longer leads to an upload over newer cloud data, and an upload waits for changes another device saved first',
+          ] },
+        ],
+      },
       {
         version: '1.19.1',
         date: 'Oct 21, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Improved', items: [
             'Formatting in projects: editing a project note, task, or comment now shows the same B / I / U / • toolbar as the desk, with Ctrl+B / Ctrl+I / Ctrl+U, bullet lists, and pasted text cleaned up the same way. Ctrl+Enter saves and Esc cancels',
@@ -9822,7 +9892,6 @@
       merriweather: '"Merriweather", serif',
     };
     const CUSTOM_HOLIDAYS_KEY = 'work-desk-custom-holidays';
-    const RETENTION_MONTHS = 12;
     const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     function getListContext() {
@@ -13315,7 +13384,7 @@
       const targetDay = targetData.days[date] || { date, items: [] };
       targetDay.items = [...targetDay.items, item];
       targetData.days[date] = targetDay;
-      localStorage.setItem(getStorageKey(targetContext), JSON.stringify(targetData));
+      writeStorage(getStorageKey(targetContext), JSON.stringify(targetData));
 
       clearPendingUndo();
       showToast(`Sent to ${targetLabel} list`);
@@ -14097,7 +14166,7 @@
 
     function loadData(context = state.listContext) {
       try {
-        const raw = localStorage.getItem(getStorageKey(context));
+        const raw = readStorage(getStorageKey(context));
         if (raw) {
           const parsed = JSON.parse(raw);
           const templates = loadRecurringTemplates(context);
@@ -14122,13 +14191,14 @@
           };
           // Persist healed recurring collapse so sync doesn't keep re-pushing dupes
           if (recurRemoved > 0) {
-            localStorage.setItem(getStorageKey(context), JSON.stringify(result));
+            writeStorage(getStorageKey(context), JSON.stringify(result));
           }
           return result;
         }
       } catch (_) {}
       return { days: {}, deletedIds: {} };
     }
+
 
     // purgedIds: deletions that beat another device's stale local copy on sync.
     // restoredIds: explicit Undo-restores, which beat any earlier deletion.
@@ -14174,7 +14244,7 @@
 
     function loadProjectsData() {
       try {
-        const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+        const raw = readStorage(PROJECTS_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           const data = { projects: parsed.projects || [], deletedIds: parsed.deletedIds || {} };
@@ -14195,8 +14265,8 @@
     }
 
     function saveProjectsData() {
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(state.projectsData));
-      localStorage.setItem(SB_TS_KEY, new Date().toISOString());
+      writeStorage(PROJECTS_STORAGE_KEY, JSON.stringify(state.projectsData));
+      stampLocalChange();
       if (sbSynced) sbSchedulePush();
     }
 
@@ -14749,8 +14819,8 @@
         saveData();
         return;
       }
-      localStorage.setItem(getStorageKey(ctx), JSON.stringify(data));
-      localStorage.setItem(SB_TS_KEY, new Date().toISOString());
+      writeStorage(getStorageKey(ctx), JSON.stringify(data));
+      stampLocalChange();
       if (getStorageKey() === getStorageKey(ctx)) state.data = data;
       if (sbSynced) sbSchedulePush();
     }
@@ -14923,7 +14993,7 @@
       let totalFixed = 0;
       ['personal', 'work'].forEach(ctx => {
         try {
-          const raw = localStorage.getItem(getStorageKey(ctx));
+          const raw = readStorage(getStorageKey(ctx));
           if (!raw) return;
           const parsed = JSON.parse(raw);
           let changed = false;
@@ -14965,7 +15035,7 @@
           if (changed) {
             parsed.days = cleaned;
             parsed.deletedIds = pruneDeletedIds(parsed.deletedIds || {});
-            localStorage.setItem(getStorageKey(ctx), JSON.stringify(parsed));
+            writeStorage(getStorageKey(ctx), JSON.stringify(parsed));
           }
         } catch (_) {}
       });
@@ -14977,6 +15047,109 @@
         : 'No duplicates found — data looks clean ✓');
     }
 
+    // ── Browser storage ───────────────────────────────────────────
+    function isQuotaError(e) {
+      return !!e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
+    }
+
+    // A full browser storage is reported instead of throwing mid-edit; the change stays in memory
+    function writeStorage(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        if (!isQuotaError(e)) throw e;
+        console.warn('[storage] full, could not save', key);
+        unsavedStorage.set(key, value);
+        updateStorageWarning({ retry: false });
+        return false;
+      }
+      const recovered = unsavedStorage.delete(key);
+      if (unsavedStorage.delete('*') || recovered || Date.now() - lastStorageCheck > 60 * 1000) updateStorageWarning();
+      return true;
+    }
+
+    function readStorage(key) {
+      return unsavedStorage.has(key) ? unsavedStorage.get(key) : localStorage.getItem(key);
+    }
+
+    // Settings and other small writes call localStorage directly; a full storage there still raises the warning
+    function noteUncaughtStorageError(err) {
+      if (!isQuotaError(err)) return;
+      unsavedStorage.set('*', '');
+      updateStorageWarning({ retry: false });
+    }
+    window.addEventListener('error', (e) => noteUncaughtStorageError(e.error));
+    window.addEventListener('unhandledrejection', (e) => noteUncaughtStorageError(e.reason));
+
+    function storageCharsUsed() {
+      let total = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        total += key.length + (localStorage.getItem(key) || '').length;
+      }
+      return total;
+    }
+
+    function storagePercent(chars) {
+      return Math.min(100, Math.round((chars / STORAGE_BUDGET_CHARS) * 100));
+    }
+
+    function storageWarningLevel(percent, failed) {
+      if (failed) return 'full';
+      if (percent >= 80) return 'warn';
+      if (percent >= 50) return 'info';
+      return 'ok';
+    }
+
+    function storageBannerText(level, percent, signedIn) {
+      if (level === 'full') {
+        return signedIn
+          ? "Browser storage is full, so this device can't save new changes. Your desk still syncs to the cloud; Export All keeps a backup file too."
+          : "Browser storage is full, so new changes aren't being saved. Export All now to keep a backup, or sign in to save your desk to the cloud.";
+      }
+      return signedIn
+        ? `This browser's storage is ${percent}% full. Your desk is saved to the cloud; Export All keeps a backup file too.`
+        : `This browser's storage is ${percent}% full, and your desk is only saved here. Export All to keep a backup, or sign in to save it to the cloud.`;
+    }
+
+    function retryUnsavedStorage() {
+      for (const [key, value] of unsavedStorage) {
+        if (key === '*') continue;
+        try { localStorage.setItem(key, value); } catch (_) { return; }
+        unsavedStorage.delete(key);
+        unsavedStorage.delete('*');
+      }
+    }
+
+    function updateStorageWarning({ retry = true } = {}) {
+      if (retry) retryUnsavedStorage();
+      lastStorageCheck = Date.now();
+      const percent = storagePercent(storageCharsUsed());
+      const level = storageWarningLevel(percent, unsavedStorage.size > 0);
+      const usage = document.getElementById('storage-usage');
+      if (usage) {
+        usage.textContent = level === 'full' ? 'Browser storage is full' : `Browser storage ${percent}% used`;
+        usage.dataset.level = level;
+        usage.classList.toggle('hidden', level === 'ok');
+      }
+      const banner = document.getElementById('storage-banner');
+      if (!banner) return;
+      const dismissKey = level === 'full' ? 'full' : `warn:${Math.floor(percent / 5)}`;
+      let dismissed = null;
+      try { dismissed = sessionStorage.getItem(STORAGE_BANNER_DISMISSED_KEY); } catch (_) {}
+      const signingIn = !document.getElementById('auth-modal')?.classList.contains('hidden');
+      if ((level !== 'warn' && level !== 'full') || dismissed === dismissKey || signingIn) {
+        banner.classList.add('hidden');
+        return;
+      }
+      const signedIn = !document.getElementById('sb-signout-btn')?.classList.contains('hidden');
+      document.getElementById('storage-banner-text').textContent = storageBannerText(level, percent, signedIn);
+      document.getElementById('storage-banner-signin').classList.toggle('hidden', signedIn);
+      banner.dataset.level = level;
+      banner.dataset.dismissKey = dismissKey;
+      banner.classList.remove('hidden');
+    }
+
     // ── Supabase cloud sync ───────────────────────────────────────
     const SB_URL    = 'https://vfpoxsvosltaupoxvzac.supabase.co';
     const SB_KEY    = 'sb_publishable_CBXoXz67hk8IWGfwXRNIDQ_Pvk50PjT';
@@ -14986,8 +15159,12 @@
     let sbSyncTimer = null;
     let sbSynced   = false;
 
+    function stampLocalChange() {
+      try { localStorage.setItem(SB_TS_KEY, new Date().toISOString()); } catch (_) {}
+    }
+
     function buildSbPayload() {
-      const get = key => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(_){ return null; } };
+      const get = key => { try { return JSON.parse(readStorage(key) || 'null'); } catch(_){ return null; } };
       return {
         personal: get('work-desk-data-personal') || { days: {}, deletedIds: {} },
         work:     get('work-desk-data-work')     || { days: {}, deletedIds: {} },
@@ -15090,6 +15267,7 @@
     function showAuthModal({ force = false } = {}) {
       if (!force && localStorage.getItem('work-desk-continue-offline') === 'true') return;
       document.getElementById('auth-modal').classList.remove('hidden');
+      updateStorageWarning();
     }
 
     /** Update sidebar account chrome. Modes: signed-in | offline | guest */
@@ -15110,6 +15288,7 @@
         }
         signInBtn.classList.add('hidden');
         signOutBtn.classList.remove('hidden');
+        updateStorageWarning();
         return;
       }
 
@@ -15124,6 +15303,7 @@
       }
       signInBtn.classList.remove('hidden');
       signOutBtn.classList.add('hidden');
+      updateStorageWarning();
     }
 
     function openSignInFromDesk() {
@@ -15131,6 +15311,7 @@
       setAuthError('');
       updateAccountChrome('guest');
       document.getElementById('auth-modal').classList.remove('hidden');
+      updateStorageWarning();
       const emailInput = document.getElementById('auth-email');
       if (emailInput) emailInput.focus();
     }
@@ -15167,7 +15348,7 @@
         const { error } = await sbClient.auth.signInWithPassword({ email, password });
         if (error) throw error;
         hideAuthModal(email);
-        await sbPostAuthSync();
+        await sbPostAuthSync({ force: true });
       } catch (e) {
         setAuthError(e.message);
       } finally {
@@ -15193,7 +15374,7 @@
         if (data.session) {
           // Email confirmation is off — signed in immediately
           hideAuthModal(email);
-          await sbPostAuthSync();
+          await sbPostAuthSync({ force: true });
         } else {
           setAuthError('Check your email for a confirmation link, then sign in.');
           setAuthBusy(false);
@@ -15476,8 +15657,83 @@
     const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
     const SYNC_DEBOUNCE = 10 * 1000; // Don't sync more than once per 10 seconds
 
+    const SB_SYNC_META_KEY = 'work-desk-sb-sync';
+    const FULL_SYNC_MAX_AGE = 4 * 60 * 60 * 1000; // download everything at least this often
+
+    // Key order is sorted so the cloud's jsonb copy (which reorders keys) compares equal to the local one
+    function canonicalJson(value) {
+      if (Array.isArray(value)) return `[${value.map(v => (v === undefined ? 'null' : canonicalJson(v))).join(',')}]`;
+      if (value && typeof value === 'object') {
+        const keys = Object.keys(value).filter(k => value[k] !== undefined).sort();
+        return `{${keys.map(k => `${JSON.stringify(k)}:${canonicalJson(value[k])}`).join(',')}}`;
+      }
+      return JSON.stringify(value) ?? 'null';
+    }
+
+    function hashString(str) {
+      let h1 = 0xdeadbeef;
+      let h2 = 0x41c6ce57;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+    }
+
+    function payloadFingerprint(payload) {
+      const json = canonicalJson(payload);
+      return `${json.length.toString(36)}-${hashString(json)}`;
+    }
+
+    // { userId, remoteUpdatedAt, pushedHash, fullSyncAt }; another account's marker counts as none
+    function readSyncMeta(userId) {
+      try {
+        const meta = JSON.parse(localStorage.getItem(SB_SYNC_META_KEY) || 'null');
+        return meta && userId && meta.userId === userId ? meta : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function writeSyncMeta(meta) {
+      try {
+        localStorage.setItem(SB_SYNC_META_KEY, JSON.stringify(meta));
+      } catch (_) {}
+    }
+
+    function clearSyncMeta() {
+      localStorage.removeItem(SB_SYNC_META_KEY);
+    }
+
+    // check: cloud unchanged, upload local edits only. full: download and merge.
+    // converge: full, and also upload whenever the cloud differs (on open and every few hours).
+    function syncMode({ meta, remoteUpdatedAt, force, now }) {
+      const fullAt = Date.parse(meta?.fullSyncAt || '');
+      if (force || !meta || Number.isNaN(fullAt) || !(now - fullAt < FULL_SYNC_MAX_AGE)) return 'converge';
+      if (!meta.remoteUpdatedAt || meta.remoteUpdatedAt !== remoteUpdatedAt) return 'full';
+      return 'check';
+    }
+
+    // Merges keep the local copy on ties, so two devices can disagree on an item forever.
+    // Outside converge syncs, only upload what this device hasn't uploaded yet, so they can't bounce it back and forth.
+    function shouldPushAfterMerge({ localHash, remoteHash, pushedHash, converge }) {
+      if (localHash === remoteHash) return false;
+      return converge || localHash !== pushedHash;
+    }
+
+    let syncQueue = Promise.resolve();
+    // Syncs and uploads run one at a time, so an upload can't land between a sync's download and its upload
+    function runSyncExclusive(task) {
+      const run = syncQueue.then(task, task);
+      syncQueue = run.catch(() => {});
+      return run;
+    }
+
     async function sbPostAuthSync(options = {}) {
-      const { silent = false, force = false } = options;
+      const { force = false } = options;
 
       // Debounce rapid sync requests
       const now = Date.now();
@@ -15486,11 +15742,37 @@
         return;
       }
       lastSyncTime = now;
+      return runSyncExclusive(() => sbSyncNow(options));
+    }
 
-      console.log('[sync] starting sbPostAuthSync...');
+    async function sbSyncNow({ silent = false, force = false } = {}) {
+      console.log('[sync] starting sync...');
       sbSetStatus('syncing');
       try {
-      const remote = await sbPull();
+      const userId = await sbUserId();
+      if (!userId) {
+        console.warn('[sync] no user session');
+        sbSetStatus('error');
+        return;
+      }
+      const meta = readSyncMeta(userId);
+      const head = await sbPullUpdatedAt();
+      const mode = head.exists ? syncMode({ meta, remoteUpdatedAt: head.updatedAt, force, now: Date.now() }) : 'empty';
+      console.log('[sync] mode:', mode);
+
+      if (mode === 'check') {
+        // The cloud hasn't changed since this device last saw it: skip the download, upload only local edits
+        renderInBackground(() => {
+          runSyncDayJobs();
+          return force;
+        });
+        await sbPushIfChanged(userId, meta);
+        sbSetStatus('ok');
+        sbSynced = true;
+        return;
+      }
+
+      const remote = mode === 'empty' ? null : await sbPullRow();
       console.log('[sync] remote data:', remote ? 'exists' : 'null');
 
       // A stale cached copy of the app must not carry tasks or overwrite newer prefs/data;
@@ -15505,117 +15787,108 @@
 
       if (remote && remote.data) {
         console.log('[sync] remote.data keys:', Object.keys(remote.data));
-        let changed = false;
+        renderInBackground(() => {
+          let changed = false;
 
-        // Merge daily data for each context
-        ['personal', 'work'].forEach(ctx => {
-          console.log(`[sync] processing context: ${ctx}`);
-          if (remote.data[ctx]) {
-            console.log(`[sync] remote.data.${ctx} days:`, Object.keys(remote.data[ctx].days || {}).length);
-            const localRaw = localStorage.getItem(`work-desk-data-${ctx}`);
-            const localData = localRaw ? JSON.parse(localRaw) : { days: {} };
-            console.log(`[sync] local ${ctx} days:`, Object.keys(localData.days || {}).length);
-            const merged = mergeDaysData(localData, remote.data[ctx]);
-            console.log(`[sync] merged ${ctx} days:`, Object.keys(merged.days || {}).length);
-
-            // Check if merge resulted in changes
-            const mergedStr = JSON.stringify(merged);
-            if (mergedStr !== localRaw) {
-              localStorage.setItem(`work-desk-data-${ctx}`, mergedStr);
-              console.log(`[sync] saved merged ${ctx} to localStorage`);
-              changed = true;
-            }
-          } else {
-            console.log(`[sync] no remote.data.${ctx}`);
-          }
-        });
-
-        // Merge projects data
-        if (remote.data.projects) {
-          const localProjects = loadProjectsData();
-          const mergedProjects = mergeProjectsData(localProjects, remote.data.projects);
-          const mergedStr = JSON.stringify(mergedProjects);
-          const localStr = JSON.stringify(localProjects);
-
-          if (mergedStr !== localStr) {
-            localStorage.setItem(PROJECTS_STORAGE_KEY, mergedStr);
-            state.projectsData = mergedProjects;
-            changed = true;
-          }
-        }
-
-        // Merge recurring templates (keeps lastInjectedDate in sync across devices)
-        if (remote.data.recurring) {
-          console.log('[sync] merging recurring templates');
+          // Merge daily data for each context
           ['personal', 'work'].forEach(ctx => {
-            const remoteBlock = remote.data.recurring[ctx];
-            const remoteList = Array.isArray(remoteBlock)
-              ? remoteBlock
-              : (remoteBlock?.templates || []);
-            const remoteDeletedIds = (typeof remoteBlock === 'object' && !Array.isArray(remoteBlock))
-              ? (remoteBlock?.deletedIds || {}) : {};
-            const localList = loadRecurringTemplates(ctx);
-            const localDeletedIds = loadRecurringDeletedIds(ctx);
-            console.log(`[sync] ${ctx} templates - local: ${localList.length}, remote: ${remoteList.length}`);
-            const mergedDeletedIds = mergeDeletedIds(localDeletedIds, remoteDeletedIds);
-            const mergedList = mergeRecurringTemplates(localList, remoteList)
-              .filter(t => !mergedDeletedIds[t.id]);
-            const data = loadRecurringData(ctx);
-            data.templates = mergedList;
-            data.deletedIds = mergedDeletedIds;
-            if (JSON.stringify(mergedList) !== JSON.stringify(localList) ||
-                JSON.stringify(mergedDeletedIds) !== JSON.stringify(localDeletedIds)) {
-              localStorage.setItem(getRecurringKey(ctx), JSON.stringify(data));
-              console.log(`[sync] saved ${ctx} templates (${mergedList.length})`);
-              changed = true;
+            console.log(`[sync] processing context: ${ctx}`);
+            if (remote.data[ctx]) {
+              console.log(`[sync] remote.data.${ctx} days:`, Object.keys(remote.data[ctx].days || {}).length);
+              const localRaw = readStorage(`work-desk-data-${ctx}`);
+              const localData = localRaw ? JSON.parse(localRaw) : { days: {} };
+              console.log(`[sync] local ${ctx} days:`, Object.keys(localData.days || {}).length);
+              const merged = mergeDaysData(localData, remote.data[ctx]);
+              console.log(`[sync] merged ${ctx} days:`, Object.keys(merged.days || {}).length);
+
+              // Check if merge resulted in changes
+              const mergedStr = JSON.stringify(merged);
+              if (mergedStr !== localRaw) {
+                writeStorage(`work-desk-data-${ctx}`, mergedStr);
+                console.log(`[sync] saved merged ${ctx} to localStorage`);
+                changed = true;
+              }
+            } else {
+              console.log(`[sync] no remote.data.${ctx}`);
             }
           });
-        } else {
-          console.log('[sync] no remote.data.recurring');
-        }
 
-        // Theme + Customize prefs (later updatedAt wins)
-        if (remote.data.prefs) {
-          if (applyCloudPrefs(remote.data.prefs)) changed = true;
-        }
+          // Merge projects data
+          if (remote.data.projects) {
+            const localProjects = loadProjectsData();
+            const mergedProjects = mergeProjectsData(localProjects, remote.data.projects);
+            const mergedStr = JSON.stringify(mergedProjects);
+            const localStr = JSON.stringify(localProjects);
 
-        if (changed) {
-          console.log('[sync] changes detected, reloading state.data');
-          state.data = loadData();
-          if (!silent) showToast('Synced from cloud ☁️');
-        } else {
-          console.log('[sync] no changes detected, reloading state.data anyway');
-          state.data = loadData();
-        }
-
-        // Carry/inject after merge so stale local opens aren't promoted before cloud state wins
-        if (state.listContext === 'work' || state.listContext === 'personal') {
-          if (state.autoCarryForward) {
-            console.log('[sync] running auto carry forward');
-            carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
-            localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
+            if (mergedStr !== localStr) {
+              writeStorage(PROJECTS_STORAGE_KEY, mergedStr);
+              state.projectsData = mergedProjects;
+              changed = true;
+            }
           }
-          injectDueTemplates();
-        }
-        render();
-        console.log('[sync] rendered, state.data.days:', Object.keys(state.data.days || {}).length);
 
-        // Always push merged data back to ensure cloud has the complete set
-        localStorage.setItem(SB_TS_KEY, new Date().toISOString());
-        await sbPush();
+          // Merge recurring templates (keeps lastInjectedDate in sync across devices)
+          if (remote.data.recurring) {
+            console.log('[sync] merging recurring templates');
+            ['personal', 'work'].forEach(ctx => {
+              const remoteBlock = remote.data.recurring[ctx];
+              const remoteList = Array.isArray(remoteBlock)
+                ? remoteBlock
+                : (remoteBlock?.templates || []);
+              const remoteDeletedIds = (typeof remoteBlock === 'object' && !Array.isArray(remoteBlock))
+                ? (remoteBlock?.deletedIds || {}) : {};
+              const localList = loadRecurringTemplates(ctx);
+              const localDeletedIds = loadRecurringDeletedIds(ctx);
+              console.log(`[sync] ${ctx} templates - local: ${localList.length}, remote: ${remoteList.length}`);
+              const mergedDeletedIds = mergeDeletedIds(localDeletedIds, remoteDeletedIds);
+              const mergedList = mergeRecurringTemplates(localList, remoteList)
+                .filter(t => !mergedDeletedIds[t.id]);
+              const data = loadRecurringData(ctx);
+              data.templates = mergedList;
+              data.deletedIds = mergedDeletedIds;
+              if (JSON.stringify(mergedList) !== JSON.stringify(localList) ||
+                  JSON.stringify(mergedDeletedIds) !== JSON.stringify(localDeletedIds)) {
+                writeStorage(getRecurringKey(ctx), JSON.stringify(data));
+                console.log(`[sync] saved ${ctx} templates (${mergedList.length})`);
+                changed = true;
+              }
+            });
+          } else {
+            console.log('[sync] no remote.data.recurring');
+          }
+
+          // Theme + Customize prefs (later updatedAt wins)
+          if (remote.data.prefs) {
+            if (applyCloudPrefs(remote.data.prefs)) changed = true;
+          }
+
+          if (changed) {
+            state.data = loadData();
+            if (!silent) showToast('Synced from cloud ☁️');
+          }
+          runSyncDayJobs();
+          return changed || force;
+        });
+        console.log('[sync] merged, state.data.days:', Object.keys(state.data.days || {}).length);
+
+        const payload = buildSbPayload();
+        const localHash = payloadFingerprint(payload);
+        const nextMeta = { userId, remoteUpdatedAt: remote.updated_at ?? null, pushedHash: localHash, fullSyncAt: new Date().toISOString() };
+        if (shouldPushAfterMerge({ localHash, remoteHash: payloadFingerprint(remote.data), pushedHash: meta?.pushedHash, converge: mode === 'converge' })) {
+          await sbUpload(payload, nextMeta);
+        } else {
+          writeSyncMeta(nextMeta);
+        }
         sbSetStatus('ok');
-        console.log('[sync] sbPostAuthSync complete');
+        console.log('[sync] sync complete');
       } else {
         console.log('[sync] no remote data, pushing local');
-        // No remote data, just push local
-        if (state.listContext === 'work' || state.listContext === 'personal') {
-          if (state.autoCarryForward) {
-            carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
-            localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey());
-          }
-          injectDueTemplates();
-        }
-        await sbPush();
+        renderInBackground(() => {
+          runSyncDayJobs();
+          return true;
+        });
+        const payload = buildSbPayload();
+        await sbUpload(payload, { userId, pushedHash: payloadFingerprint(payload), fullSyncAt: new Date().toISOString() });
         if (!silent) showToast('Data backed up to cloud ☁️');
         sbSetStatus('ok');
         console.log('[sync] push complete');
@@ -15623,9 +15896,20 @@
 
       sbSynced = true;
       } catch (e) {
-        console.error('[sync] sbPostAuthSync error:', e.message);
+        console.error('[sync] sync error:', e.message);
         sbSetStatus('error');
       }
+    }
+
+    // Carry/inject after merge so stale local opens aren't promoted before cloud state wins
+    function runSyncDayJobs() {
+      if (state.listContext !== 'work' && state.listContext !== 'personal') return;
+      if (state.autoCarryForward) {
+        console.log('[sync] running auto carry forward');
+        carryForwardUnfinished(yesterdayKey(), { auto: true, allPastDays: true });
+        try { localStorage.setItem(`${AUTO_CARRY_LAST_KEY}-${state.listContext}`, todayKey()); } catch (_) {}
+      }
+      injectDueTemplates();
     }
 
     // Auto-sync on window focus (when user returns to tab)
@@ -15638,42 +15922,96 @@
 
     // Periodic auto-sync every 5 minutes
     setInterval(() => {
+      if (unsavedStorage.size) updateStorageWarning();
       if (sbSynced && sbClient && document.visibilityState === 'visible') {
         sbPostAuthSync({ silent: true });
       }
     }, SYNC_INTERVAL);
 
+    // Another tab saved: reload so this tab's next save doesn't write its older copy over that change
+    let otherTabRenderTimer = null;
+    window.addEventListener('storage', (e) => {
+      if (e.storageArea !== localStorage || !e.key || unsavedStorage.has(e.key)) return;
+      if (e.key === getStorageKey()) state.data = loadData();
+      else if (e.key === PROJECTS_STORAGE_KEY) state.projectsData = loadProjectsData();
+      else return;
+      clearTimeout(otherTabRenderTimer);
+      otherTabRenderTimer = setTimeout(() => renderInBackground(() => true), 50);
+    });
+
+    async function sbUserId() {
+      const { data: { session } } = await sbClient.auth.getSession();
+      return session?.user?.id || null;
+    }
+
+    async function sbPullUpdatedAt() {
+      const { data, error } = await sbClient.from('user_data').select('updated_at').maybeSingle();
+      if (error) throw error;
+      return { exists: !!data, updatedAt: data?.updated_at ?? null };
+    }
+
+    async function sbPullRow() {
+      const { data, error } = await sbClient.from('user_data').select('data, updated_at').maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+
     async function sbPull() {
       if (!sbClient) return null;
       try {
-        const { data, error } = await sbClient.from('user_data').select('data, updated_at').maybeSingle();
-        if (error) throw error;
-        return data;
+        return await sbPullRow();
       } catch (e) {
         console.warn('[sync] pull failed:', e.message);
         return null;
       }
     }
 
-    async function sbPush() {
-      if (!sbClient) return;
-      try {
-        sbSetStatus('syncing');
-        const { data: { user } } = await sbClient.auth.getUser();
-        if (!user) { console.warn('[sync] no user session'); sbSetStatus('error'); return; }
-        const { error } = await sbClient.from('user_data').upsert({
-          id: user.id,
-          user_id: user.id,
-          data: buildSbPayload(),
-          updated_at: new Date().toISOString(),
-        });
-        if (error) throw error;
-        localStorage.setItem(SB_TS_KEY, new Date().toISOString());
-        sbSetStatus('ok');
-      } catch (e) {
-        console.warn('[sync] push failed:', e.message);
-        sbSetStatus('error');
-      }
+    // Remembers the server's own timestamp for this write, so the next check doesn't mistake it for another device's
+    async function sbUpload(payload, meta) {
+      const { data, error } = await sbClient.from('user_data').upsert({
+        id: meta.userId,
+        user_id: meta.userId,
+        data: payload,
+        updated_at: new Date().toISOString(),
+      }).select('updated_at').maybeSingle();
+      if (error) throw error;
+      stampLocalChange();
+      writeSyncMeta({ ...meta, remoteUpdatedAt: data?.updated_at ?? null });
+    }
+
+    async function sbPushIfChanged(userId, meta) {
+      const payload = buildSbPayload();
+      const hash = payloadFingerprint(payload);
+      if (hash === meta?.pushedHash) return false;
+      await sbUpload(payload, { ...meta, userId, pushedHash: hash });
+      return true;
+    }
+
+    // If another device wrote since this one last looked, merge first instead of uploading over it
+    function sbPush() {
+      return runSyncExclusive(async () => {
+        if (!sbClient) return;
+        try {
+          sbSetStatus('syncing');
+          const userId = await sbUserId();
+          if (!userId) {
+            console.warn('[sync] no user session');
+            sbSetStatus('error');
+            return;
+          }
+          const meta = readSyncMeta(userId);
+          const head = await sbPullUpdatedAt();
+          if (!meta || !head.exists || head.updatedAt !== meta.remoteUpdatedAt) {
+            await sbSyncNow({ silent: true });
+            return;
+          }
+          await sbPushIfChanged(userId, meta);
+          sbSetStatus('ok');
+        } catch (e) {
+          console.warn('[sync] push failed:', e.message);
+          sbSetStatus('error');
+        }
+      });
     }
 
     function sbSchedulePush() {
@@ -15703,9 +16041,9 @@
 
     function saveData(options = {}) {
       const { flush = false } = options;
-      localStorage.setItem(getStorageKey(), JSON.stringify(state.data));
+      writeStorage(getStorageKey(), JSON.stringify(state.data));
       // Update local timestamp immediately so a refresh before push won't overwrite local changes
-      localStorage.setItem(SB_TS_KEY, new Date().toISOString());
+      stampLocalChange();
       if (!sbSynced) return;
       if (flush) {
         clearTimeout(sbSyncTimer);
@@ -16306,26 +16644,6 @@
         : null;
     }
 
-    function getRetentionCutoffKey() {
-      const d = new Date();
-      d.setMonth(d.getMonth() - RETENTION_MONTHS);
-      return formatDateKey(d);
-    }
-
-    function getEligibleArchiveDayKeys() {
-      const cutoff = getRetentionCutoffKey();
-      return Object.keys(state.data.days).filter(k => k < cutoff).sort();
-    }
-
-    // Silently prune days older than RETENTION_MONTHS from the active dataset.
-    // Supabase already holds the full history; this just keeps the local payload lean.
-    function maybeAutoArchive() {
-      const eligibleKeys = getEligibleArchiveDayKeys();
-      if (eligibleKeys.length === 0) return;
-      for (const key of eligibleKeys) delete state.data.days[key];
-      saveData();
-    }
-
     // ── Recurring templates ──────────────────────────────────────────
 
     function getRecurringKey(context = state.listContext) {
@@ -16334,7 +16652,7 @@
 
     function loadRecurringData(context = state.listContext) {
       try {
-        const raw = localStorage.getItem(getRecurringKey(context));
+        const raw = readStorage(getRecurringKey(context));
         if (raw) return JSON.parse(raw);
       } catch (_) {}
       return { templates: [], deletedIds: {} };
@@ -16350,7 +16668,7 @@
 
     function saveRecurringTemplates(templates, context = state.listContext) {
       const existing = loadRecurringData(context);
-      localStorage.setItem(getRecurringKey(context), JSON.stringify({
+      writeStorage(getRecurringKey(context), JSON.stringify({
         templates,
         deletedIds: existing.deletedIds || {},
       }));
@@ -16361,7 +16679,7 @@
       if (!data.deletedIds) data.deletedIds = {};
       data.deletedIds[templateId] = new Date().toISOString();
       data.templates = (data.templates || []).filter(t => t.id !== templateId);
-      localStorage.setItem(getRecurringKey(context), JSON.stringify(data));
+      writeStorage(getRecurringKey(context), JSON.stringify(data));
     }
 
     function recurringRuleLabel(template) {
@@ -17184,10 +17502,10 @@
             else days[date] = { date, items };
           }
           const deduped = deduplicateAcrossDays(days);
-          localStorage.setItem(getStorageKey('work'), JSON.stringify({ days: deduped.days, deletedIds, ...syncRecords(workData) }));
+          writeStorage(getStorageKey('work'), JSON.stringify({ days: deduped.days, deletedIds, ...syncRecords(workData) }));
         } else {
           const merged = mergeImportInto(workData, work);
-          localStorage.setItem(getStorageKey('work'), JSON.stringify(merged));
+          writeStorage(getStorageKey('work'), JSON.stringify(merged));
         }
       }
 
@@ -17206,10 +17524,10 @@
             else days[date] = { date, items };
           }
           const deduped = deduplicateAcrossDays(days);
-          localStorage.setItem(getStorageKey('personal'), JSON.stringify({ days: deduped.days, deletedIds, ...syncRecords(personalData) }));
+          writeStorage(getStorageKey('personal'), JSON.stringify({ days: deduped.days, deletedIds, ...syncRecords(personalData) }));
         } else {
           const merged = mergeImportInto(personalData, personal);
-          localStorage.setItem(getStorageKey('personal'), JSON.stringify(merged));
+          writeStorage(getStorageKey('personal'), JSON.stringify(merged));
         }
       }
 
@@ -21149,7 +21467,6 @@
         clearPendingUndo();
         syncSearchUi();
         if (!preserveSearch) renderSearchResults();
-        maybeAutoArchive();
         maybeAutoCarryForward();
         injectDueTemplates();
       } else {
@@ -22150,88 +22467,238 @@
       }
     }
 
+    // Drafts whose card isn't on screen (moved to another day, or comments collapsed) wait here until it is
+    const orphanCommentDrafts = new Map();
+
+    function caretTextOffset(editor) {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount || !editor.contains(sel.focusNode)) return null;
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.setEnd(sel.focusNode, sel.focusOffset);
+      return range.toString().length;
+    }
+
+    function placeCaret(editor, offset) {
+      const range = document.createRange();
+      let placed = false;
+      if (offset != null) {
+        const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+        let remaining = offset;
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          if (remaining <= node.length) {
+            range.setStart(node, remaining);
+            range.collapse(true);
+            placed = true;
+            break;
+          }
+          remaining -= node.length;
+        }
+      }
+      if (!placed) {
+        range.selectNodeContents(editor);
+        range.collapse(false);
+      }
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function isTextField(el) {
+      return !!el && (el.isContentEditable || el.matches?.('input, textarea'));
+    }
+
+    // Comment boxes, comment edits, task text edits, and column add boxes all keep their text across a redraw
     function captureCommentDraft() {
-      const draft = {};
+      const draft = { adds: [], edit: null, itemEdit: null, inline: null, focus: null, otherFieldFocused: false };
+      const active = document.activeElement;
+      const focusOn = (el, info) => {
+        if (el !== active) return;
+        draft.focus = { ...info, caret: el.matches('input, textarea') ? el.selectionStart : caretTextOffset(el) };
+      };
       try {
-        const form = document.querySelector('.add-comment-form');
-        if (form) {
+        document.querySelectorAll('.add-comment-form').forEach(form => {
           const editor = form.querySelector('.comment-input');
-          if (editor && editor.childNodes) {
-            const html = getEditorHtml(editor);
-            if (!isEmptyHtml(html)) {
-              const card = form.closest('.item-card');
-              if (card) draft.add = { taskId: card.id.replace(/^item-/, ''), html };
-            }
-          }
-        }
+          const card = form.closest('.item-card');
+          if (!editor || !card) return;
+          const html = getEditorHtml(editor);
+          if (isEmptyHtml(html)) return;
+          const taskId = card.id.replace(/^item-/, '');
+          draft.adds.push({ taskId, html });
+          focusOn(editor, { kind: 'add', taskId });
+        });
         if (state.editingComment) {
-          const editWrap = document.querySelector('.comment-edit-wrap');
-          if (editWrap) {
-            const editor = editWrap.querySelector('.comment-input');
-            if (editor && editor.childNodes) {
-              draft.edit = { taskId: state.editingComment.taskId, commentId: state.editingComment.commentId, html: getEditorHtml(editor) };
-            }
+          const editor = document.querySelector('.comment-edit-wrap .comment-input');
+          if (editor) {
+            draft.edit = { taskId: state.editingComment.taskId, commentId: state.editingComment.commentId, html: getEditorHtml(editor) };
+            focusOn(editor, { kind: 'edit' });
           }
         }
+        if (state.editingId) {
+          const editor = document.getElementById(`item-${state.editingId}`)?.querySelector('.edit-input');
+          if (editor) {
+            draft.itemEdit = { id: state.editingId, html: getEditorHtml(editor) };
+            focusOn(editor, { kind: 'item' });
+          }
+        }
+        if (state.addingInColumn) {
+          const input = document.querySelector(`.board-column.${state.addingInColumn} .col-inline-input`);
+          if (input) {
+            draft.inline = { column: state.addingInColumn, value: input.value };
+            focusOn(input, { kind: 'inline' });
+          }
+        }
+        draft.otherFieldFocused = !draft.focus && isTextField(active);
       } catch (_) {}
-      return (draft.add || draft.edit) ? draft : null;
+      for (const [taskId, html] of orphanCommentDrafts) {
+        if (!draft.adds.some(a => a.taskId === taskId)) draft.adds.push({ taskId, html });
+      }
+      orphanCommentDrafts.clear();
+      return (draft.adds.length || draft.edit || draft.itemEdit || draft.inline) ? draft : null;
+    }
+
+    function restoreAddCommentDraft(add) {
+      const card = document.getElementById(`item-${add.taskId}`);
+      const panel = card?.querySelector('.comments-panel');
+      if (!panel) return null;
+      const trigger = panel.querySelector('.add-comment-trigger-wrap');
+      if (trigger) trigger.remove();
+      const existing = panel.querySelector('.add-comment-form .comment-input');
+      if (existing) {
+        existing.innerHTML = add.html;
+        return existing;
+      }
+      const item = findItem(add.taskId)?.item;
+      if (!item) return null;
+      const isNote = item.type === 'note';
+      const addPlaceholder = isNote ? 'Add an update…' : 'Add a comment…';
+      const form = document.createElement('form');
+      form.className = 'add-comment-form';
+      form.draggable = false;
+      const { wrap: editorWrap, editor: commentEditor } = createRichEditor({
+        className: 'comment-input',
+        placeholder: addPlaceholder,
+      });
+      commentEditor.innerHTML = add.html;
+      const addBtn = document.createElement('button');
+      addBtn.className = 'comment-add-btn';
+      addBtn.type = 'submit';
+      addBtn.textContent = 'Add';
+      addBtn.disabled = isEmptyHtml(add.html);
+      commentEditor.addEventListener('input', () => { addBtn.disabled = isEmptyHtml(getEditorHtml(commentEditor)); });
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        addComment(add.taskId, getEditorHtml(commentEditor));
+      });
+      bindCtrlEnterSubmit(commentEditor, form, addBtn);
+      form.appendChild(editorWrap);
+      form.appendChild(addBtn);
+      panel.appendChild(form);
+      return commentEditor;
     }
 
     function restoreCommentDraft(draft) {
       if (!draft) return;
+      const want = draft.focus;
+      let focusEl = null;
+      let caret = null;
+      const offer = (el, kind, matches = true) => {
+        if (!el) return;
+        if (want ? (want.kind === kind && matches) : !focusEl && !draft.otherFieldFocused) {
+          focusEl = el;
+          caret = want ? want.caret : null;
+        }
+      };
 
       if (draft.edit) {
-        const editWrap = document.querySelector('.comment-edit-wrap');
-        if (editWrap) {
-          const ed = editWrap.querySelector('.comment-input');
-          if (ed) { ed.innerHTML = draft.edit.html; setTimeout(() => ed.focus(), 0); }
+        const ed = document.querySelector('.comment-edit-wrap .comment-input');
+        if (ed) ed.innerHTML = draft.edit.html;
+        offer(ed, 'edit');
+      }
+      if (draft.itemEdit) {
+        const ed = document.getElementById(`item-${draft.itemEdit.id}`)?.querySelector('.edit-input');
+        if (ed) ed.innerHTML = draft.itemEdit.html;
+        if (ed && want?.kind === 'item') { focusEl = ed; caret = want.caret; }
+      }
+      if (draft.inline) {
+        const input = document.querySelector(`.board-column.${draft.inline.column} .col-inline-input`);
+        if (input) input.value = draft.inline.value;
+        if (input && want?.kind === 'inline') { focusEl = input; caret = want.caret; }
+      }
+      for (const add of draft.adds) {
+        const ed = restoreAddCommentDraft(add);
+        if (!ed) {
+          orphanCommentDrafts.set(add.taskId, add.html);
+          continue;
         }
+        offer(ed, 'add', want?.taskId === add.taskId);
       }
 
-      if (draft.add) {
-        const card = document.getElementById(`item-${draft.add.taskId}`);
-        if (!card) return;
-        const panel = card.querySelector('.comments-panel');
-        if (!panel) return;
-        const trigger = panel.querySelector('.add-comment-trigger-wrap');
-        if (trigger) trigger.remove();
-        const existing = panel.querySelector('.add-comment-form');
-        if (existing) {
-          const ed = existing.querySelector('.comment-input');
-          if (ed) { ed.innerHTML = draft.add.html; setTimeout(() => ed.focus(), 0); }
-          return;
+      if (!focusEl) return;
+      const target = focusEl;
+      setTimeout(() => {
+        if (!target.isConnected) return;
+        target.focus();
+        if (target.matches('input, textarea')) {
+          const at = caret ?? target.value.length;
+          target.setSelectionRange(at, at);
+        } else {
+          placeCaret(target, caret);
         }
-        const item = findItem(draft.add.taskId)?.item;
-        if (!item) return;
-        const isNote = item.type === 'note';
-        const addPlaceholder = isNote ? 'Add an update…' : 'Add a comment…';
-        const form = document.createElement('form');
-        form.className = 'add-comment-form';
-        form.draggable = false;
-        const { wrap: editorWrap, editor: commentEditor } = createRichEditor({
-          className: 'comment-input',
-          placeholder: addPlaceholder,
-        });
-        commentEditor.innerHTML = draft.add.html;
-        const addBtn = document.createElement('button');
-        addBtn.className = 'comment-add-btn';
-        addBtn.type = 'submit';
-        addBtn.textContent = 'Add';
-        addBtn.disabled = isEmptyHtml(draft.add.html);
-        commentEditor.addEventListener('input', () => { addBtn.disabled = isEmptyHtml(getEditorHtml(commentEditor)); });
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          addComment(draft.add.taskId, getEditorHtml(commentEditor));
-        });
-        bindCtrlEnterSubmit(commentEditor, form, addBtn);
-        form.appendChild(editorWrap);
-        form.appendChild(addBtn);
-        panel.appendChild(form);
-        setTimeout(() => commentEditor.focus(), 0);
-      }
+      }, 0);
     }
 
+    // Background redraws (sync, other tabs) never run mid-typing; they wait for the next click or focus change
+    let backgroundRenderDepth = 0;
+    let heldRender = false;
+    let pointerIsDown = false;
+
+    function isTypingOnDesk() {
+      const el = document.activeElement;
+      return isTextField(el) && els.itemLists.contains(el);
+    }
+
+    function deskSnapshot() {
+      return `${state.listContext}|${state.activeTab}|${todayKey()}|${JSON.stringify(state.data)}`;
+    }
+
+    // The task returns true to force a redraw; otherwise one only happens if the desk changed
+    function renderInBackground(task) {
+      const before = deskSnapshot();
+      let force = false;
+      backgroundRenderDepth++;
+      try {
+        force = task() === true;
+      } finally {
+        backgroundRenderDepth--;
+      }
+      if (!force && deskSnapshot() === before) return false;
+      if (isTypingOnDesk()) {
+        heldRender = true;
+        return false;
+      }
+      render();
+      return true;
+    }
+
+    function flushHeldRender() {
+      if (!heldRender || pointerIsDown || !document.hasFocus() || isTypingOnDesk()) return;
+      render();
+    }
+
+    document.addEventListener('pointerdown', () => { pointerIsDown = true; }, true);
+    // After the click lands, so a held redraw can't swap the button out from under it
+    const releasePointer = () => {
+      pointerIsDown = false;
+      setTimeout(flushHeldRender, 0);
+    };
+    document.addEventListener('pointerup', releasePointer, true);
+    document.addEventListener('pointercancel', releasePointer, true);
+    document.addEventListener('focusout', () => setTimeout(flushHeldRender, 0));
+
     function render() {
+      if (backgroundRenderDepth > 0) return;
+      heldRender = false;
       const draft = captureCommentDraft();
       renderSidebar();
       if (state.listContext === 'projects') {
@@ -22445,6 +22912,7 @@
 
     function openAccountMenu() {
       syncAccountNewDots();
+      updateStorageWarning();
       accountMenu.classList.remove('hidden');
       accountMenuBtn.setAttribute('aria-expanded', 'true');
     }
@@ -22830,13 +23298,20 @@
       if (e.target === els.recurringModal) closeRecurringModal();
     });
 
+    const storageBanner = document.getElementById('storage-banner');
+    document.getElementById('storage-banner-export').addEventListener('click', exportAll);
+    document.getElementById('storage-banner-signin').addEventListener('click', openSignInFromDesk);
+    document.getElementById('storage-banner-dismiss').addEventListener('click', () => {
+      try { sessionStorage.setItem(STORAGE_BANNER_DISMISSED_KEY, storageBanner.dataset.dismissKey || ''); } catch (_) {}
+      storageBanner.classList.add('hidden');
+    });
+
     initTheme();
     initAddEditor();
     initSearchScope();
     initCarryForwardMenu();
     initBoardLanes();
     initDensityToggle();
-    maybeAutoArchive();
     // Carry/inject run after sync when signed in (sbStartSync); offline/guest path carries there too
     if (localStorage.getItem('work-desk-continue-offline') === 'true') {
       updateAccountChrome('offline');
@@ -22876,6 +23351,8 @@
       if (!sbClient) return;
       await sbClient.auth.signOut();
       sbSynced = false;
+      clearTimeout(sbSyncTimer);
+      clearSyncMeta();
       sbSetStatus('idle');
       localStorage.removeItem('work-desk-continue-offline');
       updateAccountChrome('guest');
@@ -22907,7 +23384,7 @@
         // Force write remote data to localStorage
         ['personal', 'work'].forEach(ctx => {
           if (remote.data[ctx]) {
-            localStorage.setItem(`work-desk-data-${ctx}`, JSON.stringify(remote.data[ctx]));
+            writeStorage(`work-desk-data-${ctx}`, JSON.stringify(remote.data[ctx]));
             console.log(`[recovery] wrote remote ${ctx} data to localStorage`);
           }
         });
