@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.19.1] — 2026-10-21
+
+### Improved
+- **Formatting in projects** — editing a project note, task, or comment now uses the desk's editor: the B / I / U / • toolbar, Ctrl+B / Ctrl+I / Ctrl+U, bullet lists, and the same paste cleanup. Ctrl+Enter saves and Esc cancels. Project notes and tasks used a bare text box and comments a plain textarea
+- **Project comments keep their formatting** — comments now store HTML alongside a plain-text copy, so formatting survives sending a card between the desk and a project (it used to be flattened to plain text) and shows up in *Copy as Markdown*. Older versions still read the plain copy; if one of them edits a comment, its plain text wins over the stale formatting
+
 ## [1.19.0] — 2026-10-20
 
 ### Added
