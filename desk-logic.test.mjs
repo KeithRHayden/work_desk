@@ -612,7 +612,7 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
   it('every automatic carry-forward call is gated on the Auto carry toggle', () => {
     const script = extractMainScript(html);
     const calls = [...script.matchAll(/carryForwardUnfinished\([^;]*?\{\s*auto:\s*true/g)];
-    assert.ok(calls.length >= 3, 'expected sync, no-remote, and maybeAutoCarryForward call sites');
+    assert.ok(calls.length >= 2, 'expected runSyncDayJobs and maybeAutoCarryForward call sites');
     for (const m of calls) {
       const before = script.slice(Math.max(0, m.index - 400), m.index);
       assert.match(before, /if \(!?state\.autoCarryForward\)/,
@@ -621,9 +621,13 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
   });
 
   it('sync still injects recurring templates when Auto carry is off', () => {
-    const sync = html.slice(html.indexOf('async function sbPostAuthSync'), html.indexOf('async function sbPull'));
-    const blocks = [...sync.matchAll(/if \(state\.autoCarryForward\) \{[\s\S]*?\n\s*\}\n\s*injectDueTemplates\(\);/g)];
-    assert.equal(blocks.length, 2, 'both sync branches inject outside the auto-carry guard');
+    const jobs = fnSource('runSyncDayJobs');
+    assert.match(jobs, /if \(state\.autoCarryForward\) \{[\s\S]*?\n\s*\}\n\s*injectDueTemplates\(\);/,
+      'injection sits outside the auto-carry guard');
+    const sync = fnSource('sbSyncNow');
+    const check = sync.slice(sync.indexOf("if (mode === 'check')"), sync.indexOf('const remote ='));
+    assert.match(check, /runSyncDayJobs\(\);/, 'the light check (no download) still runs the day jobs');
+    assert.equal((sync.match(/runSyncDayJobs\(\);/g) || []).length, 3, 'check, merge, and first-upload paths all run them');
   });
 
   it('uncomplete preserves New boardColumn', () => {
@@ -3186,7 +3190,7 @@ describe('v1.15.0 Insights additions', () => {
     assert.match(fn, /\(e\.ctrlKey \|\| e\.metaKey\) && e\.key === 'Enter'/);
     assert.match(fn, /if \(!submitBtn\.disabled\) form\.requestSubmit\(\)/);
     assert.match(fnSource('initAddEditor'), /bindCtrlEnterSubmit\(editor, els\.addForm, els\.addBtn\)/);
-    assert.match(fnSource('restoreCommentDraft'), /bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/);
+    assert.match(fnSource('restoreAddCommentDraft'), /bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/);
     assert.equal((mainScript.match(/bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/g) || []).length, 2);
     assert.match(html, /<li><strong>Add comment\/update<\/strong> — Ctrl\/Cmd \+ Enter<\/li>/);
     const entry = html.match(/version: '1\.15\.0'[\s\S]*?\n      \},/)[0];
@@ -5212,12 +5216,9 @@ describe('v1.19.1 formatting in projects', () => {
     `${['escapeHtml', 'getProject', 'richCommentText', 'richCommentFields', 'projectCommentHtml', 'addProjectItemComment', 'updateProjectItemComment'].map(fnSource).join('\n')}
     return { projectCommentHtml, richCommentFields, addProjectItemComment, updateProjectItemComment };`)(state, () => { saves.n++; }, plainTextPreview, (h) => `[clean]${h}`, () => {});
 
-  it('1.19.1 is the latest release and documented everywhere', () => {
-    assert.match(html, /const APP_VERSION = '1\.19\.1';/);
+  it('1.19.1 is documented everywhere', () => {
     const entry = html.slice(html.indexOf("version: '1.19.1'"), html.indexOf("version: '1.19.0'"));
-    assert.match(entry, /tag: 'latest'/);
     assert.match(entry, /Formatting in projects/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
     const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
     assert.match(md, /## \[1\.19\.1\][^#]*### Improved\n- \*\*Formatting in projects\*\*[\s\S]*?- \*\*Project comments keep their formatting\*\*/);
     const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
@@ -5267,5 +5268,344 @@ describe('v1.19.1 formatting in projects', () => {
     }
     assert.match(fnSource('projectToMarkdown'), /htmlToMarkdown\(projectCommentHtml\(c\)\)/);
     assert.match(html, /\.rich-editor\.project-item-editor \{/);
+  });
+});
+
+describe('v1.20.0 sync efficiency, full history, storage warning', () => {
+  const fns = (names, deps = {}) => new Function(...Object.keys(deps),
+    `${names.map(fnSource).join('\n')}\nreturn { ${names.join(', ')} };`)(...Object.values(deps));
+  const fakeStorage = (initial = {}) => {
+    const map = new Map(Object.entries(initial));
+    return {
+      map,
+      failNext: null,
+      full: false,
+      getItem: (k) => (map.has(k) ? map.get(k) : null),
+      setItem(k, v) {
+        if (this.failNext) { const e = this.failNext; this.failNext = null; throw e; }
+        if (this.full) throw quotaError();
+        map.set(k, String(v));
+      },
+      removeItem: (k) => map.delete(k),
+      key: (i) => [...map.keys()][i] ?? null,
+      get length() { return map.size; },
+    };
+  };
+  const quotaError = () => Object.assign(new Error('quota'), { name: 'QuotaExceededError', code: 22 });
+
+  it('1.20.0 is the latest release and documented everywhere', () => {
+    assert.match(html, /const APP_VERSION = '1\.20\.0';/);
+    const entry = html.slice(html.indexOf("version: '1.20.0'"), html.indexOf("version: '1.19.1'"));
+    assert.match(entry, /tag: 'latest'/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    for (const label of ['Added', 'Improved', 'Fixed']) assert.match(entry, new RegExp(`label: '${label}'`));
+    assert.match(entry, /Storage warning/);
+    assert.match(entry, /Lighter cloud sync/);
+    assert.match(entry, /History older than a year is no longer removed/);
+    assert.match(entry, /Sync no longer interrupts typing/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    const block = md.slice(md.indexOf('## [1.20.0]'), md.indexOf('## [1.19.1]'));
+    assert.match(block, /### Added\n- \*\*Storage warning\*\*/);
+    assert.match(block, /### Improved\n- \*\*Lighter cloud sync\*\*[\s\S]*- \*\*Several tabs\*\*/);
+    assert.match(block, /### Fixed\n- \*\*Sync no longer interrupts typing\*\*[\s\S]*- \*\*History is no longer trimmed\*\*[\s\S]*- \*\*Full browser storage\*\*[\s\S]*- \*\*Failed downloads\*\*/);
+    assert.match(html, /<li><strong>Typing comes first<\/strong>/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /\*\*Full sync \(download and merge\)\*\*/);
+    assert.match(readme, /\*\*Typing is never interrupted\*\*/);
+    assert.match(readme, /\*\*Storage warning\*\*/);
+    assert.doesNotMatch(readme, /older than (1 year|12 months)/);
+    assert.match(html, /<li><strong>Light sync checks<\/strong>/);
+    assert.match(html, /<li><strong>Browser storage<\/strong> — the desk lives in this browser's storage/);
+    assert.match(html, /<li><strong>Several tabs<\/strong>/);
+  });
+
+  it('the 12-month trim is gone from code and docs', () => {
+    for (const name of ['RETENTION_MONTHS', 'maybeAutoArchive', 'getEligibleArchiveDayKeys', 'getRetentionCutoffKey']) {
+      assert.doesNotMatch(html, new RegExp(name), `${name} should be removed`);
+    }
+    assert.doesNotMatch(html, /Auto-pruning/);
+    assert.doesNotMatch(html, /older than 1 year/);
+  });
+
+  it('canonical fingerprint ignores key order but not values or array order', () => {
+    const { canonicalJson, payloadFingerprint } = fns(['canonicalJson', 'hashString', 'payloadFingerprint']);
+    const a = { work: { days: { '2026-10-21': { date: 'x', items: [{ id: 1, tags: ['a', 'b'] }] } }, deletedIds: {} }, prefs: { theme: 'dark', density: 1 } };
+    const b = { prefs: { density: 1, theme: 'dark' }, work: { deletedIds: {}, days: { '2026-10-21': { items: [{ tags: ['a', 'b'], id: 1 }], date: 'x' } } } };
+    assert.equal(canonicalJson(a), canonicalJson(b));
+    assert.equal(payloadFingerprint(a), payloadFingerprint(b));
+    assert.notEqual(payloadFingerprint(a), payloadFingerprint({ ...a, prefs: { theme: 'light', density: 1 } }));
+    assert.notEqual(canonicalJson([1, 2]), canonicalJson([2, 1]));
+    // undefined object values drop out like JSON.stringify; jsonb never stores them
+    assert.equal(canonicalJson({ x: undefined, y: 1 }), canonicalJson({ y: 1 }));
+    assert.equal(canonicalJson([undefined, null]), '[null,null]');
+    assert.equal(canonicalJson('a"b'), JSON.stringify('a"b'));
+    assert.match(payloadFingerprint(a), /^[0-9a-z]+-[0-9a-z]+$/);
+  });
+
+  it('sync mode: check when the cloud is unchanged, full when it changed, converge on open or after 4 hours', () => {
+    const FULL_SYNC_MAX_AGE = 4 * 60 * 60 * 1000;
+    const { syncMode } = fns(['syncMode'], { FULL_SYNC_MAX_AGE });
+    const now = Date.parse('2026-10-21T12:00:00Z');
+    const fresh = { remoteUpdatedAt: 'T1', fullSyncAt: new Date(now - 60 * 1000).toISOString() };
+    assert.equal(syncMode({ meta: fresh, remoteUpdatedAt: 'T1', force: false, now }), 'check');
+    assert.equal(syncMode({ meta: fresh, remoteUpdatedAt: 'T2', force: false, now }), 'full');
+    assert.equal(syncMode({ meta: { ...fresh, remoteUpdatedAt: null }, remoteUpdatedAt: 'T1', force: false, now }), 'full');
+    assert.equal(syncMode({ meta: fresh, remoteUpdatedAt: 'T1', force: true, now }), 'converge');
+    assert.equal(syncMode({ meta: null, remoteUpdatedAt: 'T1', force: false, now }), 'converge');
+    assert.equal(syncMode({ meta: { remoteUpdatedAt: 'T1' }, remoteUpdatedAt: 'T1', force: false, now }), 'converge');
+    const old = { remoteUpdatedAt: 'T1', fullSyncAt: new Date(now - FULL_SYNC_MAX_AGE).toISOString() };
+    assert.equal(syncMode({ meta: old, remoteUpdatedAt: 'T1', force: false, now }), 'converge');
+    const almost = { remoteUpdatedAt: 'T1', fullSyncAt: new Date(now - FULL_SYNC_MAX_AGE + 1000).toISOString() };
+    assert.equal(syncMode({ meta: almost, remoteUpdatedAt: 'T1', force: false, now }), 'check');
+  });
+
+  it('after a merge, uploads only new local data except on converge syncs, never when equal to the cloud', () => {
+    const { shouldPushAfterMerge } = fns(['shouldPushAfterMerge']);
+    assert.equal(shouldPushAfterMerge({ localHash: 'a', remoteHash: 'a', pushedHash: null, converge: true }), false);
+    assert.equal(shouldPushAfterMerge({ localHash: 'a', remoteHash: 'b', pushedHash: 'a', converge: false }), false,
+      'a tie this device already uploaded must not bounce back');
+    assert.equal(shouldPushAfterMerge({ localHash: 'a', remoteHash: 'b', pushedHash: 'z', converge: false }), true);
+    assert.equal(shouldPushAfterMerge({ localHash: 'a', remoteHash: 'b', pushedHash: 'a', converge: true }), true);
+    assert.equal(shouldPushAfterMerge({ localHash: 'a', remoteHash: 'b', pushedHash: undefined, converge: false }), true);
+  });
+
+  it('the sync marker belongs to one account and survives bad JSON', () => {
+    const localStorage = fakeStorage();
+    const SB_SYNC_META_KEY = 'work-desk-sb-sync';
+    const { readSyncMeta, writeSyncMeta, clearSyncMeta } = fns(['readSyncMeta', 'writeSyncMeta', 'clearSyncMeta'], { localStorage, SB_SYNC_META_KEY });
+    assert.equal(readSyncMeta('u1'), null);
+    writeSyncMeta({ userId: 'u1', remoteUpdatedAt: 'T1', pushedHash: 'h', fullSyncAt: 'x' });
+    assert.equal(readSyncMeta('u1').remoteUpdatedAt, 'T1');
+    assert.equal(readSyncMeta('u2'), null, "another account's marker counts as none");
+    assert.equal(readSyncMeta(null), null);
+    localStorage.map.set(SB_SYNC_META_KEY, '{oops');
+    assert.equal(readSyncMeta('u1'), null);
+    clearSyncMeta();
+    assert.equal(localStorage.getItem(SB_SYNC_META_KEY), null);
+    localStorage.failNext = quotaError();
+    assert.doesNotThrow(() => writeSyncMeta({ userId: 'u1' }));
+  });
+
+  it('syncs and uploads run one at a time, and a failure does not block the next', async () => {
+    const { runSyncExclusive } = new Function(`let syncQueue = Promise.resolve();\n${fnSource('runSyncExclusive')}\nreturn { runSyncExclusive };`)();
+    const log = [];
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const p1 = runSyncExclusive(async () => { log.push('a1'); await wait(20); log.push('a2'); });
+    const p2 = runSyncExclusive(async () => { log.push('b1'); throw new Error('boom'); });
+    const p3 = runSyncExclusive(async () => { log.push('c1'); return 'done'; });
+    await p1;
+    await assert.rejects(p2, /boom/);
+    assert.equal(await p3, 'done');
+    assert.deepEqual(log, ['a1', 'a2', 'b1', 'c1']);
+  });
+
+  it('sync engine: light check skips the download, pull errors stop the sync, uploads check the cloud first', () => {
+    const sync = fnSource('sbSyncNow');
+    const check = sync.slice(sync.indexOf("if (mode === 'check')"), sync.indexOf('const remote ='));
+    assert.ok(sync.indexOf('sbPullUpdatedAt()') < sync.indexOf("if (mode === 'check')"));
+    assert.doesNotMatch(check, /sbPullRow|sbPull\(/, 'no full download in check mode');
+    assert.match(check, /sbPushIfChanged\(userId, meta\)/);
+    assert.match(sync, /const remote = mode === 'empty' \? null : await sbPullRow\(\);/);
+    assert.match(fnSource('sbPullRow'), /if \(error\) throw error;/);
+    assert.match(fnSource('sbPullUpdatedAt'), /select\('updated_at'\)/);
+    const upload = fnSource('sbUpload');
+    assert.match(upload, /\.select\('updated_at'\)\.maybeSingle\(\)/);
+    assert.match(upload, /writeSyncMeta\(\{ \.\.\.meta, remoteUpdatedAt: data\?\.updated_at \?\? null \}\)/);
+    assert.match(fnSource('sbPushIfChanged'), /if \(hash === meta\?\.pushedHash\) return false;/);
+    const push = fnSource('sbPush');
+    assert.match(push, /runSyncExclusive\(/);
+    assert.match(push, /head\.updatedAt !== meta\.remoteUpdatedAt\) \{\s*await sbSyncNow\(\{ silent: true \}\);/);
+    assert.match(fnSource('sbPostAuthSync'), /runSyncExclusive\(\(\) => sbSyncNow\(options\)\)/);
+    assert.equal((html.match(/hideAuthModal\(email\);\s*await sbPostAuthSync\(\{ force: true \}\);/g) || []).length, 2,
+      'sign-in and sign-up force a full sync past the debounce');
+  });
+
+  it('sign-out clears the sync marker and any pending upload', () => {
+    const at = html.indexOf('await sbClient.auth.signOut();');
+    const after = html.slice(at, at + 300);
+    assert.match(after, /clearTimeout\(sbSyncTimer\);/);
+    assert.match(after, /clearSyncMeta\(\);/);
+  });
+
+  it('another tab saving desk or project data reloads this tab, other keys and unsaved copies are left alone', () => {
+    const at = html.indexOf("window.addEventListener('storage'");
+    const block = html.slice(at, html.indexOf('});', at));
+    assert.match(block, /e\.storageArea !== localStorage \|\| !e\.key \|\| unsavedStorage\.has\(e\.key\)\) return;/);
+    assert.match(block, /if \(e\.key === getStorageKey\(\)\) state\.data = loadData\(\);/);
+    assert.match(block, /else if \(e\.key === PROJECTS_STORAGE_KEY\) state\.projectsData = loadProjectsData\(\);/);
+    assert.match(block, /else return;/);
+  });
+
+  it('storage warning levels and banner text', () => {
+    const STORAGE_BUDGET_CHARS = 5 * 1024 * 1024;
+    const { storagePercent, storageWarningLevel, storageBannerText } = fns(['storagePercent', 'storageWarningLevel', 'storageBannerText'], { STORAGE_BUDGET_CHARS });
+    assert.equal(storagePercent(STORAGE_BUDGET_CHARS / 2), 50);
+    assert.equal(storagePercent(STORAGE_BUDGET_CHARS * 2), 100);
+    assert.deepEqual([0, 49, 50, 79, 80, 100].map((p) => storageWarningLevel(p, false)), ['ok', 'ok', 'info', 'info', 'warn', 'warn']);
+    assert.equal(storageWarningLevel(10, true), 'full');
+    assert.match(storageBannerText('warn', 83, false), /83% full[\s\S]*only saved here[\s\S]*Export All[\s\S]*sign in/);
+    assert.match(storageBannerText('warn', 83, true), /83% full[\s\S]*saved to the cloud/);
+    assert.doesNotMatch(storageBannerText('warn', 83, true), /sign in/i);
+    assert.match(storageBannerText('full', 100, false), /full[\s\S]*aren't being saved[\s\S]*Export All[\s\S]*sign in/);
+    assert.match(storageBannerText('full', 100, true), /still syncs to the cloud/);
+  });
+
+  it('a full storage keeps the change in memory, reads prefer it, and it is written once space frees', () => {
+    const localStorage = fakeStorage({ k: 'old' });
+    const unsavedStorage = new Map();
+    let warnings = 0;
+    const api = new Function('localStorage', 'unsavedStorage', 'updateStorageWarningSpy', `
+      let lastStorageCheck = Date.now();
+      function updateStorageWarning({ retry = true } = {}) { if (retry) retryUnsavedStorage(); updateStorageWarningSpy(); }
+      ${['isQuotaError', 'writeStorage', 'readStorage', 'retryUnsavedStorage'].map(fnSource).join('\n')}
+      return { isQuotaError, writeStorage, readStorage, retryUnsavedStorage };
+    `)(localStorage, unsavedStorage, () => { warnings++; });
+    const realWarn = console.warn; console.warn = () => {};
+    try {
+      localStorage.full = true;
+      assert.equal(api.writeStorage('k', 'new'), false);
+      assert.equal(unsavedStorage.get('k'), 'new');
+      assert.equal(api.readStorage('k'), 'new', 'reads see the unsaved copy');
+      assert.equal(localStorage.getItem('k'), 'old');
+      assert.ok(warnings >= 1);
+      api.retryUnsavedStorage();
+      assert.equal(unsavedStorage.get('k'), 'new', 'still pending while storage is full');
+      localStorage.full = false;
+      assert.equal(api.writeStorage('k', 'newer'), true);
+      assert.equal(unsavedStorage.has('k'), false);
+      assert.equal(localStorage.getItem('k'), 'newer');
+
+      localStorage.full = true;
+      api.writeStorage('r', 'pending');
+      unsavedStorage.set('*', '');
+      localStorage.full = false;
+      api.retryUnsavedStorage();
+      assert.equal(localStorage.getItem('r'), 'pending', 'retried once space is available');
+      assert.equal(unsavedStorage.size, 0);
+
+      localStorage.failNext = new TypeError('not quota');
+      assert.throws(() => api.writeStorage('k', 'x'), TypeError);
+      assert.ok(api.isQuotaError({ name: 'NS_ERROR_DOM_QUOTA_REACHED' }));
+      assert.ok(api.isQuotaError({ code: 22 }));
+      assert.ok(!api.isQuotaError(null));
+    } finally {
+      console.warn = realWarn;
+    }
+  });
+
+  it('the cloud payload and Export All include data that could not be saved locally', () => {
+    const unsaved = new Map([['work-desk-data-work', JSON.stringify({ days: { d: { items: [{ id: 'mem' }] } }, deletedIds: {} })]]);
+    const localStorage = fakeStorage({ 'work-desk-data-work': JSON.stringify({ days: {}, deletedIds: {} }), 'work-desk-projects': JSON.stringify({ projects: [{ id: 'p' }] }) });
+    const readStorage = (k) => (unsaved.has(k) ? unsaved.get(k) : localStorage.getItem(k));
+    const { buildSbPayload } = fns(['buildSbPayload'], { readStorage, readLocalPrefs: () => ({ theme: 'x' }), APP_VERSION: '1.20.0', PROJECTS_STORAGE_KEY: 'work-desk-projects' });
+    const payload = buildSbPayload();
+    assert.equal(payload.work.days.d.items[0].id, 'mem');
+    assert.deepEqual(payload.personal, { days: {}, deletedIds: {} });
+    assert.equal(payload.projects.projects[0].id, 'p');
+    assert.deepEqual(payload.recurring.work, { templates: [] });
+    assert.equal(payload.appVersion, '1.20.0');
+    for (const name of ['loadData', 'loadProjectsData', 'loadRecurringData', 'repairData']) {
+      assert.match(fnSource(name), /readStorage\(/, `${name} reads through readStorage`);
+    }
+  });
+
+  it('every desk, project, and recurring save goes through writeStorage', () => {
+    assert.doesNotMatch(mainScript, /localStorage\.setItem\((getStorageKey\((ctx|context|targetContext)?\)|PROJECTS_STORAGE_KEY|getRecurringKey|`work-desk-data-)/);
+    for (const name of ['saveData', 'saveProjectsData', 'saveRecurringTemplates', 'markRecurringTemplateDeleted']) {
+      assert.match(fnSource(name), /writeStorage\(/, name);
+    }
+    assert.equal((mainScript.match(/localStorage\.setItem\(SB_TS_KEY/g) || []).length, 1, 'stamp writes go through stampLocalChange');
+    assert.match(fnSource('stampLocalChange'), /try \{ localStorage\.setItem\(SB_TS_KEY/);
+  });
+
+  it('background redraws: skipped when nothing changed, held while typing, forced on request', () => {
+    const make = () => new Function(`
+      let backgroundRenderDepth = 0, heldRender = false, pointerIsDown = false;
+      let snapshot = 'a', typing = false, focused = true, renders = 0, renderedDuringTask = 0;
+      const state = {};
+      const document = { hasFocus: () => focused };
+      function deskSnapshot() { return snapshot; }
+      function isTypingOnDesk() { return typing; }
+      function render() { if (backgroundRenderDepth > 0) { renderedDuringTask++; return; } heldRender = false; renders++; }
+      ${['renderInBackground', 'flushHeldRender'].map(fnSource).join('\n')}
+      return {
+        renderInBackground, flushHeldRender, render,
+        set: (o) => { if ('snapshot' in o) snapshot = o.snapshot; if ('typing' in o) typing = o.typing; if ('focused' in o) focused = o.focused; if ('pointer' in o) pointerIsDown = o.pointer; },
+        get: () => ({ renders, heldRender, renderedDuringTask }),
+      };
+    `)();
+    const r = make();
+    assert.equal(r.renderInBackground(() => {}), false, 'unchanged desk: no redraw');
+    assert.equal(r.get().renders, 0);
+    assert.equal(r.renderInBackground(() => true), true, 'forced');
+    assert.equal(r.renderInBackground(() => r.set({ snapshot: 'b' })), true, 'desk changed');
+    assert.equal(r.get().renders, 2);
+
+    r.set({ typing: true });
+    assert.equal(r.renderInBackground(() => true), false, 'held while typing');
+    assert.equal(r.get().heldRender, true);
+    r.flushHeldRender();
+    assert.equal(r.get().renders, 2, 'still typing');
+    r.set({ typing: false, pointer: true });
+    r.flushHeldRender();
+    assert.equal(r.get().renders, 2, 'waits for the click to finish');
+    r.set({ pointer: false, focused: false });
+    r.flushHeldRender();
+    assert.equal(r.get().renders, 2, 'not while the window is in the background');
+    r.set({ focused: true });
+    r.flushHeldRender();
+    assert.deepEqual([r.get().renders, r.get().heldRender], [3, false]);
+    r.flushHeldRender();
+    assert.equal(r.get().renders, 3, 'nothing held, nothing to flush');
+
+    // Day jobs call render() themselves; inside a background task those calls are absorbed
+    assert.equal(r.renderInBackground(() => { r.render(); }), false);
+    assert.deepEqual([r.get().renderedDuringTask, r.get().renders], [1, 3]);
+  });
+
+  it('render() defers inside background tasks; drafts cover comments, comment and task edits, and column add boxes', () => {
+    assert.match(fnSource('render'), /if \(backgroundRenderDepth > 0\) return;\s*heldRender = false;\s*const draft = captureCommentDraft\(\);/);
+    const capture = fnSource('captureCommentDraft');
+    assert.match(capture, /querySelectorAll\('\.add-comment-form'\)/, 'every open comment box, not just the first');
+    assert.match(capture, /state\.editingComment/);
+    assert.match(capture, /state\.editingId[\s\S]*\.edit-input/);
+    assert.match(capture, /state\.addingInColumn[\s\S]*\.col-inline-input/);
+    assert.match(capture, /orphanCommentDrafts/);
+    const restore = fnSource('restoreCommentDraft');
+    assert.match(restore, /orphanCommentDrafts\.set\(add\.taskId, add\.html\)/);
+    assert.match(restore, /placeCaret\(target, caret\)/);
+    assert.match(restore, /setSelectionRange\(at, at\)/);
+    assert.match(fnSource('isTypingOnDesk'), /els\.itemLists\.contains\(el\)/);
+    assert.match(html, /document\.addEventListener\('pointerup', releasePointer, true\);/);
+    assert.match(html, /document\.addEventListener\('focusout', \(\) => setTimeout\(flushHeldRender, 0\)\);/);
+  });
+
+  it('sync redraws go through renderInBackground; the light check does not reload the desk', () => {
+    const sync = fnSource('sbSyncNow');
+    assert.doesNotMatch(sync, /\n\s*render\(\);/, 'no direct render() in the sync');
+    assert.equal((sync.match(/renderInBackground\(/g) || []).length, 3);
+    const check = sync.slice(sync.indexOf("if (mode === 'check')"), sync.indexOf('const remote ='));
+    assert.doesNotMatch(check, /loadData\(\)/);
+    assert.match(sync, /if \(changed\) \{\s*state\.data = loadData\(\);\s*if \(!silent\) showToast\('Synced from cloud/);
+    assert.match(sync, /return changed \|\| force;/);
+    assert.match(html, /otherTabRenderTimer = setTimeout\(\(\) => renderInBackground\(\(\) => true\), 50\);/);
+  });
+
+  it('storage banner markup and wiring', () => {
+    assert.match(html, /<div id="storage-banner" class="storage-banner hidden" role="alert"/);
+    for (const id of ['storage-banner-text', 'storage-banner-export', 'storage-banner-signin', 'storage-banner-dismiss', 'storage-usage']) {
+      assert.match(html, new RegExp(`id="${id}"`), id);
+    }
+    assert.match(html, /getElementById\('storage-banner-export'\)\.addEventListener\('click', exportAll\)/);
+    assert.match(html, /getElementById\('storage-banner-signin'\)\.addEventListener\('click', openSignInFromDesk\)/);
+    assert.match(fnSource('updateStorageWarning'), /const signingIn = !document\.getElementById\('auth-modal'\)/, 'the banner never covers the sign-in dialog');
+    assert.match(fnSource('showAuthModal'), /classList\.remove\('hidden'\);\s*updateStorageWarning\(\);/);
+    assert.match(fnSource('openSignInFromDesk'), /classList\.remove\('hidden'\);\s*updateStorageWarning\(\);/);
+    assert.match(html, /sessionStorage\.setItem\(STORAGE_BANNER_DISMISSED_KEY, storageBanner\.dataset\.dismissKey/);
+    assert.match(fnSource('updateAccountChrome'), /updateStorageWarning\(\);[\s\S]*updateStorageWarning\(\);/);
+    assert.match(fnSource('openAccountMenu'), /updateStorageWarning\(\);/);
+    const script = extractMainScript(html);
+    assert.ok(script.indexOf('const unsavedStorage = new Map()') < script.indexOf('const state ='),
+      'storage globals must exist before state init, since loading data can write');
   });
 });
