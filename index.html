@@ -3653,17 +3653,31 @@
        equivalent fix already applied to .rich-content/.rich-editor. */
     .project-item-content ul,
     .project-item-content ol,
+    .project-task-text ul,
+    .project-task-text ol,
+    .project-comment-body ul,
+    .project-comment-body ol,
     .project-item-editor ul,
     .project-item-editor ol {
       margin: 0.15em 0;
       padding-left: 1.4em;
     }
     .project-item-content ul,
+    .project-task-text ul,
+    .project-comment-body ul,
     .project-item-editor ul { list-style: disc; }
     .project-item-content ol,
+    .project-task-text ol,
+    .project-comment-body ol,
     .project-item-editor ol { list-style: decimal; }
     .project-item-content li,
+    .project-task-text li,
+    .project-comment-body li,
     .project-item-editor li { margin: 0; padding: 0.1em 0; }
+    .project-comment-body > ul:first-child,
+    .project-comment-body > ol:first-child { margin-top: 0.3em; }
+    .project-comment-edit-actions { display: flex; gap: 6px; margin-top: 6px; }
+    .project-comment-edit-actions button { font-size: 0.75rem; padding: 4px 10px; }
 
     .project-item-meta {
       font-size: 0.72rem;
@@ -3759,6 +3773,7 @@
     }
 
     .project-task-text {
+      display: block;
       font-size: 0.9rem;
       color: var(--text);
     }
@@ -6222,6 +6237,8 @@
     .rich-editor.add-input { min-height: 38px; padding: 8px 12px; font-size: 0.9rem; }
     .rich-editor.edit-input { min-height: 36px; padding: 6px 10px; font-size: 0.95rem; }
     .rich-editor.comment-input { min-height: 36px; padding: 8px 10px; font-size: 0.88rem; }
+    .rich-editor.project-item-editor { min-height: 36px; padding: 8px 10px; font-size: 0.9rem; }
+    .rich-editor.project-comment-editor { min-height: 50px; padding: 6px 10px; font-size: 0.82rem; }
 
     .edit-wrap { flex: 1; min-width: 0; }
 
@@ -8746,6 +8763,7 @@
           <li><strong>Note preview</strong> — long notes are truncated to a few lines with a <em>show more</em> toggle; turn this off in Options → Behavior → <strong>Truncate long notes</strong></li>
           <li><strong>Archive</strong> — click <em>archive</em> on any note or task to move it into a collapsed <strong>Archived (n)</strong> section at the bottom of its tab; completing a task automatically archives it, and reopening it puts it back in the list</li>
           <li><strong>Double-click to edit</strong> — double-click a note's content or a task's text to jump straight into the editor</li>
+          <li><strong>Formatting</strong> — project notes, tasks, and comments use the same toolbar as the desk: <strong>B</strong>, <em>I</em>, <u>U</u>, and • bullets (or <kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd>); <kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves and <kbd>Esc</kbd> cancels</li>
           <li><strong>Rename / Delete</strong> — the <strong>Rename</strong> and <strong>Delete</strong> buttons in the project header; Delete asks before removing the project and everything in it</li>
           <li><strong>Project list counts</strong> — each project shows its open tasks and active notes; archived notes and finished tasks aren't counted</li>
           <li><strong>Pin and reorder</strong> — click the pin on a project in the list (or <strong>Pin</strong> in the project header) to keep it at the top, above a thin line; drag projects to put them in any order within the pinned or unpinned group. Keyboard: focus a project and press <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>. On phones, use <strong>More → Move up / Move down</strong> in the project header</li>
@@ -9003,12 +9021,22 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.19.0';
+    const APP_VERSION = '1.19.1';
     const CHANGELOG = [
+      {
+        version: '1.19.1',
+        date: 'Oct 21, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'Formatting in projects: editing a project note, task, or comment now shows the same B / I / U / • toolbar as the desk, with Ctrl+B / Ctrl+I / Ctrl+U, bullet lists, and pasted text cleaned up the same way. Ctrl+Enter saves and Esc cancels',
+            'Project comments keep their formatting, including comments sent from the desk to a project and back, and in Copy as Markdown',
+          ] },
+        ],
+      },
       {
         version: '1.19.0',
         date: 'Oct 20, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Search covers Projects: the scope chip next to the search box now reads All instead of Both, and searches Work, Personal, and Projects together. Click a project result to open that project with the note or task outlined',
@@ -14339,7 +14367,7 @@
       const tagText = (item) => normalizeTagList(item.tags).map(t => ` #${t}`).join('');
       const commentLines = (item) => (item.comments || []).map(c => {
         const when = c.createdAt ? `${new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ` : '';
-        return `  - ${indent(`${when}${String(c.text || '').trim()}`, '    ')}`;
+        return `  - ${indent(`${when}${htmlToMarkdown(projectCommentHtml(c))}`, '    ')}`;
       });
       const lines = [`# ${project.name}`];
       const { done, total } = projectProgress(project);
@@ -14548,15 +14576,36 @@
       return false;
     }
 
-    function addProjectItemComment(projectId, itemId, commentText) {
+    function richCommentText(html) {
+      return plainTextPreview(String(html || '').replace(/<br\s*\/?>|<\/(p|div|li)>|<(ul|ol)\b[^>]*>/gi, '\n'), Infinity)
+        .split('\n').map(line => line.replace(/\s+$/, '')).join('\n');
+    }
+
+    // Project comments keep formatting in `html` and a plain copy in `text` for
+    // older clients; if one of those edits `text`, the stale `html` is ignored
+    function projectCommentHtml(comment) {
+      const html = comment?.html;
+      if (typeof html === 'string' && html && richCommentText(html) === String(comment.text || '').trim()) {
+        return sanitizeHtml(html);
+      }
+      return escapeHtml(comment?.text || '').replace(/\n/g, '<br>');
+    }
+
+    function richCommentFields(html) {
+      const text = richCommentText(html);
+      return text ? { text, html: String(html).trim() } : null;
+    }
+
+    function addProjectItemComment(projectId, itemId, commentHtml) {
       const project = getProject(projectId);
       if (!project) return false;
       let item = project.notes.find(n => n.id === itemId) || project.tasks.find(t => t.id === itemId);
-      if (item && commentText && commentText.trim()) {
+      const fields = richCommentFields(commentHtml);
+      if (item && fields) {
         if (!item.comments) item.comments = [];
         item.comments.push({
           id: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-          text: commentText.trim(),
+          ...fields,
           createdAt: new Date().toISOString(),
         });
         saveProjectsData();
@@ -14565,16 +14614,17 @@
       return false;
     }
 
-    function updateProjectItemComment(projectId, itemId, commentId, newText) {
+    function updateProjectItemComment(projectId, itemId, commentId, newHtml) {
       const project = getProject(projectId);
       if (!project) return false;
       let item = project.notes.find(n => n.id === itemId) || project.tasks.find(t => t.id === itemId);
-      if (item && item.comments && newText && newText.trim()) {
+      const fields = richCommentFields(newHtml);
+      if (item && item.comments && fields) {
         const commentIdx = item.comments.findIndex(c => c.id === commentId);
         if (commentIdx >= 0) {
           item.comments[commentIdx] = {
             ...item.comments[commentIdx],
-            text: newText.trim(),
+            ...fields,
           };
           state.editingProjectComment = null;
           saveProjectsData();
@@ -14644,7 +14694,7 @@
       saveProjectsData();
     }
 
-    // Desk comments hold HTML in `content`; project comments hold plain text in `text`
+    // Desk comments hold HTML in `content`; project comments hold `html` plus a plain `text` copy
     function deskItemToProjectItem(item) {
       const out = {
         id: generateProjectItemId(),
@@ -14653,7 +14703,7 @@
         createdAt: item.createdAt || new Date().toISOString(),
         comments: (item.comments || []).map(c => ({
           id: c.id || newId(),
-          text: plainTextPreview(String(c.content || '').replace(/<br\s*\/?>|<\/(p|div|li)>/gi, '\n'), Infinity),
+          ...(richCommentFields(c.content) || { text: '' }),
           createdAt: c.createdAt || new Date().toISOString(),
         })),
       };
@@ -14681,7 +14731,7 @@
       }
       const comments = (item.comments || []).map(c => ({
         id: c.id || newId(),
-        content: escapeHtml(c.text || '').replace(/\n/g, '<br>'),
+        content: projectCommentHtml(c),
         createdAt: c.createdAt || new Date().toISOString(),
       }));
       if (comments.length) out.comments = comments;
@@ -21535,6 +21585,152 @@
       return row;
     }
 
+    function buildProjectCommentsList(projectId, item) {
+      if (!item.comments || !item.comments.length) return null;
+      const isNote = item.type === 'note';
+      const commentsDiv = document.createElement('div');
+      commentsDiv.className = 'project-item-comments';
+      commentsDiv.style.marginTop = isNote ? '12px' : '10px';
+      commentsDiv.style.paddingTop = isNote ? '10px' : '8px';
+      commentsDiv.style.borderTop = '1px solid var(--border)';
+
+      item.comments.forEach(comment => {
+        const isEditingComment =
+          state.editingProjectComment?.itemId === item.id &&
+          state.editingProjectComment?.commentId === comment.id;
+
+        const commentEl = document.createElement('div');
+        commentEl.style.fontSize = '0.82rem';
+        commentEl.style.color = 'var(--text-muted)';
+        commentEl.style.marginBottom = '8px';
+
+        if (isEditingComment) {
+          const editForm = document.createElement('div');
+          const { wrap, editor } = createRichEditor({
+            className: 'project-comment-editor',
+            initialHtml: projectCommentHtml(comment),
+          });
+
+          const btnRow = document.createElement('div');
+          btnRow.className = 'project-comment-edit-actions';
+
+          const save = () => updateProjectItemComment(projectId, item.id, comment.id, getEditorHtml(editor));
+          const cancel = () => {
+            state.editingProjectComment = null;
+            renderProjectDetail();
+          };
+
+          const saveBtn = document.createElement('button');
+          saveBtn.type = 'button';
+          saveBtn.textContent = 'save';
+          saveBtn.addEventListener('click', save);
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.type = 'button';
+          cancelBtn.textContent = 'cancel';
+          cancelBtn.style.color = 'var(--text-muted)';
+          cancelBtn.addEventListener('click', cancel);
+
+          editor.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); save(); }
+            else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+          });
+
+          btnRow.appendChild(saveBtn);
+          btnRow.appendChild(cancelBtn);
+          editForm.appendChild(wrap);
+          editForm.appendChild(btnRow);
+          commentEl.appendChild(editForm);
+          setTimeout(() => editor.focus(), 0);
+        } else {
+          const commentRow = document.createElement('div');
+          commentRow.className = 'project-comment-row';
+          commentRow.style.display = 'flex';
+          commentRow.style.alignItems = 'flex-start';
+          commentRow.style.gap = '8px';
+
+          const textDiv = document.createElement('div');
+          textDiv.style.flex = '1';
+          textDiv.style.minWidth = '0';
+
+          const timeEl = document.createElement('span');
+          timeEl.style.fontSize = '0.72rem';
+          timeEl.style.opacity = '0.7';
+          const commentDate = new Date(comment.createdAt);
+          timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ';
+
+          const body = document.createElement('span');
+          body.className = 'project-comment-body';
+          body.innerHTML = projectCommentHtml(comment);
+
+          textDiv.appendChild(timeEl);
+          textDiv.appendChild(body);
+          textDiv.style.cursor = 'pointer';
+          textDiv.title = 'Double-click to edit';
+          textDiv.addEventListener('dblclick', () => {
+            state.editingProjectComment = { itemId: item.id, commentId: comment.id };
+            renderProjectDetail();
+          });
+
+          const actions = document.createElement('div');
+          actions.className = 'project-comment-actions';
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.textContent = 'edit';
+          editBtn.style.fontSize = '0.7rem';
+          editBtn.style.padding = '2px 6px';
+          editBtn.style.color = 'var(--text-muted)';
+          editBtn.addEventListener('click', () => {
+            state.editingProjectComment = { itemId: item.id, commentId: comment.id };
+            renderProjectDetail();
+          });
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.type = 'button';
+          deleteBtn.textContent = 'delete';
+          deleteBtn.style.fontSize = '0.7rem';
+          deleteBtn.style.padding = '2px 6px';
+          deleteBtn.style.color = 'var(--danger)';
+          deleteBtn.addEventListener('click', () => {
+            if (confirm('Delete this comment?')) {
+              deleteProjectItemComment(projectId, item.id, comment.id);
+            }
+          });
+
+          actions.appendChild(editBtn);
+          actions.appendChild(deleteBtn);
+
+          commentRow.appendChild(textDiv);
+          commentRow.appendChild(actions);
+          commentEl.appendChild(commentRow);
+        }
+
+        commentsDiv.appendChild(commentEl);
+      });
+
+      return commentsDiv;
+    }
+
+    // Shared by note and task cards; Save/Cancel stay with the caller
+    function createProjectItemEditor(content, onSave, onCancel) {
+      const { wrap, editor } = createRichEditor({
+        className: 'project-item-editor',
+        initialHtml: content || '',
+      });
+      editor.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onSave(); }
+        else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+      });
+      setTimeout(() => {
+        editor.focus();
+        const sel = window.getSelection();
+        sel.selectAllChildren(editor);
+        sel.collapseToEnd();
+      }, 0);
+      return { wrap, editor };
+    }
+
     function createProjectNoteCard(projectId, note) {
       const card = document.createElement('div');
       card.className = 'project-item-card note-card';
@@ -21543,10 +21739,7 @@
       const isEditing = state.editingProjectItemId === note.id;
 
       if (isEditing) {
-        const editor = document.createElement('div');
-        editor.className = 'project-item-editor';
-        editor.contentEditable = 'true';
-        editor.innerHTML = sanitizeHtml(note.content || '');
+        const { wrap, editor } = createProjectItemEditor(note.content, () => saveBtn.click(), () => cancelBtn.click());
 
         const saveBtn = document.createElement('button');
         saveBtn.type = 'button';
@@ -21589,16 +21782,9 @@
           renderProjectDetail();
         });
 
-        card.appendChild(editor);
+        card.appendChild(wrap);
         card.appendChild(saveBtn);
         card.appendChild(cancelBtn);
-
-        setTimeout(() => {
-          editor.focus();
-          const sel = window.getSelection();
-          sel.selectAllChildren(editor);
-          sel.collapseToEnd();
-        }, 0);
       } else {
         const content = document.createElement('div');
         content.className = 'project-item-content' + (state.truncateNotes ? ' truncated' : '');
@@ -21693,133 +21879,8 @@
         card.appendChild(showMoreBtn);
         card.appendChild(meta);
 
-        if (note.comments && note.comments.length > 0) {
-          const commentsDiv = document.createElement('div');
-          commentsDiv.className = 'project-item-comments';
-          commentsDiv.style.marginTop = '12px';
-          commentsDiv.style.paddingTop = '10px';
-          commentsDiv.style.borderTop = '1px solid var(--border)';
-
-          note.comments.forEach(comment => {
-            const isEditingComment = 
-              state.editingProjectComment?.itemId === note.id && 
-              state.editingProjectComment?.commentId === comment.id;
-
-            const commentEl = document.createElement('div');
-            commentEl.style.fontSize = '0.82rem';
-            commentEl.style.color = 'var(--text-muted)';
-            commentEl.style.marginBottom = '8px';
-
-            if (isEditingComment) {
-              const editForm = document.createElement('div');
-              const editor = document.createElement('textarea');
-              editor.value = comment.text;
-              editor.style.width = '100%';
-              editor.style.minHeight = '50px';
-              editor.style.padding = '6px';
-              editor.style.border = '1px solid var(--border)';
-              editor.style.borderRadius = '4px';
-              editor.style.fontSize = '0.82rem';
-              editor.style.resize = 'vertical';
-              editor.style.background = 'var(--input-bg)';
-              editor.style.color = 'var(--text)';
-
-              const btnRow = document.createElement('div');
-              btnRow.style.display = 'flex';
-              btnRow.style.gap = '6px';
-              btnRow.style.marginTop = '6px';
-
-              const saveBtn = document.createElement('button');
-              saveBtn.type = 'button';
-              saveBtn.textContent = 'save';
-              saveBtn.style.fontSize = '0.75rem';
-              saveBtn.style.padding = '4px 10px';
-              saveBtn.addEventListener('click', () => {
-                updateProjectItemComment(projectId, note.id, comment.id, editor.value.trim());
-              });
-
-              const cancelBtn = document.createElement('button');
-              cancelBtn.type = 'button';
-              cancelBtn.textContent = 'cancel';
-              cancelBtn.style.fontSize = '0.75rem';
-              cancelBtn.style.padding = '4px 10px';
-              cancelBtn.style.color = 'var(--text-muted)';
-              cancelBtn.addEventListener('click', () => {
-                state.editingProjectComment = null;
-                renderProjectDetail();
-              });
-
-              btnRow.appendChild(saveBtn);
-              btnRow.appendChild(cancelBtn);
-              editForm.appendChild(editor);
-              editForm.appendChild(btnRow);
-              commentEl.appendChild(editForm);
-              setTimeout(() => editor.focus(), 0);
-            } else {
-              const commentRow = document.createElement('div');
-              commentRow.className = 'project-comment-row';
-              commentRow.style.display = 'flex';
-              commentRow.style.alignItems = 'flex-start';
-              commentRow.style.gap = '8px';
-
-              const textDiv = document.createElement('div');
-              textDiv.style.flex = '1';
-
-              const timeEl = document.createElement('span');
-              timeEl.style.fontSize = '0.72rem';
-              timeEl.style.color = 'var(--text-muted)';
-              timeEl.style.opacity = '0.7';
-              const commentDate = new Date(comment.createdAt);
-              timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ';
-
-              textDiv.appendChild(timeEl);
-              textDiv.appendChild(document.createTextNode(comment.text));
-              textDiv.style.cursor = 'pointer';
-              textDiv.title = 'Double-click to edit';
-              textDiv.addEventListener('dblclick', () => {
-                state.editingProjectComment = { itemId: note.id, commentId: comment.id };
-                renderProjectDetail();
-              });
-
-              const actions = document.createElement('div');
-              actions.className = 'project-comment-actions';
-
-              const editBtn = document.createElement('button');
-              editBtn.type = 'button';
-              editBtn.textContent = 'edit';
-              editBtn.style.fontSize = '0.7rem';
-              editBtn.style.padding = '2px 6px';
-              editBtn.style.color = 'var(--text-muted)';
-              editBtn.addEventListener('click', () => {
-                state.editingProjectComment = { itemId: note.id, commentId: comment.id };
-                renderProjectDetail();
-              });
-
-              const deleteBtn = document.createElement('button');
-              deleteBtn.type = 'button';
-              deleteBtn.textContent = 'delete';
-              deleteBtn.style.fontSize = '0.7rem';
-              deleteBtn.style.padding = '2px 6px';
-              deleteBtn.style.color = 'var(--danger)';
-              deleteBtn.addEventListener('click', () => {
-                if (confirm('Delete this comment?')) {
-                  deleteProjectItemComment(projectId, note.id, comment.id);
-                }
-              });
-
-              actions.appendChild(editBtn);
-              actions.appendChild(deleteBtn);
-
-              commentRow.appendChild(textDiv);
-              commentRow.appendChild(actions);
-              commentEl.appendChild(commentRow);
-            }
-
-            commentsDiv.appendChild(commentEl);
-          });
-
-          card.appendChild(commentsDiv);
-        }
+        const commentsDiv = buildProjectCommentsList(projectId, note);
+        if (commentsDiv) card.appendChild(commentsDiv);
       }
 
       return card;
@@ -21851,11 +21912,7 @@
       const isEditing = state.editingProjectItemId === task.id;
 
       if (isEditing) {
-        const editor = document.createElement('div');
-        editor.className = 'project-item-editor';
-        editor.contentEditable = 'true';
-        editor.innerHTML = sanitizeHtml(task.content || '');
-        editor.style.minHeight = '32px';
+        const { wrap, editor } = createProjectItemEditor(task.content, () => saveBtn.click(), () => cancelBtn.click());
 
         const saveBtn = document.createElement('button');
         saveBtn.type = 'button';
@@ -21898,16 +21955,9 @@
           renderProjectDetail();
         });
 
-        contentDiv.appendChild(editor);
+        contentDiv.appendChild(wrap);
         contentDiv.appendChild(saveBtn);
         contentDiv.appendChild(cancelBtn);
-
-        setTimeout(() => {
-          editor.focus();
-          const sel = window.getSelection();
-          sel.selectAllChildren(editor);
-          sel.collapseToEnd();
-        }, 0);
       } else {
         const textSpan = document.createElement('span');
         textSpan.className = 'project-task-text' + (task.completed ? ' completed' : '');
@@ -21973,131 +22023,8 @@
         contentDiv.appendChild(textSpan);
         contentDiv.appendChild(meta);
 
-        if (task.comments && task.comments.length > 0) {
-          const commentsDiv = document.createElement('div');
-          commentsDiv.style.marginTop = '10px';
-          commentsDiv.style.paddingTop = '8px';
-          commentsDiv.style.borderTop = '1px solid var(--border)';
-
-          task.comments.forEach(comment => {
-            const isEditingComment = 
-              state.editingProjectComment?.itemId === task.id && 
-              state.editingProjectComment?.commentId === comment.id;
-
-            const commentEl = document.createElement('div');
-            commentEl.style.fontSize = '0.82rem';
-            commentEl.style.color = 'var(--text-muted)';
-            commentEl.style.marginBottom = '8px';
-
-            if (isEditingComment) {
-              const editForm = document.createElement('div');
-              const editor = document.createElement('textarea');
-              editor.value = comment.text;
-              editor.style.width = '100%';
-              editor.style.minHeight = '50px';
-              editor.style.padding = '6px';
-              editor.style.border = '1px solid var(--border)';
-              editor.style.borderRadius = '4px';
-              editor.style.fontSize = '0.82rem';
-              editor.style.resize = 'vertical';
-              editor.style.background = 'var(--input-bg)';
-              editor.style.color = 'var(--text)';
-
-              const btnRow = document.createElement('div');
-              btnRow.style.display = 'flex';
-              btnRow.style.gap = '6px';
-              btnRow.style.marginTop = '6px';
-
-              const saveBtn = document.createElement('button');
-              saveBtn.type = 'button';
-              saveBtn.textContent = 'save';
-              saveBtn.style.fontSize = '0.75rem';
-              saveBtn.style.padding = '4px 10px';
-              saveBtn.addEventListener('click', () => {
-                updateProjectItemComment(projectId, task.id, comment.id, editor.value.trim());
-              });
-
-              const cancelBtn = document.createElement('button');
-              cancelBtn.type = 'button';
-              cancelBtn.textContent = 'cancel';
-              cancelBtn.style.fontSize = '0.75rem';
-              cancelBtn.style.padding = '4px 10px';
-              cancelBtn.style.color = 'var(--text-muted)';
-              cancelBtn.addEventListener('click', () => {
-                state.editingProjectComment = null;
-                renderProjectDetail();
-              });
-
-              btnRow.appendChild(saveBtn);
-              btnRow.appendChild(cancelBtn);
-              editForm.appendChild(editor);
-              editForm.appendChild(btnRow);
-              commentEl.appendChild(editForm);
-              setTimeout(() => editor.focus(), 0);
-            } else {
-              const commentRow = document.createElement('div');
-              commentRow.className = 'project-comment-row';
-              commentRow.style.display = 'flex';
-              commentRow.style.alignItems = 'flex-start';
-              commentRow.style.gap = '8px';
-
-              const textDiv = document.createElement('div');
-              textDiv.style.flex = '1';
-
-              const timeEl = document.createElement('span');
-              timeEl.style.fontSize = '0.72rem';
-              timeEl.style.opacity = '0.7';
-              const commentDate = new Date(comment.createdAt);
-              timeEl.textContent = commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ';
-
-              textDiv.appendChild(timeEl);
-              textDiv.appendChild(document.createTextNode(comment.text));
-              textDiv.style.cursor = 'pointer';
-              textDiv.title = 'Double-click to edit';
-              textDiv.addEventListener('dblclick', () => {
-                state.editingProjectComment = { itemId: task.id, commentId: comment.id };
-                renderProjectDetail();
-              });
-
-              const actions = document.createElement('div');
-              actions.className = 'project-comment-actions';
-
-              const editBtn = document.createElement('button');
-              editBtn.type = 'button';
-              editBtn.textContent = 'edit';
-              editBtn.style.fontSize = '0.7rem';
-              editBtn.style.padding = '2px 6px';
-              editBtn.style.color = 'var(--text-muted)';
-              editBtn.addEventListener('click', () => {
-                state.editingProjectComment = { itemId: task.id, commentId: comment.id };
-                renderProjectDetail();
-              });
-
-              const deleteBtn = document.createElement('button');
-              deleteBtn.type = 'button';
-              deleteBtn.textContent = 'delete';
-              deleteBtn.style.fontSize = '0.7rem';
-              deleteBtn.style.padding = '2px 6px';
-              deleteBtn.style.color = 'var(--danger)';
-              deleteBtn.addEventListener('click', () => {
-                if (confirm('Delete this comment?')) {
-                  deleteProjectItemComment(projectId, task.id, comment.id);
-                }
-              });
-
-              actions.appendChild(editBtn);
-              actions.appendChild(deleteBtn);
-
-              commentRow.appendChild(textDiv);
-              commentRow.appendChild(actions);
-              commentEl.appendChild(commentRow);
-            }
-
-            commentsDiv.appendChild(commentEl);
-          });
-
-          contentDiv.appendChild(commentsDiv);
-        }
+        const commentsDiv = buildProjectCommentsList(projectId, task);
+        if (commentsDiv) contentDiv.appendChild(commentsDiv);
       }
 
       row.appendChild(checkBtn);
@@ -22120,18 +22047,10 @@
       editorWrap.style.paddingTop = '10px';
       editorWrap.style.borderTop = '1px solid var(--border)';
 
-      const editor = document.createElement('textarea');
-      editor.className = 'project-comment-editor';
-      editor.placeholder = 'Add a comment or update...';
-      editor.style.width = '100%';
-      editor.style.minHeight = '60px';
-      editor.style.padding = '8px';
-      editor.style.border = '1px solid var(--border)';
-      editor.style.borderRadius = '6px';
-      editor.style.fontSize = '0.85rem';
-      editor.style.resize = 'vertical';
-      editor.style.background = 'var(--input-bg)';
-      editor.style.color = 'var(--text)';
+      const { wrap, editor } = createRichEditor({
+        className: 'project-comment-editor',
+        placeholder: 'Add a comment or update...',
+      });
 
       const btnRow = document.createElement('div');
       btnRow.style.display = 'flex';
@@ -22143,8 +22062,7 @@
       addBtn.className = 'project-add-btn';
       addBtn.textContent = 'Add';
       addBtn.addEventListener('click', () => {
-        if (editor.value.trim()) {
-          addProjectItemComment(projectId, itemId, editor.value.trim());
+        if (addProjectItemComment(projectId, itemId, getEditorHtml(editor))) {
           renderProjectDetail();
         }
       });
@@ -22158,9 +22076,14 @@
         editorWrap.remove();
       });
 
+      editor.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+        else if (e.key === 'Escape') { e.preventDefault(); editorWrap.remove(); }
+      });
+
       btnRow.appendChild(addBtn);
       btnRow.appendChild(cancelBtn);
-      editorWrap.appendChild(editor);
+      editorWrap.appendChild(wrap);
       editorWrap.appendChild(btnRow);
       card.appendChild(editorWrap);
 
