@@ -4905,8 +4905,8 @@ describe('v1.18.4 complete edge on project tasks', () => {
     assert.deepEqual([task.completed, task.archived], [true, true]);
   });
   it('project comment actions are CSS-driven, always shown on touch', () => {
-    assert.equal((mainScript.match(/commentRow\.className = 'project-comment-row';/g) || []).length, 2);
-    assert.equal((mainScript.match(/actions\.className = 'project-comment-actions';/g) || []).length, 2);
+    assert.equal((mainScript.match(/commentRow\.className = 'project-comment-row';/g) || []).length, 1);
+    assert.equal((mainScript.match(/actions\.className = 'project-comment-actions';/g) || []).length, 1);
     assert.doesNotMatch(mainScript, /commentRow\.addEventListener\('mouse(enter|leave)'|actions\.style\.opacity/);
     assert.match(html, /\.project-comment-row:hover \.project-comment-actions,\s*\.project-comment-actions:focus-within \{ opacity: 1; \}/);
     assert.match(html, /@media \(hover: none\), \(pointer: coarse\) \{\s*\.project-comment-actions \{ opacity: 1; \}\s*\}/);
@@ -4917,16 +4917,14 @@ describe('v1.19.0 projects: search, send, tags', () => {
   const stripHtml = (s) => String(s || '').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
   const plainTextPreview = (h, max = 60) => { const t = stripHtml(h); return t.length > max ? `${t.slice(0, max)}…` : t; };
   const helpers = ['escapeHtml', 'normalizeTag', 'normalizeTagList', 'generateProjectItemId', 'newId'];
-  const converters = () => new Function('plainTextPreview', `${[...helpers, 'deskItemToProjectItem', 'projectItemToDeskItem'].map(fnSource).join('\n')}\nreturn { deskItemToProjectItem, projectItemToDeskItem };`)(plainTextPreview);
+  const commentHelpers = ['richCommentText', 'richCommentFields', 'projectCommentHtml'];
+  const converters = () => new Function('plainTextPreview', 'sanitizeHtml', `${[...helpers, ...commentHelpers, 'deskItemToProjectItem', 'projectItemToDeskItem'].map(fnSource).join('\n')}\nreturn { deskItemToProjectItem, projectItemToDeskItem };`)(plainTextPreview, (h) => h);
 
-  it('1.19.0 is the latest release and documented everywhere', () => {
+  it('1.19.0 is documented everywhere', () => {
     const entry = html.slice(html.indexOf("version: '1.19.0'"), html.indexOf("version: '1.18.4'"));
-    assert.match(entry, /tag: 'latest'/);
     assert.match(entry, /Search covers Projects/);
     assert.match(entry, /Send between your desk and projects/);
     assert.match(entry, /Tags on project notes and tasks/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /const APP_VERSION = '1\.19\.0';/);
     const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
     assert.match(md, /## \[1\.19\.0\][^#]*### Added\n- \*\*Search covers Projects[\s\S]*?- \*\*Send between the desk and projects[\s\S]*?- \*\*Tags on project notes and tasks/);
     const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
@@ -4938,7 +4936,7 @@ describe('v1.19.0 projects: search, send, tags', () => {
     assert.doesNotMatch(html, /Work \/ Personal \/ Both/);
   });
 
-  it('desk → project keeps type, done state, tags, and comments as plain text', () => {
+  it('desk → project keeps type, done state, tags, and comment formatting with a plain copy', () => {
     const { deskItemToProjectItem } = converters();
     const out = deskItemToProjectItem({
       id: 'd1', type: 'task', content: '<b>Ship</b> it', completed: true, createdAt: '2026-10-01T00:00:00Z',
@@ -4949,7 +4947,7 @@ describe('v1.19.0 projects: search, send, tags', () => {
     assert.equal(out.content, '<b>Ship</b> it');
     assert.deepEqual([out.type, out.completed, out.archived], ['task', true, true]);
     assert.deepEqual(out.tags, ['ops', 'xy']);
-    assert.deepEqual(out.comments, [{ id: 'c1', text: 'line one\nline <two>', createdAt: '2026-10-02T00:00:00Z' }]);
+    assert.deepEqual(out.comments, [{ id: 'c1', text: 'line one\nline <two>', html: 'line one<br>line &lt;two&gt;', createdAt: '2026-10-02T00:00:00Z' }]);
     const note = deskItemToProjectItem({ id: 'd2', type: 'note', content: 'n' });
     assert.equal('completed' in note, false);
     assert.equal('tags' in note, false);
@@ -4967,6 +4965,8 @@ describe('v1.19.0 projects: search, send, tags', () => {
     assert.equal('archived' in out, false);
     assert.deepEqual(out.tags, ['q4']);
     assert.deepEqual(out.comments, [{ id: 'c1', content: 'a &lt;b&gt;<br>b', createdAt: '2026-10-02T00:00:00Z' }]);
+    const rich = projectItemToDeskItem({ type: 'task', content: 't', comments: [{ id: 'c2', text: 'bold\nitem', html: '<b>bold</b><ul><li>item</li></ul>' }] });
+    assert.equal(rich.comments[0].content, '<b>bold</b><ul><li>item</li></ul>');
     const note = projectItemToDeskItem({ type: 'note', content: 'x', comments: [] });
     assert.equal('boardColumn' in note, false);
     assert.equal('comments' in note, false);
@@ -5202,5 +5202,70 @@ describe('v1.19.0 projects: search, send, tags', () => {
     assert.match(fnSource('appendProjectItemExtras'), /'to desk'/);
     assert.match(fnSource('collectTagUsage'), /projectsData/);
     assert.match(mainScript, /state\.projectTaggingId = null/);
+  });
+});
+
+describe('v1.19.1 formatting in projects', () => {
+  const stripHtml = (s) => String(s || '').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
+  const plainTextPreview = (h, max = 60) => { const t = stripHtml(h); return t.length > max ? `${t.slice(0, max)}…` : t; };
+  const commentFns = (state, saves = { n: 0 }) => new Function('state', 'saveProjectsData', 'plainTextPreview', 'sanitizeHtml', 'renderProjectDetail',
+    `${['escapeHtml', 'getProject', 'richCommentText', 'richCommentFields', 'projectCommentHtml', 'addProjectItemComment', 'updateProjectItemComment'].map(fnSource).join('\n')}
+    return { projectCommentHtml, richCommentFields, addProjectItemComment, updateProjectItemComment };`)(state, () => { saves.n++; }, plainTextPreview, (h) => `[clean]${h}`, () => {});
+
+  it('1.19.1 is the latest release and documented everywhere', () => {
+    assert.match(html, /const APP_VERSION = '1\.19\.1';/);
+    const entry = html.slice(html.indexOf("version: '1.19.1'"), html.indexOf("version: '1.19.0'"));
+    assert.match(entry, /tag: 'latest'/);
+    assert.match(entry, /Formatting in projects/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    assert.match(md, /## \[1\.19\.1\][^#]*### Improved\n- \*\*Formatting in projects\*\*[\s\S]*?- \*\*Project comments keep their formatting\*\*/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /Notes, tasks, and comments use the desk's formatting toolbar/);
+    assert.match(html, /<li><strong>Formatting<\/strong> — project notes, tasks, and comments use the same toolbar as the desk/);
+  });
+
+  it('comments store HTML plus a plain copy; blank HTML is rejected', () => {
+    const state = { projectsData: { projects: [{ id: 'p', notes: [], tasks: [{ id: 't', comments: [] }] }] } };
+    const saves = { n: 0 };
+    const { addProjectItemComment, updateProjectItemComment } = commentFns(state, saves);
+    assert.equal(addProjectItemComment('p', 't', '<b> </b><br>'), false);
+    assert.equal(addProjectItemComment('p', 't', ' <b>Ship</b> it<ul><li>one</li><li>two</li></ul> '), true);
+    const c = state.projectsData.projects[0].tasks[0].comments[0];
+    assert.deepEqual([c.text, c.html], ['Ship it\none\ntwo', '<b>Ship</b> it<ul><li>one</li><li>two</li></ul>']);
+    assert.match(c.id, /^c_/);
+    assert.equal(updateProjectItemComment('p', 't', c.id, '<i>later</i>'), true);
+    const edited = state.projectsData.projects[0].tasks[0].comments[0];
+    assert.deepEqual([edited.id, edited.text, edited.html, edited.createdAt], [c.id, 'later', '<i>later</i>', c.createdAt]);
+    assert.equal(updateProjectItemComment('p', 't', c.id, '<br>'), false);
+    assert.equal(saves.n, 2);
+  });
+
+  it('display uses sanitized HTML unless an older client changed the plain text', () => {
+    const { projectCommentHtml } = commentFns({ projectsData: { projects: [] } });
+    assert.equal(projectCommentHtml({ text: 'a <b>\nb' }), 'a &lt;b&gt;<br>b');
+    assert.equal(projectCommentHtml({ text: 'bold', html: '<b>bold</b>' }), '[clean]<b>bold</b>');
+    assert.equal(projectCommentHtml({ text: 'edited elsewhere', html: '<b>bold</b>' }), 'edited elsewhere');
+    assert.equal(projectCommentHtml({ text: 'x', html: '' }), 'x');
+    assert.equal(projectCommentHtml(undefined), '');
+  });
+
+  it('project note, task, and comment editors use the shared rich editor', () => {
+    assert.match(fnSource('createProjectItemEditor'), /createRichEditor\(\{\s*className: 'project-item-editor'/);
+    assert.match(fnSource('createProjectNoteCard'), /createProjectItemEditor\(note\.content,/);
+    assert.match(fnSource('createProjectTaskCard'), /createProjectItemEditor\(task\.content,/);
+    assert.match(fnSource('createProjectNoteCard'), /buildProjectCommentsList\(projectId, note\)/);
+    assert.match(fnSource('createProjectTaskCard'), /buildProjectCommentsList\(projectId, task\)/);
+    const list = fnSource('buildProjectCommentsList');
+    assert.match(list, /createRichEditor\(\{\s*className: 'project-comment-editor',\s*initialHtml: projectCommentHtml\(comment\)/);
+    assert.match(list, /body\.innerHTML = projectCommentHtml\(comment\);/);
+    const add = fnSource('showProjectItemCommentEditor');
+    assert.match(add, /createRichEditor\(/);
+    assert.match(add, /addProjectItemComment\(projectId, itemId, getEditorHtml\(editor\)\)/);
+    for (const name of ['createProjectNoteCard', 'createProjectTaskCard', 'buildProjectCommentsList', 'showProjectItemCommentEditor']) {
+      assert.doesNotMatch(fnSource(name), /createElement\('textarea'\)|contentEditable = 'true'/, name);
+    }
+    assert.match(fnSource('projectToMarkdown'), /htmlToMarkdown\(projectCommentHtml\(c\)\)/);
+    assert.match(html, /\.rich-editor\.project-item-editor \{/);
   });
 });
