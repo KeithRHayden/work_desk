@@ -6385,3 +6385,181 @@ test.describe('Search covers projects 1.19.0', { tag: ['@search', '@projects'] }
     await expect(page.locator('#search-overlay-count')).toHaveText('No matches');
   });
 });
+
+test.describe('Formatting in projects 1.19.1', { tag: ['@projects', '@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  const formatBtn = (scope: Locator, cmd: string) => scope.locator(`.format-btn[data-cmd="${cmd}"]`);
+
+  test('note editor toolbar: B, I, U, and bullets apply, keep the editor open, and save', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    const card = projectCard(page, 'Alpha note');
+    await cardButton(card, 'edit').click();
+    const editor = page.locator('#project-notes-list .project-item-editor');
+    await expect(editor).toBeFocused();
+    const toolbar = page.locator('#project-notes-list .format-toolbar');
+    await expect(toolbar.locator('.format-btn')).toHaveCount(4);
+
+    await page.keyboard.press('Control+A');
+    for (const cmd of ['bold', 'italic', 'underline']) {
+      await formatBtn(toolbar, cmd).click();
+      await expect(editor).toBeVisible();
+    }
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await formatBtn(toolbar, 'insertUnorderedList').click();
+    await expect(editor).toBeVisible();
+    await page.keyboard.type('first point');
+
+    await page.locator('#project-notes-list .project-add-btn', { hasText: 'Save' }).click();
+    await expect(editor).toHaveCount(0);
+    const content = projectCard(page, 'Alpha note').locator('.project-item-content');
+    await expect(content.locator('b, strong').first()).toContainText('Alpha note');
+    await expect(content.locator('i, em').first()).toContainText('Alpha note');
+    await expect(content.locator('u').first()).toContainText('Alpha note');
+    await expect(content.locator('ul li')).toHaveText('first point');
+    const stored = (await storedProjects(page)).projects[0].notes[0].content;
+    expect(stored).toMatch(/<(b|strong)>/);
+    expect(stored).toMatch(/<ul><li>.*first point.*<\/li><\/ul>/);
+  });
+
+  test('task editor: Ctrl+B formats, Ctrl+Enter saves, Esc cancels and keeps the old text', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    await cardButton(projectCard(page, 'Alpha task'), 'edit').click();
+    const editor = page.locator('#project-tasks-list .project-item-editor');
+    await expect(page.locator('#project-tasks-list .format-toolbar .format-btn')).toHaveCount(4);
+    await page.keyboard.press('Control+A');
+    await page.keyboard.press('Control+B');
+    await page.keyboard.press('Control+Enter');
+    await expect(editor).toHaveCount(0);
+    await expect(projectCard(page, 'Alpha task').locator('.project-task-text b, .project-task-text strong')).toHaveText('Alpha task');
+
+    await projectCard(page, 'Alpha task').locator('.project-task-text').dblclick();
+    await expect(editor).toBeFocused();
+    await page.keyboard.type(' changed');
+    await page.keyboard.press('Escape');
+    await expect(editor).toHaveCount(0);
+    await expect(projectCard(page, 'Alpha task').locator('.project-task-text')).toHaveText('Alpha task');
+    expect((await storedProjects(page)).projects[0].tasks[0].content).toMatch(/^<(b|strong)>Alpha task<\/(b|strong)>$/);
+  });
+
+  test('add a formatted comment with the toolbar; Ctrl+Enter adds it, Esc closes the box', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    const card = projectCard(page, 'Alpha task');
+    await cardButton(card, 'comments (1)').click();
+    const box = card.locator('.project-comment-editor-wrap');
+    const editor = box.locator('.project-comment-editor');
+    await expect(editor).toBeFocused();
+    await expect(box.locator('.format-btn')).toHaveCount(4);
+    await formatBtn(box, 'bold').click();
+    await expect(box).toBeVisible();
+    await page.keyboard.type('Bold update');
+    await formatBtn(box, 'bold').click();
+    await page.keyboard.press('Enter');
+    await formatBtn(box, 'insertUnorderedList').click();
+    await page.keyboard.type('item one');
+    await page.keyboard.press('Control+Enter');
+
+    await expect(card.locator('.project-comment-editor-wrap')).toHaveCount(0);
+    const body = projectCard(page, 'Alpha task').locator('.project-comment-body').last();
+    await expect(body.locator('b, strong')).toHaveText('Bold update');
+    await expect(body.locator('ul li')).toHaveText('item one');
+    const comment = (await storedProjects(page)).projects[0].tasks[0].comments[1];
+    expect(comment.html).toMatch(/<(b|strong)>Bold update<\/(b|strong)>/);
+    expect(comment.text).toBe('Bold update\nitem one');
+
+    await cardButton(projectCard(page, 'Alpha task'), 'comments (2)').click();
+    await expect(projectCard(page, 'Alpha task').locator('.project-comment-editor')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(projectCard(page, 'Alpha task').locator('.project-comment-editor-wrap')).toHaveCount(0);
+  });
+
+  test('a blank comment is not added', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'notes');
+    const card = projectCard(page, 'Alpha note');
+    await cardButton(card, 'add update').click();
+    await card.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(card.locator('.project-comment-editor-wrap')).toBeVisible();
+    expect((await storedProjects(page)).projects[0].notes[0].comments).toHaveLength(1);
+  });
+
+  test('edit a comment: starts with its text, bullets apply, save keeps it; cancel and Esc leave it alone', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    const row = () => projectCard(page, 'Alpha task').locator('.project-comment-row');
+    await expect(row().locator('.project-comment-body br')).toHaveCount(1);
+    await row().hover();
+    await row().getByRole('button', { name: 'edit', exact: true }).click();
+    const card = projectCard(page, 'Alpha task');
+    const editor = card.locator('.project-comment-editor');
+    await expect(editor).toBeFocused();
+    await expect(editor).toContainText('line one');
+    await expect(editor).toContainText('line two');
+
+    await page.keyboard.press('Control+A');
+    await formatBtn(card, 'insertUnorderedList').click();
+    await expect(editor).toBeVisible();
+    await card.getByRole('button', { name: 'save', exact: true }).click();
+    await expect(editor).toHaveCount(0);
+    await expect(row().locator('.project-comment-body ul li').first()).toContainText('line one');
+    await expect(row().locator('.project-comment-body ul')).toContainText('line two');
+    const saved = (await storedProjects(page)).projects[0].tasks[0].comments[0];
+    expect(saved.html).toMatch(/<ul><li>line one/);
+    expect(saved.text).toMatch(/^line one\s+line two$/);
+
+    await row().locator('.project-comment-body').dblclick();
+    await page.keyboard.type('zzz');
+    await card.getByRole('button', { name: 'cancel', exact: true }).click();
+    await expect(row().locator('.project-comment-body')).not.toContainText('zzz');
+
+    await row().hover();
+    await row().getByRole('button', { name: 'edit', exact: true }).click();
+    await page.keyboard.type('yyy');
+    await page.keyboard.press('Escape');
+    await expect(row().locator('.project-comment-body')).not.toContainText('yyy');
+    expect((await storedProjects(page)).projects[0].tasks[0].comments[0].html).toBe(saved.html);
+  });
+
+  test('comment formatting survives desk → project → desk', async ({ page }) => {
+    await seedProjectSpace(page);
+    const deskCard = page.locator('.item-card', { hasText: 'Desk task to send' });
+    await deskCard.locator('.card-overflow-btn').click();
+    await deskCard.locator('.card-overflow-menu button', { hasText: 'Send to project…' }).click();
+    await page.locator('#send-modal .send-option', { hasText: 'Gamma Project' }).click();
+
+    await openSeededProjectTab(page, 'Gamma Project', 'tasks');
+    const body = projectCard(page, 'Desk task to send').locator('.project-comment-body');
+    await expect(body.locator('b')).toHaveText('comment');
+
+    await cardButton(projectCard(page, 'Desk task to send'), 'to desk').click();
+    await page.locator('#send-modal .send-option', { hasText: 'Work desk' }).click();
+    const work = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!));
+    const items = Object.values(work.days as Record<string, { items: { content: string; comments?: { content: string }[] }[] }>).flatMap(d => d.items);
+    const back = items.find(i => i.content === 'Desk task to send')!;
+    expect(back.comments![0].content).toBe('desk <b>comment</b>');
+  });
+
+  test('a comment edited by an older version shows its plain text, not stale formatting', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+        { id: 'p1', name: 'Old Client Project', createdAt: '2026-10-01T09:00:00', notes: [], tasks: [
+          { id: 't1', type: 'task', content: 'Task', createdAt: '2026-10-03T09:00:00', comments: [
+            { id: 'c1', text: 'edited on 1.19.0', html: '<b>original</b>', createdAt: '2026-10-03T10:00:00' },
+            { id: 'c2', text: 'kept', html: '<i>kept</i>', createdAt: '2026-10-03T11:00:00' },
+          ] },
+        ] },
+      ] }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await openSeededProjectTab(page, 'Old Client Project', 'tasks');
+    const bodies = projectCard(page, 'Task').locator('.project-comment-body');
+    await expect(bodies.nth(0)).toHaveText('edited on 1.19.0');
+    await expect(bodies.nth(0).locator('b')).toHaveCount(0);
+    await expect(bodies.nth(1).locator('i')).toHaveText('kept');
+  });
+});
