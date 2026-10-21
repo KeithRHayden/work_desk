@@ -77,7 +77,9 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Continue offline** — use the desk without an account; data stays in this browser only (clearing site data can wipe it). Use **Sign in** in the sidebar account footer (on phones, in the menu) when you’re ready to sync.
 - **Export / Import Desk** — save or restore a single tab (Work, Personal, or Projects) as a JSON file; the export stamps which desk it came from, and importing into the wrong tab shows a confirmation warning
 - **Export / Import All** — bundles Work + Personal + Projects into a single file for a complete one-click backup and restore
-- Auto-prune of days older than 1 year from the local cache (cloud keeps history)
+- **Full history** — every day stays on the desk and in Search and Insights; nothing is trimmed after a year
+- **Storage warning** — from 50% of the browser's ~5 MB storage the account menu shows how much is used; from 80% a banner suggests **Export All** (and **Sign in** when not signed in). If storage fills, edits stay on screen, still sync when signed in, and are included in Export All
+- **Several tabs** — a change saved in one tab shows up in your other open tabs right away
 
 ### Mobile and PWA
 
@@ -111,8 +113,11 @@ The details behind the features above: when things happen automatically, and wha
 
 ### Sync timing (signed in)
 
-- **Pull and merge** — on open, when you switch back to the tab, and every 5 minutes while the tab is visible (at most once every 10 seconds)
-- **Push** — your edits, including auto carry, upload about 2.5 seconds after the last change; auto-added recurring tasks upload immediately
+- **Check** — when you switch back to the tab and every 5 minutes while the tab is visible (at most once every 10 seconds), the app reads only the cloud row's last-updated time. If it matches what this device last saw, nothing is downloaded; auto carry and recurring tasks still run, and local edits upload if there are any
+- **Full sync (download and merge)** — on open, after signing in to a different account, whenever another device or the add-task shortcut has saved, and at least every 4 hours
+- **Push** — your edits, including auto carry, upload about 2.5 seconds after the last change; auto-added recurring tasks upload immediately. An upload is skipped when the data matches the cloud, and if another device saved in the meantime its changes are merged in first
+- **Sign out** clears this device's sync marker, so the next sign-in starts with a full sync
+- **Typing is never interrupted** — a sync (or a change from another tab) redraws the board only when something changed, and waits while you're typing a comment, editing a task, or adding to a column; it lands when you click or tab away. Unsent comments, edits, and the cursor position survive the redraw
 - **Offline** — nothing leaves the browser; use Export All for backups
 
 ### Insights
@@ -136,7 +141,7 @@ The details behind the features above: when things happen automatically, and wha
 - **Tag box** — clicking *tag* on a card opens a text field with your two most-used tags; it stays open until you add a tag, press Esc, or click outside it
 - **Today's Progress** — the sidebar card always shows today, whichever day you're viewing
 - **What's new** — the link under the subtitle appears once per new version and disappears after you close the changelog
-- **Local history** — days older than 12 months are pruned from this browser's copy to keep it fast
+- **Local history** — every day is kept in this browser's copy; the storage warning tells you when it's getting full
 
 ## Tech stack
 
@@ -222,7 +227,7 @@ work-desk/
 
 | Store | Contents |
 |-------|----------|
-| Local | `work-desk-data-work`, `work-desk-data-personal`, projects + recurring keys, preferences |
+| Local | `work-desk-data-work`, `work-desk-data-personal`, projects + recurring keys, preferences, and `work-desk-sb-sync` (the signed-in account's last-seen cloud time and upload fingerprint) |
 | Cloud | Supabase `user_data.data` JSON (work, personal, projects, recurring, prefs) |
 | Backup | Single-desk export includes `days` + `deletedIds` + `context`; Export All bundles all three desks |
 
