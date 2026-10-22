@@ -15,7 +15,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Drag and drop** — reorder within a day or move between columns; on desktop, the empty space below a column accepts drops for that column, with a *Drop in …* strip showing where the task will land
 - **Shelving** — park a task without deleting it
 - **Carry forward** — a one-click button that only appears when there's something to carry; enable auto-carry (Options → Behavior) to pull it in every time you open the desk
-- **Recurring templates** — daily / weekdays / weekly / custom; injects once per due day (completed instances count)
+- **Recurring templates** — daily / weekdays / weekly / custom days / every 2 weeks / monthly / quarterly; monthly and quarterly go on dates (the 1st and 15th, the last day) or weekdays (the 3rd Thursday, the 1st and 3rd Tuesday); injects once per due day (completed instances count)
 - **Comments / updates** — timestamped follow-ups on tasks; split any comment into its own task or note with one click (→ task / → note)
 - **Move to another day** — keeps a single ID (no dual-day clones)
 
@@ -37,7 +37,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Calendar legend / Today's Progress switches** — Options → Appearance → Layout can hide the key under the sidebar calendar and the Today's Progress card (both on by default)
 - **Tags** — tag a task or note by typing `#word` inline or clicking the `tag` action (which offers your two most-used tags as one-click picks, narrowing as you type); chips render top-right on the card, always uppercase and case-insensitive (`#ACE` == `#ace`)
 - **Tag position** — Options → Appearance → Card layout: *Own row* (default), *Slim headroom* (every task keeps a short tag row so text starts at the same height with or without tags), or *Action bar* (chips beside ⋮; on narrow cards they drop to a second line with ⋮, right-aligned)
-- **Tag colors** — Options → Appearance → Tags: *Single color (accent)* (default, every tag uses the accent), *Shades of accent* (lighter/darker/neighboring shades of the accent), or *Multi-color* (hues spread around the color wheel at the accent's brightness); both follow the theme when you switch and are stable across devices. Each mode has 8 colors, so with more tags some share one. Click any chip on a card, or use the tag list in Options, to pin a custom color that overrides any mode; synced with your other preferences
+- **Tag colors** — Options → Appearance → Tags: *Single color (accent)* (default, every tag uses the accent), *Shades of accent* (8 clearly different colors that suit the theme: its own color set for Monokai, Dracula, Nord, Solarized, Gruvbox, Catppuccin, One Dark, Rosé Pine, Tokyo, Kanagawa, Everforest, and Mediterranean, otherwise a blend from the accent toward the theme's second color, checked so no two look alike; your most-used tags get the most distinct colors and keep them), or *Multi-color* (hues spread around the color wheel at the accent's brightness); both follow the theme when you switch and are stable across devices. Each mode has 8 colors, so with more tags some share one. Click any chip on a card, or use the tag list in Options, to pin a custom color that overrides any mode; synced with your other preferences
 - **Search** — floating overlay with a result count; search the current list or switch the scope chip to *All* for Work, Personal, and Projects together (project results show the project name and open the project with the item outlined), and use `#tagname` to filter by tag; finished tasks are marked `✓ Done` or `Shelved`
 - **Repair duplicates** — cleans same-ID and same-day recurring copies left by sync races
 
@@ -59,10 +59,10 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 ### Customization
 
-- **96 preset themes** — 32 light + 32 medium + 32 dark (Nord, Dracula, Synthwave, Catppuccin, Gruvbox, Retro, Dot Matrix, Monokai, Phosphor, Fog, Twilight, the four Unit themes, etc.), browsed as mini wireframe previews, filterable by Light/Med/Dark
+- **108 preset themes** — 36 light + 36 medium + 36 dark, so each group fills the four-column theme grid (Nord, Dracula, Synthwave, Catppuccin, Catppuccin Latte, Catppuccin Frappé, Gruvbox, Gruvbox Mid, Solarized Mid, Rosewood, Rosé Pine Moon, Retro, Dot Matrix, Monokai, Monokai Pro, Kanagawa, Everforest, Rosé Pine Dawn, Phosphor, Fog, Twilight, the four Unit themes, etc.), browsed as mini wireframe previews, filterable by Light/Med/Dark
 - **Custom Theme Builder** — create up to 5 of your own themes from 5 picked colors (Background, Surface, Sidebar, Accent, Text); ~30 CSS variables auto-derived, live preview, synced across devices
 - **Options menu** — tabbed **Themes** / **Appearance** / **Behavior** panels (customize button ⚙ near the date, or **Options** in the account menu; on phones, **Options** in the menu sheet). Appearance and Behavior open on a summary list where each row has a one-line note of what's inside (hover it for the current settings); click a row to open that section, then *‹ Back* or Esc to return (Esc again closes). On/off settings are switches, and settings added in the current release carry a *New* tag until you open their section
-  - Themes: 96 presets with Light/Med/Dark filters, plus Custom tab for user-created themes; a line under the filter names the current theme, with *Show* to jump to its group
+  - Themes: 108 presets with Light/Med/Dark filters, plus Custom tab for user-created themes; a line under the filter names the current theme, with *Show* to jump to its group
   - Appearance: Card layout (Comfortable/Compact, complete button style, tag position), Typography (text size, font family), Layout (sidebar left, right, top, or bottom), Effects (card glow, gradient header), Background (12 patterns, 2–45% strength), Tags (tag colors; top 8 tags with *Show all*; *Reset* only on pinned colors)
   - Behavior: General (startup view, first day of week, quieter weekends), Tasks (keep comments open, auto-collapse completed with threshold 3–20, auto carry each day, celebration confetti, confirm before delete, strike-through completed tasks), Projects (truncate long notes), Insights (weekends don't break streaks), Holidays (past custom holidays hidden behind *Show past*)
   - *Reset to defaults* at the bottom of Appearance and Behavior restores new-install settings for that tab; theme, pinned tag colors, and custom holidays are kept
@@ -104,6 +104,9 @@ The details behind the features above: when things happen automatically, and wha
 - **No backfill, no preview** — days the app was never opened don't get filled in later, and future days stay empty until that day arrives
 - **Offline mode** — with no account there's no periodic sync, so a tab left open overnight adds the new day's tasks after a refresh or a Work/Personal switch
 - **Skip holidays** — templates with *skip holidays* on aren't added on US federal holidays (when enabled in Options → Behavior) or your custom holidays
+- **Every 2 weeks** — counts from the first date you pick, so it lands on that weekday every other week
+- **Monthly and quarterly** — *Day of month* picks one or more dates; a 29th–31st falls on the last day in shorter months, and *Last* is always the last day. *Day of week* picks one or more weeks (1st–4th or Last) and a weekday. Quarterly runs in one of three month sets (Jan · Apr · Jul · Oct, Feb · May · Aug · Nov, or Mar · Jun · Sep · Dec)
+- **Ctrl+Enter** (Cmd+Enter on Mac) adds or saves a template, the same as it saves task, note, and comment edits
 
 ### Carry forward
 
@@ -264,13 +267,13 @@ E2E covers add → New, complete/uncomplete, reload persistence, export tombston
 
 ## Themes
 
-96 presets — 32 light + 32 medium + 32 dark — browsable as mini wireframe previews in Options → Themes, filterable by Light/Med/Dark.
+108 presets — 36 light + 36 medium + 36 dark — browsable as mini wireframe previews in Options → Themes, filterable by Light/Med/Dark.
 
-**Light (32):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Solarized, Sepia, Tokyo Day, Nord Light, Honey, Cloud, Peach, Olive, Seafoam, Citrus, Mediterranean, Vaporwave, Synthwave, Cyberpunk, Outrun, Retro, Unit Zero, Unit One, Unit Two, Unit Eight
+**Light (36):** Default, Slate, Arctic, Paper, Latte, Sand, Coral, Rose, Sakura, Mint, Sage, Lavender, Catppuccin Latte, Solarized, Sepia, Tokyo Day, Nord Light, Honey, Cloud, Peach, Olive, Seafoam, Citrus, Everforest, Mediterranean, Gruvbox Light, Rosé Pine Dawn, Vaporwave, Synthwave, Cyberpunk, Outrun, Retro, Unit Zero, Unit One, Unit Two, Unit Eight
 
-**Medium (32):** Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Denim, Lichen, Fern, Tundra, Moss, Basalt, Dot Matrix, Driftwood, Clay, Sandstone, Umber, Terracotta, Flint, Twilight, Haze, Plum Mid, Mulberry, Merlot, Ash, Graphite, Concrete, Unit Zero, Unit One, Unit Two, Unit Eight
+**Medium (36):** Fog, Overcast, Steel, Fjord, Nimbus, Pewter, Horizon, Solarized Mid, Denim, Lichen, Fern, Tundra, Moss, Basalt, Dot Matrix, Driftwood, Clay, Sandstone, Umber, Terracotta, Gruvbox Mid, Flint, Twilight, Haze, Plum Mid, Mulberry, Merlot, Rosewood, Catppuccin Frappé, Ash, Graphite, Concrete, Unit Zero, Unit One, Unit Two, Unit Eight
 
-**Dark (32):** Default, OLED, Nord, Dracula, Catppuccin, Tokyo Storm, Solarized, Gruvbox, Ocean, Forest, Dusk, Warm, Midnight, Noir, Mocha, Rose, Ember, Glacier, Plum, Storm, One Dark, Phosphor, Monokai, Rosé Pine, Synthwave, Cyberpunk, Outrun, Vaporwave, Unit Zero, Unit One, Unit Two, Unit Eight
+**Dark (36):** Default, OLED, Nord, Dracula, Catppuccin, Tokyo Storm, Solarized, Gruvbox, Ocean, Forest, Everforest, Dusk, Warm, Midnight, Noir, Kanagawa, Mocha, Rose, Ember, Glacier, Plum, Storm, One Dark, Phosphor, Monokai, Monokai Pro, Rosé Pine, Rosé Pine Moon, Synthwave, Cyberpunk, Outrun, Vaporwave, Unit Zero, Unit One, Unit Two, Unit Eight
 
 **Unit themes** — one per pilot (Zero: prototype blue and white; One: purple and neon green; Two: production red and orange; Eight: pink and mint), each in all three tiers, with a thin color stripe across the top header. **Dot Matrix** was called Game Boy before 1.14.0; a saved selection carries over automatically.
 
