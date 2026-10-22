@@ -15,6 +15,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ### Fixed
 - **Theme grid scrolled sideways** — the four theme columns grew to fit the widest name, so longer names (Catppuccin Frappé, Catppuccin Latte, Gruvbox Light, Mediterranean) pushed the grid wider than the Options panel, worst with JetBrains Mono, Merriweather, or Large text. Columns now share the width evenly, names wrap at spaces, and a single word too wide for its column (such as *Mediterranean*) shrinks to fit
+- **Installed app didn't rotate** — the app manifest set `"orientation": "portrait-primary"`, which locks an installed app upright on tablets and phones (browser tabs ignore it, so the browser version rotated). It's now `"any"`. An app installed earlier picks up the change when the device next refreshes its copy of the manifest (on Android, usually within a day of opening it), or right away after uninstalling and reinstalling
 
 ## [1.21.0] — 2026-10-21
 
