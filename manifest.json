@@ -5,7 +5,7 @@
   "start_url": "/work_desk/",
   "scope": "/work_desk/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#1a1025",
   "theme_color": "#1a1025",
   "icons": [
