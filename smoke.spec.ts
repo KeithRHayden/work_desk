@@ -329,6 +329,19 @@ test.describe('Phone menu (1.13.0)', { tag: ['@phone', '@sidebar'] }, () => {
     await expect(page.locator('#export-menu')).toBeHidden();
   });
 
+  test('Help fits the phone: search and chips stay on screen and a chip opens its section', async ({ page }) => {
+    await openPhone(page);
+    await page.locator('#help-btn').click();
+    const search = (await page.locator('#help-search').boundingBox())!;
+    expect(search.x).toBeGreaterThanOrEqual(0);
+    expect(search.x + search.width).toBeLessThanOrEqual(390);
+    const chips = page.locator('#help-index button');
+    for (const box of await chips.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().right))) expect(box).toBeLessThanOrEqual(390);
+    await chips.filter({ hasText: 'Phone & install' }).click();
+    await expect(page.locator('#help-phone li').first()).toBeInViewport();
+    await expect(page.locator('#help-search')).toBeInViewport();
+  });
+
   test('Repair duplicates and Sign in work from the menu', async ({ page }) => {
     await openPhone(page);
     await openMenu(page);
@@ -3284,6 +3297,74 @@ test.describe('Help and What\'s New modals', { tag: ['@docs'] }, () => {
     await expect(page.locator('#help-modal')).toContainText('Weekends don\'t break streaks');
     await page.locator('#help-modal-close').click();
     await expect(page.locator('#help-modal')).toBeHidden();
+  });
+
+  test('Help opens with Quick start and Keyboard shortcuts unfolded and an index chip per section', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#help-btn').click();
+    const modal = page.locator('#help-modal');
+    const sections = modal.locator('.help-section');
+    const chips = page.locator('#help-index button');
+    await expect(chips).toHaveCount(await sections.count());
+    await expect(chips.first()).toHaveText('Quick start');
+    await expect(modal.locator('.help-section[open] > summary')).toHaveText(['Quick start', 'Keyboard shortcuts']);
+
+    const insights = modal.locator('#help-insights');
+    await expect(insights.locator('li').first()).toBeHidden();
+    await chips.filter({ hasText: 'Insights' }).click();
+    await expect(insights).toHaveAttribute('open', '');
+    await expect(insights.locator('li').first()).toBeInViewport();
+    await expect(modal).toBeVisible();
+
+    await insights.locator('summary').click();
+    await expect(insights).not.toHaveAttribute('open', '');
+    await modal.locator('#help-projects > summary').click();
+    await expect(modal.locator('#help-projects')).toHaveAttribute('open', '');
+    await expect(modal.locator('#help-projects li', { hasText: 'Copy as Markdown' })).toBeVisible();
+  });
+
+  test('Help search narrows to matching lines, says when nothing matches, and Esc clears before closing', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#help-btn').click();
+    const modal = page.locator('#help-modal');
+    const search = page.locator('#help-search');
+
+    await search.fill('quarterly');
+    const visible = modal.locator('.help-section:not([hidden])');
+    await expect(visible.locator('> summary')).toHaveText(['Recurring tasks']);
+    await expect(modal.locator('#help-recurring')).toHaveAttribute('open', '');
+    const shown = modal.locator('#help-recurring li:not([hidden])');
+    await expect(shown).toHaveCount(2);
+    for (const text of await shown.allTextContents()) expect(text.toLowerCase()).toContain('quarterly');
+    await expect(page.locator('#help-index button:not(.hidden)')).toHaveText(['Recurring tasks']);
+
+    await search.fill('  OPTIONS  ');
+    await expect(modal.locator('#help-options li:not([hidden])')).toHaveCount(5);
+    await expect(modal.locator('#help-options')).toHaveAttribute('open', '');
+
+    await search.fill('zzqx');
+    await expect(page.locator('#help-no-results')).toBeVisible();
+    await expect(visible).toHaveCount(0);
+
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+    await expect(modal).toBeVisible();
+    await expect(page.locator('#help-no-results')).toBeHidden();
+    await expect(modal.locator('.help-section[open] > summary')).toHaveText(['Quick start', 'Keyboard shortcuts']);
+    await expect(modal.locator('.help-section:not([hidden])')).toHaveCount(await modal.locator('.help-section').count());
+    await search.press('Escape');
+    await expect(modal).toBeHidden();
+  });
+
+  test('Help resets its search and sections each time it opens', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#help-btn').click();
+    await page.locator('#help-search').fill('tags');
+    await page.locator('#help-modal-dismiss').click();
+    await page.locator('#help-btn').click();
+    await expect(page.locator('#help-search')).toHaveValue('');
+    await expect(page.locator('#help-modal .help-section[open] > summary')).toHaveText(['Quick start', 'Keyboard shortcuts']);
+    await expect(page.locator('#help-index button.hidden')).toHaveCount(0);
   });
 
   test('clicking the help backdrop closes it', async ({ page }) => {
@@ -6863,5 +6944,403 @@ test.describe('Formatting in projects 1.19.1', { tag: ['@projects', '@board'] },
     await expect(bodies.nth(0)).toHaveText('edited on 1.19.0');
     await expect(bodies.nth(0).locator('b')).toHaveCount(0);
     await expect(bodies.nth(1).locator('i')).toHaveText('kept');
+  });
+});
+
+// ── Coverage gaps closed in 1.21.0 ───────────────────────────────────────
+type SeedItem = Record<string, unknown> & { id: string; content: string };
+async function seedToday(page: Page, work: SeedItem[], extra: Record<string, unknown> = {}) {
+  await page.addInitScript(({ work, extra }) => {
+    if (localStorage.getItem('gap-seeded')) return;
+    localStorage.setItem('gap-seeded', '1');
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const at = `${today}T09:00:00.000Z`;
+    const items = work.map((i) => ({ type: 'task', completed: false, shelved: false, boardColumn: 'new', comments: [], createdAt: at, ...i }));
+    localStorage.setItem('work-desk-list-context', 'work');
+    localStorage.setItem('work-desk-data-work', JSON.stringify({ deletedIds: {}, days: items.length ? { [today]: { date: today, items } } : {} }));
+    localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+    for (const [k, v] of Object.entries(extra)) {
+      localStorage.setItem(k, (typeof v === 'string' ? v : JSON.stringify(v)).replace(/__TODAY__/g, today).replace(/__YESTERDAY__/g,
+        (() => { const y = new Date(d); y.setDate(y.getDate() - 1); return `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`; })()));
+    }
+  }, { work, extra });
+  await page.goto(DESK_URL);
+  await dismissAuthModal(page);
+}
+
+const storedDesk = (page: Page, ctx: 'work' | 'personal' = 'work') =>
+  page.evaluate((c) => JSON.parse(localStorage.getItem(`work-desk-data-${c}`) || '{}'), ctx);
+const storedItems = async (page: Page, ctx: 'work' | 'personal' = 'work') =>
+  Object.values<any>((await storedDesk(page, ctx)).days || {}).flatMap((d) => d.items);
+
+async function openCardMenu(page: Page, text: string) {
+  const card = page.locator('.item-card', { hasText: text });
+  await card.locator('.card-overflow-btn').click();
+  const menu = card.locator('.card-overflow-menu');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+test.describe('Card ⋮ menu actions', { tag: ['@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('lists the right actions, closes on outside click, and only one menu is open at a time', async ({ page }) => {
+    await seedToday(page, [{ id: 'm1', content: 'Menu task' }, { id: 'm2', content: 'Other task' }, { id: 'n1', type: 'note', content: 'Menu note' }]);
+    const menu = await openCardMenu(page, 'Menu task');
+    await expect(menu.locator('button')).toHaveText(['Start', 'Shelve', 'Send to Personal', 'Send to project…', 'Convert to note', 'Delete']);
+    const other = await openCardMenu(page, 'Other task');
+    await expect(menu).toBeHidden();
+    await page.locator('#add-form').click({ position: { x: 5, y: 5 } });
+    await expect(other).toBeHidden();
+    const noteMenu = await openCardMenu(page, 'Menu note');
+    await expect(noteMenu.locator('button')).toHaveText(['Send to Personal', 'Send to project…', 'Convert to task', 'Delete']);
+  });
+
+  test('Start moves a new task to Active and leaves the menu', async ({ page }) => {
+    await seedToday(page, [{ id: 'm1', content: 'Menu task' }]);
+    await (await openCardMenu(page, 'Menu task')).locator('button', { hasText: 'Start' }).click();
+    await expect(page.locator('.board-column.active .item-card', { hasText: 'Menu task' })).toBeVisible();
+    const menu = await openCardMenu(page, 'Menu task');
+    await expect(menu.locator('button', { hasText: 'Start' })).toHaveCount(0);
+    expect((await storedItems(page))[0].boardColumn).toBe('active');
+  });
+
+  test('Shelve moves a task to Shelved and Unshelve brings it back to Active', async ({ page }) => {
+    await seedToday(page, [{ id: 'm1', content: 'Menu task' }]);
+    await (await openCardMenu(page, 'Menu task')).locator('button', { hasText: 'Shelve' }).click();
+    await expect(page.locator('#toast')).toContainText('Task shelved');
+    await expect(page.locator('.board-column.done .shelved-card', { hasText: 'Menu task' })).toBeVisible();
+    await expect(page.locator('.board-column.done .shelved-sub')).toHaveText('Shelved (1)');
+    expect((await storedItems(page))[0].shelved).toBe(true);
+
+    const menu = await openCardMenu(page, 'Menu task');
+    await expect(menu.locator('button', { hasText: 'Start' })).toHaveCount(0);
+    await menu.locator('button', { hasText: 'Unshelve' }).click();
+    await expect(page.locator('#toast')).toContainText('Task moved to Active');
+    await expect(page.locator('.board-column.active .item-card', { hasText: 'Menu task' })).toBeVisible();
+    expect((await storedItems(page))[0]).toMatchObject({ shelved: false, boardColumn: 'active' });
+  });
+
+  test('completed tasks offer no Shelve', async ({ page }) => {
+    await seedToday(page, [{ id: 'm1', content: 'Done task', completed: true }]);
+    const menu = await openCardMenu(page, 'Done task');
+    await expect(menu.locator('button')).toHaveText(['Send to Personal', 'Send to project…', 'Convert to note', 'Delete']);
+  });
+
+  test('Send to Personal moves the card to the other desk and back, dropping carried-from', async ({ page }) => {
+    await seedToday(page, [{ id: 'm1', content: 'Menu task', carriedFrom: '2026-01-01', tags: ['ace'] }]);
+    await (await openCardMenu(page, 'Menu task')).locator('button', { hasText: 'Send to Personal' }).click();
+    await expect(page.locator('#toast')).toContainText('Sent to Personal list');
+    await expect(page.locator('.item-card', { hasText: 'Menu task' })).toHaveCount(0);
+    expect(await storedItems(page)).toHaveLength(0);
+    const sent = (await storedItems(page, 'personal'))[0];
+    expect(sent).toMatchObject({ id: 'm1', tags: ['ace'] });
+    expect(sent.carriedFrom).toBeUndefined();
+
+    await page.locator('#tab-personal').click();
+    const menu = await openCardMenu(page, 'Menu task');
+    await menu.locator('button', { hasText: 'Send to Work' }).click();
+    await expect(page.locator('#toast')).toContainText('Sent to Work list');
+    await page.locator('#tab-work').click();
+    await expect(page.locator('.item-card', { hasText: 'Menu task' })).toBeVisible();
+    expect(await storedItems(page, 'personal')).toHaveLength(0);
+  });
+
+  test('Convert to note drops task-only fields; Convert to task puts it back in New', async ({ page }) => {
+    await seedToday(page, [{ id: 'm1', content: 'Menu task', boardColumn: 'active', comments: [{ id: 'c1', content: 'hi', createdAt: '2026-10-01T09:00:00Z' }] }]);
+    await (await openCardMenu(page, 'Menu task')).locator('button', { hasText: 'Convert to note' }).click();
+    await expect(page.locator('#toast')).toContainText('Task converted to note');
+    await expect(page.locator('.item-card.note-card', { hasText: 'Menu task' })).toBeVisible();
+    const note = (await storedItems(page))[0];
+    expect(note.type).toBe('note');
+    expect(note.boardColumn).toBeUndefined();
+    expect(note.comments).toBeUndefined();
+
+    await (await openCardMenu(page, 'Menu task')).locator('button', { hasText: 'Convert to task' }).click();
+    await expect(page.locator('#toast')).toContainText('Note converted to task');
+    await expect(page.locator('.board-column.new .item-card', { hasText: 'Menu task' })).toBeVisible();
+    expect((await storedItems(page))[0]).toMatchObject({ type: 'task', boardColumn: 'new', completed: false, shelved: false });
+  });
+
+  test('deleting a task from a recurring template warns and it does not come back after reload', async ({ page }) => {
+    const messages: string[] = [];
+    let accept = false;
+    page.on('dialog', (d) => { messages.push(d.message()); accept ? d.accept() : d.dismiss(); });
+    await seedToday(page, [{ id: 'r1', content: 'Daily standup notes', recurringTemplateId: 't1', comments: [{ id: 'c1', content: 'x', createdAt: '2026-10-01T09:00:00Z' }] }], {
+      'work-desk-confirm-delete': 'true',
+      'work-desk-recurring-work': { deletedIds: {}, templates: [
+        { id: 't1', content: 'Daily standup notes', rule: 'daily', createdAt: '2026-01-01T09:00:00Z', lastInjectedDate: '__YESTERDAY__' },
+      ] },
+    });
+    await (await openCardMenu(page, 'Daily standup notes')).locator('button', { hasText: 'Delete' }).click();
+    expect(messages[0]).toBe('Delete this task? It has 1 comment. It came from a recurring template.');
+    await expect(page.locator('.item-card', { hasText: 'Daily standup notes' })).toHaveCount(1);
+
+    accept = true;
+    await (await openCardMenu(page, 'Daily standup notes')).locator('button', { hasText: 'Delete' }).click();
+    await expect(page.locator('.item-card', { hasText: 'Daily standup notes' })).toHaveCount(0);
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('#add-form')).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Daily standup notes' })).toHaveCount(0);
+  });
+});
+
+test.describe('Backup export and import', { tag: ['@sync'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  async function pickImport(page: Page, opt: 'desk' | 'all', file: { name: string; body: unknown }) {
+    await openAccountMenu(page);
+    await page.locator('#import-btn').click();
+    await expect(page.locator('#import-menu')).toBeVisible();
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator(`#import-${opt}-opt`).click()]);
+    const body = typeof file.body === 'string' ? file.body : JSON.stringify(file.body);
+    await chooser.setFiles({ name: file.name, mimeType: 'application/json', buffer: Buffer.from(body) });
+  }
+
+  test('Export All downloads every desk, and Import All → Replace restores it', async ({ page }) => {
+    const messages: string[] = [];
+    page.on('dialog', (d) => { messages.push(d.message()); d.accept(); });
+    await seedToday(page, [{ id: 'w1', content: 'Work backup task' }], {
+      'work-desk-data-personal': { deletedIds: {}, days: { __TODAY__: { date: '__TODAY__', items: [
+        { id: 'h1', type: 'task', content: 'Home backup task', completed: false, boardColumn: 'new', createdAt: '2026-10-01T09:00:00Z', comments: [] },
+      ] } } },
+      'work-desk-projects': { deletedIds: {}, projects: [{ id: 'p1', name: 'Backup Project', createdAt: '2026-10-01T09:00:00Z', notes: [], tasks: [] }] },
+    });
+    await openAccountMenu(page);
+    await page.locator('#export-btn').click();
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#export-all-opt').click()]);
+    expect(download.suggestedFilename()).toMatch(/^work-desk-backup-all-\d{4}-\d{2}-\d{2}\.json$/);
+    await expect(page.locator('#toast')).toContainText('Exported all — Work: 1 items, Personal: 1 items, 1 project');
+    const { readFileSync } = await import('node:fs');
+    const backup = JSON.parse(readFileSync((await download.path())!, 'utf8'));
+    expect(backup).toMatchObject({ type: 'all', app: 'work-desk' });
+    expect(JSON.stringify(backup.work.days)).toContain('Work backup task');
+    expect(JSON.stringify(backup.personal.days)).toContain('Home backup task');
+    expect(backup.projects.map((p: { name: string }) => p.name)).toEqual(['Backup Project']);
+
+    await page.keyboard.press('Escape');
+    await addTask(page, 'Added after backup');
+    await pickImport(page, 'all', { name: 'work-desk-backup-all.json', body: backup });
+    await expect(page.locator('#import-modal')).toBeVisible();
+    await expect(page.locator('#import-modal-text')).toHaveText(
+      'Import All backup: Work (1 items, 1 days), Personal (1 items, 1 days), 1 project. Merge adds new items alongside yours. Replace overwrites all desks.');
+    await page.locator('#import-replace').click();
+    expect(messages.at(-1)).toContain('replace ALL your Work, Personal, and Projects data');
+    await expect(page.locator('#import-modal')).toBeHidden();
+    await expect(page.locator('#toast')).toContainText('Replaced all desks from backup');
+    await expect(page.locator('.item-card', { hasText: 'Work backup task' })).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Added after backup' })).toHaveCount(0);
+    await page.locator('#tab-personal').click();
+    await expect(page.locator('.item-card', { hasText: 'Home backup task' })).toBeVisible();
+  });
+
+  test('Import All → Merge keeps both sides, the more finished copy, all comments, and respects deletions', async ({ page }) => {
+    const recent = new Date(Date.now() - 86400000).toISOString();
+    await seedToday(page, [
+      { id: 'w1', content: 'Shared task', comments: [{ id: 'c-local', content: 'local note', createdAt: recent }] },
+      { id: 'w3', content: 'Only on this device' },
+    ], {
+      'work-desk-data-work': { deletedIds: { w4: recent }, days: { __TODAY__: { date: '__TODAY__', items: [
+        { id: 'w1', type: 'task', content: 'Shared task', completed: false, boardColumn: 'new', createdAt: recent, comments: [{ id: 'c-local', content: 'local note', createdAt: recent }] },
+        { id: 'w3', type: 'task', content: 'Only on this device', completed: false, boardColumn: 'new', createdAt: recent, comments: [] },
+      ] } } },
+      'work-desk-projects': { deletedIds: {}, projects: [{ id: 'p1', name: 'Local Project', createdAt: recent, notes: [], tasks: [] }] },
+    });
+    const today = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('work-desk-data-work')!).days)[0]);
+    const backup = {
+      version: 1, type: 'all', app: 'work-desk',
+      work: { deletedIds: {}, days: { [today]: { date: today, items: [
+        { id: 'w1', type: 'task', content: 'Shared task', completed: true, createdAt: recent, comments: [{ id: 'c-backup', content: 'backup note', createdAt: recent }] },
+        { id: 'w2', type: 'task', content: 'Only in the backup', completed: false, createdAt: recent, comments: [] },
+        { id: 'w4', type: 'task', content: 'Deleted here already', completed: false, createdAt: recent, comments: [] },
+      ] } } },
+      personal: { deletedIds: {}, days: {} },
+      projects: [{ id: 'p1', name: 'Local Project', notes: [], tasks: [] }, { id: 'p2', name: 'Backup Project', notes: [], tasks: [] }],
+    };
+    await pickImport(page, 'all', { name: 'backup-all.json', body: backup });
+    await page.locator('#import-merge').click();
+    await expect(page.locator('#toast')).toContainText('Merged backup into all desks');
+
+    await expect(page.locator('.board-column.done .item-card', { hasText: 'Shared task' })).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Only in the backup' })).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Only on this device' })).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Deleted here already' })).toHaveCount(0);
+    const shared = (await storedItems(page)).find((i) => i.id === 'w1');
+    expect(shared.comments.map((c: { id: string }) => c.id).sort()).toEqual(['c-backup', 'c-local']);
+    const projects = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-projects')!).projects.map((p: { name: string }) => p.name));
+    expect(projects.sort()).toEqual(['Backup Project', 'Local Project']);
+  });
+
+  test('Import Desk → Merge adds to the current desk; a different desk\'s file asks first', async ({ page }) => {
+    const messages: string[] = [];
+    let accept = false;
+    page.on('dialog', (d) => { messages.push(d.message()); accept ? d.accept() : d.dismiss(); });
+    await seedToday(page, [{ id: 'w1', content: 'Existing task' }]);
+    const today = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('work-desk-data-work')!).days)[0]);
+    const deskFile = (context: string) => ({ version: 1, app: 'work-desk', context, deletedIds: {}, days: { [today]: { date: today, items: [
+      { id: 'i1', type: 'task', content: 'Imported desk task', completed: false, createdAt: '2026-10-01T09:00:00Z', comments: [] },
+      { id: 'bad', type: 'mystery', content: 'Skipped item' },
+    ] } } });
+
+    await pickImport(page, 'desk', { name: 'personal.json', body: deskFile('personal') });
+    await expect.poll(() => messages.at(-1)).toContain('This backup is from your Personal desk, but you\'re on the Work tab');
+    await expect(page.locator('#import-modal')).toBeHidden();
+
+    accept = true;
+    await pickImport(page, 'desk', { name: 'work.json', body: deskFile('work') });
+    await expect(page.locator('#import-modal-text')).toContainText('1 items');
+    await page.locator('#import-merge').click();
+    await expect(page.locator('#toast')).toContainText('Merged backup — now 2 items across 1 days');
+    await expect(page.locator('.item-card', { hasText: 'Imported desk task' })).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Existing task' })).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Skipped item' })).toHaveCount(0);
+  });
+
+  test('the wrong kind of file, or a broken one, is refused with a clear message', async ({ page }) => {
+    await seedToday(page, [{ id: 'w1', content: 'Existing task' }]);
+    await pickImport(page, 'all', { name: 'desk.json', body: { context: 'work', days: {} } });
+    await expect(page.locator('#toast')).toContainText('This is not an Export All backup — use Import Desk for single-desk files');
+    await pickImport(page, 'desk', { name: 'all.json', body: { type: 'all', work: {}, personal: {} } });
+    await expect(page.locator('#toast')).toContainText('This is an Export All backup — use Import All instead');
+    await pickImport(page, 'desk', { name: 'empty.json', body: { context: 'work', days: { '2026-10-01': { items: [] } } } });
+    await expect(page.locator('#toast')).toContainText('Invalid backup file');
+    await pickImport(page, 'all', { name: 'broken.json', body: '{ not json' });
+    await expect(page.locator('#toast')).toContainText('Could not read backup file');
+    await expect(page.locator('#import-modal')).toBeHidden();
+    await expect(page.locator('.item-card', { hasText: 'Existing task' })).toBeVisible();
+  });
+});
+
+test.describe('Insights chart types', { tag: ['@insights'] }, () => {
+  test('Bar, Line, Stacked, and Pie each draw their chart; Pie shows a tooltip on hover', async ({ page }) => {
+    const items: SeedItem[] = [];
+    for (let i = 0; i < 4; i++) items.push({ id: `c${i}`, content: `Done ${i}`, completed: true, boardColumn: 'active' });
+    items.push({ id: 's1', content: 'Shelved one', shelved: true }, { id: 'o1', content: 'Open one' });
+    await seedToday(page, items);
+    await page.locator('#tab-insights').click();
+    const view = page.locator('#insights-view');
+    const btn = (name: string) => view.locator('.chart-type-btn', { hasText: name });
+    await expect(btn('Bar')).toHaveClass(/active/);
+    await expect(view.locator('.insight-bars')).toBeVisible();
+
+    for (const [name, wrap] of [['Line', '.line-chart-wrap'], ['Stacked', '.stacked-chart-wrap'], ['Pie', '.pie-chart-wrap']] as const) {
+      await btn(name).click();
+      await expect(btn(name)).toHaveClass(/active/);
+      await expect(view.locator('.chart-type-btn.active')).toHaveCount(1);
+      const canvas = view.locator(`${wrap} canvas`);
+      await expect(canvas).toBeVisible();
+      expect((await canvas.boundingBox())!.width).toBeGreaterThan(100);
+    }
+
+    const pie = (await view.locator('.pie-chart-canvas').boundingBox())!;
+    // The first slice (Completed, 4 of 6) starts at 12 o'clock and runs clockwise
+    await page.mouse.move(pie.x + pie.width * 0.62, pie.y + pie.height * 0.3);
+    const tip = page.locator('.pie-chart-tooltip').last();
+    await expect(tip).toHaveCSS('opacity', '1');
+    await expect(tip).toContainText('Completed');
+    await page.mouse.move(pie.x - 20, pie.y - 20);
+    await expect(tip).toHaveCSS('opacity', '0');
+
+    await btn('Bar').click();
+    await expect(view.locator('.insight-bars')).toBeVisible();
+  });
+});
+
+test.describe('Touch drag', { tag: ['@phone', '@board'] }, () => {
+  test.use({ viewport: { width: 1024, height: 900 }, hasTouch: true, isMobile: true });
+
+  async function touchDrag(page: Page, from: Locator, to: Locator) {
+    const a = (await from.boundingBox())!;
+    const b = (await to.boundingBox())!;
+    await from.evaluate((card, pts) => {
+      const fire = (type: string, x: number, y: number) => card.dispatchEvent(new PointerEvent(type, {
+        bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', clientX: x, clientY: y, isPrimary: true,
+      }));
+      fire('pointerdown', pts.ax, pts.ay);
+      fire('pointermove', pts.ax + 20, pts.ay + 20);
+      fire('pointermove', pts.bx, pts.by);
+      fire('pointerup', pts.bx, pts.by);
+    }, { ax: a.x + a.width / 2, ay: a.y + 12, bx: b.x + b.width / 2, by: b.y + b.height / 2 });
+  }
+
+  test('dragging a card onto Active moves it; dropping on a card in the same column reorders', async ({ page }) => {
+    await seedToday(page, [{ id: 't1', content: 'First task' }, { id: 't2', content: 'Second task' }, { id: 't3', content: 'Third task' }]);
+    const newCol = page.locator('.board-column.new');
+    await expect(newCol.locator('.item-card')).toHaveCount(3);
+
+    await touchDrag(page, newCol.locator('.item-card', { hasText: 'Third task' }), newCol.locator('.item-card', { hasText: 'First task' }));
+    await expect(newCol.locator('.item-card .item-content')).toHaveText([/Third task/, /First task/, /Second task/]);
+
+    await touchDrag(page, newCol.locator('.item-card', { hasText: 'Second task' }), page.locator('.board-column.active'));
+    await expect(page.locator('.board-column.active .item-card', { hasText: 'Second task' })).toBeVisible();
+    await expect(page.locator('body')).not.toHaveClass(/touch-drag-active/);
+    expect((await storedItems(page)).find((i) => i.id === 't2').boardColumn).toBe('active');
+  });
+
+  test('a short touch that never passes the drag threshold moves nothing', async ({ page }) => {
+    await seedToday(page, [{ id: 't1', content: 'First task' }]);
+    const card = page.locator('.board-column.new .item-card', { hasText: 'First task' });
+    const a = (await card.boundingBox())!;
+    await card.evaluate((el, p) => {
+      const fire = (type: string, dx: number) => el.dispatchEvent(new PointerEvent(type, {
+        bubbles: true, pointerId: 3, pointerType: 'touch', clientX: p.x + dx, clientY: p.y,
+      }));
+      fire('pointerdown', 0); fire('pointermove', 5); fire('pointerup', 5);
+    }, { x: a.x + a.width / 2, y: a.y + 12 });
+    await expect(card).toBeVisible();
+    await expect(card).not.toHaveClass(/dragging/);
+  });
+});
+
+test.describe('Phone week strip', { tag: ['@phone', '@calendar'] }, () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('tapping a day opens it; the week arrows scroll the strip', async ({ page }) => {
+    await seedToday(page, [{ id: 't1', content: 'Today task' }]);
+    const strip = page.locator('#week-strip');
+    await expect(strip).toBeVisible();
+    const selected = strip.locator('.week-day.selected');
+    await expect(selected).toHaveClass(/today/);
+
+    const tomorrow = await page.evaluate(() => {
+      const d = new Date(); d.setDate(d.getDate() + 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+    await strip.locator(`.week-day[data-date-key="${tomorrow}"]`).click();
+    await expect(strip.locator(`.week-day[data-date-key="${tomorrow}"]`)).toHaveClass(/selected/);
+    await expect(page.locator('#add-editor-host .rich-editor')).toHaveAttribute('data-placeholder', 'Add a task for tomorrow…');
+    await expect(page.locator('.item-card', { hasText: 'Today task' })).toHaveCount(0);
+
+    const scrollLeft = () => strip.evaluate((el) => el.scrollLeft);
+    const before = await scrollLeft();
+    await page.locator('#week-next-btn').click();
+    await expect.poll(scrollLeft).toBeGreaterThan(before + 100);
+    const afterNext = await scrollLeft();
+    await page.locator('#week-prev-btn').click();
+    await page.locator('#week-prev-btn').click();
+    await expect.poll(scrollLeft).toBeLessThan(afterNext - 100);
+  });
+});
+
+test.describe('Project item archive', { tag: ['@projects'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('archive moves a project task to Archived and unarchive brings it back', async ({ page }) => {
+    await seedProjectSpace(page);
+    await openSeededProjectTab(page, 'Alpha Project', 'tasks');
+    const live = page.locator('#project-tasks-list .project-task-card', { hasText: 'Alpha task' });
+    await cardButton(live, 'archive').click();
+    await expect(live).toHaveCount(0);
+    await expect(page.locator('#project-tasks-archive-wrap .project-archive-toggle')).toContainText('Archived (2)');
+    expect((await storedProjects(page)).projects[0].tasks.find((t: { id: string }) => t.id === 'pt1').archived).toBe(true);
+
+    await page.locator('#project-tasks-archive-wrap .project-archive-toggle').click();
+    const archived = page.locator('#project-tasks-archive-wrap .project-task-card', { hasText: /^(?!.*Finished).*Alpha task/ });
+    await cardButton(archived, 'unarchive').click();
+    await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Alpha task' }).first()).toBeVisible();
+    await expect(page.locator('#project-tasks-archive-wrap .project-archive-toggle')).toContainText('Archived (1)');
+    expect((await storedProjects(page)).projects[0].tasks.find((t: { id: string }) => t.id === 'pt1').archived).toBeFalsy();
   });
 });
