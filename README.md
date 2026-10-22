@@ -144,6 +144,7 @@ The details behind the features above: when things happen automatically, and wha
 - **Tag box** — clicking *tag* on a card opens a text field with your two most-used tags; it stays open until you add a tag, press Esc, or click outside it
 - **Today's Progress** — the sidebar card always shows today, whichever day you're viewing
 - **What's new** — the link under the subtitle appears once per new version and disappears after you close the changelog
+- **Help** — the **?** beside the title opens a short guide in folding sections (Quick start and Keyboard shortcuts start open). The search box at the top filters every section down to the matching lines, and the chips under it jump to a section. Esc in the search box clears it; Esc again closes Help. The mechanics on this page live here rather than in Help
 - **Local history** — every day is kept in this browser's copy; the storage warning tells you when it's getting full
 
 ## Tech stack
@@ -223,7 +224,9 @@ work-desk/
 |--------|----------|
 | Add task / note | `Ctrl/Cmd + Enter` |
 | Add comment / update | `Ctrl/Cmd + Enter` |
+| Save an edit (task, note, comment, recurring task) | `Ctrl/Cmd + Enter` |
 | Bold / Italic / Underline | `Ctrl/Cmd + B` / `I` / `U` |
+| Reorder a project, note, or project task | `Alt + ↑` / `Alt + ↓` |
 | Cancel / close | `Escape` |
 
 ## Data storage
@@ -279,6 +282,8 @@ E2E covers add → New, complete/uncomplete, reload persistence, export tombston
 
 ## Future ideas
 
+- **Data encryption** — opt-in PIN or passphrase (AES-256) encryption of stored data so the database owner can't read tasks in plain text; a 4–6 digit PIN blocks casual viewing, a full passphrase blocks determined attacks
+- **Local weather** — an opt-in readout like 72°F ☀️ in the header or sidebar from Open-Meteo (free, no API key); off by default because it asks for your location
 - **Faster edge scrolling while dragging** — scroll the page quickly when a dragged task nears the top or bottom of the window, so reaching a column far up the page doesn't rely on the browser's slow built-in scrolling
 - **Settings window with search** — a wider Options panel with every category (Themes, Appearance, Behavior) in one list down the left and a search box that finds any setting by name, highlighting matches. A natural next step after the 1.17.0 summary-list Options once there are many more settings; on phones it would be a full-screen sheet
 - **Suggested colors for custom themes** — next to the five manual pickers, a *Suggest from a color* option: pick a color (color wheel or hex) or a mood (e.g. calm, cozy, energetic, focused), choose dark or light, and the app fills in background, surface, sidebar, accent, and text from color-harmony rules, with readable contrast enforced. A *Surprise me* button rolls a random harmonious set. Every suggestion stays editable with the existing pickers. Roughly 100–150 lines and no new files, so low overhead
