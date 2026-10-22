@@ -337,7 +337,10 @@ test.describe('Phone menu (1.13.0)', { tag: ['@phone', '@sidebar'] }, () => {
     expect(search.x + search.width).toBeLessThanOrEqual(390);
     const chips = page.locator('#help-index button');
     for (const box of await chips.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().right))) expect(box).toBeLessThanOrEqual(390);
-    await chips.filter({ hasText: 'Phone & install' }).click();
+    const columns = await chips.evaluateAll((els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().left))).size);
+    expect(columns).toBe(3);
+    expect(await chips.evaluateAll((els) => els.filter((e) => e.scrollWidth > e.clientWidth).length)).toBe(0);
+    await chips.filter({ hasText: 'Phone' }).click();
     await expect(page.locator('#help-phone li').first()).toBeInViewport();
     await expect(page.locator('#help-search')).toBeInViewport();
   });
@@ -1330,29 +1333,62 @@ test.describe('Tag colors', { tag: ['@tags', '@options'] }, () => {
     await expect(chipOn(page, 'Bravo task')).toHaveAttribute('data-shade-slot', '1');
   });
 
-  test('Shades of accent follows the theme: Monokai uses its own colors, other themes a wide two-tone spread', async ({ page }) => {
+  test('Shades of accent matches the screen, Multi-color uses the theme\'s wider set, both follow the theme', async ({ page }) => {
     await setupTwoTaggedTasks(page);
     await openAppearance(page);
-    await page.locator('#tag-color-mode-select').selectOption('analogous');
+    const modeSelect = page.locator('#tag-color-mode-select');
+    await modeSelect.selectOption('analogous');
     const shades = () => page.evaluate(() => Array.from({ length: 8 }, (_, i) =>
       getComputedStyle(document.documentElement).getPropertyValue(`--tag-shade-${i}`).trim()));
+    const spread = async () => {
+      const hues = (await Promise.all((await shades()).map((c) => rgbOf(page, c)))).map(hueOf);
+      return Math.max(...hues.map((h) => hueGap(h, hues[0])));
+    };
+    const ensureOpen = async () => {
+      if (!(await page.locator('#density-popout').isVisible())) await page.locator('#density-toggle').click();
+      await expect(page.locator('#density-popout')).toBeVisible();
+    };
+    const pickTheme = async (filter: string, id: string) => {
+      await ensureOpen();
+      await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
+      await page.locator(`.theme-filter-btn[data-theme-filter="${filter}"]`).click();
+      await page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="${id}"]`).click();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', id);
+    };
+    const pickMode = async (mode: string) => {
+      await ensureOpen();
+      await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+      await openOptionsSectionFor(page, '#tag-color-mode-select');
+      await modeSelect.selectOption(mode);
+    };
 
-    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
-    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
-    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="monokai"]').click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
+    // Monokai: the pink accent plus at most two colors from the olive background family
+    await pickTheme('dark', 'monokai');
+    await expect.poll(async () => (await shades())[1]).toBe('#b5d76c');
+    expect(await shades()).toEqual(['#f92672', '#b5d76c', '#f4a1ff', '#ff8008', '#d652e9', '#ffaba7', '#fbba53', '#ff6cb4']);
+    await expect.poll(async () => toHex(await rgbOf(page, await colorOf(chipOn(page, 'Bravo task'))))).toBe('#b5d76c');
+    await expect(page.locator('#tag-shade-vars')).toHaveCount(1);
+
+    await pickMode('palette');
     await expect.poll(async () => (await shades())[1]).toBe('#a6e22e');
     expect((await shades()).slice(0, 4)).toEqual(['#f92672', '#a6e22e', '#66d9ef', '#fd971f']);
     await expect.poll(async () => toHex(await rgbOf(page, await colorOf(chipOn(page, 'Bravo task'))))).toBe('#a6e22e');
-    await expect(page.locator('#tag-shade-vars')).toHaveCount(1);
 
-    await page.locator('#density-toggle').click();
-    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
-    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="seafoam"]').click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'seafoam');
+    // Seafoam: Multi-color spreads wide; Shades of accent keeps more of its colors near the teal
+    const nearAccent = async () => {
+      const hues = (await Promise.all((await shades()).map((c) => rgbOf(page, c)))).map(hueOf);
+      return hues.filter((h) => hueGap(h, hues[0]) <= 30).length;
+    };
+    await pickTheme('light', 'seafoam');
     await expect.poll(async () => (await shades())[0]).toBe('#0d9488');
-    const hues = (await Promise.all((await shades()).map((c) => rgbOf(page, c)))).map(hueOf);
-    expect(Math.max(...hues.map((h) => hueGap(h, hues[0])))).toBeGreaterThan(60);
+    const multiSet = await shades();
+    const multiNear = await nearAccent();
+    expect(await spread()).toBeGreaterThan(60);
+    expect(new Set(multiSet).size).toBe(8);
+    await pickMode('analogous');
+    await expect.poll(shades).not.toEqual(multiSet);
+    expect(await nearAccent()).toBeGreaterThan(multiNear);
+    expect((await shades())[0]).toBe('#0d9488');
     expect(new Set(await shades()).size).toBe(8);
     await expect(page.locator('#tag-shade-vars')).toHaveCount(1);
   });
@@ -1387,14 +1423,19 @@ test.describe('Tag colors', { tag: ['@tags', '@options'] }, () => {
     expect(pinned[0]).toBeGreaterThan(pinned[1] + 60);
   });
 
-  test('Single color and Multi-color chips carry no shade slot', async ({ page }) => {
+  test('Shades of accent and Multi-color share a tag\'s slot, Single color has none', async ({ page }) => {
     await setupTwoTaggedTasks(page);
-    await expect(chipOn(page, 'Alpha task')).not.toHaveAttribute('data-shade-slot');
+    const chip = chipOn(page, 'Alpha task');
+    await expect(chip).not.toHaveAttribute('data-shade-slot');
     await openAppearance(page);
     await page.locator('#tag-color-mode-select').selectOption('analogous');
-    await expect(chipOn(page, 'Alpha task')).toHaveAttribute('data-shade-slot', /\d/);
+    await expect(chip).toHaveAttribute('data-shade-slot', /\d/);
+    const slot = await chip.getAttribute('data-shade-slot');
     await page.locator('#tag-color-mode-select').selectOption('palette');
-    await expect(chipOn(page, 'Alpha task')).not.toHaveAttribute('data-shade-slot');
+    await expect(chip).toHaveAttribute('data-shade-slot', slot!);
+    await expect(chip).not.toHaveAttribute('data-tag-slot');
+    await page.locator('#tag-color-mode-select').selectOption('theme');
+    await expect(chip).not.toHaveAttribute('data-shade-slot');
   });
 
   test('Options color boxes show each tag\'s displayed color in every mode', async ({ page }) => {
@@ -1972,6 +2013,25 @@ test.describe('Theme filter buttons', { tag: ['@options', '@themes'] }, () => {
     await expect(swatch).toHaveClass(/active/);
     await expect(swatch).toContainText('Dot Matrix');
     await expect(page.locator('#customize-theme-grid')).not.toContainText('Game Boy');
+  });
+
+  test('theme grid fits without sideways scrolling, even with JetBrains Mono at Large text', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('work-desk-font-family', 'jetbrains');
+      localStorage.setItem('work-desk-font-size', 'large');
+    });
+    await openThemesTab(page);
+    const grid = page.locator('#customize-theme-grid');
+    for (const tier of ['light', 'medium', 'dark']) {
+      await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+      await expect.poll(() => grid.evaluate((host) => {
+        const names = [...host.querySelectorAll<HTMLElement>('.theme-swatch-name')];
+        const cut = names.filter((n) => n.scrollWidth > n.clientWidth + 0.5).map((n) => n.textContent);
+        return { sideways: host.scrollWidth > host.clientWidth, cut };
+      }), { message: tier }).toEqual({ sideways: false, cut: [] });
+    }
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await expect(grid.locator('.theme-swatch[data-theme-id="mediterranean"] .theme-swatch-name')).toHaveAttribute('style', /font-size/);
   });
 
   test('switching between all four filters keeps popout open', async ({ page }) => {
@@ -3306,7 +3366,18 @@ test.describe('Help and What\'s New modals', { tag: ['@docs'] }, () => {
     const sections = modal.locator('.help-section');
     const chips = page.locator('#help-index button');
     await expect(chips).toHaveCount(await sections.count());
-    await expect(chips.first()).toHaveText('Quick start');
+    await expect(chips).toHaveText(['Quick start', 'Cards', 'Tags', 'Comments', 'Recurring', 'Projects', 'Navigation', 'Insights', 'Options', 'Sync & data', 'Phone', 'Shortcuts']);
+    await expect(chips.filter({ hasText: 'Sync & data' })).toHaveAttribute('title', 'Sync, backup & storage');
+    const grid = await chips.evaluateAll((els) => {
+      const boxes = els.map((e) => e.getBoundingClientRect());
+      return {
+        rows: new Set(boxes.map((b) => Math.round(b.top))).size,
+        columns: new Set(boxes.map((b) => Math.round(b.left))).size,
+        widths: new Set(boxes.map((b) => Math.round(b.width))).size,
+        clipped: els.filter((e) => e.scrollWidth > e.clientWidth).length,
+      };
+    });
+    expect(grid).toEqual({ rows: 3, columns: 4, widths: 1, clipped: 0 });
     await expect(modal.locator('.help-section[open] > summary')).toHaveText(['Quick start', 'Keyboard shortcuts']);
 
     const insights = modal.locator('#help-insights');
@@ -3336,7 +3407,7 @@ test.describe('Help and What\'s New modals', { tag: ['@docs'] }, () => {
     const shown = modal.locator('#help-recurring li:not([hidden])');
     await expect(shown).toHaveCount(2);
     for (const text of await shown.allTextContents()) expect(text.toLowerCase()).toContain('quarterly');
-    await expect(page.locator('#help-index button:not(.hidden)')).toHaveText(['Recurring tasks']);
+    await expect(page.locator('#help-index button:not(.hidden)')).toHaveText(['Recurring']);
 
     await search.fill('  OPTIONS  ');
     await expect(modal.locator('#help-options li:not([hidden])')).toHaveCount(5);
