@@ -40,11 +40,19 @@
         seafoam: '🐚',
         mediterranean: '🏛️',
         citrus: '🍋',
+        'gruvbox-light': '📻',
+        'rose-pine-dawn': '🌸',
+        'everforest-light': '🌿',
+        'catppuccin-latte': '🐱',
         // Medium — Retro/rich
         'dot-matrix': '👾',
         denim: '👖',
         terracotta: '🏺',
         merlot: '🍷',
+        'catppuccin-frappe': '🐱',
+        'gruvbox-mid': '📻',
+        'solarized-mid': '🌤️',
+        rosewood: '🪵',
         // Units — one per pilot, in every tier
         'unit-zero-light': '🌙', 'unit-zero-mid': '🌙', 'unit-zero': '🌙',
         'unit-one-light': '💜', 'unit-one-mid': '💜', 'unit-one': '💜',
@@ -55,6 +63,10 @@
         'one-dark': '⚛️',
         phosphor: '📟',
         'rose-pine': '🌷',
+        'rose-pine-moon': '🌙',
+        kanagawa: '🎏',
+        'monokai-pro': '💻',
+        'everforest-dark': '🌳',
         // Dark — Base/neutral
         dark: '🌙',
         oled: '🖤',
@@ -591,6 +603,90 @@
       --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
       color-scheme: dark;
     }
+    /* Rosewood — dusty rose-brown, gold leaf */
+    [data-theme="rosewood"] {
+      --bg: #6e4a4e; --surface: #7e5a5e; --panel-bg: #644246; --input-bg: #886468;
+      --sidebar: #2a1618; --sidebar-text: #d8b4ac; --sidebar-active: #fbefe8;
+      --sidebar-muted: #8e6466; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.10);
+      --accent: #e8b84a; --accent-hover: #d4a030; --accent-light: #4e3630;
+      --text: #fbefe8; --text-muted: #e0c4c0;
+      --border: #5c3c40; --done: #b8949a;
+      --note-bg: #765256; --note-border: #5c3c40;
+      --danger: #fca5a5; --danger-surface: #4a2424; --danger-surface-hover: #5a2e2e; --danger-border: #7a3c3c;
+      --shelved-border: #6e5054; --shelved-label: #d0aca8;
+      --shadow: 0 1px 4px rgba(0,0,0,.26);
+      --tooltip-bg: #2a1618; --tooltip-text: #fbefe8;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #6a5040; --delete-hover-bg: #6a3a3e; --shelf-hover-bg: #664c50;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Catppuccin Frappé — the lightest dark flavor, lifted to mid-tone */
+    [data-theme="catppuccin-frappe"] {
+      --bg: #51576d; --surface: #626880; --panel-bg: #494e63; --input-bg: #6c728a;
+      --sidebar: #232634; --sidebar-text: #b5bfe2; --sidebar-active: #f0f2fc;
+      --sidebar-muted: #737994; --sidebar-border: rgba(198,208,245,.10);
+      --sidebar-hover: rgba(198,208,245,.07); --sidebar-btn-border: rgba(198,208,245,.14);
+      --accent: #ca9ee6; --accent-hover: #babbf1; --accent-light: #414559;
+      --text: #f0f2fc; --text-muted: #c6d0f5;
+      --border: #414559; --done: #a5adce;
+      --note-bg: #5a6077; --note-border: #414559;
+      --danger: #e78284; --danger-surface: #4a3440; --danger-surface-hover: #583c4a; --danger-border: #7a4c5c;
+      --shelved-border: #5a6078; --shelved-label: #a5adce;
+      --shadow: 0 1px 4px rgba(0,0,0,.28);
+      --tooltip-bg: #232634; --tooltip-text: #f0f2fc;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #4a5470; --delete-hover-bg: #5a4050; --shelf-hover-bg: #525870;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Gruvbox Mid — Gruvbox's warm gray-browns with retro orange */
+    [data-theme="gruvbox-mid"] {
+      --bg: #504945; --surface: #665c54; --panel-bg: #48413d; --input-bg: #706560;
+      --sidebar: #282828; --sidebar-text: #d5c4a1; --sidebar-active: #fbf1c7;
+      --sidebar-muted: #928374; --sidebar-border: rgba(235,219,178,.10);
+      --sidebar-hover: rgba(235,219,178,.07); --sidebar-btn-border: rgba(235,219,178,.14);
+      --accent: #fe8019; --accent-hover: #d65d0e; --accent-light: #3c3836;
+      --text: #fbf1c7; --text-muted: #d5c4a1;
+      --border: #3c3836; --done: #a89984;
+      --note-bg: #5c534d; --note-border: #3c3836;
+      --danger: #fb4934; --danger-surface: #4a2c26; --danger-surface-hover: #58342c; --danger-border: #7a4034;
+      --shelved-border: #5e5550; --shelved-label: #bdae93;
+      --shadow: 0 1px 4px rgba(0,0,0,.30);
+      --tooltip-bg: #282828; --tooltip-text: #fbf1c7;
+      --modal-overlay: rgba(0,0,0,.55); --modal-shadow: 0 8px 32px rgba(0,0,0,.35);
+      --move-hover-bg: #5a5040; --delete-hover-bg: #5e3c34; --shelf-hover-bg: #584e48;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Solarized Mid — Solarized's base01 teal-gray with a brightened yellow */
+    [data-theme="solarized-mid"] {
+      --bg: #4b5f66; --surface: #586e75; --panel-bg: #43565c; --input-bg: #627880;
+      --sidebar: #002b36; --sidebar-text: #93a1a1; --sidebar-active: #fdf6e3;
+      --sidebar-muted: #657b83; --sidebar-border: rgba(147,161,161,.14);
+      --sidebar-hover: rgba(147,161,161,.08); --sidebar-btn-border: rgba(147,161,161,.18);
+      --accent: #e6b422; --accent-hover: #b58900; --accent-light: #073642;
+      --text: #fdf6e3; --text-muted: #d6d3c4;
+      --border: #3f5258; --done: #93a1a1;
+      --note-bg: #52676e; --note-border: #3f5258;
+      --danger: #f0605c; --danger-surface: #4a2c2c; --danger-surface-hover: #583434; --danger-border: #7a4040;
+      --shelved-border: #52656c; --shelved-label: #b0b8b0;
+      --shadow: 0 1px 4px rgba(0,0,0,.28);
+      --tooltip-bg: #002b36; --tooltip-text: #fdf6e3;
+      --modal-overlay: rgba(0,0,0,.5); --modal-shadow: 0 8px 32px rgba(0,0,0,.3);
+      --move-hover-bg: #4a6068; --delete-hover-bg: #5a4040; --shelf-hover-bg: #506068;
+      --sidebar-tab-active-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, var(--accent) 60%, transparent);
+      color-scheme: dark;
+    }
     /* Neutral / Gray */
     [data-theme="ash"] {
       --bg: #585858; --surface: #686868; --panel-bg: #505050; --input-bg: #727272;
@@ -890,6 +986,10 @@
     [data-theme="one-dark"],
     [data-theme="phosphor"],
     [data-theme="rose-pine"],
+    [data-theme="kanagawa"],
+    [data-theme="monokai-pro"],
+    [data-theme="everforest-dark"],
+    [data-theme="rose-pine-moon"],
     [data-theme="unit-zero"],
     [data-theme="unit-one"],
     [data-theme="unit-two"],
@@ -1378,6 +1478,78 @@
       --sidebar-tab-active-bg: color-mix(in srgb, #ebbcba 26%, transparent);
       --sidebar-cal-selected-bg: color-mix(in srgb, #ebbcba 20%, transparent);
       --sidebar-cal-today-ring: color-mix(in srgb, #9ccfd8 60%, transparent);
+    }
+
+    /* Rosé Pine Moon — dusky purple-navy, iris accent */
+    [data-theme="rose-pine-moon"] {
+      --bg: #232136; --surface: #2a273f; --panel-bg: #1c1a2e; --input-bg: #393552;
+      --sidebar: #1c1a2e; --sidebar-text: #908caa; --sidebar-active: #e0def4;
+      --sidebar-muted: #6e6a86; --sidebar-border: rgba(196,167,231,.1);
+      --sidebar-hover: rgba(196,167,231,.07); --sidebar-btn-border: rgba(196,167,231,.14);
+      --accent: #c4a7e7; --accent-hover: #d6c2ef; --accent-light: #393552;
+      --text: #e0def4; --text-muted: #908caa;
+      --border: #393552; --tooltip-bg: #393552;
+      --done: #6e6a86; --shelved-label: #ea9a97;
+      --note-bg: #2d2a44; --note-border: #393552;
+      --shelved-border: #393552;
+      --move-hover-bg: #393552; --delete-hover-bg: #44263a; --shelf-hover-bg: #34304c;
+      --sidebar-tab-active-bg: color-mix(in srgb, #c4a7e7 26%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #c4a7e7 20%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #9ccfd8 60%, transparent);
+    }
+
+    /* Kanagawa — sumi ink night, carp-yellow accent, crystal blue and wave red */
+    [data-theme="kanagawa"] {
+      --bg: #1f1f28; --surface: #2a2a37; --panel-bg: #16161d; --input-bg: #2a2a37;
+      --sidebar: #16161d; --sidebar-text: #c8c093; --sidebar-active: #dcd7ba;
+      --sidebar-muted: #727169; --sidebar-border: rgba(230,195,132,.12);
+      --sidebar-hover: rgba(230,195,132,.08); --sidebar-btn-border: rgba(230,195,132,.16);
+      --accent: #e6c384; --accent-hover: #ffa066; --accent-light: #3a3428;
+      --text: #dcd7ba; --text-muted: #9e9b93;
+      --border: #363646; --tooltip-bg: #2a2a37;
+      --done: #727169; --shelved-label: #957fb8;
+      --note-bg: #252530; --note-border: #363646;
+      --shelved-border: #363646;
+      --move-hover-bg: #2d2a2a; --delete-hover-bg: #3a2228; --shelf-hover-bg: #2c2a38;
+      --sidebar-tab-active-bg: color-mix(in srgb, #e6c384 26%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #7e9cd8 24%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #e46876 60%, transparent);
+    }
+
+    /* Monokai Pro — warm charcoal filter, soft yellow accent */
+    [data-theme="monokai-pro"] {
+      --bg: #2d2a2e; --surface: #403e41; --panel-bg: #221f22; --input-bg: #403e41;
+      --sidebar: #221f22; --sidebar-text: #c1c0c0; --sidebar-active: #fcfcfa;
+      --sidebar-muted: #727072; --sidebar-border: rgba(255,216,102,.12);
+      --sidebar-hover: rgba(255,216,102,.08); --sidebar-btn-border: rgba(255,216,102,.16);
+      --accent: #ffd866; --accent-hover: #fc9867; --accent-light: #4a4230;
+      --text: #fcfcfa; --text-muted: #a5a3a5;
+      --border: #5b595c; --tooltip-bg: #403e41;
+      --done: #727072; --shelved-label: #ab9df2;
+      --note-bg: #353236; --note-border: #5b595c;
+      --shelved-border: #5b595c;
+      --move-hover-bg: #3a3630; --delete-hover-bg: #3e2630; --shelf-hover-bg: #38343e;
+      --sidebar-tab-active-bg: color-mix(in srgb, #ffd866 24%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #ffd866 18%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #ff6188 60%, transparent);
+    }
+
+    /* Everforest (dark) — mossy slate, sage-green accent, low contrast */
+    [data-theme="everforest-dark"] {
+      --bg: #2d353b; --surface: #343f44; --panel-bg: #232a2e; --input-bg: #3d484d;
+      --sidebar: #232a2e; --sidebar-text: #9da9a0; --sidebar-active: #d3c6aa;
+      --sidebar-muted: #7a8478; --sidebar-border: rgba(167,192,128,.12);
+      --sidebar-hover: rgba(167,192,128,.08); --sidebar-btn-border: rgba(167,192,128,.16);
+      --accent: #a7c080; --accent-hover: #b8cc94; --accent-light: #3c4a3a;
+      --text: #d3c6aa; --text-muted: #9da9a0;
+      --border: #475258; --tooltip-bg: #3d484d;
+      --done: #7a8478; --shelved-label: #d699b6;
+      --note-bg: #333c36; --note-border: #475258;
+      --shelved-border: #475258;
+      --move-hover-bg: #3a4238; --delete-hover-bg: #4c3743; --shelf-hover-bg: #3a3c46;
+      --sidebar-tab-active-bg: color-mix(in srgb, #a7c080 26%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #a7c080 20%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #dbbc7f 60%, transparent);
     }
 
     /* Unit Zero (dark) — night navy, pale-blue accent, red-eye danger */
@@ -2025,6 +2197,90 @@
       color-scheme: light;
     }
 
+    /* Gruvbox Light — retro cream paper, faded orange accent */
+    [data-theme="gruvbox-light"] {
+      --bg: #fbf1c7; --surface: #f9f5d7; --panel-bg: #f2e5bc; --input-bg: #f9f5d7;
+      --sidebar: #3c3836; --sidebar-text: #d5c4a1; --sidebar-active: #fbf1c7;
+      --sidebar-muted: #928374; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
+      --accent: #af3a03; --accent-hover: #9d0006; --accent-light: #f3d9b1;
+      --text: #3c3836; --text-muted: #7c6f64;
+      --border: #e0cfa6; --done: #a89984;
+      --note-bg: #fdf6d8; --note-border: #ebdbb2;
+      --danger: #9d0006; --danger-surface: #fbe3d6; --danger-surface-hover: #f6cfc0; --danger-border: #eaa894;
+      --shelved-border: #d5c4a1; --shelved-label: #8f3f71;
+      --move-hover-bg: #fdf3cf; --delete-hover-bg: #fbe3d6; --shelf-hover-bg: #f0e6d8;
+      --shadow: 0 1px 4px rgba(60,56,54,.08); --modal-overlay: rgba(40,40,40,.45); --modal-shadow: 0 8px 32px rgba(60,56,54,.14);
+      --tooltip-bg: #3c3836; --tooltip-text: #fbf1c7;
+      --sidebar-tab-active-bg: color-mix(in srgb, #fe8019 30%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #fe8019 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #fabd2f 65%, transparent);
+      color-scheme: light;
+    }
+
+    /* Rosé Pine Dawn — warm morning parchment, violet night sidebar, love accent */
+    [data-theme="rose-pine-dawn"] {
+      --bg: #faf4ed; --surface: #fffaf3; --panel-bg: #f2e9e1; --input-bg: #fffaf3;
+      --sidebar: #26233a; --sidebar-text: #908caa; --sidebar-active: #ebbcba;
+      --sidebar-muted: #6e6a86; --sidebar-border: rgba(235,188,186,.1);
+      --sidebar-hover: rgba(235,188,186,.07); --sidebar-btn-border: rgba(235,188,186,.14);
+      --accent: #b4637a; --accent-hover: #9a4f66; --accent-light: #f3dfe0;
+      --text: #575279; --text-muted: #797593;
+      --border: #dfdad9; --done: #9893a5;
+      --note-bg: #fdf3e4; --note-border: #f0dcc0;
+      --danger: #a8354f; --danger-surface: #fbe6ea; --danger-surface-hover: #f6d2d9; --danger-border: #eab0bc;
+      --shelved-border: #cecacd; --shelved-label: #907aa9;
+      --move-hover-bg: #fdf3e4; --delete-hover-bg: #fbe6ea; --shelf-hover-bg: #f2ecf3;
+      --shadow: 0 1px 4px rgba(87,82,121,.08); --modal-overlay: rgba(38,35,58,.45); --modal-shadow: 0 8px 32px rgba(87,82,121,.14);
+      --tooltip-bg: #26233a; --tooltip-text: #faf4ed;
+      --sidebar-tab-active-bg: color-mix(in srgb, #ebbcba 26%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #ebbcba 20%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #9ccfd8 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Catppuccin Latte — Catppuccin's light flavor, Frappé sidebar, mauve accent */
+    [data-theme="catppuccin-latte"] {
+      --bg: #e6e9ef; --surface: #eff1f5; --panel-bg: #dce0e8; --input-bg: #f6f7fa;
+      --sidebar: #303446; --sidebar-text: #a5adce; --sidebar-active: #eff1f5;
+      --sidebar-muted: #737994; --sidebar-border: rgba(198,208,245,.1);
+      --sidebar-hover: rgba(198,208,245,.07); --sidebar-btn-border: rgba(198,208,245,.14);
+      --accent: #8839ef; --accent-hover: #7028d6; --accent-light: #e8dcfb;
+      --text: #4c4f69; --text-muted: #5c5f77;
+      --border: #ccd0da; --done: #8c8fa1;
+      --note-bg: #f2eefb; --note-border: #dcd0f4;
+      --danger: #d20f39; --danger-surface: #fbe4e9; --danger-surface-hover: #f6d0d8; --danger-border: #eeaab8;
+      --shelved-border: #bcc0cc; --shelved-label: #7287fd;
+      --move-hover-bg: #e6e0f8; --delete-hover-bg: #fbe4e9; --shelf-hover-bg: #e4e6f2;
+      --shadow: 0 1px 4px rgba(76,79,105,.08); --modal-overlay: rgba(48,52,70,.45); --modal-shadow: 0 8px 32px rgba(76,79,105,.14);
+      --tooltip-bg: #303446; --tooltip-text: #eff1f5;
+      --sidebar-tab-active-bg: color-mix(in srgb, #ca9ee6 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #ca9ee6 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #8caaee 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Everforest (light) — soft parchment, forest-green accent, low contrast */
+    [data-theme="everforest-light"] {
+      --bg: #fdf6e3; --surface: #fffbef; --panel-bg: #f4f0d9; --input-bg: #fffbef;
+      --sidebar: #2d353b; --sidebar-text: #9da9a0; --sidebar-active: #d3c6aa;
+      --sidebar-muted: #7a8478; --sidebar-border: rgba(167,192,128,.12);
+      --sidebar-hover: rgba(167,192,128,.08); --sidebar-btn-border: rgba(167,192,128,.16);
+      --accent: #8da101; --accent-hover: #7a8b00; --accent-light: #e5ecc4;
+      --text: #5c6a72; --text-muted: #829181;
+      --border: #e6e2cc; --done: #a6b0a0;
+      --note-bg: #fbf3d6; --note-border: #efe0b0;
+      --danger: #e5413e; --danger-surface: #fde8e4; --danger-surface-hover: #fad4ce; --danger-border: #f4b0a8;
+      --shelved-border: #ddd8be; --shelved-label: #c1559f;
+      --move-hover-bg: #fbf3d6; --delete-hover-bg: #fde8e4; --shelf-hover-bg: #f4ecee;
+      --shadow: 0 1px 4px rgba(45,53,59,.08); --modal-overlay: rgba(45,53,59,.45); --modal-shadow: 0 8px 32px rgba(45,53,59,.14);
+      --tooltip-bg: #2d353b; --tooltip-text: #fdf6e3;
+      --sidebar-tab-active-bg: color-mix(in srgb, #a7c080 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #a7c080 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #dbbc7f 65%, transparent);
+      color-scheme: light;
+    }
+
     /* Unit Zero (light) — white plugsuit, prototype blue, red-eye ring */
     [data-theme="unit-zero-light"] {
       --bg: #eef3fa; --surface: #ffffff; --panel-bg: #e2eaf5; --input-bg: #ffffff;
@@ -2134,6 +2390,15 @@
     [data-theme="terracotta"] .add-btn, [data-theme="terracotta"] .modal-btn.primary { color: #2e1a14; }
     [data-theme="merlot"] .add-btn, [data-theme="merlot"] .modal-btn.primary,
     [data-theme="rose-pine"] .add-btn, [data-theme="rose-pine"] .modal-btn.primary { color: #1f1320; }
+    [data-theme="kanagawa"] .add-btn, [data-theme="kanagawa"] .modal-btn.primary { color: #1f1f28; }
+    [data-theme="monokai-pro"] .add-btn, [data-theme="monokai-pro"] .modal-btn.primary { color: #2d2a2e; }
+    [data-theme="everforest-dark"] .add-btn, [data-theme="everforest-dark"] .modal-btn.primary,
+    [data-theme="everforest-light"] .add-btn, [data-theme="everforest-light"] .modal-btn.primary { color: #2d353b; }
+    [data-theme="catppuccin-frappe"] .add-btn, [data-theme="catppuccin-frappe"] .modal-btn.primary { color: #232634; }
+    [data-theme="rosewood"] .add-btn, [data-theme="rosewood"] .modal-btn.primary { color: #2a1618; }
+    [data-theme="rose-pine-moon"] .add-btn, [data-theme="rose-pine-moon"] .modal-btn.primary { color: #232136; }
+    [data-theme="gruvbox-mid"] .add-btn, [data-theme="gruvbox-mid"] .modal-btn.primary { color: #282828; }
+    [data-theme="solarized-mid"] .add-btn, [data-theme="solarized-mid"] .modal-btn.primary { color: #002b36; }
     [data-theme="phosphor"] .date-title,
     [data-theme="phosphor"] .app-tab.active {
       text-shadow: 0 0 8px rgba(51,255,102,.35);
@@ -5495,6 +5760,15 @@
     }
     .day-btn:hover { color: var(--text); background: var(--surface); }
     .day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .recurring-schedule { display: flex; flex-direction: column; gap: 8px; }
+    .recurring-schedule-options { display: flex; flex-direction: column; gap: 8px; }
+    .recurring-schedule-options:empty { display: none; }
+    .recurring-month-by, .recurring-month-weeks, .recurring-quarter-months { display: flex; gap: 6px; flex-wrap: wrap; }
+    .month-day-grid { display: grid; grid-template-columns: repeat(8, 32px); gap: 4px; }
+    .month-day-last { grid-column: span 2; width: auto; border-radius: 16px; }
+    .recurring-schedule-field { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); }
+    .recurring-schedule-field .recurring-start-date[type="date"] { flex: 0 0 auto; width: 150px; font-size: 0.8rem; }
+    .recurring-schedule-hint { margin: 0; font-size: 0.74rem; color: var(--text-muted); }
     .recurring-add-actions { display: flex; justify-content: flex-end; gap: 8px; }
     .icon-repeat {
       width: 1em; height: 1em; vertical-align: -0.125em;
@@ -7282,22 +7556,20 @@
       html[data-tag-colors="palette"] .tag-chip[data-tag-slot="5"] { --tag-hue: 225; }
       html[data-tag-colors="palette"] .tag-chip[data-tag-slot="6"] { --tag-hue: 270; }
       html[data-tag-colors="palette"] .tag-chip[data-tag-slot="7"] { --tag-hue: 315; }
-
-      /* Analogous: shades and neighboring hues of the accent (e.g. rose, dark rose, light rose) */
-      html[data-tag-colors="analogous"] .tag-chip {
-        --tag-dh: 0;
-        --tag-dl: 0;
-        --tag-fg: oklch(from var(--accent) clamp(0.4, calc(l + var(--tag-dl)), 0.86) c calc(h + var(--tag-dh)));
-        --tag-bg: color-mix(in srgb, var(--tag-fg) 18%, var(--surface));
-      }
-      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="1"] { --tag-dh: 14;  --tag-dl: 0.08; }
-      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="2"] { --tag-dh: -14; --tag-dl: -0.08; }
-      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="3"] { --tag-dh: 28;  --tag-dl: 0; }
-      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="4"] { --tag-dh: -28; --tag-dl: 0; }
-      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="5"] { --tag-dh: 0;   --tag-dl: 0.14; }
-      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="6"] { --tag-dh: 0;   --tag-dl: -0.14; }
-      html[data-tag-colors="analogous"] .tag-chip[data-tag-slot="7"] { --tag-dh: 14;  --tag-dl: -0.1; }
     }
+    /* Shades of accent: --tag-shade-0..7 are computed per theme in JS (refreshTagShades) */
+    html[data-tag-colors="analogous"] .tag-chip {
+      --tag-shade: var(--tag-shade-0, var(--accent));
+      --tag-fg: var(--tag-shade);
+      --tag-bg: color-mix(in srgb, var(--tag-fg) 18%, var(--surface));
+    }
+    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="1"] { --tag-shade: var(--tag-shade-1, var(--accent)); }
+    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="2"] { --tag-shade: var(--tag-shade-2, var(--accent)); }
+    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="3"] { --tag-shade: var(--tag-shade-3, var(--accent)); }
+    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="4"] { --tag-shade: var(--tag-shade-4, var(--accent)); }
+    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="5"] { --tag-shade: var(--tag-shade-5, var(--accent)); }
+    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="6"] { --tag-shade: var(--tag-shade-6, var(--accent)); }
+    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="7"] { --tag-shade: var(--tag-shade-7, var(--accent)); }
     /* Custom color wins in both modes; text leans toward --text so it stays readable on any theme */
     .tag-chip.tag-custom[data-tag] {
       --tag-fg: color-mix(in oklch, var(--tag-custom) 72%, var(--text));
@@ -8435,7 +8707,7 @@
                         <option value="palette">Multi-color</option>
                       </select>
                     </div>
-                    <p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color that follows the theme when you switch. Pick a color below (or click a tag on a card) to pin a custom color that overrides any mode.</p>
+                    <p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color that follows the theme when you switch; Shades of accent gives your most-used tags the most distinct colors. Pick a color below (or click a tag on a card) to pin a custom color that overrides any mode.</p>
                     <div id="tag-color-list" class="tag-color-list"></div>
                     </section>
 
@@ -8743,7 +9015,7 @@
           <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
           <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
           <li><strong>Full history</strong> — every day you've used stays on your desk, in Search, and in Insights; nothing is trimmed after a year</li>
-          <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark, including Retro, Dot Matrix, and Phosphor) with mini wireframe previews in Options → Themes, filterable by Light/Med/Dark. The four Unit themes (Zero, One, Two, Eight) come in every tier, each with a thin color stripe across the top header; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
+          <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark, including Retro, Dot Matrix, Phosphor, Kanagawa, Everforest, Catppuccin Latte and Frappé, Rosewood, and Rosé Pine Dawn and Moon) with mini wireframe previews in Options → Themes, filterable by Light/Med/Dark. The four Unit themes (Zero, One, Two, Eight) come in every tier, each with a thin color stripe across the top header; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
           <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically. Deleting a task or note removes it from every device; <strong>Undo</strong> brings it back everywhere</li>
           <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
           <li><strong>Staying up to date</strong> — the app loads the latest version whenever you're online (the saved copy is only used offline). If the app has been open in the background when a new version ships, a <em>Work Desk x.y.z is available</em> message with a <strong>Reload</strong> button appears when you come back to it</li>
@@ -8771,7 +9043,7 @@
           <li><strong>Case-insensitive</strong> — <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
           <li><strong>Chips</strong> — shown in the top-right corner of the card; click the <strong>×</strong> on a chip to remove that tag</li>
           <li><strong>Tag position</strong> — Options → Appearance → Card layout: <strong>Own row</strong> (default) puts chips on a row above the text; <strong>Slim headroom</strong> gives every task a short tag row with smaller chips, so text starts at the same height whether or not it has tags (long tags shorten with …; needs the edge complete button, so with Checkbox it works like Own row); <strong>Action bar</strong> puts chips next to <strong>⋮</strong>, and on narrow cards they move to a second line together with ⋮, right-aligned. Compact cards always keep chips on their own line</li>
-          <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Single color (accent)</strong> (default) keeps every tag in the accent color; <strong>Shades of accent</strong> gives each tag a lighter, darker, or neighboring shade of the accent (e.g. rose, dark rose, light rose); <strong>Multi-color</strong> spreads tags around the color wheel at the accent's brightness. Both follow the theme when you switch, and each tag keeps the same color on every device. There are 8 colors per mode, so with more tags some share a color — pin one to change it</li>
+          <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Single color (accent)</strong> (default) keeps every tag in the accent color; <strong>Shades of accent</strong> gives each tag one of 8 clearly different colors that suit the theme: the theme's own colors where it has a well-known set (Monokai, Dracula, Nord, Solarized, Gruvbox, Catppuccin, One Dark, Rosé Pine, Tokyo, Kanagawa, Everforest, Mediterranean), otherwise a blend from the accent toward the theme's second color. Your most-used tags get the most distinct colors, and a tag keeps its color from then on; <strong>Multi-color</strong> spreads tags around the color wheel at the accent's brightness. Both follow the theme when you switch, and each tag keeps the same color on every device. There are 8 colors per mode, so with more tags some share a color — pin one to change it</li>
           <li><strong>Custom tag color</strong> — click any tag chip on a card to pick a preset swatch or a custom color, or set colors from the tag list in Options → Appearance; a custom color overrides either mode, and <em>Reset to auto</em> / <em>auto</em> removes it</li>
           <li><strong>Find by tag</strong> — search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
         </ul>
@@ -8822,7 +9094,7 @@
         <ul>
           <li>Open with the customize button (⚙) near the date, or <strong>Options</strong> in the account menu at the bottom of the sidebar; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
           <li><strong>Summary list</strong> — Appearance and Behavior open on a short list, each row with a one-line note of what's inside (e.g. <em>Card layout: Density, complete button, tag spot</em>); hover a row to see its current settings. Click a row to open that section; <strong>‹ Back</strong> or <strong>Esc</strong> goes back, and Esc again closes Options. On/off settings are switches, and a <em>New</em> tag marks settings added in this release until you open that section</li>
-          <li><strong>Themes</strong> — 96 presets (32 light, 32 medium, 32 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
+          <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
           <li><strong>Appearance</strong> — Card layout (Comfortable/Compact, Complete button style, Tag position), Typography (text size Small/Default/Large, 8 font families), Layout (sidebar left, right, top, or bottom), Effects (card glow on hover, gradient header), Background (patterned background), and Tags (tag colors). The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
           <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Startup view, week start day (Sunday/Monday), Quieter weekends, Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
           <li><strong>Patterned background</strong> — Options → Appearance → Background. Turn on <em>Patterned background</em>, pick one of 12 patterns (Graph paper, Isometric, Herringbone, Greek key, and more; the name of the one you picked shows under the grid), and drag <em>Strength</em> from 2% (barely there) to 45%. The pattern follows your theme's colors and only shows behind the board; cards stay solid. Arrow keys move between patterns. Turning it off remembers your choice</li>
@@ -8855,7 +9127,10 @@
         <h3>Recurring tasks</h3>
         <ul>
           <li>Open via the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
-          <li>Templates auto-add on the schedule you set (daily, weekly, specific days, etc.)</li>
+          <li>Templates auto-add on the schedule you set: <strong>Daily</strong>, <strong>Weekdays</strong>, <strong>Weekly</strong>, <strong>Custom</strong> days, <strong>Every 2 weeks</strong>, <strong>Monthly</strong>, or <strong>Quarterly</strong></li>
+          <li><strong>Every 2 weeks</strong> — pick the first date; it repeats every other week on that weekday</li>
+          <li><strong>Monthly and Quarterly</strong> — choose <em>Day of month</em> to pick dates (e.g. the 1st and 15th, or <em>Last</em> for the last day; a 29th–31st falls on the last day in shorter months), or <em>Day of week</em> to pick weeks and a weekday (e.g. the 3rd Thursday, or the 1st and 3rd Tuesday for twice a month). Quarterly also asks which months it runs in</li>
+          <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds or saves a recurring task</li>
           <li><strong>When they appear</strong> — a due task is added to <em>today</em> whenever the app opens or refreshes, syncs (if signed in: every 5 minutes and when you switch back to the tab), or you switch between Work and Personal. You don't need to be viewing today. Each one is added once per day, so deleting or completing it won't bring it back. Days the app wasn't opened aren't filled in afterward, and future days show their recurring tasks only once that day arrives. In offline mode, a tab left open overnight picks up the new day after a refresh</li>
           <li>Injected tasks show a <strong><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></strong> badge on the card</li>
           <li><strong>Edit or delete</strong> — click <em>edit</em> or <em>delete</em> on any template in the recurring panel, or use the overflow menu (⋮) on an injected task card and choose <em>Edit recurring</em></li>
@@ -8920,7 +9195,7 @@
           <li>Double-click a task, note, or comment to edit it on desktop</li>
           <li>Click <strong>Aa</strong> next to the input box to show bold, italic, underline, and bullet formatting buttons</li>
           <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
-          <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box or a comment box to submit without clicking Add</li>
+          <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box or a comment box to submit without clicking Add, or while editing to save without clicking Save</li>
           <li>Use the sidebar collapse button (‹) to give the board more room</li>
           <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
           <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors; use the <strong>Custom</strong> tab to create your own theme from 5 picked colors</li>
@@ -8931,6 +9206,7 @@
         <ul>
           <li><strong>Add task/note</strong> — Ctrl/Cmd + Enter</li>
           <li><strong>Add comment/update</strong> — Ctrl/Cmd + Enter</li>
+          <li><strong>Save an edit</strong> (task, note, comment, or recurring task) — Ctrl/Cmd + Enter</li>
           <li><strong>Bold</strong> — Ctrl/Cmd + B</li>
           <li><strong>Italic</strong> — Ctrl/Cmd + I</li>
           <li><strong>Underline</strong> — Ctrl/Cmd + U</li>
@@ -9066,18 +9342,65 @@
     const TAG_POSITION_KEY = 'work-desk-tag-position';
     const TAG_POSITIONS = ['row', 'slim', 'actions'];
     const TAG_PALETTE_SIZE = 8;
+    const TAG_SHADE_SLOTS_KEY = 'work-desk-tag-shade-slots';
+    const TAG_SHADE_COUNT = 8;
+    const TAG_SHADE_MIN_GAP = 0.07;
+    // Theme vars that may name a theme's second color, most telling first
+    const TAG_SHADE_SECOND_VARS = ['--sidebar-cal-today-ring', '--shelved-label', '--sidebar-cal-selected-bg', '--sidebar-active', '--sidebar', '--sidebar-text', '--accent-hover'];
+    // Shades of accent uses a theme's own colors when it has a well-known set; accent first, then most distinct
+    const THEME_TAG_PALETTES = {
+      monokai:           ['#f92672', '#a6e22e', '#66d9ef', '#fd971f', '#ae81ff', '#e6db74', '#a1efe4', '#cfcfc2'],
+      'monokai-pro':     ['#ffd866', '#ff6188', '#78dce8', '#a9dc76', '#ab9df2', '#fc9867', '#c1c0c0', '#fcfcfa'],
+      dracula:           ['#bd93f9', '#50fa7b', '#ff79c6', '#8be9fd', '#ffb86c', '#f1fa8c', '#ff5555', '#f8f8f2'],
+      nord:              ['#88c0d0', '#bf616a', '#a3be8c', '#ebcb8b', '#b48ead', '#e5e9f0', '#d08770', '#5e81ac'],
+      'nord-light':      ['#5e81ac', '#bf616a', '#a3be8c', '#b48ead', '#ebcb8b', '#4c566a', '#d08770', '#88c0d0'],
+      'solarized-dark':  ['#268bd2', '#dc322f', '#859900', '#b58900', '#d33682', '#2aa198', '#cb4b16', '#6c71c4'],
+      'solarized-light': ['#268bd2', '#dc322f', '#859900', '#b58900', '#d33682', '#2aa198', '#cb4b16', '#6c71c4'],
+      'gruvbox-dark':    ['#fe8019', '#83a598', '#b8bb26', '#fb4934', '#d3869b', '#fabd2f', '#8ec07c', '#ebdbb2'],
+      'gruvbox-mid':     ['#fe8019', '#83a598', '#b8bb26', '#fb4934', '#d3869b', '#fabd2f', '#8ec07c', '#ebdbb2'],
+      'solarized-mid':   ['#e6b422', '#268bd2', '#dc322f', '#859900', '#6c71c4', '#2aa198', '#d33682', '#cb4b16'],
+      'catppuccin-frappe': ['#ca9ee6', '#a6d189', '#e78284', '#8caaee', '#e5c890', '#81c8be', '#ef9f76', '#f4b8e4'],
+      'gruvbox-light':   ['#af3a03', '#076678', '#79740e', '#9d0006', '#8f3f71', '#b57614', '#427b58', '#7c6f64'],
+      catppuccin:        ['#cba6f7', '#a6e3a1', '#f38ba8', '#89b4fa', '#fab387', '#f9e2af', '#94e2d5', '#f5c2e7'],
+      'one-dark':        ['#61afef', '#e06c75', '#98c379', '#e5c07b', '#c678dd', '#56b6c2', '#d19a66', '#abb2bf'],
+      'rose-pine':       ['#ebbcba', '#9ccfd8', '#f6c177', '#c4a7e7', '#eb6f92', '#31748f', '#e0def4', '#908caa'],
+      'rose-pine-moon':  ['#c4a7e7', '#9ccfd8', '#f6c177', '#eb6f92', '#3e8fb0', '#ea9a97', '#e0def4', '#908caa'],
+      'catppuccin-latte': ['#8839ef', '#40a02b', '#d20f39', '#1e66f5', '#df8e1d', '#179299', '#fe640b', '#ea76cb'],
+      'rose-pine-dawn':  ['#b4637a', '#286983', '#ea9d34', '#907aa9', '#56949f', '#575279', '#9893a5', '#d7827e'],
+      'tokyo-storm':     ['#7aa2f7', '#f7768e', '#9ece6a', '#e0af68', '#bb9af7', '#7dcfff', '#ff9e64', '#73daca'],
+      'tokyo-day':       ['#7aa2f7', '#f52a65', '#587539', '#8c6c3e', '#9854f1', '#007197', '#b15c00', '#118c74'],
+      kanagawa:          ['#e6c384', '#7e9cd8', '#e46876', '#98bb6c', '#957fb8', '#7aa89f', '#ffa066', '#d27e99'],
+      'everforest-dark': ['#a7c080', '#e67e80', '#7fbbb3', '#dbbc7f', '#d699b6', '#e69875', '#d3c6aa', '#83c092'],
+      'everforest-light':['#8da101', '#f85552', '#3a94c5', '#dfa000', '#df69ba', '#f57d26', '#35a77c', '#5c6a72'],
+      mediterranean:     ['#c8553d', '#1d4e89', '#5b7d2a', '#c08a1e', '#2a8bb0', '#8a3b62', '#2f7a6d', '#6b5a4a'],
+    };
     const TAG_PRESET_COLORS = [
       '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
       '#14b8a6', '#0ea5e9', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b',
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.20.0';
+    const APP_VERSION = '1.21.0';
     const CHANGELOG = [
+      {
+        version: '1.21.0',
+        date: 'Oct 21, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Twelve new themes: Kanagawa, Monokai Pro, Everforest, and Rosé Pine Moon in Dark; Catppuccin Frappé, Gruvbox Mid, Solarized Mid, and Rosewood in Medium; Gruvbox Light, Rosé Pine Dawn, Everforest, and Catppuccin Latte in Light. That makes 108 presets, 36 in each group, so every group fills the theme grid evenly',
+            'Recurring tasks can repeat every 2 weeks, monthly, or quarterly. Monthly and quarterly tasks go on dates (the 1st and 15th, or the last day) or on weekdays (the 3rd Thursday, or the 1st and 3rd Tuesday for twice a month)',
+          ] },
+          { label: 'Improved', items: [
+            'Ctrl+Enter (Cmd+Enter on Mac) saves when you edit a task or comment on the desk, or a recurring task',
+            'Shades of accent tags are easier to tell apart. Themes with a well-known color set (Monokai, Dracula, Nord, Solarized, Gruvbox, Catppuccin, One Dark, Rosé Pine, Tokyo, Kanagawa, Everforest, Mediterranean) use their own colors; other themes blend from the accent toward the theme\'s second color, with a check that no two colors look alike',
+            'Your most-used tags get the most distinct colors, and a tag keeps its color from then on (synced across devices). Tag colors change once when you update; pinned colors are untouched',
+          ] },
+        ],
+      },
       {
         version: '1.20.0',
         date: 'Oct 21, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Storage warning: when this browser\'s storage passes 80% full, a banner suggests Export All for a backup, plus Sign in if you use the desk without an account. The account menu shows how much storage is used from 50%',
@@ -10010,6 +10333,7 @@
       streakSkipWeekends: localStorage.getItem(STREAK_SKIP_WEEKENDS_KEY) !== 'false',
       tagColorMode: normalizeTagColorMode(localStorage.getItem(TAG_COLOR_MODE_KEY)),
       tagColors: loadTagColors(),
+      tagShadeSlots: loadTagShadeSlots(),
       completeStyle: normalizeCompleteStyle(localStorage.getItem(COMPLETE_STYLE_KEY)),
       tagPosition: normalizeTagPosition(localStorage.getItem(TAG_POSITION_KEY)),
       customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
@@ -10245,19 +10569,23 @@
       { id: 'olive',           name: 'Olive',     sidebar: '#2a3020', bg: '#f2f0e6', surface: '#fafaf4', accent: '#6a8040', dark: false },
       { id: 'seafoam',         name: 'Seafoam',   sidebar: '#0f3b3a', bg: '#eef8f6', surface: '#ffffff', accent: '#0d9488', dark: false },
       { id: 'citrus',          name: 'Citrus',    sidebar: '#283214', bg: '#fafbe9', surface: '#ffffff', accent: '#4d7c0f', dark: false },
+      { id: 'everforest-light',name: 'Everforest',sidebar: '#2d353b', bg: '#fdf6e3', surface: '#fffbef', accent: '#8da101', dark: false },
       // Light — Warm/earthy
       { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', bg: '#fdf6ee', surface: '#ffffff', accent: '#b5611a', dark: false },
       { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', bg: '#f7f0e6', surface: '#fffcf8', accent: '#d2691e', dark: false },
       { id: 'honey',           name: 'Honey',     sidebar: '#4a3010', bg: '#fef9ec', surface: '#fffef8', accent: '#d4940a', dark: false },
       { id: 'sepia',           name: 'Sepia',     sidebar: '#382a1d', bg: '#f4ecd8', surface: '#faf6eb', accent: '#8c5828', dark: false },
       { id: 'mediterranean',   name: 'Mediterranean', sidebar: '#13315c', bg: '#f6f1e7', surface: '#fffdf8', accent: '#c8553d', dark: false },
+      { id: 'gruvbox-light',   name: 'Gruvbox Light', sidebar: '#3c3836', bg: '#fbf1c7', surface: '#f9f5d7', accent: '#af3a03', dark: false },
       // Light — Red/pink
       { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', bg: '#fff5f0', surface: '#ffffff', accent: '#f05040', dark: false },
       { id: 'peach',           name: 'Peach',     sidebar: '#5a2838', bg: '#fff5ee', surface: '#ffffff', accent: '#e87050', dark: false },
       { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', bg: '#fff1f2', surface: '#ffffff', accent: '#f43f5e', dark: false },
       { id: 'sakura',          name: 'Sakura',    sidebar: '#4a1525', bg: '#fdf2f4', surface: '#ffffff', accent: '#e11d48', dark: false },
+      { id: 'rose-pine-dawn',  name: 'Rosé Pine Dawn', sidebar: '#26233a', bg: '#faf4ed', surface: '#fffaf3', accent: '#b4637a', dark: false },
       // Light — Purple/neutral
       { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', bg: '#f3f0fa', surface: '#ffffff', accent: '#7c3aed', dark: false },
+      { id: 'catppuccin-latte', name: 'Catppuccin Latte', sidebar: '#303446', bg: '#e6e9ef', surface: '#eff1f5', accent: '#8839ef', dark: false },
       { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', surface: '#ffffff', accent: '#555555', dark: false },
       // Light — Neon/vibrant
       { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#a8e8ff', surface: '#ccf4ff', accent: '#ff1493', dark: false },
@@ -10279,6 +10607,7 @@
       { id: 'nimbus',          name: 'Nimbus',     sidebar: '#202838', bg: '#606c7c', surface: '#6e7a8a', accent: '#818cf8', dark: false, medium: true },
       { id: 'pewter',          name: 'Pewter',     sidebar: '#1c2430', bg: '#586878', surface: '#667686', accent: '#94a3b8', dark: false, medium: true },
       { id: 'horizon',         name: 'Horizon',    sidebar: '#182838', bg: '#4e6478', surface: '#5c728a', accent: '#0ea5e9', dark: false, medium: true },
+      { id: 'solarized-mid',   name: 'Solarized Mid', sidebar: '#002b36', bg: '#4b5f66', surface: '#586e75', accent: '#e6b422', dark: false, medium: true },
       { id: 'denim',           name: 'Denim',      sidebar: '#1a2238', bg: '#4a5a7a', surface: '#586a8c', accent: '#f59e0b', dark: false, medium: true },
       // Medium — Green/earth
       { id: 'lichen',          name: 'Lichen',     sidebar: '#1a2820', bg: '#5a6e5c', surface: '#6a7e6c', accent: '#4ade80', dark: false, medium: true },
@@ -10294,12 +10623,15 @@
       { id: 'umber',           name: 'Umber',      sidebar: '#201410', bg: '#5e4838', surface: '#6e5848', accent: '#fb923c', dark: false, medium: true },
       { id: 'flint',           name: 'Flint',      sidebar: '#1e1810', bg: '#585048', surface: '#686058', accent: '#fbbf24', dark: false, medium: true },
       { id: 'terracotta',      name: 'Terracotta', sidebar: '#2e1a14', bg: '#7a5244', surface: '#8a6254', accent: '#fdba74', dark: false, medium: true },
+      { id: 'gruvbox-mid',     name: 'Gruvbox Mid', sidebar: '#282828', bg: '#504945', surface: '#665c54', accent: '#fe8019', dark: false, medium: true },
       // Medium — Purple/pink
       { id: 'twilight',        name: 'Twilight',   sidebar: '#14102a', bg: '#4a4466', surface: '#5a5478', accent: '#c084fc', dark: false, medium: true },
       { id: 'haze',            name: 'Haze',       sidebar: '#22202a', bg: '#706878', surface: '#807888', accent: '#f472b6', dark: false, medium: true },
       { id: 'plum-mid',        name: 'Plum Mid',   sidebar: '#1a1028', bg: '#544868', surface: '#645878', accent: '#a78bfa', dark: false, medium: true },
       { id: 'mulberry',        name: 'Mulberry',   sidebar: '#201428', bg: '#5e4a64', surface: '#6e5a74', accent: '#e879f9', dark: false, medium: true },
       { id: 'merlot',          name: 'Merlot',     sidebar: '#2a1018', bg: '#6a3a4a', surface: '#7a4a5a', accent: '#fda4af', dark: false, medium: true },
+      { id: 'rosewood',        name: 'Rosewood',   sidebar: '#2a1618', bg: '#6e4a4e', surface: '#7e5a5e', accent: '#e8b84a', dark: false, medium: true },
+      { id: 'catppuccin-frappe', name: 'Catppuccin Frappé', sidebar: '#232634', bg: '#51576d', surface: '#626880', accent: '#ca9ee6', dark: false, medium: true },
       // Medium — Neutral/gray
       { id: 'ash',             name: 'Ash',        sidebar: '#1a1a1a', bg: '#585858', surface: '#686868', accent: '#a78bfa', dark: false, medium: true },
       { id: 'graphite',        name: 'Graphite',   sidebar: '#101418', bg: '#484e58', surface: '#565c66', accent: '#fb923c', dark: false, medium: true },
@@ -10323,21 +10655,25 @@
       // Dark — Green/earth
       { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', surface: '#143323', accent: '#46d17c', dark: true  },
       { id: 'phosphor',        name: 'Phosphor',  sidebar: '#020703', bg: '#050d07', surface: '#0b1a0f', accent: '#33ff66', dark: true  },
+      { id: 'everforest-dark', name: 'Everforest',sidebar: '#232a2e', bg: '#2d353b', surface: '#343f44', accent: '#a7c080', dark: true  },
       // Dark — Warm/amber
       { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', surface: '#1e1006', accent: '#f59e0b', dark: true  },
       { id: 'gruvbox-dark',    name: 'Gruvbox',   sidebar: '#1d2021', bg: '#282828', surface: '#3c3836', accent: '#fe8019', dark: true  },
       { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', surface: '#261610', accent: '#d4883c', dark: true  },
       { id: 'ember',           name: 'Ember',     sidebar: '#100604', bg: '#1a0e08', surface: '#281810', accent: '#e06830', dark: true  },
       { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', surface: '#1c1c1c', accent: '#c8a84a', dark: true  },
+      { id: 'kanagawa',        name: 'Kanagawa',  sidebar: '#16161d', bg: '#1f1f28', surface: '#2a2a37', accent: '#e6c384', dark: true  },
       // Dark — Red/pink
       { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', surface: '#2a1018', accent: '#e8608a', dark: true  },
       { id: 'monokai',         name: 'Monokai',   sidebar: '#1e1f1c', bg: '#272822', surface: '#3e3d32', accent: '#f92672', dark: true  },
+      { id: 'monokai-pro',     name: 'Monokai Pro', sidebar: '#221f22', bg: '#2d2a2e', surface: '#403e41', accent: '#ffd866', dark: true  },
       // Dark — Purple
       { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', surface: '#383a4a', accent: '#bd93f9', dark: true  },
       { id: 'catppuccin',      name: 'Catppuccin',sidebar: '#181825', bg: '#1e1e2e', surface: '#313244', accent: '#cba6f7', dark: true  },
       { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0e0620', surface: '#160a30', accent: '#a78bfa', dark: true  },
       { id: 'plum',            name: 'Plum',      sidebar: '#0c0410', bg: '#140818', surface: '#221028', accent: '#b868d8', dark: true  },
       { id: 'rose-pine',       name: 'Rosé Pine', sidebar: '#13111e', bg: '#191724', surface: '#1f1d2e', accent: '#ebbcba', dark: true  },
+      { id: 'rose-pine-moon',  name: 'Rosé Pine Moon', sidebar: '#1c1a2e', bg: '#232136', surface: '#2a273f', accent: '#c4a7e7', dark: true  },
       // Dark — Neon/vibrant
       { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', surface: '#16082e', accent: '#ff71ce', dark: true  },
       { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', surface: '#121218', accent: '#00ff9f', dark: true  },
@@ -10511,6 +10847,7 @@
         streakSkipWeekends: localStorage.getItem(STREAK_SKIP_WEEKENDS_KEY) !== 'false',
         tagColorMode: normalizeTagColorMode(localStorage.getItem(TAG_COLOR_MODE_KEY)),
         tagColors: loadTagColors(),
+        tagShadeSlots: loadTagShadeSlots(),
         completeStyle: normalizeCompleteStyle(localStorage.getItem(COMPLETE_STYLE_KEY)),
         tagPosition: normalizeTagPosition(localStorage.getItem(TAG_POSITION_KEY)),
         customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
@@ -10541,6 +10878,7 @@
     /** Apply cloud prefs when remote is newer (or force). Returns true if UI prefs changed. */
     function applyCloudPrefs(prefs, { force = false } = {}) {
       if (!prefs || typeof prefs !== 'object') return false;
+      mergeRemoteTagShadeSlots(prefs.tagShadeSlots);
       const localTs = localStorage.getItem(PREFS_UPDATED_AT_KEY) || '';
       const remoteTs = prefs.updatedAt || '';
       if (!force) {
@@ -12716,6 +13054,7 @@
 
       // Tag colors
       applyTagColorMode(state.tagColorMode, { fromSync: true });
+      initTagShades();
       const tagColorModeSelect = document.getElementById('tag-color-mode-select');
       if (tagColorModeSelect) {
         tagColorModeSelect.value = state.tagColorMode;
@@ -13472,6 +13811,9 @@
       actions.appendChild(saveBtn);
       actions.appendChild(cancelBtn);
       container.appendChild(actions);
+      container.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onSave(); }
+      });
       return actions;
     }
 
@@ -13515,6 +13857,283 @@
       let h = 0;
       for (const ch of String(tag)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
       return h % TAG_PALETTE_SIZE;
+    }
+
+    // ── Shades of accent: 8 colors per theme, handed out to tags by use ──────
+    function srgbToLinear(c) {
+      const v = c / 255;
+      return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    }
+
+    function hexToOklab(hex) {
+      const [r, g, b] = hexToRgb(hex).map(srgbToLinear);
+      const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+      const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+      const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+      return [
+        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+      ];
+    }
+
+    function hexToOklch(hex) {
+      const [l, a, b] = hexToOklab(hex);
+      return { l, c: Math.hypot(a, b), h: (Math.atan2(b, a) * 180 / Math.PI + 360) % 360 };
+    }
+
+    function oklabToLinearRgb(L, a, b) {
+      const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+      const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+      const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+      return [
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+      ];
+    }
+
+    // Colors outside sRGB keep their lightness and hue and lose chroma until they fit
+    function oklchToHex(l, c, h) {
+      const rad = h * Math.PI / 180;
+      const rgbAt = (chroma) => oklabToLinearRgb(l, chroma * Math.cos(rad), chroma * Math.sin(rad));
+      const fits = (chroma) => rgbAt(chroma).every(v => v >= -0.0005 && v <= 1.0005);
+      let chroma = Math.max(0, c);
+      if (!fits(chroma)) {
+        let lo = 0, hi = chroma;
+        for (let i = 0; i < 20; i++) {
+          const mid = (lo + hi) / 2;
+          if (fits(mid)) lo = mid; else hi = mid;
+        }
+        chroma = lo;
+      }
+      const toSrgb = (v) => {
+        const x = Math.min(1, Math.max(0, v));
+        return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055);
+      };
+      return rgbToHex(...rgbAt(chroma).map(toSrgb));
+    }
+
+    function relativeLuminance(hex) {
+      const [r, g, b] = hexToRgb(hex).map(srgbToLinear);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function contrastRatio(a, b) {
+      const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    }
+
+    // Perceptual distance; lightness counts a little less than hue/chroma, since tags are told apart by color
+    function tagShadeDistance(a, b) {
+      const [l1, a1, b1] = hexToOklab(a);
+      const [l2, a2, b2] = hexToOklab(b);
+      return Math.hypot((l1 - l2) * 0.8, a1 - a2, b1 - b2);
+    }
+
+    // Step lightness toward the theme's text color until the tag text reads on its own pill (18% tint of itself)
+    function readableTagColor(hex, surface, text, minContrast) {
+      const towardLight = relativeLuminance(text) > relativeLuminance(surface);
+      const { c, h } = hexToOklch(hex);
+      let { l } = hexToOklch(hex);
+      let out = hex;
+      for (let i = 0; i < 24 && contrastRatio(out, mixHex(out, surface, 82)) < minContrast; i++) {
+        l = Math.min(0.97, Math.max(0.12, l + (towardLight ? 0.03 : -0.03)));
+        out = oklchToHex(l, c, h);
+      }
+      return out;
+    }
+
+    // The theme's most saturated color that's clearly a different hue from the accent, if any
+    function pickTagShadeSecond(accent, candidates) {
+      const a = hexToOklch(accent);
+      for (const hex of candidates) {
+        const o = hexToOklch(hex);
+        const gap = Math.abs(((o.h - a.h + 540) % 360) - 180);
+        if (o.c >= 0.05 && gap >= 45) return hex;
+      }
+      return null;
+    }
+
+    // Smallest distance between any two colors in the list
+    function minTagShadeGap(colors) {
+      let min = Infinity;
+      for (let i = 0; i < colors.length; i++) {
+        for (let j = i + 1; j < colors.length; j++) min = Math.min(min, tagShadeDistance(colors[i], colors[j]));
+      }
+      return min;
+    }
+
+    // Accent first, then each next color is the candidate farthest from every color already picked.
+    // Candidates run `span` degrees from the accent (toward the second color) at several lightnesses.
+    // Chroma blends from the accent's to the second color's over the first `toSecond` degrees, then holds
+    function spreadTagShades(accent, a, s, span, toSecond, readable) {
+      const steps = Math.max(5, Math.ceil(Math.abs(span) / 24));
+      const candidates = [];
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const h = (a.h + span * t + 360) % 360;
+        const blend = Math.min(1, (Math.abs(span) * t) / Math.abs(toSecond));
+        const c = Math.max(0.09, a.c + ((s ? s.c : a.c) - a.c) * blend);
+        for (const dl of [0, -0.1, 0.1, -0.2, 0.2]) {
+          candidates.push(readable(oklchToHex(Math.min(0.95, Math.max(0.2, a.l + dl)), c, h)));
+        }
+      }
+      const chosen = [readable(accent)];
+      while (chosen.length < TAG_SHADE_COUNT) {
+        let best = candidates[0];
+        let bestGap = -1;
+        for (const cand of candidates) {
+          const gap = Math.min(...chosen.map(x => tagShadeDistance(x, cand)));
+          if (gap > bestGap) { best = cand; bestGap = gap; }
+        }
+        chosen.push(best);
+      }
+      return chosen;
+    }
+
+    // Two-tone: accent toward the theme's second color (or 120° around the wheel). If the six most-used
+    // colors would still look alike (common on medium gray themes), widen the range until they don't.
+    function buildTagShades({ accent, second = null, surface, text, palette = null }) {
+      // Never ask for more contrast than the theme's own accent has (medium themes would wash out to pastels)
+      const minContrast = Math.max(2, Math.min(3, contrastRatio(accent, mixHex(accent, surface, 82))));
+      const readable = (hex) => readableTagColor(hex, surface, text, minContrast);
+      if (palette) return palette.slice(0, TAG_SHADE_COUNT).map(readable);
+      const a = hexToOklch(accent);
+      const s = second ? hexToOklch(second) : null;
+      let dh = s ? ((s.h - a.h + 540) % 360) - 180 : 120;
+      if (Math.abs(dh) < 100) dh = Math.sign(dh || 1) * 100;
+      const spans = [dh, ...[180, 270, 360].filter(x => x > Math.abs(dh)).map(x => Math.sign(dh) * x)];
+      let best = null;
+      let bestGap = -1;
+      for (const span of spans) {
+        const shades = spreadTagShades(accent, a, s, span, dh, readable);
+        const gap = minTagShadeGap(shades.slice(0, 6));
+        if (gap > bestGap) { best = shades; bestGap = gap; }
+        if (gap >= TAG_SHADE_MIN_GAP) break;
+      }
+      return best;
+    }
+
+    let tagShadeKey = '';
+    let tagShadeFrame = 0;
+
+    function scheduleTagShadeRefresh() {
+      if (tagShadeFrame) return;
+      tagShadeFrame = requestAnimationFrame(() => {
+        tagShadeFrame = 0;
+        refreshTagShades();
+      });
+    }
+
+    // Writes --tag-shade-0..7 for the current theme; only recomputes when the theme's colors change
+    function refreshTagShades() {
+      if (state.tagColorMode !== 'analogous') return;
+      const probe = document.createElement('span');
+      probe.style.cssText = 'position:absolute;visibility:hidden;color:var(--accent);background-color:var(--surface);border:1px solid var(--text)';
+      document.body.appendChild(probe);
+      const cs = getComputedStyle(probe);
+      const accent = cssColorToHex(cs.color);
+      const surface = cssColorToHex(cs.backgroundColor);
+      const text = cssColorToHex(cs.borderTopColor);
+      probe.remove();
+      if (!accent || !surface || !text) return;
+      const themeId = getCurrentThemeId();
+      const root = getComputedStyle(document.documentElement);
+      const seconds = TAG_SHADE_SECOND_VARS
+        .map(v => (root.getPropertyValue(v).match(/#[0-9a-f]{6}\b/i) || [])[0])
+        .filter(Boolean)
+        .map(hex => hex.toLowerCase());
+      const key = [themeId, accent, surface, text, ...seconds].join('|');
+      if (key === tagShadeKey) return;
+      tagShadeKey = key;
+      const palette = THEME_TAG_PALETTES[themeId] || null;
+      const shades = buildTagShades({ accent, surface, text, palette, second: palette ? null : pickTagShadeSecond(accent, seconds) });
+      let style = document.getElementById('tag-shade-vars');
+      if (!style) {
+        style = document.createElement('style');
+        style.id = 'tag-shade-vars';
+        document.head.appendChild(style);
+      }
+      style.textContent = `:root { ${shades.map((c, i) => `--tag-shade-${i}: ${c};`).join(' ')} }`;
+      syncTagColorListRows();
+    }
+
+    function initTagShades() {
+      new MutationObserver(scheduleTagShadeRefresh)
+        .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style', 'data-tag-colors'] });
+      refreshTagShades();
+    }
+
+    function normalizeTagShadeSlots(obj) {
+      const out = {};
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
+      for (const [rawTag, slot] of Object.entries(obj)) {
+        const tag = normalizeTag(rawTag);
+        if (tag && Number.isInteger(slot) && slot >= 0 && slot < TAG_SHADE_COUNT) out[tag] = slot;
+      }
+      return out;
+    }
+
+    function loadTagShadeSlots() {
+      try { return normalizeTagShadeSlots(JSON.parse(localStorage.getItem(TAG_SHADE_SLOTS_KEY))); }
+      catch (_) { return {}; }
+    }
+
+    function sameTagShadeSlots(a, b) {
+      const keys = Object.keys(a);
+      return keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k]);
+    }
+
+    // The least-shared color among tags still in use; ties go to the lower slot (lower slots are the most distinct)
+    function nextTagShadeSlot(slots, liveTags) {
+      const load = new Array(TAG_SHADE_COUNT).fill(0);
+      for (const tag of liveTags) if (tag in slots) load[slots[tag]]++;
+      return load.indexOf(Math.min(...load));
+    }
+
+    // Existing assignments never change; unassigned tags get slots in order of use, most-used first
+    function assignTagShadeSlots(current, tagsByUse) {
+      const live = new Set(tagsByUse);
+      const next = { ...current };
+      for (const tag of tagsByUse) if (!(tag in next)) next[tag] = nextTagShadeSlot(next, live);
+      return next;
+    }
+
+    let liveShadeTags = null;
+
+    function reconcileTagShadeSlots() {
+      const tagsByUse = collectTagUsage().map(u => u.tag);
+      liveShadeTags = new Set(tagsByUse);
+      storeTagShadeSlots(assignTagShadeSlots(state.tagShadeSlots, tagsByUse));
+    }
+
+    function tagShadeSlot(tag) {
+      if (!liveShadeTags) reconcileTagShadeSlots();
+      liveShadeTags.add(tag);
+      if (!(tag in state.tagShadeSlots)) {
+        storeTagShadeSlots({ ...state.tagShadeSlots, [tag]: nextTagShadeSlot(state.tagShadeSlots, liveShadeTags) });
+      }
+      return state.tagShadeSlots[tag];
+    }
+
+    // Assignments sync with prefs but leave the prefs timestamp alone, so they never outvote a real settings change
+    function storeTagShadeSlots(next) {
+      if (sameTagShadeSlots(next, state.tagShadeSlots)) return;
+      state.tagShadeSlots = next;
+      localStorage.setItem(TAG_SHADE_SLOTS_KEY, JSON.stringify(next));
+      setTimeout(() => { if (sbSynced) sbSchedulePush(); }, 0);
+    }
+
+    // Another device's assignment wins for every tag it has, so all devices settle on the same colors
+    function mergeRemoteTagShadeSlots(remote) {
+      const incoming = normalizeTagShadeSlots(remote);
+      const next = { ...state.tagShadeSlots, ...incoming };
+      if (sameTagShadeSlots(next, state.tagShadeSlots)) return false;
+      state.tagShadeSlots = next;
+      localStorage.setItem(TAG_SHADE_SLOTS_KEY, JSON.stringify(next));
+      refreshTagChipColors();
+      return true;
     }
 
     function normalizeTagColorMode(mode) {
@@ -13586,6 +14205,8 @@
     function decorateTagChip(chip, tag) {
       chip.dataset.tag = tag;
       chip.dataset.tagSlot = String(tagPaletteSlot(tag));
+      if (state.tagColorMode === 'analogous') chip.dataset.shadeSlot = String(tagShadeSlot(tag));
+      else delete chip.dataset.shadeSlot;
       const custom = state.tagColors[tag];
       chip.classList.toggle('tag-custom', !!custom);
       if (custom) chip.style.setProperty('--tag-custom', custom);
@@ -13605,7 +14226,8 @@
       const el = document.getElementById('tag-color-mode-select');
       if (el) el.value = next;
       localStorage.setItem(TAG_COLOR_MODE_KEY, next);
-      syncTagColorListRows();
+      refreshTagShades();
+      refreshTagChipColors();
       if (!fromSync) schedulePrefsPush();
     }
 
@@ -16694,8 +17316,87 @@
           const ds = (template.days || []).map(d => DAY_LABELS[d]);
           return ds.length ? ds.join(', ') : 'Custom';
         }
+        case 'biweekly': {
+          if (!template.startDate) return 'Every 2 weeks';
+          return `Every other ${DAY_LABELS[new Date(template.startDate + 'T12:00:00').getDay()]}`;
+        }
+        case 'monthly':
+        case 'quarterly': {
+          const when = recurringMonthlyWhen(template);
+          if (template.rule === 'monthly') return when ? `Monthly on the ${when}` : 'Monthly';
+          const months = quarterMonths(template.startMonth).map(m => MONTH_SHORT[m]).join(', ');
+          return when ? `Quarterly on the ${when} (${months})` : `Quarterly (${months})`;
+        }
         default: return template.rule;
       }
+    }
+
+    const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const RECURRING_SCHEDULE_KEYS = ['rule', 'days', 'startDate', 'monthBy', 'monthDays', 'weeks', 'startMonth'];
+
+    function ordinal(n) {
+      const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    function joinAnd(parts) {
+      return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} & ${parts[parts.length - 1]}` : (parts[0] || '');
+    }
+
+    function sortLastAtEnd(list) {
+      return [...list].sort((a, b) => (a === -1 ? 99 : a) - (b === -1 ? 99 : b));
+    }
+
+    function quarterMonths(startMonth) {
+      const first = (((Number.isInteger(startMonth) ? startMonth : 0) % 3) + 3) % 3;
+      return [first, first + 3, first + 6, first + 9];
+    }
+
+    function recurringMonthlyWhen(template) {
+      if (template.monthBy === 'weekday') {
+        const weeks = sortLastAtEnd(template.weeks || []).map(w => (w === -1 ? 'last' : ordinal(w)));
+        const day = Array.isArray(template.days) ? DAY_LABELS[template.days[0]] : null;
+        return weeks.length && day ? `${joinAnd(weeks)} ${day}` : '';
+      }
+      const dates = sortLastAtEnd(template.monthDays || []).map(n => (n === -1 ? 'last day' : ordinal(n)));
+      return joinAnd(dates);
+    }
+
+    function recurringDueOn(template, dateKey) {
+      const d = new Date(dateKey + 'T12:00:00');
+      const dow = d.getDay();
+      const days = Array.isArray(template.days) ? template.days : [];
+      switch (template.rule) {
+        case 'daily': return true;
+        case 'weekdays': return dow >= 1 && dow <= 5;
+        case 'weekly':
+        case 'custom': return days.includes(dow);
+        case 'biweekly': {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(template.startDate || '')) return false;
+          const diff = Math.round((d - new Date(template.startDate + 'T12:00:00')) / 86400000);
+          return diff >= 0 && diff % 14 === 0;
+        }
+        case 'monthly':
+        case 'quarterly': {
+          if (template.rule === 'quarterly' && !quarterMonths(template.startMonth).includes(d.getMonth())) return false;
+          const date = d.getDate();
+          const lastDate = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+          if (template.monthBy === 'weekday') {
+            if (!days.includes(dow)) return false;
+            const weeks = template.weeks || [];
+            return weeks.includes(Math.ceil(date / 7)) || (weeks.includes(-1) && date + 7 > lastDate);
+          }
+          // A 31st (or 29th/30th) lands on the month's last day in shorter months
+          return (template.monthDays || []).some(n => (n === -1 ? lastDate : Math.min(n, lastDate)) === date);
+        }
+        default: return false;
+      }
+    }
+
+    function withRecurringSchedule(template, schedule) {
+      const next = { ...template };
+      RECURRING_SCHEDULE_KEYS.forEach(k => { delete next[k]; });
+      return Object.assign(next, schedule);
     }
 
     // ── Holiday computation ───────────────────────────────────────────
@@ -16765,16 +17466,7 @@
     function isDueToday(template) {
       const today = todayKey();
       if (template.lastInjectedDate === today) return false;
-      const d = new Date(today + 'T12:00:00');
-      const dow = d.getDay();
-      let due = false;
-      switch (template.rule) {
-        case 'daily': due = true; break;
-        case 'weekdays': due = dow >= 1 && dow <= 5; break;
-        case 'weekly':
-        case 'custom': due = Array.isArray(template.days) && template.days.includes(dow); break;
-        default: return false;
-      }
+      const due = recurringDueOn(template, today);
       if (due && template.skipHolidays && checkHoliday(today).isHoliday) return false;
       return due;
     }
@@ -16880,6 +17572,157 @@
         saveRecurringTemplates(updated);
       }
       return toInject.length;
+    }
+
+    const RECURRING_RULES = [
+      { value: 'daily', label: 'Daily' },
+      { value: 'weekdays', label: 'Weekdays' },
+      { value: 'weekly', label: 'Weekly' },
+      { value: 'custom', label: 'Custom' },
+      { value: 'biweekly', label: 'Every 2 weeks' },
+      { value: 'monthly', label: 'Monthly' },
+      { value: 'quarterly', label: 'Quarterly' },
+    ];
+
+    function createRecurringSchedulePicker(initial = {}) {
+      let rule = RECURRING_RULES.some(r => r.value === initial.rule) ? initial.rule : 'weekdays';
+      let days = Array.isArray(initial.days) ? [...initial.days] : [];
+      let startDate = initial.startDate || todayKey();
+      let monthBy = initial.monthBy === 'weekday' ? 'weekday' : 'date';
+      let monthDays = Array.isArray(initial.monthDays) ? [...initial.monthDays] : [];
+      let weeks = Array.isArray(initial.weeks) ? [...initial.weeks] : [];
+      let startMonth = Number.isInteger(initial.startMonth) ? initial.startMonth % 3 : new Date().getMonth() % 3;
+
+      const el = document.createElement('div');
+      el.className = 'recurring-schedule';
+      const ruleBtns = document.createElement('div');
+      ruleBtns.className = 'recurring-rule-btns';
+      const options = document.createElement('div');
+      options.className = 'recurring-schedule-options';
+      el.appendChild(ruleBtns);
+      el.appendChild(options);
+
+      const toggleIn = (list, value) => (list.includes(value) ? list.filter(v => v !== value) : [...list, value]);
+
+      function choiceRow(className, items, isActive, onPick) {
+        const row = document.createElement('div');
+        row.className = className;
+        items.forEach(({ value, label, title, btnClass }) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = btnClass + (isActive(value) ? ' active' : '');
+          btn.textContent = label;
+          if (title) btn.title = title;
+          btn.addEventListener('click', () => { onPick(value); renderOptions(); });
+          row.appendChild(btn);
+        });
+        return row;
+      }
+
+      function dayRow(multi) {
+        const items = DAY_LABELS.map((label, idx) => ({ value: idx, label: label.slice(0, 1), title: label, btnClass: 'day-btn' }));
+        return choiceRow('day-picker', items, v => days.includes(v), v => {
+          days = multi ? toggleIn(days, v).sort((a, b) => a - b) : [v];
+        });
+      }
+
+      function hint(text) {
+        const p = document.createElement('p');
+        p.className = 'recurring-schedule-hint';
+        p.textContent = text;
+        return p;
+      }
+
+      function renderOptions() {
+        options.innerHTML = '';
+        if (rule === 'weekly' || rule === 'custom') {
+          if (rule === 'weekly' && days.length > 1) days = [days[0]];
+          options.appendChild(dayRow(rule === 'custom'));
+        } else if (rule === 'biweekly') {
+          const row = document.createElement('label');
+          row.className = 'recurring-schedule-field';
+          row.appendChild(document.createTextNode('Starting '));
+          const input = document.createElement('input');
+          input.type = 'date';
+          input.className = 'recurring-start-date custom-holiday-input';
+          input.value = startDate;
+          input.addEventListener('change', () => { if (input.value) { startDate = input.value; renderOptions(); } });
+          row.appendChild(input);
+          options.appendChild(row);
+          const start = new Date(startDate + 'T12:00:00');
+          options.appendChild(hint(`Every other ${start.toLocaleDateString('en-US', { weekday: 'long' })}, starting ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`));
+        } else if (rule === 'monthly' || rule === 'quarterly') {
+          options.appendChild(choiceRow('recurring-month-by', [
+            { value: 'date', label: 'Day of month', btnClass: 'rule-btn month-by-btn' },
+            { value: 'weekday', label: 'Day of week', btnClass: 'rule-btn month-by-btn' },
+          ], v => v === monthBy, v => { monthBy = v; }));
+          if (monthBy === 'date') {
+            const items = Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: String(i + 1), btnClass: 'day-btn month-day-btn' }));
+            items.push({ value: -1, label: 'Last', title: 'Last day of the month', btnClass: 'day-btn month-day-btn month-day-last' });
+            options.appendChild(choiceRow('month-day-grid', items, v => monthDays.includes(v), v => { monthDays = toggleIn(monthDays, v); }));
+            options.appendChild(hint('Pick one or more dates. A 29th–31st falls on the last day in shorter months.'));
+          } else {
+            const weekItems = [1, 2, 3, 4, -1].map(w => ({ value: w, label: w === -1 ? 'Last' : ordinal(w), btnClass: 'rule-btn month-week-btn' }));
+            options.appendChild(choiceRow('recurring-month-weeks', weekItems, v => weeks.includes(v), v => { weeks = toggleIn(weeks, v); }));
+            if (days.length > 1) days = [days[0]];
+            options.appendChild(dayRow(false));
+            options.appendChild(hint('Pick one or more weeks, e.g. 1st and 3rd for twice a month.'));
+          }
+          if (rule === 'quarterly') {
+            const qItems = [0, 1, 2].map(m => ({
+              value: m, label: quarterMonths(m).map(x => MONTH_SHORT[x]).join(' · '), btnClass: 'rule-btn quarter-btn',
+            }));
+            options.appendChild(choiceRow('recurring-quarter-months', qItems, v => v === startMonth, v => { startMonth = v; }));
+          }
+        }
+      }
+
+      RECURRING_RULES.forEach(r => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rule-btn' + (r.value === rule ? ' active' : '');
+        btn.dataset.rule = r.value;
+        btn.textContent = r.label;
+        btn.addEventListener('click', () => {
+          if (rule === r.value) return;
+          const wasMonthly = rule === 'monthly' || rule === 'quarterly';
+          rule = r.value;
+          if (!(wasMonthly && (rule === 'monthly' || rule === 'quarterly'))) days = [];
+          ruleBtns.querySelectorAll('.rule-btn').forEach(b => b.classList.toggle('active', b === btn));
+          renderOptions();
+        });
+        ruleBtns.appendChild(btn);
+      });
+      renderOptions();
+
+      function read() {
+        switch (rule) {
+          case 'weekly':
+          case 'custom':
+            if (!days.length) return { error: 'Please choose at least one day' };
+            return { schedule: { rule, days: [...days] } };
+          case 'biweekly':
+            return { schedule: { rule, startDate, days: [new Date(startDate + 'T12:00:00').getDay()] } };
+          case 'monthly':
+          case 'quarterly': {
+            const schedule = { rule, monthBy };
+            if (monthBy === 'date') {
+              if (!monthDays.length) return { error: 'Please choose at least one day of the month' };
+              schedule.monthDays = sortLastAtEnd(monthDays);
+            } else {
+              if (!weeks.length || days.length !== 1) return { error: 'Please choose a week and a day' };
+              schedule.weeks = sortLastAtEnd(weeks);
+              schedule.days = [...days];
+            }
+            if (rule === 'quarterly') schedule.startMonth = startMonth;
+            return { schedule };
+          }
+          default:
+            return { schedule: { rule, days: null } };
+        }
+      }
+
+      return { el, read };
     }
 
     function openRecurringModal() {
@@ -17038,68 +17881,8 @@
       ruleLabel.textContent = 'Repeats';
       form.appendChild(ruleLabel);
 
-      let selectedRule = 'weekdays';
-      let selectedDays = [];
-
-      const ruleBtns = document.createElement('div');
-      ruleBtns.className = 'recurring-rule-btns';
-
-      const rules = [
-        { value: 'daily', label: 'Daily' },
-        { value: 'weekdays', label: 'Weekdays' },
-        { value: 'weekly', label: 'Weekly' },
-        { value: 'custom', label: 'Custom' },
-      ];
-
-      let dayPickerEl = null;
-
-      function updateDayPicker() {
-        if (dayPickerEl) dayPickerEl.remove();
-        if (selectedRule !== 'weekly' && selectedRule !== 'custom') return;
-
-        dayPickerEl = document.createElement('div');
-        dayPickerEl.className = 'day-picker';
-
-        const isMulti = selectedRule === 'custom';
-        if (selectedRule === 'weekly' && selectedDays.length > 1) selectedDays = [selectedDays[0]];
-
-        DAY_LABELS.forEach((label, idx) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'day-btn' + (selectedDays.includes(idx) ? ' active' : '');
-          btn.textContent = label.slice(0, 1);
-          btn.title = label;
-          btn.addEventListener('click', () => {
-            if (isMulti) {
-              selectedDays = selectedDays.includes(idx)
-                ? selectedDays.filter(d => d !== idx)
-                : [...selectedDays, idx].sort((a, b) => a - b);
-            } else {
-              selectedDays = [idx];
-            }
-            updateDayPicker();
-          });
-          dayPickerEl.appendChild(btn);
-        });
-
-        form.insertBefore(dayPickerEl, addActions);
-      }
-
-      rules.forEach(r => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'rule-btn' + (r.value === selectedRule ? ' active' : '');
-        btn.textContent = r.label;
-        btn.addEventListener('click', () => {
-          selectedRule = r.value;
-          selectedDays = [];
-          ruleBtns.querySelectorAll('.rule-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          updateDayPicker();
-        });
-        ruleBtns.appendChild(btn);
-      });
-      form.appendChild(ruleBtns);
+      const schedulePicker = createRecurringSchedulePicker();
+      form.appendChild(schedulePicker.el);
 
       // Skip holidays checkbox
       const skipHolidayWrap = document.createElement('label');
@@ -17125,17 +17908,15 @@
       addBtn.addEventListener('click', () => {
         let content = sanitizeHtml(getEditorHtml(editor));
         if (isEmptyHtml(content)) { showToast('Please enter a task description'); return; }
-        if ((selectedRule === 'weekly' || selectedRule === 'custom') && selectedDays.length === 0) {
-          showToast('Please choose at least one day'); return;
-        }
+        const picked = schedulePicker.read();
+        if (picked.error) { showToast(picked.error); return; }
         const extracted = extractHashtags(content);
         const tags = extracted.tags;
         if (tags.length && extracted.content) content = extracted.content;
         const template = {
           id: newId(),
           content,
-          rule: selectedRule,
-          days: (selectedRule === 'weekly' || selectedRule === 'custom') ? selectedDays : null,
+          ...picked.schedule,
           skipHolidays: skipHolidayCb.checked,
           createdAt: new Date().toISOString(),
           lastInjectedDate: null,
@@ -17152,7 +17933,9 @@
 
       form.appendChild(addActions);
       addActions.appendChild(addBtn);
-      updateDayPicker();
+      editor.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+      });
       body.appendChild(form);
 
       // Existing templates section
@@ -17192,63 +17975,8 @@
       ruleLabel.textContent = 'Repeats';
       hostEl.appendChild(ruleLabel);
 
-      let selectedRule = template.rule || 'weekdays';
-      let selectedDays = template.days ? [...template.days] : [];
-
-      const ruleBtns = document.createElement('div');
-      ruleBtns.className = 'recurring-rule-btns';
-      let dayPickerEl = null;
-      let editActions; // forward ref for insertBefore
-
-      function updateDayPicker() {
-        if (dayPickerEl) dayPickerEl.remove();
-        if (selectedRule !== 'weekly' && selectedRule !== 'custom') return;
-        dayPickerEl = document.createElement('div');
-        dayPickerEl.className = 'day-picker';
-        const isMulti = selectedRule === 'custom';
-        if (selectedRule === 'weekly' && selectedDays.length > 1) selectedDays = [selectedDays[0]];
-        DAY_LABELS.forEach((label, idx) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'day-btn' + (selectedDays.includes(idx) ? ' active' : '');
-          btn.textContent = label.slice(0, 1);
-          btn.title = label;
-          btn.addEventListener('click', () => {
-            if (isMulti) {
-              selectedDays = selectedDays.includes(idx)
-                ? selectedDays.filter(d => d !== idx)
-                : [...selectedDays, idx].sort((a, b) => a - b);
-            } else {
-              selectedDays = [idx];
-            }
-            updateDayPicker();
-          });
-          dayPickerEl.appendChild(btn);
-        });
-        hostEl.insertBefore(dayPickerEl, editActions);
-      }
-
-      const rules = [
-        { value: 'daily', label: 'Daily' },
-        { value: 'weekdays', label: 'Weekdays' },
-        { value: 'weekly', label: 'Weekly' },
-        { value: 'custom', label: 'Custom' },
-      ];
-      rules.forEach(r => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'rule-btn' + (r.value === selectedRule ? ' active' : '');
-        btn.textContent = r.label;
-        btn.addEventListener('click', () => {
-          selectedRule = r.value;
-          selectedDays = [];
-          ruleBtns.querySelectorAll('.rule-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          updateDayPicker();
-        });
-        ruleBtns.appendChild(btn);
-      });
-      hostEl.appendChild(ruleBtns);
+      const schedulePicker = createRecurringSchedulePicker(template);
+      hostEl.appendChild(schedulePicker.el);
 
       const skipHolidayWrap = document.createElement('label');
       skipHolidayWrap.className = 'customize-toggle';
@@ -17316,7 +18044,7 @@
       renderEditTagChips();
       hostEl.appendChild(tagSection);
 
-      editActions = document.createElement('div');
+      const editActions = document.createElement('div');
       editActions.className = 'recurring-add-actions';
 
       const saveBtn = document.createElement('button');
@@ -17326,9 +18054,8 @@
       saveBtn.addEventListener('click', () => {
         let content = sanitizeHtml(getEditorHtml(editor));
         if (isEmptyHtml(content)) { showToast('Please enter a task description'); return; }
-        if ((selectedRule === 'weekly' || selectedRule === 'custom') && selectedDays.length === 0) {
-          showToast('Please choose at least one day'); return;
-        }
+        const picked = schedulePicker.read();
+        if (picked.error) { showToast(picked.error); return; }
         const extracted = extractHashtags(content);
         if (extracted.tags.length && extracted.content) {
           content = extracted.content;
@@ -17339,10 +18066,8 @@
         if (idx === -1) { showToast('Template not found'); renderRecurringPanel(); return; }
         const mergedTags = [...editTags];
         templates[idx] = {
-          ...templates[idx],
+          ...withRecurringSchedule(templates[idx], picked.schedule),
           content,
-          rule: selectedRule,
-          days: (selectedRule === 'weekly' || selectedRule === 'custom') ? selectedDays : null,
           skipHolidays: skipHolidayCb.checked,
           tags: mergedTags.length ? mergedTags : undefined,
         };
@@ -17364,7 +18089,9 @@
       editActions.appendChild(cancelBtn);
       editActions.appendChild(saveBtn);
       hostEl.appendChild(editActions);
-      updateDayPicker();
+      editor.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
+      });
     }
 
     // ── End recurring ──────────────────────────────────────────────────
