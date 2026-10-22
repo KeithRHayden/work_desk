@@ -1,5 +1,5 @@
 // Bump CACHE whenever this file changes so old caches are cleared on activate.
-const CACHE = 'work-desk-v2';
+const CACHE = 'work-desk-v3';
 const ASSETS = [
   '/work_desk/',
   '/work_desk/index.html',
