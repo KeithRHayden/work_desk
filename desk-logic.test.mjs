@@ -1111,6 +1111,14 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
   });
 });
 
+describe('installed app manifest', () => {
+  it('does not lock screen orientation, so the installed app rotates on tablets and phones', () => {
+    const manifest = JSON.parse(readFileSync(join(__dirname, '..', 'manifest.json'), 'utf8'));
+    assert.equal(manifest.orientation, 'any');
+    assert.equal(manifest.display, 'standalone');
+  });
+});
+
 describe('Character encoding (mojibake guard)', () => {
   const SHIPPED_FILES = ['work-desk.html', 'index.html', 'sw.js', 'manifest.json', 'CHANGELOG.md', 'README.md'];
   // UTF-8 bytes misread as Windows-1252: — → "â€”", → → "â†’", é → "Ã©", emoji → "ðŸ…", nbsp → "Â "
@@ -3425,7 +3433,7 @@ describe('v1.16.2 tag color labels', () => {
   it('uses plain labels everywhere, with stored values unchanged', () => {
     assert.match(mainScript, /const TAG_COLOR_MODES = \['theme', 'analogous', 'palette'\];/);
     assert.doesNotMatch(html, /Analogous \(shades of accent\)<\/option>|Multi-color \(from theme\)<\/option>/);
-    assert.match(html, /<p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color/);
+    assert.match(html, /<p class="tag-color-hint">Shades of accent picks colors that match what's on screen: the accent and the theme's background tint\. Multi-color uses a wider set that suits the theme\./);
   });
 
 });
@@ -3575,17 +3583,21 @@ describe('Tag colors', () => {
     assert.deepEqual(state.tagColors, {});
   });
 
-  it('decorateTagChip sets the slot and applies/removes a custom color', () => {
+  it('decorateTagChip hands out the same use-order slot in both color modes and applies/removes a custom color', () => {
     const f = tagColorFns({ 'work-desk-tag-colors': JSON.stringify({ urgent: '#ef4444' }) });
     const chip = fakeChip();
     f.decorateTagChip(chip, 'urgent');
     assert.equal(chip.dataset.tag, 'urgent');
-    assert.equal(chip.dataset.tagSlot, String(f.tagPaletteSlot('urgent')));
-    assert.equal(chip.dataset.shadeSlot, undefined, 'shade slots are only handed out in Shades of accent');
+    assert.equal(chip.dataset.tagSlot, undefined, 'the name-hash slot is gone');
+    assert.equal(chip.dataset.shadeSlot, undefined, 'Single color has no slots');
     f.state.tagColorMode = 'analogous';
     f.decorateTagChip(chip, 'urgent');
-    assert.equal(chip.dataset.shadeSlot, String('urgent'.length % 8));
+    const slot = chip.dataset.shadeSlot;
+    assert.equal(slot, String('urgent'.length % 8));
     f.state.tagColorMode = 'palette';
+    f.decorateTagChip(chip, 'urgent');
+    assert.equal(chip.dataset.shadeSlot, slot, 'Multi-color uses the same slot, so a tag keeps its position when you switch');
+    f.state.tagColorMode = 'theme';
     f.decorateTagChip(chip, 'urgent');
     assert.equal(chip.dataset.shadeSlot, undefined);
     assert.ok(chip.classList.has('tag-custom'));
@@ -3628,18 +3640,17 @@ describe('Tag colors', () => {
     assert.match(html, /<option value="theme">Single color \(accent\)<\/option>\s*<option value="analogous">Shades of accent<\/option>\s*<option value="palette">Multi-color<\/option>/);
   });
 
-  it('CSS: chips read --tag-fg/--tag-bg, palette is gated by @supports, custom beats palette', () => {
+  it('CSS: chips read --tag-fg/--tag-bg, both color modes share the shade-slot rules, custom beats them', () => {
     assert.match(html, /\.tag-chip \{\s*--tag-fg: var\(--accent\);\s*--tag-bg: var\(--accent-light\);/);
-    assert.match(html, /@supports \(color: oklch\(from red l c h\)\) \{\s*html\[data-tag-colors="palette"\] \.tag-chip \{/);
-    for (let s = 1; s < 8; s++) assert.match(html, new RegExp(`\\.tag-chip\\[data-tag-slot="${s}"\\] \\{ --tag-hue: ${s * 45}; \\}`));
-    // Shades of accent: the (0,2,1) base rule sets --tag-fg; (0,3,1) slot rules only pick the shade, so a pinned color still wins
-    assert.match(html, /html\[data-tag-colors="analogous"\] \.tag-chip \{\s*--tag-shade: var\(--tag-shade-0, var\(--accent\)\);\s*--tag-fg: var\(--tag-shade\);/);
+    const modes = 'html:is\\(\\[data-tag-colors="analogous"\\], \\[data-tag-colors="palette"\\]\\)';
+    // the (0,2,1) base rule sets --tag-fg; (0,3,1) slot rules only pick the shade, so a pinned color still wins
+    assert.match(html, new RegExp(`${modes} \\.tag-chip \\{\\s*--tag-shade: var\\(--tag-shade-0, var\\(--accent\\)\\);\\s*--tag-fg: var\\(--tag-shade\\);`));
     for (let s = 1; s < 8; s++) {
-      assert.match(html, new RegExp(`html\\[data-tag-colors="analogous"\\] \\.tag-chip\\[data-shade-slot="${s}"\\] \\{ --tag-shade: var\\(--tag-shade-${s}, var\\(--accent\\)\\); \\}`), `shade slot ${s}`);
+      assert.match(html, new RegExp(`${modes} \\.tag-chip\\[data-shade-slot="${s}"\\] \\{ --tag-shade: var\\(--tag-shade-${s}, var\\(--accent\\)\\); \\}`), `shade slot ${s}`);
     }
     assert.doesNotMatch(html, /data-shade-slot="\d"\] \{[^}]*--tag-fg/);
-    assert.doesNotMatch(html, /--tag-dh|--tag-dl/);
-    // (0,3,0) custom selector must out-rank the (0,2,1) palette selector
+    assert.doesNotMatch(html, /--tag-dh|--tag-dl|--tag-hue|data-tag-slot/, 'the old hue-rotation Multi-color is gone');
+    // (0,3,0) custom selector must out-rank the (0,2,1) mode selector
     assert.match(html, /\.tag-chip\.tag-custom\[data-tag\] \{\s*--tag-fg: color-mix\(in oklch, var\(--tag-custom\) \d+%, var\(--text\)\);/);
     assert.match(html, /\.tag-chip-remove \{[^}]*color: inherit;/);
   });
@@ -5490,7 +5501,9 @@ describe('v1.21.0 new themes and Shades of accent', () => {
 
   it('shades are recomputed for the current theme and written to one style element', () => {
     const refresh = fnSource('refreshTagShades');
-    assert.match(refresh, /if \(state\.tagColorMode !== 'analogous'\) return;/);
+    assert.match(refresh, /if \(mode !== 'analogous' && mode !== 'palette'\) return;/);
+    assert.match(refresh, /const key = \[mode, themeId,/, 'switching modes recomputes');
+    assert.match(refresh, /mode === 'analogous'\s*\? buildAccentShades\(\{ accent, surface, text, neutrals \}\)\s*: buildTagShades\(/);
     assert.match(refresh, /THEME_TAG_PALETTES\[themeId\]/);
     assert.match(refresh, /if \(key === tagShadeKey\) return;/);
     assert.match(refresh, /style\.id = 'tag-shade-vars'/);
@@ -5721,8 +5734,8 @@ describe('docs stay in step with the app', () => {
 describe('Help modal structure', () => {
   const start = html.indexOf('<div id="help-modal"');
   const help = html.slice(start, html.indexOf('<div class="help-modal-footer">', start));
-  const sections = [...help.matchAll(/<details class="help-section" id="(help-[a-z-]+)"( open)?>\s*<summary>([^<]+)<\/summary>([\s\S]*?)<\/details>/g)]
-    .map((m) => ({ id: m[1], open: !!m[2], title: m[3], body: m[4] }));
+  const sections = [...help.matchAll(/<details class="help-section" id="(help-[a-z-]+)"(?: data-short="([^"]+)")?( open)?>\s*<summary>([^<]+)<\/summary>([\s\S]*?)<\/details>/g)]
+    .map((m) => ({ id: m[1], short: m[2], open: !!m[3], title: m[4], body: m[5] }));
 
   it('has a search box, an index, and folding sections with Quick start and Keyboard shortcuts open', () => {
     assert.match(help, /<input id="help-search" class="help-search" type="search"/);
@@ -5731,6 +5744,8 @@ describe('Help modal structure', () => {
     assert.equal((help.match(/class="help-section"/g) || []).length, sections.length, 'every section parses');
     assert.deepEqual(sections.filter((s) => s.open).map((s) => s.title), ['Quick start', 'Keyboard shortcuts']);
     for (const s of sections) assert.match(s.body, /<li>/, `${s.title} has items`);
+    for (const s of sections) assert.ok((s.short || s.title).replace('&amp;', '&').length <= 11, `index label for ${s.title} fits its grid cell`);
+    assert.equal(sections.length % 4, 0, 'the 4-column index fills every row');
     assert.doesNotMatch(help, /<h3>/, 'no loose headings outside the folding sections');
   });
 
@@ -5751,6 +5766,16 @@ describe('Help modal structure', () => {
   });
 });
 
+describe('theme grid width', () => {
+  it('columns can shrink below their longest name, names wrap, and a too-wide word is shrunk after each render', () => {
+    assert.match(html, /\.theme-picker-grid \{\s*display: grid; grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+    assert.match(html, /\.theme-swatch \{\s*min-width: 0;/);
+    assert.match(html, /\.theme-picker-grid \.theme-swatch-name \{\s*white-space: normal;/);
+    assert.match(fnSource('renderThemeSwatches'), /requestAnimationFrame\(fitThemeNames\);\s*document\.fonts\?\.ready\.then\(fitThemeNames\);\s*\}$/);
+    assert.match(fnSource('fitThemeNames'), /while \(name\.scrollWidth > name\.clientWidth \+ 0\.5 && size > min\)/);
+  });
+});
+
 describe('stylesheet structure', () => {
   it('every <style> block has balanced braces, so no rule is silently dropped', () => {
     const blocks = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1].replace(/\/\*[\s\S]*?\*\//g, ''));
@@ -5763,6 +5788,42 @@ describe('stylesheet structure', () => {
       }
       assert.equal(depth, 0, 'unclosed {');
     }
+  });
+});
+
+describe('Shades of accent colors (run from work-desk.html)', () => {
+  const app = bootAppInVm();
+  const MONOKAI = {
+    accent: '#f92672', surface: '#3e3d32', text: '#f8f8f2',
+    neutrals: ['#272822', '#3e3d32', '#1e1f1c', '#1e1f1c', '#a6a28c', '#a6a28c', '#49483e'],
+  };
+  const hueOf = (hex) => app.hexToOklch(hex).h;
+
+  it('Monokai leans on its pink and uses at most two bright olive-family colors, all 8 clearly different', () => {
+    const shades = [...app.buildAccentShades(MONOKAI)];
+    assert.deepEqual(shades, ['#f92672', '#b5d76c', '#f4a1ff', '#ff8008', '#d652e9', '#ffaba7', '#fbba53', '#ff6cb4']);
+    assert.ok(app.minTagShadeGap(shades) >= 0.07, 'no two look alike');
+    const tint = app.tagShadeTint(MONOKAI.accent, MONOKAI.neutrals);
+    const nearTint = shades.filter((h) => app.hexToOklch(h).c > 0.05 && Math.abs(((hueOf(h) - tint.h + 540) % 360) - 180) <= 24);
+    assert.ok(nearTint.length <= 2, `${nearTint.length} tint colors`);
+  });
+
+  it('plain gray backgrounds have no tint, so every color stays within 60° of the accent', () => {
+    const gray = { accent: '#0d9488', surface: '#ffffff', text: '#111111', neutrals: ['#f5f5f5', '#ffffff', '#fafafa', '#e5e5e5', '#737373'] };
+    assert.equal(app.tagShadeTint(gray.accent, gray.neutrals), null);
+    const a = hueOf(gray.accent);
+    for (const hex of app.buildAccentShades(gray)) {
+      assert.ok(Math.abs(((hueOf(hex) - a + 540) % 360) - 180) <= 62, `${hex} is near the accent's hue`);
+    }
+  });
+
+  it('Multi-color still uses the theme\'s own color set', () => {
+    const palette = JSON.parse(html.match(/\n\s+monokai:\s+(\[[^\]]+\])/)[1].replace(/'/g, '"'));
+    assert.equal(palette.length, 8);
+    const shades = [...app.buildTagShades({ accent: MONOKAI.accent, surface: MONOKAI.surface, text: MONOKAI.text, palette })];
+    assert.equal(shades.length, 8);
+    assert.equal(shades[0], '#f92672');
+    assert.ok(shades.includes('#a6e22e') && shades.includes('#66d9ef'), 'Monokai green and cyan are in the set');
   });
 });
 
