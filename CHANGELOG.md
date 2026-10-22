@@ -23,6 +23,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
   - Every other theme (including custom themes) blends from the accent toward the theme's second color (taken from its sidebar, calendar, or shelved colors, or 120° around the color wheel when the theme has only one hue), at several lightnesses. Each next color is the one most different from those already picked, and if the six most-used colors would still look alike (common on medium gray themes) the range widens until they don't
   - Colors are darkened or lightened until the text reads on its pill, but never pushed past the contrast of the theme's own accent, so medium themes don't wash out to pastels
 - **Most-used tags get the most distinct colors** — the first time you use Shades of accent, tags are given colors in order of use, and a tag keeps its color from then on; new tags take the least-used color. Assignments sync with your preferences (without overriding a settings change made on another device). Existing tags change color once with this update; pinned custom colors are untouched, and Single color and Multi-color work as before
+- **Help is shorter and easier to get around** — cut from about 4,700 words to under 1,400, in 12 folding sections. Quick start and Keyboard shortcuts start open; the rest open with a click. A search box at the top shows only the matching lines (and opens their sections), a row of section links jumps to a topic, and Esc clears the search before closing Help. The roadmap moved to the README
+
+### Fixed
+- **Stylesheet** — a stray closing brace made the browser skip the style rule that followed it
 
 ## [1.20.0] — 2026-10-21
 
