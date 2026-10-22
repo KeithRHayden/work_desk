@@ -2711,9 +2711,11 @@
       border: none; border-top: 1px solid var(--border); margin: 8px 0;
     }
     .theme-picker-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+      align-items: start;
     }
     .theme-swatch {
+      min-width: 0;
       display: flex; flex-direction: column; align-items: center;
       gap: 5px; cursor: pointer; padding: 4px 2px; border-radius: 8px;
       background: transparent; border: 1px solid transparent;
@@ -2777,6 +2779,9 @@
       text-align: center; white-space: nowrap;
       max-width: 100%; overflow: hidden; text-overflow: ellipsis;
       line-height: 1.15;
+    }
+    .theme-picker-grid .theme-swatch-name {
+      white-space: normal; text-wrap: balance; text-overflow: clip;
     }
     .theme-swatch-name.long { font-size: 0.56rem; letter-spacing: -0.01em; }
     .theme-swatch.active .theme-swatch-name {
@@ -4163,17 +4168,21 @@
       font-size: 0.88rem;
     }
     .help-search:focus { outline: none; border-color: var(--accent); }
-    .help-index { display: flex; flex-wrap: wrap; gap: 4px; }
+    .help-index { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    @media (max-width: 480px) { .help-index { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     .help-index button {
       font: inherit;
       font-size: 0.74rem;
-      padding: 2px 9px;
-      border-radius: 999px;
+      padding: 4px 6px;
+      border-radius: 6px;
       border: 1px solid var(--border);
       background: transparent;
       color: var(--text-muted);
       cursor: pointer;
+      text-align: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .help-index button.hidden { display: none; }
     .help-index button:hover { color: var(--text); border-color: var(--accent); }
     .help-modal .help-modal-body:has(.help-section) { padding-top: 4px; }
     .help-section { border-bottom: 1px solid var(--border); }
@@ -7491,34 +7500,19 @@
       .tag-chip { padding-block: 0.4em; }
       .tag-chip-label { text-box: trim-both cap alphabetic; }
     }
-    /* Palette: hue-rotate the accent in OKLCH so every tag keeps the theme's lightness */
-    @supports (color: oklch(from red l c h)) {
-      html[data-tag-colors="palette"] .tag-chip {
-        --tag-hue: 0;
-        --tag-fg: oklch(from var(--accent) l max(c, 0.1) calc(h + var(--tag-hue)));
-        --tag-bg: color-mix(in srgb, var(--tag-fg) 18%, var(--surface));
-      }
-      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="1"] { --tag-hue: 45; }
-      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="2"] { --tag-hue: 90; }
-      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="3"] { --tag-hue: 135; }
-      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="4"] { --tag-hue: 180; }
-      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="5"] { --tag-hue: 225; }
-      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="6"] { --tag-hue: 270; }
-      html[data-tag-colors="palette"] .tag-chip[data-tag-slot="7"] { --tag-hue: 315; }
-    }
-    /* Shades of accent: --tag-shade-0..7 are computed per theme in JS (refreshTagShades) */
-    html[data-tag-colors="analogous"] .tag-chip {
+    /* Shades of accent and Multi-color: --tag-shade-0..7 are computed per theme and mode in JS (refreshTagShades) */
+    html:is([data-tag-colors="analogous"], [data-tag-colors="palette"]) .tag-chip {
       --tag-shade: var(--tag-shade-0, var(--accent));
       --tag-fg: var(--tag-shade);
       --tag-bg: color-mix(in srgb, var(--tag-fg) 18%, var(--surface));
     }
-    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="1"] { --tag-shade: var(--tag-shade-1, var(--accent)); }
-    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="2"] { --tag-shade: var(--tag-shade-2, var(--accent)); }
-    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="3"] { --tag-shade: var(--tag-shade-3, var(--accent)); }
-    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="4"] { --tag-shade: var(--tag-shade-4, var(--accent)); }
-    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="5"] { --tag-shade: var(--tag-shade-5, var(--accent)); }
-    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="6"] { --tag-shade: var(--tag-shade-6, var(--accent)); }
-    html[data-tag-colors="analogous"] .tag-chip[data-shade-slot="7"] { --tag-shade: var(--tag-shade-7, var(--accent)); }
+    html:is([data-tag-colors="analogous"], [data-tag-colors="palette"]) .tag-chip[data-shade-slot="1"] { --tag-shade: var(--tag-shade-1, var(--accent)); }
+    html:is([data-tag-colors="analogous"], [data-tag-colors="palette"]) .tag-chip[data-shade-slot="2"] { --tag-shade: var(--tag-shade-2, var(--accent)); }
+    html:is([data-tag-colors="analogous"], [data-tag-colors="palette"]) .tag-chip[data-shade-slot="3"] { --tag-shade: var(--tag-shade-3, var(--accent)); }
+    html:is([data-tag-colors="analogous"], [data-tag-colors="palette"]) .tag-chip[data-shade-slot="4"] { --tag-shade: var(--tag-shade-4, var(--accent)); }
+    html:is([data-tag-colors="analogous"], [data-tag-colors="palette"]) .tag-chip[data-shade-slot="5"] { --tag-shade: var(--tag-shade-5, var(--accent)); }
+    html:is([data-tag-colors="analogous"], [data-tag-colors="palette"]) .tag-chip[data-shade-slot="6"] { --tag-shade: var(--tag-shade-6, var(--accent)); }
+    html:is([data-tag-colors="analogous"], [data-tag-colors="palette"]) .tag-chip[data-shade-slot="7"] { --tag-shade: var(--tag-shade-7, var(--accent)); }
     /* Custom color wins in both modes; text leans toward --text so it stays readable on any theme */
     .tag-chip.tag-custom[data-tag] {
       --tag-fg: color-mix(in oklch, var(--tag-custom) 72%, var(--text));
@@ -8632,7 +8626,7 @@
                         <option value="palette">Multi-color</option>
                       </select>
                     </div>
-                    <p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color that follows the theme when you switch; Shades of accent gives your most-used tags the most distinct colors. Pick a color below (or click a tag on a card) to pin a custom color that overrides any mode.</p>
+                    <p class="tag-color-hint">Shades of accent picks colors that match what's on screen: the accent and the theme's background tint. Multi-color uses a wider set that suits the theme. Both follow the theme when you switch and give your most-used tags the most distinct colors. Pick a color below (or click a tag on a card) to pin a custom color that overrides any mode.</p>
                     <div id="tag-color-list" class="tag-color-list"></div>
                     </section>
 
@@ -8933,7 +8927,7 @@
           </ol>
         </details>
 
-        <details class="help-section" id="help-cards">
+        <details class="help-section" id="help-cards" data-short="Cards">
           <summary>Cards &amp; columns</summary>
           <ul>
             <li><strong>Columns</strong> — tasks move through New, Active, and Completed / Shelved; notes have their own area. The bar above the board shows today's mix (hover for counts)</li>
@@ -8953,13 +8947,13 @@
           <ul>
             <li><strong>Add</strong> — type <code>#word</code> anywhere while writing, or click <em>tag</em>; your two most-used tags show up as one-click picks. <code>#ACE</code> and <code>#ace</code> are the same tag</li>
             <li><strong>Remove</strong> — click the <strong>×</strong> on a chip</li>
-            <li><strong>Tag colors</strong> — Options → Appearance → Tags: <strong>Single color (accent)</strong> (default), <strong>Shades of accent</strong>, or <strong>Multi-color</strong>. Your most-used tags get the most distinct colors and keep them on every device. Click a chip to pin your own color; <em>Reset to auto</em> removes it</li>
+            <li><strong>Tag colors</strong> — Options → Appearance → Tags: <strong>Single color (accent)</strong> (default), <strong>Shades of accent</strong> (colors that match the screen), or <strong>Multi-color</strong> (a wider set that suits the theme). Your most-used tags get the most distinct colors and keep them on every device. Click a chip to pin your own color; <em>Reset to auto</em> removes it</li>
             <li><strong>Tag position</strong> — Options → Appearance → Card layout: Own row (default), Slim headroom, or Action bar</li>
             <li><strong>Find</strong> — search <code>#tagname</code> to see every tagged task and note</li>
           </ul>
         </details>
 
-        <details class="help-section" id="help-comments">
+        <details class="help-section" id="help-comments" data-short="Comments">
           <summary>Comments &amp; updates</summary>
           <ul>
             <li>Click <em>comment</em> on a task, or <em>add update</em> on a note, for a timestamped thread with bold, italic, underline, and bullets</li>
@@ -8968,7 +8962,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-recurring">
+        <details class="help-section" id="help-recurring" data-short="Recurring">
           <summary>Recurring tasks</summary>
           <ul>
             <li>Open the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
@@ -8992,7 +8986,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-navigation">
+        <details class="help-section" id="help-navigation" data-short="Navigation">
           <summary>Navigation &amp; search</summary>
           <ul>
             <li><strong>Calendar</strong> — dots mark days with data, and yellow badges count tasks left open on past days. The <strong>Today chip</strong> beside the month jumps back</li>
@@ -9026,7 +9020,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-sync">
+        <details class="help-section" id="help-sync" data-short="Sync &amp; data">
           <summary>Sync, backup &amp; storage</summary>
           <ul>
             <li><strong>Signed in</strong>, changes sync a few seconds after you edit, and devices merge rather than overwrite. Deleting removes an item everywhere, and Undo brings it back everywhere. Your settings sync too</li>
@@ -9039,7 +9033,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-phone">
+        <details class="help-section" id="help-phone" data-short="Phone">
           <summary>Phone &amp; install</summary>
           <ul>
             <li><strong>Install</strong> — use your browser's install option, or on iPhone <strong>Share → Add to Home Screen</strong>. Installed, it opens in its own window and works offline</li>
@@ -9048,7 +9042,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-shortcuts" open>
+        <details class="help-section" id="help-shortcuts" data-short="Shortcuts" open>
           <summary>Keyboard shortcuts</summary>
           <ul>
             <li><strong>Add a task, note, or comment</strong> — Ctrl/Cmd + Enter</li>
@@ -9188,7 +9182,9 @@
     const TAG_SHADE_MIN_GAP = 0.07;
     // Theme vars that may name a theme's second color, most telling first
     const TAG_SHADE_SECOND_VARS = ['--sidebar-cal-today-ring', '--shelved-label', '--sidebar-cal-selected-bg', '--sidebar-active', '--sidebar', '--sidebar-text', '--accent-hover'];
-    // Shades of accent uses a theme's own colors when it has a well-known set; accent first, then most distinct
+    // Theme vars that carry the backgrounds' and text's tint; Shades of accent pairs that tint with the accent
+    const TAG_SHADE_TINT_VARS = ['--bg', '--surface', '--panel-bg', '--sidebar', '--text-muted', '--sidebar-text', '--border'];
+    // Multi-color uses a theme's own colors when it has a well-known set; accent first, then most distinct
     const THEME_TAG_PALETTES = {
       monokai:           ['#f92672', '#a6e22e', '#66d9ef', '#fd971f', '#ae81ff', '#e6db74', '#a1efe4', '#cfcfc2'],
       'monokai-pro':     ['#ffd866', '#ff6188', '#78dce8', '#a9dc76', '#ab9df2', '#fc9867', '#c1c0c0', '#fcfcfa'],
@@ -9221,12 +9217,26 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.21.0';
+    const APP_VERSION = '1.21.1';
     const CHANGELOG = [
+      {
+        version: '1.21.1',
+        date: 'Oct 22, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'Shades of accent matches the screen again: tags use the accent and the theme\'s background tint (Monokai\'s olive, Mediterranean\'s navy), spread by lightness so they stay distinct, and never turn into a rainbow',
+            'Multi-color now uses the colorful set Shades of accent had in 1.21.0 (each theme\'s own colors where it has a well-known set), and hands colors out by use like Shades of accent, so two tags no longer share a color until you have more than eight. Tag colors in both modes change once with this update; pinned colors are untouched',
+            'Help\'s section links sit in a tidy grid with short names (Cards, Recurring, Sync & data), four across and three on a phone. Hover one for the full section name',
+          ] },
+          { label: 'Fixed', items: [
+            'The theme grid fits the Options panel again instead of scrolling sideways. Long names wrap onto two lines, and a single long word shrinks to fit with wider fonts or Large text',
+          ] },
+        ],
+      },
       {
         version: '1.21.0',
         date: 'Oct 21, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Twelve new themes: Kanagawa, Monokai Pro, Everforest, and Rosé Pine Moon in Dark; Catppuccin Frappé, Gruvbox Mid, Solarized Mid, and Rosewood in Medium; Gruvbox Light, Rosé Pine Dawn, Everforest, and Catppuccin Latte in Light. That makes 108 presets, 36 in each group, so every group fills the theme grid evenly',
@@ -11189,7 +11199,24 @@
       } else if (currentThemeFilter === 'dark') {
         elThemeGrid.appendChild(renderGrid(dark));
       }
+      requestAnimationFrame(fitThemeNames);
+      document.fonts?.ready.then(fitThemeNames);
     }
+
+    // Names wrap at spaces; a single word wider than its column (wide fonts, Large text) shrinks to fit
+    function fitThemeNames() {
+      if (!elThemeGrid || !elThemeGrid.offsetParent) return;
+      elThemeGrid.querySelectorAll('.theme-swatch-name').forEach((name) => {
+        name.style.fontSize = '';
+        let size = parseFloat(getComputedStyle(name).fontSize);
+        const min = size * 0.7;
+        while (name.scrollWidth > name.clientWidth + 0.5 && size > min) {
+          size -= 0.25;
+          name.style.fontSize = `${size}px`;
+        }
+      });
+    }
+    window.addEventListener('resize', () => requestAnimationFrame(fitThemeNames));
 
     // ── Custom theme panel (browse + editor) ──────────────────────────────────
     function renderCustomThemePanel() {
@@ -13532,7 +13559,7 @@
       return h % TAG_PALETTE_SIZE;
     }
 
-    // ── Shades of accent: 8 colors per theme, handed out to tags by use ──────
+    // ── Shades of accent and Multi-color: 8 colors per theme, handed out to tags by use ──────
     function srgbToLinear(c) {
       const v = c / 255;
       return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
@@ -13688,6 +13715,74 @@
       return best;
     }
 
+    const hueGap = (h1, h2) => Math.abs(((h1 - h2 + 540) % 360) - 180);
+
+    // The tint shared by the theme's backgrounds and text (Monokai's olive, Nord's slate blue), or null when they're plain gray
+    // or the same hue as the accent. Hue is the chroma-weighted average, so the most colored neutrals count most
+    function tagShadeTint(accent, neutrals) {
+      const a = hexToOklch(accent);
+      const tinted = neutrals.map(hexToOklch).filter(o => o.c >= 0.012);
+      if (!tinted.length) return null;
+      const x = tinted.reduce((s, o) => s + o.c * Math.cos(o.h * Math.PI / 180), 0);
+      const y = tinted.reduce((s, o) => s + o.c * Math.sin(o.h * Math.PI / 180), 0);
+      const h = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+      if (hueGap(h, a.h) < 25) return null;
+      return { l: a.l, c: Math.max(0.07, Math.min(a.c * 0.7, 0.13)), h };
+    }
+
+    // Shades of accent: only colors that are always on screen, the accent and the backgrounds' tint, with a little hue room
+    // around each and spread by lightness. Never widens into a rainbow. When the card itself carries the tint, tint-colored
+    // tags sink into it, so lean on the accent and allow at most 2 brighter, stronger tint colors
+    function buildAccentShades({ accent, surface, text, neutrals = [] }) {
+      const minContrast = Math.max(2, Math.min(3, contrastRatio(accent, mixHex(accent, surface, 82))));
+      const readable = (hex) => readableTagColor(hex, surface, text, minContrast);
+      const a = hexToOklch(accent);
+      const dark = relativeLuminance(surface) < relativeLuminance(text);
+      const tint = tagShadeTint(accent, neutrals);
+      const card = hexToOklch(surface);
+      const tintedCard = !!tint && card.c >= 0.012 && hueGap(card.h, tint.h) < 40;
+      const shadeL = (l) => Math.min(0.86, Math.max(0.3, l));
+      const LIGHTNESS = [0, -0.09, 0.09, -0.18, 0.18];
+      const candidates = [];
+      const add = (hex, fromTint = false) => candidates.push({ hex: readable(hex), fromTint });
+      const accentAt = (dh, dl) => oklchToHex(shadeL(a.l + dl), Math.max(0.08, a.c), (a.h + dh + 360) % 360);
+      if (!tint) {
+        for (const dh of [0, -20, 20, -40, 40, -60, 60]) for (const dl of LIGHTNESS) add(accentAt(dh, dl));
+      } else {
+        const accentBand = tintedCard ? [0, -15, 15, -30, 30, -45, 45] : [0, -12, 12, -24, 24];
+        for (const dh of accentBand) for (const dl of LIGHTNESS) add(accentAt(dh, dl));
+        const away = dark ? 1 : -1;
+        const tintL = tint.l + (tintedCard ? 0.1 * away : 0);
+        const tintC = tintedCard ? 0.14 : Math.max(0.08, tint.c);
+        for (const dh of [0, -12, 12, -24, 24]) {
+          for (const dl of tintedCard ? [0, 0.09] : LIGHTNESS) add(oklchToHex(shadeL(tintL + dl * away), tintC, (tint.h + dh + 360) % 360), true);
+        }
+        // In-between hues only when the two are neighbors on the wheel (pink → green would pass through yellow)
+        const d = ((tint.h - a.h + 540) % 360) - 180;
+        if (Math.abs(d) <= 90) {
+          for (const t of [0.33, 0.66]) {
+            for (const dl of [0, -0.12, 0.12]) {
+              add(oklchToHex(Math.min(0.95, Math.max(0.2, a.l + dl)), Math.max(0.07, a.c + (tintC - a.c) * t), (a.h + d * t + 360) % 360));
+            }
+          }
+        }
+      }
+      const tintMax = tintedCard ? 2 : TAG_SHADE_COUNT;
+      const picked = [{ hex: readable(accent), fromTint: false }];
+      while (picked.length < TAG_SHADE_COUNT) {
+        const tintCount = picked.filter(p => p.fromTint).length;
+        let best = null;
+        let bestGap = -1;
+        for (const cand of candidates) {
+          if (cand.fromTint && tintCount >= tintMax) continue;
+          const gap = Math.min(...picked.map(p => tagShadeDistance(p.hex, cand.hex)));
+          if (gap > bestGap) { best = cand; bestGap = gap; }
+        }
+        picked.push(best);
+      }
+      return picked.map(p => p.hex);
+    }
+
     let tagShadeKey = '';
     let tagShadeFrame = 0;
 
@@ -13699,9 +13794,10 @@
       });
     }
 
-    // Writes --tag-shade-0..7 for the current theme; only recomputes when the theme's colors change
+    // Writes --tag-shade-0..7 for the current theme and mode; only recomputes when the theme's colors or the mode change
     function refreshTagShades() {
-      if (state.tagColorMode !== 'analogous') return;
+      const mode = state.tagColorMode;
+      if (mode !== 'analogous' && mode !== 'palette') return;
       const probe = document.createElement('span');
       probe.style.cssText = 'position:absolute;visibility:hidden;color:var(--accent);background-color:var(--surface);border:1px solid var(--text)';
       document.body.appendChild(probe);
@@ -13717,11 +13813,17 @@
         .map(v => (root.getPropertyValue(v).match(/#[0-9a-f]{6}\b/i) || [])[0])
         .filter(Boolean)
         .map(hex => hex.toLowerCase());
-      const key = [themeId, accent, surface, text, ...seconds].join('|');
+      const neutrals = TAG_SHADE_TINT_VARS
+        .map(v => (root.getPropertyValue(v).match(/#[0-9a-f]{6}\b/i) || [])[0])
+        .filter(Boolean)
+        .map(hex => hex.toLowerCase());
+      const key = [mode, themeId, accent, surface, text, ...seconds, ...neutrals].join('|');
       if (key === tagShadeKey) return;
       tagShadeKey = key;
       const palette = THEME_TAG_PALETTES[themeId] || null;
-      const shades = buildTagShades({ accent, surface, text, palette, second: palette ? null : pickTagShadeSecond(accent, seconds) });
+      const shades = mode === 'analogous'
+        ? buildAccentShades({ accent, surface, text, neutrals })
+        : buildTagShades({ accent, surface, text, palette, second: palette ? null : pickTagShadeSecond(accent, seconds) });
       let style = document.getElementById('tag-shade-vars');
       if (!style) {
         style = document.createElement('style');
@@ -13878,7 +13980,7 @@
     function decorateTagChip(chip, tag) {
       chip.dataset.tag = tag;
       chip.dataset.tagSlot = String(tagPaletteSlot(tag));
-      if (state.tagColorMode === 'analogous') chip.dataset.shadeSlot = String(tagShadeSlot(tag));
+      if (state.tagColorMode === 'analogous' || state.tagColorMode === 'palette') chip.dataset.shadeSlot = String(tagShadeSlot(tag));
       else delete chip.dataset.shadeSlot;
       const custom = state.tagColors[tag];
       chip.classList.toggle('tag-custom', !!custom);
@@ -23247,7 +23349,9 @@
     for (const section of helpSections) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = section.querySelector('summary').textContent;
+      const title = section.querySelector('summary').textContent;
+      btn.textContent = section.dataset.short || title;
+      btn.title = title;
       btn.addEventListener('click', () => {
         section.open = true;
         section.scrollIntoView({ block: 'start', behavior: 'smooth' });
