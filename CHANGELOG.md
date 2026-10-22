@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.21.1] — 2026-10-22
+
+### Improved
+- **Shades of accent matches the screen again** — 1.21.0 made the shades distinct, but on themes with a well-known color set (and on gray themes, where the range kept widening) they turned into a full rainbow that didn't look like the theme. Now Shades of accent only uses colors that are always on screen: the accent, plus the tint shared by the theme's backgrounds and text (Monokai's olive, Mediterranean's navy, Nord's slate blue). Colors that only show sometimes, like the calendar's today ring or the Shelved label, are left out. It allows about 24° of hue room around each and separates tags by lightness; on themes with plain gray backgrounds it uses a 60° band around the accent. When the card itself carries the tint (Monokai, Dracula, Nord), tint-colored tags would sink into it, so it leans on the accent (45° of room) and uses at most two brighter, stronger tint colors. Most themes keep 8 clearly different colors; soft blue-violet themes get about 6 and near-gray ones fewer, where Multi-color is the better pick
+- **Multi-color takes over the 1.21.0 Shades logic** — each theme's own color set (Monokai, Dracula, Nord, Solarized, Gruvbox, Catppuccin, One Dark, Rosé Pine, Tokyo, Kanagawa, Everforest, Mediterranean) or a blend from the accent toward the theme's second color, checked so no two look alike. Colors are now handed out by use, like Shades of accent, instead of from each tag's name, so two tags no longer share a color until you have more than eight, and your most-used tags get the most distinct colors. Both modes share the same assignments, so a tag keeps its position when you switch. Tag colors in both modes change once with this update; pinned custom colors are untouched
+- **Help section links** — the links under the search box were pills of different widths that wrapped into ragged rows. They're now an even grid with short names (*Cards*, *Recurring*, *Sync & data*, *Shortcuts*): four across in reading order (basics, then planning, then setup), three across on a phone. Hover a link for the full section name
+
+### Fixed
+- **Theme grid scrolled sideways** — the four theme columns grew to fit the widest name, so longer names (Catppuccin Frappé, Catppuccin Latte, Gruvbox Light, Mediterranean) pushed the grid wider than the Options panel, worst with JetBrains Mono, Merriweather, or Large text. Columns now share the width evenly, names wrap at spaces, and a single word too wide for its column (such as *Mediterranean*) shrinks to fit
+
 ## [1.21.0] — 2026-10-21
 
 ### Added
