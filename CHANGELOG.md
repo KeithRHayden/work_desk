@@ -6,6 +6,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.21.0] — 2026-10-21
+
+### Added
+- **Twelve new themes** — Dark: **Kanagawa** (sumi-ink night, carp-yellow accent), **Monokai Pro** (warm charcoal, soft yellow accent), **Everforest** (mossy slate, sage green), **Rosé Pine Moon** (dusky purple-navy, iris accent). Medium: **Catppuccin Frappé** (Frappé's slate-violet lifted to mid-tone, mauve accent), **Gruvbox Mid** (Gruvbox's warm gray-browns, orange accent), **Solarized Mid** (Solarized's teal-gray, brightened yellow accent), **Rosewood** (dusty rose-brown, gold accent). Light: **Gruvbox Light** (cream paper, faded orange), **Rosé Pine Dawn** (morning parchment, rose-red accent), **Everforest** (soft parchment, forest green), **Catppuccin Latte** (Catppuccin's light flavor, mauve accent). That makes 108 presets, 36 in each of Light, Medium, and Dark, so each group fills the four-column theme grid with no gaps; Solarized, Gruvbox, and Catppuccin now come in all three tiers
+- **More recurring schedules** — alongside Daily, Weekdays, Weekly, and Custom:
+  - **Every 2 weeks** — pick the first date; it repeats every other week on that weekday
+  - **Monthly** — *Day of month* picks one or more dates (the 1st and 15th, or *Last* for the last day; a 29th–31st falls on the last day in shorter months). *Day of week* picks one or more weeks (1st–4th or Last) and a weekday, such as the 3rd Thursday, or the 1st and 3rd Tuesday for twice a month
+  - **Quarterly** — the same choices, in one of three month sets (Jan · Apr · Jul · Oct, Feb · May · Aug · Nov, or Mar · Jun · Sep · Dec)
+  - The template list shows the schedule in words, e.g. *Monthly on the 3rd Thu* or *Every other Tue*. Older versions of the app won't add these new schedules until they're updated
+
+### Improved
+- **Ctrl+Enter saves edits** — Ctrl+Enter (Cmd+Enter on Mac) now saves when you edit a task, note, or comment on the desk, and in the recurring task add and edit forms. Project edits already worked this way
+- **Shades of accent tags are easier to tell apart** — the old shades were small lightness and hue nudges of the accent, so on themes like Mediterranean, Seafoam, Graphite, and Plum the tags looked nearly the same, and on Monokai they were all a pink-red that appears nowhere else in the theme. Now:
+  - Themes with a well-known color set use their own 8 colors: Monokai, Monokai Pro, Dracula, Nord, Nord Light, Solarized (all three), Gruvbox (all three), Catppuccin (all three), One Dark, Rosé Pine, Rosé Pine Moon, Rosé Pine Dawn, Tokyo Storm, Tokyo Day, Kanagawa, Everforest (both), and Mediterranean
+  - Every other theme (including custom themes) blends from the accent toward the theme's second color (taken from its sidebar, calendar, or shelved colors, or 120° around the color wheel when the theme has only one hue), at several lightnesses. Each next color is the one most different from those already picked, and if the six most-used colors would still look alike (common on medium gray themes) the range widens until they don't
+  - Colors are darkened or lightened until the text reads on its pill, but never pushed past the contrast of the theme's own accent, so medium themes don't wash out to pastels
+- **Most-used tags get the most distinct colors** — the first time you use Shades of accent, tags are given colors in order of use, and a tag keeps its color from then on; new tags take the least-used color. Assignments sync with your preferences (without overriding a settings change made on another device). Existing tags change color once with this update; pinned custom colors are untouched, and Single color and Multi-color work as before
+
 ## [1.20.0] — 2026-10-21
 
 ### Added
