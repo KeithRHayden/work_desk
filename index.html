@@ -9231,6 +9231,7 @@
           ] },
           { label: 'Fixed', items: [
             'The theme grid fits the Options panel again instead of scrolling sideways. Long names wrap onto two lines, and a single long word shrinks to fit with wider fonts or Large text',
+            'The installed app now turns with your tablet or phone like the browser version does; it was locked upright. An app installed earlier picks this up when the device next updates it, or right away if you reinstall',
           ] },
         ],
       },
@@ -13979,7 +13980,6 @@
 
     function decorateTagChip(chip, tag) {
       chip.dataset.tag = tag;
-      chip.dataset.tagSlot = String(tagPaletteSlot(tag));
       if (state.tagColorMode === 'analogous' || state.tagColorMode === 'palette') chip.dataset.shadeSlot = String(tagShadeSlot(tag));
       else delete chip.dataset.shadeSlot;
       const custom = state.tagColors[tag];
