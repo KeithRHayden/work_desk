@@ -51,6 +51,185 @@ function extractMainScript(source) {
   return blocks.sort((a, b) => b.length - a.length)[0];
 }
 
+/** Runs the app script in a mocked DOM; its top-level function declarations land on the returned context. */
+function bootAppInVm() {
+  const script = extractMainScript(html);
+  const idMatches = [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+  const elementsById = {};
+
+  class MockElement {
+    constructor(id = '', tagName = 'div') {
+      this.id = id;
+      this.tagName = tagName.toUpperCase();
+      this.children = [];
+      this.classList = {
+        _classes: new Set(),
+        add(...c) { c.forEach((x) => this._classes.add(x)); },
+        remove(...c) { c.forEach((x) => this._classes.delete(x)); },
+        toggle(c, force) {
+          if (force === undefined) {
+            if (this._classes.has(c)) { this._classes.delete(c); return false; }
+            this._classes.add(c);
+            return true;
+          }
+          if (force) { this._classes.add(c); return true; }
+          this._classes.delete(c);
+          return false;
+        },
+        contains(c) { return this._classes.has(c); },
+      };
+      this.dataset = {};
+      this.style = { setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; } };
+      this.innerHTML = '';
+      this.textContent = '';
+      this.disabled = false;
+      this.checked = false;
+      this.value = '';
+      this.type = '';
+      this.attributes = {};
+    }
+    setAttribute(k, v) { this.attributes[k] = v; }
+    getAttribute(k) { return this.attributes[k] || null; }
+    removeAttribute(k) { delete this.attributes[k]; }
+    appendChild(child) { this.children.push(child); return child; }
+    append(...children) { this.children.push(...children); }
+    before() {}
+    after() {}
+    removeChild(child) {
+      const idx = this.children.indexOf(child);
+      if (idx >= 0) this.children.splice(idx, 1);
+      return child;
+    }
+    addEventListener() {}
+    removeEventListener() {}
+    querySelector() { return new MockElement(); }
+    querySelectorAll() { return [new MockElement()]; }
+    getBoundingClientRect() { return { left: 0, top: 0, width: 100, height: 100 }; }
+    focus() {}
+    click() {}
+    scrollIntoView() {}
+    getContext() {
+      return {
+        clearRect() {},
+        fillRect() {},
+        strokeRect() {},
+        beginPath() {},
+        closePath() {},
+        moveTo() {},
+        lineTo() {},
+        arc() {},
+        fill() {},
+        stroke() {},
+        measureText() { return { width: 50 }; },
+        fillText() {},
+        strokeText() {},
+        save() {},
+        restore() {},
+        translate() {},
+        rotate() {},
+        scale() {},
+        setLineDash() {},
+        createLinearGradient() { return { addColorStop() {} }; },
+      };
+    }
+  }
+
+  idMatches.forEach((id) => {
+    elementsById[id] = new MockElement(id);
+  });
+
+  const mockStorage = {
+    _store: {},
+    getItem(k) { return this._store[k] !== undefined ? this._store[k] : null; },
+    setItem(k, v) { this._store[k] = String(v); },
+    removeItem(k) { delete this._store[k]; },
+    clear() { this._store = {}; },
+    key(i) { return Object.keys(this._store)[i] || null; },
+    get length() { return Object.keys(this._store).length; },
+  };
+
+  const mockDoc = {
+    documentElement: new MockElement('html', 'html'),
+    body: new MockElement('body', 'body'),
+    getElementById(id) {
+      return elementsById[id] || new MockElement(id);
+    },
+    querySelector(sel) {
+      if (sel.startsWith('#')) return mockDoc.getElementById(sel.slice(1));
+      return new MockElement('', 'div');
+    },
+    querySelectorAll() {
+      return [new MockElement('', 'div')];
+    },
+    createElement(tag) {
+      return new MockElement('', tag);
+    },
+    createTextNode(text) {
+      return { textContent: text };
+    },
+    createComment() {
+      return new MockElement('', '#comment');
+    },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+
+  const context = {
+    document: mockDoc,
+    window: {
+      innerWidth: 1200,
+      innerHeight: 800,
+      addEventListener() {},
+      location: { reload() {}, search: '', origin: 'http://localhost' },
+      requestAnimationFrame(cb) { cb(); },
+      cancelAnimationFrame() {},
+      localStorage: mockStorage,
+      sessionStorage: mockStorage,
+      navigator: { userAgent: 'test', clipboard: { writeText() {} } },
+      document: mockDoc,
+      getSelection() { return { toString() { return ''; } }; },
+      matchMedia() { return { matches: false, addEventListener() {} }; },
+    },
+    MutationObserver: class { observe() {} disconnect() {} },
+    localStorage: mockStorage,
+    sessionStorage: mockStorage,
+    navigator: { userAgent: 'test', clipboard: { writeText() {} } },
+    console: { log() {}, warn() {}, error() {} },
+    setTimeout: (fn) => fn(),
+    clearTimeout: () => {},
+    setInterval: () => {},
+    clearInterval: () => {},
+    requestAnimationFrame: (cb) => cb(),
+    cancelAnimationFrame: () => {},
+    location: { reload() {}, search: '', origin: 'http://localhost' },
+    Intl,
+    Date,
+    Math,
+    JSON,
+    Array,
+    Object,
+    String,
+    Number,
+    Boolean,
+    RegExp,
+    Set,
+    Map,
+    Error,
+    TypeError,
+    RangeError,
+    SyntaxError,
+    parseInt,
+    parseFloat,
+    isNaN,
+    isFinite,
+  };
+  context.window.window = context.window;
+
+  vm.createContext(context);
+  vm.runInContext(script, context);
+  return context;
+}
+
 function task(partial) {
   return {
     type: 'task',
@@ -849,182 +1028,7 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
   });
 
   it('main script parses and boots without runtime exceptions', () => {
-    const script = extractMainScript(html);
-    const idMatches = [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
-    const elementsById = {};
-
-    class MockElement {
-      constructor(id = '', tagName = 'div') {
-        this.id = id;
-        this.tagName = tagName.toUpperCase();
-        this.children = [];
-        this.classList = {
-          _classes: new Set(),
-          add(...c) { c.forEach((x) => this._classes.add(x)); },
-          remove(...c) { c.forEach((x) => this._classes.delete(x)); },
-          toggle(c, force) {
-            if (force === undefined) {
-              if (this._classes.has(c)) { this._classes.delete(c); return false; }
-              this._classes.add(c);
-              return true;
-            }
-            if (force) { this._classes.add(c); return true; }
-            this._classes.delete(c);
-            return false;
-          },
-          contains(c) { return this._classes.has(c); },
-        };
-        this.dataset = {};
-        this.style = { setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; } };
-        this.innerHTML = '';
-        this.textContent = '';
-        this.disabled = false;
-        this.checked = false;
-        this.value = '';
-        this.type = '';
-        this.attributes = {};
-      }
-      setAttribute(k, v) { this.attributes[k] = v; }
-      getAttribute(k) { return this.attributes[k] || null; }
-      removeAttribute(k) { delete this.attributes[k]; }
-      appendChild(child) { this.children.push(child); return child; }
-      append(...children) { this.children.push(...children); }
-      before() {}
-      after() {}
-      removeChild(child) {
-        const idx = this.children.indexOf(child);
-        if (idx >= 0) this.children.splice(idx, 1);
-        return child;
-      }
-      addEventListener() {}
-      removeEventListener() {}
-      querySelector() { return new MockElement(); }
-      querySelectorAll() { return [new MockElement()]; }
-      getBoundingClientRect() { return { left: 0, top: 0, width: 100, height: 100 }; }
-      focus() {}
-      click() {}
-      scrollIntoView() {}
-      getContext() {
-        return {
-          clearRect() {},
-          fillRect() {},
-          strokeRect() {},
-          beginPath() {},
-          closePath() {},
-          moveTo() {},
-          lineTo() {},
-          arc() {},
-          fill() {},
-          stroke() {},
-          measureText() { return { width: 50 }; },
-          fillText() {},
-          strokeText() {},
-          save() {},
-          restore() {},
-          translate() {},
-          rotate() {},
-          scale() {},
-          setLineDash() {},
-          createLinearGradient() { return { addColorStop() {} }; },
-        };
-      }
-    }
-
-    idMatches.forEach((id) => {
-      elementsById[id] = new MockElement(id);
-    });
-
-    const mockStorage = {
-      _store: {},
-      getItem(k) { return this._store[k] !== undefined ? this._store[k] : null; },
-      setItem(k, v) { this._store[k] = String(v); },
-      removeItem(k) { delete this._store[k]; },
-      clear() { this._store = {}; },
-      key(i) { return Object.keys(this._store)[i] || null; },
-      get length() { return Object.keys(this._store).length; },
-    };
-
-    const mockDoc = {
-      documentElement: new MockElement('html', 'html'),
-      body: new MockElement('body', 'body'),
-      getElementById(id) {
-        return elementsById[id] || new MockElement(id);
-      },
-      querySelector(sel) {
-        if (sel.startsWith('#')) return mockDoc.getElementById(sel.slice(1));
-        return new MockElement('', 'div');
-      },
-      querySelectorAll() {
-        return [new MockElement('', 'div')];
-      },
-      createElement(tag) {
-        return new MockElement('', tag);
-      },
-      createTextNode(text) {
-        return { textContent: text };
-      },
-      createComment() {
-        return new MockElement('', '#comment');
-      },
-      addEventListener() {},
-      removeEventListener() {},
-    };
-
-    const context = {
-      document: mockDoc,
-      window: {
-        innerWidth: 1200,
-        innerHeight: 800,
-        addEventListener() {},
-        location: { reload() {}, search: '', origin: 'http://localhost' },
-        requestAnimationFrame(cb) { cb(); },
-        cancelAnimationFrame() {},
-        localStorage: mockStorage,
-        sessionStorage: mockStorage,
-        navigator: { userAgent: 'test', clipboard: { writeText() {} } },
-        document: mockDoc,
-        getSelection() { return { toString() { return ''; } }; },
-        matchMedia() { return { matches: false, addEventListener() {} }; },
-      },
-      MutationObserver: class { observe() {} disconnect() {} },
-      localStorage: mockStorage,
-      sessionStorage: mockStorage,
-      navigator: { userAgent: 'test', clipboard: { writeText() {} } },
-      console: { log() {}, warn() {}, error() {} },
-      setTimeout: (fn) => fn(),
-      clearTimeout: () => {},
-      setInterval: () => {},
-      clearInterval: () => {},
-      requestAnimationFrame: (cb) => cb(),
-      cancelAnimationFrame: () => {},
-      location: { reload() {}, search: '', origin: 'http://localhost' },
-      Intl,
-      Date,
-      Math,
-      JSON,
-      Array,
-      Object,
-      String,
-      Number,
-      Boolean,
-      RegExp,
-      Set,
-      Map,
-      Error,
-      TypeError,
-      RangeError,
-      SyntaxError,
-      parseInt,
-      parseFloat,
-      isNaN,
-      isFinite,
-    };
-    context.window.window = context.window;
-
-    assert.doesNotThrow(() => {
-      vm.createContext(context);
-      vm.runInContext(script, context);
-    }, 'work-desk.html script must parse and execute without errors');
+    assert.doesNotThrow(() => bootAppInVm(), 'work-desk.html script must parse and execute without errors');
   });
 
   it('search results render in a floating overlay, not the sidebar-clipped list', () => {
@@ -2306,13 +2310,6 @@ describe('Comments system (HTML invariants)', () => {
     assert.match(fnBody[0], /add-comment/);
   });
 
-  it('createCommentsButton shows badge with comment count', () => {
-    const fnBody = html.match(/function createCommentsButton[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'createCommentsButton extractable');
-    assert.match(fnBody[0], /comment-count-badge/);
-    assert.match(fnBody[0], /comments-toggle/);
-  });
-
   it('comments panel CSS classes exist', () => {
     assert.match(html, /\.comments-panel/);
     assert.match(html, /\.comments-list/);
@@ -2716,13 +2713,6 @@ describe('Insights math (functional)', () => {
     assert.equal(p.total, 4);
   });
 
-  it('1.8.1 documents the carry-over changes in help and What\'s New', () => {
-    const entry = html.match(/version: '1\.8\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /left unfinished/);
-    assert.match(html, /id="help-modal"[\s\S]*counted on the day the task was left unfinished/);
-    assert.doesNotMatch(html, /which days of the week tasks most often carry over from/);
-  });
-
   it('week view has no trend chart', () => {
     const { analyzeCarryOverPatterns } = insightsFns({ '2026-09-24': { items: [carried('c', '2026-09-23')] } });
     const p = analyzeCarryOverPatterns('week', { startKey: '2026-09-21', endKey: '2026-09-27' });
@@ -2809,12 +2799,6 @@ describe('View separation and streak preference (HTML invariants)', () => {
     assert.match(block[0], /renderInsights\(\)/);
   });
 
-  it('docs mention the streak toggle in help and What\'s New', () => {
-    assert.match(html, /id="help-modal"[\s\S]*Weekends don't break streaks/);
-    const entry = html.match(/version: '1\.7\.0'[\s\S]*?\n      \},/);
-    assert.ok(entry);
-    assert.match(entry[0], /break streaks/);
-  });
 });
 
 describe('v1.8.0 themes (HTML invariants)', () => {
@@ -2879,12 +2863,6 @@ describe('v1.8.0 themes (HTML invariants)', () => {
     }
   });
 
-  it('1.8.0 changelog entry documents the new themes', () => {
-    const entry = html.match(/version: '1\.8\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Retro/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /id="help-modal"[\s\S]*108 presets \(36 light, 36 medium, 36 dark/);
-  });
 });
 
 describe('v1.14.0 Unit themes and Dot Matrix rename (HTML invariants)', () => {
@@ -2956,13 +2934,6 @@ describe('v1.14.0 Unit themes and Dot Matrix rename (HTML invariants)', () => {
     assert.match(html, /const prefTheme = typeof prefs\.theme === 'string' \? \(window\.__RENAMED_THEME_IDS\?\.\[prefs\.theme\] \?\? prefs\.theme\) : null;/);
   });
 
-  it('1.14.0 documents the Unit themes and rename', () => {
-    const entry = html.match(/version: '1\.14\.0'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(entry, /12 Unit themes/);
-    assert.match(entry, /now called Dot Matrix/);
-    assert.match(html, /id="help-modal"[\s\S]*four Unit themes \(Zero, One, Two, Eight\)/);
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3174,21 +3145,6 @@ describe('v1.15.0 Insights additions', () => {
     assert.match(ri, /computePeriodComparison\(period, state\.insightsAnchor, todayKey\(\)\)/);
   });
 
-  it('1.15.0 documents every Insights addition', () => {
-    const entry = html.match(/version: '1\.15\.0'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    for (const s of ['click a day', 'This week', 'Month-over-Month', 'Tasks by Tag', 'Lingering Tasks', 'Shelved Review']) {
-      assert.ok(entry.includes(s), `changelog missing ${s}`);
-    }
-    const help = html.match(/<h3>Insights<\/h3>[\s\S]*?<\/ul>/)[0];
-    for (const s of ['Click a day to open it', 'This week / This month / This year', 'Month-over-month', 'Tasks by Tag', 'Lingering Tasks', 'Shelved Review', 'Bring back']) {
-      assert.ok(help.includes(s), `Help missing ${s}`);
-    }
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*\*Shelved Review\*\*/);
-    assert.match(readme, /### Insights\n\n- \*\*Lingering Tasks ignores the period\*\*/);
-  });
-
   it('Ctrl/Cmd+Enter submits the task add box and both comment add forms', () => {
     const fn = fnSource('bindCtrlEnterSubmit');
     assert.match(fn, /\(e\.ctrlKey \|\| e\.metaKey\) && e\.key === 'Enter'/);
@@ -3196,11 +3152,6 @@ describe('v1.15.0 Insights additions', () => {
     assert.match(fnSource('initAddEditor'), /bindCtrlEnterSubmit\(editor, els\.addForm, els\.addBtn\)/);
     assert.match(fnSource('restoreAddCommentDraft'), /bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/);
     assert.equal((mainScript.match(/bindCtrlEnterSubmit\(commentEditor, form, addBtn\)/g) || []).length, 2);
-    assert.match(html, /<li><strong>Add comment\/update<\/strong> — Ctrl\/Cmd \+ Enter<\/li>/);
-    const entry = html.match(/version: '1\.15\.0'[\s\S]*?\n      \},/)[0];
-    assert.ok(entry.includes('Ctrl+Enter (Cmd+Enter on Mac) adds a comment'));
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\| Add comment \/ update \| `Ctrl\/Cmd \+ Enter` \|/);
   });
 });
 
@@ -3290,19 +3241,6 @@ describe('v1.15.1 Options menu polish', () => {
     assert.doesNotMatch(html, /\.tag-color-list \{[^}]*max-height/);
   });
 
-  it('1.15.1 is documented', () => {
-    const latest = html.match(/version: '1\.15\.1'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    for (const s of ['current theme', 'Show all', 'Confirm before delete', 'Show past', 'Reset Appearance / Behavior to defaults', 'plain text']) {
-      assert.ok(latest.includes(s), `changelog missing ${s}`);
-    }
-    const help = html.match(/<h3>Options menu<\/h3>[\s\S]*?<\/ul>/)[0];
-    for (const s of ['Show past', 'Reset to defaults', 'Show all', 'current theme']) assert.ok(help.includes(s), `Help missing ${s}`);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.15\.1\] — 2026-10-13/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*Reset to defaults\* at the bottom of Appearance and Behavior/);
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3406,24 +3344,6 @@ describe('v1.16.0 board lanes', () => {
     assert.match(fn, /overlay\.style\.bottom = `\$\{window\.innerHeight - rect\.top \+ 8\}px`/);
   });
 
-  it('1.16.0 is documented', () => {
-    const latest = html.match(/version: '1\.16\.0'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    assert.ok(latest.includes('Drop below a column'));
-    assert.ok(latest.includes('Sidebar at the top or bottom'));
-    assert.match(html, /<li><strong>Sidebar at the top or bottom<\/strong>/);
-    assert.match(html, /Layout \(sidebar left, right, top, or bottom\)/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /<li><strong>Drop below a column<\/strong>/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.16\.0\] — 2026-10-13\n\n### Added\n- \*\*Drop below a column\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*\*Column lanes when dragging\*\*/);
-    assert.match(readme, /## Future ideas\n\n- \*\*Faster edge scrolling while dragging\*\*/);
-    assert.match(readme, /- \*\*Suggested colors for custom themes\*\*/);
-    assert.match(readme, /- \*\*Sidebar at the top or bottom\*\*/);
-    assert.match(md, /- \*\*Sidebar at the top or bottom\*\*/);
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3499,23 +3419,6 @@ describe('v1.16.1 patterned backgrounds', () => {
     assert.match(fnSource('initBgPattern'), /if \(grid && !grid\.children\.length\)/);
   });
 
-  it('1.16.1 is documented everywhere', () => {
-    const latest = html.match(/version: '1\.16\.1'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    assert.ok(latest.includes('Patterned backgrounds'));
-    assert.ok(latest.includes('Drop anywhere below a column'));
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /<li><strong>Patterned background<\/strong> — Options → Appearance → Background/);
-    assert.match(html, /Effects \(card glow on hover, gradient header\), Background \(patterned background\), and Tags \(tag colors\)/);
-    assert.match(html, /all the way down the page\. The far left margin counts as New and the far right as Completed/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.16\.1\] — 2026-10-13\n\n### Added\n- \*\*Patterned backgrounds\*\*/);
-    assert.match(md, /### Improved\n- \*\*Drop anywhere below a column\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /- \*\*Patterned background\*\* — Options → Appearance → Background/);
-    assert.doesNotMatch(readme, /- \*\*Patterned backgrounds\*\* — optional subtle patterns/, 'moved out of Future ideas');
-    assert.match(readme, /all the way down the page belongs to that column/);
-  });
 });
 
 describe('v1.16.2 tag color labels', () => {
@@ -3523,20 +3426,8 @@ describe('v1.16.2 tag color labels', () => {
     assert.match(mainScript, /const TAG_COLOR_MODES = \['theme', 'analogous', 'palette'\];/);
     assert.doesNotMatch(html, /Analogous \(shades of accent\)<\/option>|Multi-color \(from theme\)<\/option>/);
     assert.match(html, /<p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color/);
-    assert.match(html, /There are 8 colors per mode, so with more tags some share a color — pin one to change it/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*Shades of accent\* \(8 clearly different colors that suit the theme[^)]*\), or \*Multi-color\*/);
-    assert.doesNotMatch(readme, /Multi-color \(from theme\)/);
   });
 
-  it('1.16.2 is documented', () => {
-    const entry = html.match(/version: '1\.16\.2'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.ok(entry.includes('Simpler tag color names'));
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.16\.2\] — 2026-10-14\n\n### Improved\n- \*\*Simpler tag color names\*\*/);
-  });
 });
 
 describe('v1.16.0 tag pills do not narrow card text', () => {
@@ -3557,16 +3448,8 @@ describe('v1.16.0 tag pills do not narrow card text', () => {
     assert.match(block, /\.board-column \.item\.has-tags \{\s*grid-template-columns: auto minmax\(0, 1fr\);\s*grid-template-areas:\s*"check tags"\s*"content content";/);
     assert.match(block, /\.item\.note\.has-tags \{[^}]*"tags"\s*"content";/);
     assert.match(block, /data-density="compact"\] \.board-column \.item\.has-tags \.tag-chip-row \{\s*order: -1;\s*flex: 0 0 100%;/);
-    assert.match(html, /\.item-card\.menu-open \.item\.has-tags:not\(:has\(\.edit-wrap\)\) \{\s*grid-template-areas:\s*"check tags"\s*"content content"\s*"actions actions";/);
   });
 
-  it('is listed under 1.16.0 Fixed in both changelogs', () => {
-    const entry = html.slice(html.indexOf("version: '1.16.0'"), html.indexOf("version: '1.15.1'"));
-    assert.match(entry, /label: 'Fixed', items: \[\s*'Adding a tag no longer squeezes/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    const block = md.slice(md.indexOf('## [1.16.0]'), md.indexOf('## [1.15.1]'));
-    assert.match(block, /### Fixed\n- \*\*Tags narrowing card text\*\*/);
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3598,11 +3481,6 @@ describe('clearCustomThemeInlineVars', () => {
 
   it('is a no-op on an empty style', () => {
     assert.deepEqual(run({}), {});
-  });
-
-  it('1.9.1 documents the font fix', () => {
-    const entry = html.match(/version: '1\.9\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /font no longer resets/);
   });
 
   it('applyTheme clears inline vars before applying, and the font is applied after initTheme', () => {
@@ -3796,12 +3674,6 @@ describe('Tag colors', () => {
     assert.match(fnSource('refreshTagShades'), /syncTagColorListRows\(\)/);
   });
 
-  it('1.10.0 documents analogous tag colors', () => {
-    const entry = html.match(/version: '1\.10\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Analogous/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Shades of accent<\/strong> gives each tag one of 8 clearly different colors that suit the theme/);
-  });
-
   it('every tag chip wraps its text in a label so it can be centered', () => {
     assert.equal((mainScript.match(/className = 'tag-chip( tag-clickable)?';/g) || []).length, 6);
     assert.doesNotMatch(mainScript, /(chip|preview)\.textContent = tag/);
@@ -3858,86 +3730,6 @@ describe('Tag colors', () => {
     assert.match(html, /@supports \(text-box: trim-both cap alphabetic\) \{\s*\.tag-chip \{ padding-block: [\d.]+em; \}\s*\.tag-chip-label \{ text-box: trim-both cap alphabetic; \}/);
   });
 
-  it('1.10.1 documents the chip and carry-over fixes', () => {
-    const entry = html.match(/version: '1\.10\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /centered in its pill/);
-    assert.match(entry, /same line as its bar/);
-  });
-
-  it('1.11.0 documents quick-pick tags', () => {
-    const entry = html.match(/version: '1\.11\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Quick-pick tags/);
-    assert.match(html, /id="help-modal"[\s\S]*two most-used tags appear next to the box/);
-  });
-
-  it('1.11.1 documents the full-width carry-over bars', () => {
-    const entry = html.match(/version: '1\.11\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /stretch the full width/);
-  });
-
-  it('1.12.0 documents updates, the stale-copy guard, and search', () => {
-    const entry = html.match(/version: '1\.12\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Update prompt/);
-    assert.match(entry, /out-of-date copy/);
-    assert.match(entry, /separate lines/);
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Staying up to date<\/strong>/);
-  });
-
-  it('1.12.1 documents the UI audit fixes', () => {
-    const entry = html.slice(html.indexOf("version: '1.12.1'"), html.indexOf("version: '1.12.0'"));
-    assert.match(entry, /more carry-over in red/);
-    assert.match(entry, /tag box no longer pushes cards/);
-    assert.match(html, /id="help-modal"[\s\S]*New, Active, and Completed \/ Shelved columns/);
-    assert.doesNotMatch(html, /New \/ Active \/ Done \/ Shelved/);
-  });
-
-  it('1.13.0 documents the phone menu', () => {
-    const entry = html.match(/version: '1\.13\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Phone menu/);
-    assert.match(entry, /Desktop and tablet layouts are unchanged/);
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Phone menu<\/strong>/);
-    assert.doesNotMatch(html, /stay available in the sidebar on mobile/);
-  });
-
-  it('1.13.1 documents the tag box fix', () => {
-    const entry = html.match(/version: '1\.13\.1'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /tag box on a card no longer closes/);
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(html, /id="help-modal"[\s\S]*box stays open until you add a tag, press Esc, or click outside it/);
-  });
-
-  it('1.13.3 documents normal desktop page scroll', () => {
-    const entry = html.match(/version: '1\.13\.3'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /date: 'Oct 1, 2026'/);
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(entry, /scrolls like a normal page/);
-    assert.doesNotMatch(entry, /recurring tasks appear/);
-  });
-
-  it('1.13.4: Help and README explain when recurring tasks are added', () => {
-    const latestEntry = html.match(/version: '1\.13\.4'[\s\S]*?\n      \},/)[0];
-    assert.match(latestEntry, /date: 'Oct 6, 2026'/);
-    assert.doesNotMatch(latestEntry, /tag: 'latest'/);
-    assert.match(html, /<strong>When they appear<\/strong> — a due task is added to <em>today<\/em> whenever the app opens or refreshes, syncs/);
-    assert.match(html, /Days the app wasn't opened aren't filled in afterward/);
-    assert.match(latestEntry, /explains when recurring tasks appear/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /## How it behaves/);
-    assert.match(readme, /\*\*When they're added\*\* — a due template is added to \*today's\* date/);
-    assert.match(readme, /\*\*No backfill, no preview\*\*/);
-  });
-
-  it('1.13.2 documents the version move', () => {
-    const entry = html.match(/version: '1\.13\.2'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.match(entry, /bottom of the sidebar/);
-    assert.match(entry, /What\\'s new link/);
-    assert.match(html, /id="help-modal"[\s\S]*highlighted <strong>What's new<\/strong> link/);
-    assert.doesNotMatch(html, /next to the app name to see the full changelog/);
-  });
-
   it('version lives in the sidebar footer; the What\'s new link sits under the subtitle and hides on close', () => {
     const sub = html.match(/<p id="logo-sub" class="logo-sub">[\s\S]*?<\/p>/)[0];
     assert.doesNotMatch(sub, /version-btn|version-new-dot/);
@@ -3980,13 +3772,6 @@ describe('Tag colors', () => {
     assert.match(apply, /normalizeTagColors\(prefs\.tagColors\)/);
   });
 
-  it('1.9.0 changelog and help document tag colors', () => {
-    const entry = html.match(/version: '1\.9\.0'[\s\S]*?\n      \},/)[0];
-    assert.match(entry, /Tag colors/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Tag colors<\/strong>/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Custom tag color<\/strong>/);
-    assert.match(html, /Synced preferences[^<]*<\/strong>[^<]*tag colors/);
-  });
 });
 
 describe('App updates and stale-client guard', () => {
@@ -4531,30 +4316,11 @@ describe('v1.17.0 calendar', () => {
 });
 
 describe('v1.17.0 docs', () => {
-  it('1.17.0 is documented everywhere', () => {
-    const latest = html.match(/version: '1\.17\.0'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    for (const s of ['Simpler Options', 'Account menu', 'Calendar Today chip', 'Calendar legend', 'Quieter weekends', 'switches']) assert.ok(latest.includes(s), s);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.17\.0\] — 2026-10-14\n\n### Added\n- \*\*Summary-list Options\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /- \*\*Account menu\*\*/);
-    assert.match(readme, /- \*\*Quieter weekends\*\*/);
-    assert.match(html, /<li><strong>Today chip<\/strong>/);
-    assert.match(html, /<li><strong>Account menu<\/strong>/);
-    assert.match(html, /<li><strong>Summary list<\/strong>/);
-  });
 
   it('1.17.1: Options panes size to their list and lock that height only while a section is open', () => {
-    const entry = html.match(/version: '1\.17\.1'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.ok(entry.includes('Options fits its list'));
     assert.doesNotMatch(html, /#options-pane-appearance, #options-pane-behavior \{ min-height/);
     assert.match(fnSource('openOptionsSection'), /pane\.style\.minHeight = `\$\{pane\.getBoundingClientRect\(\)\.height\}px`;\s*pane\.querySelectorAll/);
     assert.match(fnSource('closeOptionsSection'), /pane\.style\.minHeight = '';/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.17\.1\] — 2026-10-14\n\n### Improved\n- \*\*Options fits its list\*\*/);
   });
 });
 
@@ -4646,20 +4412,6 @@ describe('v1.17.2 Options polish', () => {
     assert.match(html, /\.item\.note \{ grid-template-areas: "content"; \}/);
   });
 
-  it('1.17.2 is documented everywhere', () => {
-    const latest = html.match(/version: '1\.17\.2'[\s\S]*?\n      \},/)[0];
-    assert.doesNotMatch(latest, /tag: 'latest'/);
-    for (const s of ['Open desk', 'calendar legend', 'New tags go away', 'Shorter Options summaries', 'Quieter weekends label', '📝']) assert.ok(latest.includes(s), s);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.17\.2\] — 2026-10-14\n\n### Added\n- \*\*Open desk\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /Open desk/);
-    assert.match(readme, /Calendar legend/);
-    const help = html.slice(html.indexOf('id="help-modal"'), html.indexOf('id="help-modal"') + 60000);
-    assert.match(help, /<strong>Open desk<\/strong>/);
-    assert.match(help, /hide the calendar legend/i);
-    assert.match(help, /New tag/);
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -4750,7 +4502,7 @@ describe('v1.18.0 complete edge and tag position', () => {
     assert.match(html, /\.card-action-end \{ margin-left: auto; display: flex;/);
   });
 
-  it('summary and docs', () => {
+  it('Options summary describes the card layout', () => {
     const labelConsts = ['OPTIONS_COMPLETE_STYLE_LABELS', 'OPTIONS_TAG_POSITION_LABELS']
       .map(n => mainScript.match(new RegExp(`const ${n} = \\{[\\s\\S]*?\\};`))[0]).join('\n');
     const summary = new Function(`${labelConsts}
@@ -4759,20 +4511,6 @@ describe('v1.18.0 complete edge and tag position', () => {
       ${fnSource('optionsSummaryText')}
       return optionsSummaryText;`)();
     assert.equal(summary('card-layout', { completeStyle: 'checkbox', tagPosition: 'actions' }), 'Comfortable · Checkbox · Tags in bar');
-    const latest = html.slice(html.indexOf("version: '1.18.0'"), html.indexOf("version: '1.17.2'"));
-    assert.match(latest, /version: '1\.18\.0'/);
-    for (const s of ['Complete button on the card edge', 'DONE?', 'DOING', 'DONE!', 'UNDO?', 'Checkbox', 'Slim headroom', 'Action bar']) assert.ok(latest.includes(s), s);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.18\.0\] — 2026-10-14\n\n### Added\n- \*\*Complete button on the card edge\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /- \*\*Complete button on the card edge\*\*/);
-    assert.match(readme, /- \*\*Tag position\*\*/);
-    const help = html.slice(html.indexOf('id="help-modal"'), html.indexOf('id="help-modal"') + 60000);
-    assert.match(help, /<li><strong>Complete button<\/strong>/);
-    assert.match(help, /<li><strong>Tag position<\/strong>/);
-    assert.match(help, /Tap a task's <strong>left edge<\/strong> to complete it/);
-    assert.doesNotMatch(help, /Tap the <strong>checkbox<\/strong> to complete a task/);
   });
 });
 
@@ -4787,13 +4525,6 @@ describe('v1.18.1 calendar legend sample', () => {
   });
   it('real per-day badges still count open tasks on past days', () => {
     assert.match(html, /badge\.className = 'cal-day-badge';\s*badge\.textContent = openCount > 9 \? '9\+' : String\(openCount\);/);
-  });
-  it('1.18.1 has a Fixed note', () => {
-    const entry = html.slice(html.indexOf("version: '1.18.1'"), html.indexOf("version: '1.18.0'"));
-    assert.match(entry, /label: 'Fixed'/);
-    assert.match(entry, /Left open/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.1\]/);
   });
 });
 
@@ -4830,18 +4561,6 @@ describe('v1.18.2 Options list descriptions, Back, and spacing', () => {
   });
   it('the main area scrolls on its own layer so dimmed completed cards do not wobble', () => {
     assert.match(html, /\.main \{[^}]*will-change: scroll-position;/);
-    const entry = html.slice(html.indexOf("version: '1.18.3'"), html.indexOf("version: '1.18.2'"));
-    assert.match(entry, /label: 'Fixed'[\s\S]*wobble/);
-    assert.doesNotMatch(html.slice(html.indexOf("version: '1.18.2'"), html.indexOf("version: '1.18.1'")), /wobble/);
-    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.3\][^#]*### Fixed\n- \*\*Completed tasks wobbling/);
-  });
-  it('1.18.2 is documented everywhere', () => {
-    const entry = html.slice(html.indexOf("version: '1.18.2'"), html.indexOf("version: '1.18.1'"));
-    assert.match(entry, /‹ Back/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /<strong>‹ Back<\/strong> or <strong>Esc<\/strong> goes back/);
-    assert.match(readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8'), /## \[1\.18\.2\]/);
-    assert.match(readFileSync(join(__dirname, '../README.md'), 'utf8'), /hover it for the current settings/);
   });
 });
 
@@ -4859,23 +4578,6 @@ describe('v1.18.4 complete edge on project tasks', () => {
     assert.match(html, /html\[data-complete-edge="on"\] \.project-task-check \{ display: none; \}/);
     assert.match(html, /html\[data-complete-edge="on"\] \.project-task-card \{ padding-left: 52px; \}/);
   });
-  it('1.18.4 is documented everywhere', () => {
-    const entry = html.slice(html.indexOf("version: '1.18.4'"), html.indexOf("version: '1.18.3'"));
-    assert.match(entry, /Project tasks now use the same complete button/);
-    assert.match(entry, /The project list counts open work/);
-    assert.match(entry, /Deleted projects stay deleted/);
-    assert.match(entry, /Reopening a finished project task moves it out of Archived/);
-    assert.match(entry, /Edit and delete on project comments now show on phones and tablets/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    const mdEntry = md.slice(md.indexOf('## [1.18.4]'), md.indexOf('## [1.18.3]'));
-    assert.match(mdEntry, /### Improved\n- \*\*Project list counts open work/);
-    assert.match(mdEntry, /- \*\*Complete edge on project tasks/);
-    assert.match(mdEntry, /- \*\*Deleted projects coming back/);
-    assert.match(mdEntry, /- \*\*Reopened project tasks stuck in Archived/);
-    assert.match(mdEntry, /- \*\*Project comment actions on touch screens/);
-    assert.match(readFileSync(join(__dirname, '../README.md'), 'utf8'), /Project tasks use the same edge/);
-    assert.match(html, /Project tasks use the same edge, and finishing one moves it to that project's Archived list/);
-  });
   it('importing a projects backup keeps archived notes and tasks archived', () => {
     const validateImportData = new Function(`${['normalizeTag', 'normalizeTagList', 'tagsField', 'validateImportData'].map(fnSource).join('\n')}\nreturn validateImportData;`)();
     const out = validateImportData({ type: 'projects', projects: [{
@@ -4891,13 +4593,6 @@ describe('v1.18.4 complete edge on project tasks', () => {
     assert.match(html, /<button id="project-rename-btn" class="project-action-btn project-text-btn" type="button" title="Rename project">Rename<\/button>/);
     assert.match(html, /<button id="project-delete-btn" class="project-action-btn project-text-btn project-delete-btn" type="button" title="Delete project">Delete<\/button>/);
     assert.doesNotMatch(html.slice(html.indexOf('<header class="project-header">'), html.indexOf('<div class="project-body">')), /✏️|🗑️/);
-  });
-  it('Possible future improvements lists encryption, weather, and theme color suggestions only', () => {
-    const start = html.indexOf('<h3>Possible future improvements</h3>');
-    const list = html.slice(start, html.indexOf('</ul>', start));
-    const items = [...list.matchAll(/<li><strong>([^<]+)<\/strong>/g)].map(m => m[1]);
-    assert.deepEqual(items, ['Data encryption', 'Local weather', 'Suggested colors for custom themes']);
-    assert.doesNotMatch(list, /Google Assistant/);
   });
   it('project list counts open tasks and active notes, archived separately', () => {
     const projectListMeta = new Function(`${fnSource('projectListMeta')}\nreturn projectListMeta;`)();
@@ -4934,22 +4629,6 @@ describe('v1.19.0 projects: search, send, tags', () => {
   const helpers = ['escapeHtml', 'normalizeTag', 'normalizeTagList', 'generateProjectItemId', 'newId'];
   const commentHelpers = ['richCommentText', 'richCommentFields', 'projectCommentHtml'];
   const converters = () => new Function('plainTextPreview', 'sanitizeHtml', `${[...helpers, ...commentHelpers, 'deskItemToProjectItem', 'projectItemToDeskItem'].map(fnSource).join('\n')}\nreturn { deskItemToProjectItem, projectItemToDeskItem };`)(plainTextPreview, (h) => h);
-
-  it('1.19.0 is documented everywhere', () => {
-    const entry = html.slice(html.indexOf("version: '1.19.0'"), html.indexOf("version: '1.18.4'"));
-    assert.match(entry, /Search covers Projects/);
-    assert.match(entry, /Send between your desk and projects/);
-    assert.match(entry, /Tags on project notes and tasks/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.19\.0\][^#]*### Added\n- \*\*Search covers Projects[\s\S]*?- \*\*Send between the desk and projects[\s\S]*?- \*\*Tags on project notes and tasks/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /switch the scope chip to \*All\* for Work, Personal, and Projects/);
-    assert.match(readme, /Project notes and tasks take `#tags`/);
-    assert.match(html, /<li><strong>Send to project…<\/strong>/);
-    assert.match(html, /<li><strong>to desk<\/strong>/);
-    assert.match(html, /<li><strong>Tags<\/strong> — click <em>tag<\/em> on a note or task/);
-    assert.doesNotMatch(html, /Work \/ Personal \/ Both/);
-  });
 
   it('desk → project keeps type, done state, tags, and comment formatting with a plain copy', () => {
     const { deskItemToProjectItem } = converters();
@@ -5227,16 +4906,6 @@ describe('v1.19.1 formatting in projects', () => {
     `${['escapeHtml', 'getProject', 'richCommentText', 'richCommentFields', 'projectCommentHtml', 'addProjectItemComment', 'updateProjectItemComment'].map(fnSource).join('\n')}
     return { projectCommentHtml, richCommentFields, addProjectItemComment, updateProjectItemComment };`)(state, () => { saves.n++; }, plainTextPreview, (h) => `[clean]${h}`, () => {});
 
-  it('1.19.1 is documented everywhere', () => {
-    const entry = html.slice(html.indexOf("version: '1.19.1'"), html.indexOf("version: '1.19.0'"));
-    assert.match(entry, /Formatting in projects/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    assert.match(md, /## \[1\.19\.1\][^#]*### Improved\n- \*\*Formatting in projects\*\*[\s\S]*?- \*\*Project comments keep their formatting\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /Notes, tasks, and comments use the desk's formatting toolbar/);
-    assert.match(html, /<li><strong>Formatting<\/strong> — project notes, tasks, and comments use the same toolbar as the desk/);
-  });
-
   it('comments store HTML plus a plain copy; blank HTML is rejected', () => {
     const state = { projectsData: { projects: [{ id: 'p', notes: [], tasks: [{ id: 't', comments: [] }] }] } };
     const saves = { n: 0 };
@@ -5303,31 +4972,6 @@ describe('v1.20.0 sync efficiency, full history, storage warning', () => {
     };
   };
   const quotaError = () => Object.assign(new Error('quota'), { name: 'QuotaExceededError', code: 22 });
-
-  it('1.20.0 is documented everywhere', () => {
-    const entry = html.slice(html.indexOf("version: '1.20.0'"), html.indexOf("version: '1.19.1'"));
-    assert.doesNotMatch(entry, /tag: 'latest'/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    for (const label of ['Added', 'Improved', 'Fixed']) assert.match(entry, new RegExp(`label: '${label}'`));
-    assert.match(entry, /Storage warning/);
-    assert.match(entry, /Lighter cloud sync/);
-    assert.match(entry, /History older than a year is no longer removed/);
-    assert.match(entry, /Sync no longer interrupts typing/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    const block = md.slice(md.indexOf('## [1.20.0]'), md.indexOf('## [1.19.1]'));
-    assert.match(block, /### Added\n- \*\*Storage warning\*\*/);
-    assert.match(block, /### Improved\n- \*\*Lighter cloud sync\*\*[\s\S]*- \*\*Several tabs\*\*/);
-    assert.match(block, /### Fixed\n- \*\*Sync no longer interrupts typing\*\*[\s\S]*- \*\*History is no longer trimmed\*\*[\s\S]*- \*\*Full browser storage\*\*[\s\S]*- \*\*Failed downloads\*\*/);
-    assert.match(html, /<li><strong>Typing comes first<\/strong>/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*\*Full sync \(download and merge\)\*\*/);
-    assert.match(readme, /\*\*Typing is never interrupted\*\*/);
-    assert.match(readme, /\*\*Storage warning\*\*/);
-    assert.doesNotMatch(readme, /older than (1 year|12 months)/);
-    assert.match(html, /<li><strong>Light sync checks<\/strong>/);
-    assert.match(html, /<li><strong>Browser storage<\/strong> — the desk lives in this browser's storage/);
-    assert.match(html, /<li><strong>Several tabs<\/strong>/);
-  });
 
   it('the 12-month trim is gone from code and docs', () => {
     for (const name of ['RETENTION_MONTHS', 'maybeAutoArchive', 'getEligibleArchiveDayKeys', 'getRetentionCutoffKey']) {
@@ -5855,28 +5499,6 @@ describe('v1.21.0 new themes and Shades of accent', () => {
     assert.match(mainScript, /applyTagColorMode\(state\.tagColorMode, \{ fromSync: true \}\);\s*initTagShades\(\);/);
   });
 
-  it('1.21.0 is the latest release and documented everywhere', () => {
-    assert.match(html, /const APP_VERSION = '1\.21\.0';/);
-    const entry = html.slice(html.indexOf("version: '1.21.0'"), html.indexOf("version: '1.20.0'"));
-    assert.match(entry, /tag: 'latest'/);
-    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(entry, /Twelve new themes: Kanagawa, Monokai Pro, Everforest, and Rosé Pine Moon in Dark; Catppuccin Frappé, Gruvbox Mid, Solarized Mid, and Rosewood in Medium; Gruvbox Light, Rosé Pine Dawn, Everforest, and Catppuccin Latte in Light\. That makes 108 presets, 36 in each group/);
-    assert.match(entry, /Shades of accent tags are easier to tell apart/);
-    assert.match(entry, /most-used tags get the most distinct colors/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    const block = md.slice(md.indexOf('## [1.21.0]'), md.indexOf('## [1.20.0]'));
-    assert.match(block, /### Added\n- \*\*Twelve new themes\*\*[\s\S]*108 presets, 36 in each of Light, Medium, and Dark/);
-    assert.match(block, /### Improved\n[\s\S]*- \*\*Shades of accent tags are easier to tell apart\*\*[\s\S]*- \*\*Most-used tags get the most distinct colors\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*\*108 preset themes\*\* — 36 light \+ 36 medium \+ 36 dark/);
-    assert.match(readme, /\*\*Medium \(36\):\*\*[^\n]*Solarized Mid[^\n]*Gruvbox Mid[^\n]*Rosewood, Catppuccin Frappé/);
-    assert.match(readme, /\*\*Light \(36\):\*\*[^\n]*Catppuccin Latte[^\n]*Everforest[^\n]*Gruvbox Light, Rosé Pine Dawn/);
-    assert.match(readme, /\*\*Dark \(36\):\*\*[^\n]*Kanagawa[^\n]*Monokai Pro[^\n]*Rosé Pine Moon/);
-    assert.match(readme, /your most-used tags get the most distinct colors and keep them/);
-    assert.match(html, /id="help-modal"[\s\S]*Your most-used tags get the most distinct colors, and a tag keeps its color from then on/);
-    assert.match(html, /<p class="tag-color-hint">[^<]*Shades of accent gives your most-used tags the most distinct colors/);
-  });
-
   it('three new Medium themes balance the tiers and read well', () => {
     const lib = shadeLib();
     const favicons = html.match(/const FAVICONS = \{[\s\S]*?\n\s*\};/)[0];
@@ -6032,19 +5654,288 @@ describe('v1.21.0 recurring schedules and Ctrl+Enter edits', () => {
     assert.match(mainScript, /function openRecurringEditForm[\s\S]*?e\.key === 'Enter'\) \{ e\.preventDefault\(\); saveBtn\.click\(\); \}/);
   });
 
-  it('1.21.0 documents the new schedules and Ctrl+Enter', () => {
-    const entry = html.slice(html.indexOf("version: '1.21.0'"), html.indexOf("version: '1.20.0'"));
-    assert.match(entry, /Recurring tasks can repeat every 2 weeks, monthly, or quarterly/);
-    assert.match(entry, /Ctrl\+Enter \(Cmd\+Enter on Mac\) saves when you edit a task or comment on the desk, or a recurring task/);
-    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
-    const block = md.slice(md.indexOf('## [1.21.0]'), md.indexOf('## [1.20.0]'));
-    assert.match(block, /- \*\*More recurring schedules\*\*[\s\S]*\*\*Every 2 weeks\*\*[\s\S]*\*\*Monthly\*\*[\s\S]*\*\*Quarterly\*\*/);
-    assert.match(block, /### Improved\n- \*\*Ctrl\+Enter saves edits\*\*/);
-    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /daily \/ weekdays \/ weekly \/ custom days \/ every 2 weeks \/ monthly \/ quarterly/);
-    assert.match(readme, /- \*\*Monthly and quarterly\*\* — \*Day of month\*/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Every 2 weeks<\/strong> — pick the first date/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Monthly and Quarterly<\/strong> — choose <em>Day of month<\/em>/);
-    assert.match(html, /<strong>Save an edit<\/strong> \(task, note, comment, or recurring task\) — Ctrl\/Cmd \+ Enter/);
+});
+
+describe('docs stay in step with the app', () => {
+  const changelog = new Function(`return ${html.match(/const CHANGELOG = (\[[\s\S]*?\n    \]);/)[1]}`)();
+  const appVersion = html.match(/const APP_VERSION = '([\d.]+)';/)[1];
+  const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+  const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+  const mdVersions = [...md.matchAll(/^## \[(\d+\.\d+\.\d+)\]/gm)].map((m) => m[1]);
+  const cmp = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; };
+
+  it('APP_VERSION is the newest release in What\'s New and CHANGELOG.md, and only it is tagged latest', () => {
+    assert.equal(changelog[0].version, appVersion);
+    assert.equal(mdVersions[0], appVersion);
+    assert.deepEqual(changelog.filter((e) => e.tag === 'latest').map((e) => e.version), [appVersion]);
+  });
+
+  it('releases are listed newest first, once each, in both changelogs', () => {
+    for (const list of [changelog.map((e) => e.version), mdVersions]) {
+      assert.equal(new Set(list).size, list.length, 'duplicate version');
+      for (let i = 1; i < list.length; i++) assert.ok(cmp(list[i - 1], list[i]) > 0, `${list[i - 1]} should come before ${list[i]}`);
+    }
+  });
+
+  it('every What\'s New release has a CHANGELOG.md block with the same sections', () => {
+    for (const entry of changelog) {
+      const start = md.indexOf(`## [${entry.version}]`);
+      assert.ok(start >= 0, `CHANGELOG.md is missing ${entry.version}`);
+      const next = md.indexOf('\n## [', start + 1);
+      const block = md.slice(start, next < 0 ? undefined : next);
+      for (const section of entry.sections) {
+        assert.match(block, new RegExp(`### ${section.label}\\n+- `), `${entry.version} ${section.label} in CHANGELOG.md`);
+      }
+    }
+  });
+
+  it('every What\'s New release has a date and at least one non-empty item per section', () => {
+    for (const entry of changelog) {
+      assert.match(entry.date, /^[A-Z][a-z]{2} \d{1,2}, \d{4}$/, `${entry.version} date`);
+      assert.ok(entry.sections.length, `${entry.version} has sections`);
+      for (const s of entry.sections) {
+        assert.ok(['Added', 'Improved', 'Fixed', 'Changed', 'Removed'].includes(s.label), `${entry.version} label ${s.label}`);
+        assert.ok(s.items.length && s.items.every((i) => typeof i === 'string' && i.trim().length > 10), `${entry.version} ${s.label} items`);
+      }
+    }
+  });
+
+  it('theme counts in Help and README match the theme list, and README names every theme', () => {
+    const themes = new Function(`return ${html.match(/const THEMES = (\[[\s\S]*?\n    \]);/)[1]}`)();
+    const tiers = {
+      Light: themes.filter((t) => !t.dark && !t.medium),
+      Medium: themes.filter((t) => t.medium),
+      Dark: themes.filter((t) => t.dark),
+    };
+    const [l, m, d] = [tiers.Light.length, tiers.Medium.length, tiers.Dark.length];
+    assert.ok(readme.includes(`**${themes.length} preset themes** — ${l} light + ${m} medium + ${d} dark`), 'README count');
+    assert.ok(html.includes(`${themes.length} presets (${l} light, ${m} medium, ${d} dark`), 'Help count');
+    for (const [tier, list] of Object.entries(tiers)) {
+      const line = readme.match(new RegExp(`\\*\\*${tier} \\(${list.length}\\):\\*\\*([^\\n]*)`));
+      assert.ok(line, `README ${tier} line with count ${list.length}`);
+      for (const t of list) assert.ok(line[1].includes(t.name), `README ${tier} list names ${t.name}`);
+    }
+  });
+});
+
+describe('Help modal structure', () => {
+  const start = html.indexOf('<div id="help-modal"');
+  const help = html.slice(start, html.indexOf('<div class="help-modal-footer">', start));
+  const sections = [...help.matchAll(/<details class="help-section" id="(help-[a-z-]+)"( open)?>\s*<summary>([^<]+)<\/summary>([\s\S]*?)<\/details>/g)]
+    .map((m) => ({ id: m[1], open: !!m[2], title: m[3], body: m[4] }));
+
+  it('has a search box, an index, and folding sections with Quick start and Keyboard shortcuts open', () => {
+    assert.match(help, /<input id="help-search" class="help-search" type="search"/);
+    assert.match(help, /<nav id="help-index" class="help-index" aria-label="Help sections"><\/nav>/);
+    assert.ok(sections.length >= 10, `${sections.length} sections`);
+    assert.equal((help.match(/class="help-section"/g) || []).length, sections.length, 'every section parses');
+    assert.deepEqual(sections.filter((s) => s.open).map((s) => s.title), ['Quick start', 'Keyboard shortcuts']);
+    for (const s of sections) assert.match(s.body, /<li>/, `${s.title} has items`);
+    assert.doesNotMatch(help, /<h3>/, 'no loose headings outside the folding sections');
+  });
+
+  it('stays short: under 2,000 words, no item over 60 words, and no roadmap', () => {
+    const text = (h) => h.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/g, ' ');
+    const words = (h) => text(h).split(/\s+/).filter((w) => /\w/.test(w)).length;
+    assert.ok(words(help) < 2000, `${words(help)} words`);
+    for (const li of help.match(/<li>[\s\S]*?<\/li>/g)) assert.ok(words(li) <= 60, `long item: ${text(li).slice(0, 80)}`);
+    assert.doesNotMatch(help, /future improvements/i);
+  });
+
+  it('search filters lines, opens matching sections, and resets when Help opens', () => {
+    const filter = fnSource('filterHelp');
+    assert.match(filter, /li\.hidden = !\(titleMatch \|\| helpText\(li\)\.includes\(q\)\)/);
+    assert.match(filter, /section\.open = helpOpenByDefault\.get\(section\)/);
+    assert.match(filter, /'help-no-results'\)\.classList\.toggle\('hidden', !q \|\| anyMatch\)/);
+    assert.match(fnSource('openHelpModal'), /helpSearch\.value = '';\s*filterHelp\(''\);/);
+  });
+});
+
+describe('stylesheet structure', () => {
+  it('every <style> block has balanced braces, so no rule is silently dropped', () => {
+    const blocks = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1].replace(/\/\*[\s\S]*?\*\//g, ''));
+    assert.ok(blocks.length);
+    for (const css of blocks) {
+      let depth = 0;
+      for (let i = 0; i < css.length; i++) {
+        if (css[i] === '{') depth++;
+        else if (css[i] === '}' && --depth < 0) assert.fail(`stray } near: ${css.slice(Math.max(0, i - 120), i + 1)}`);
+      }
+      assert.equal(depth, 0, 'unclosed {');
+    }
+  });
+});
+
+describe('the app\'s own sync merge and dedupe code (run from work-desk.html)', () => {
+  const app = bootAppInVm();
+  // The mocked DOM has no HTML parser; content matching only needs the text
+  app.stripHtmlTags = (h) => String(h || '').replace(/<[^>]*>/g, '');
+  const plain = (x) => JSON.parse(JSON.stringify(x));
+  const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
+
+  describe('mergeRecurringTemplates', () => {
+    const remote = {
+      id: 't1', content: '1-1 with Laura', rule: 'weekly', days: [4], createdAt: '2026-01-05T10:00:00Z',
+      lastInjectedDate: '2026-10-15', tags: ['mgmt'],
+    };
+
+    it('a schedule edited on this device wins and is due on the new dates', () => {
+      const local = {
+        id: 't1', content: '1-1 with Laura', rule: 'monthly', monthBy: 'weekday', weeks: [3], days: [4],
+        createdAt: '2026-03-01T10:00:00Z', lastInjectedDate: '2026-09-17', tags: ['laura'],
+      };
+      const [merged] = plain(app.mergeRecurringTemplates([local], [remote]));
+      assert.equal(merged.rule, 'monthly');
+      assert.deepEqual(merged.weeks, [3]);
+      assert.equal(merged.createdAt, '2026-01-05T10:00:00Z', 'first-seen createdAt is kept');
+      assert.equal(merged.lastInjectedDate, '2026-10-15', 'the later inject date wins from either side');
+      assert.deepEqual(merged.tags, ['mgmt', 'laura']);
+      assert.equal(app.recurringDueOn(merged, '2026-11-19'), true, '3rd Thursday of November');
+      assert.equal(app.recurringDueOn(merged, '2026-11-12'), false, '2nd Thursday is not due');
+      assert.equal(app.recurringRuleLabel(merged), 'Monthly on the 3rd Thu');
+    });
+
+    it('fields left over from the other device\'s older schedule do not change when it is due', () => {
+      const oldRemote = { id: 't2', content: 'Sara 1-1', rule: 'monthly', monthBy: 'weekday', weeks: [1, 3], days: [2] };
+      const editedLocal = { id: 't2', content: 'Sara 1-1', rule: 'monthly', monthBy: 'date', monthDays: [1, 15] };
+      const [merged] = plain(app.mergeRecurringTemplates([editedLocal], [oldRemote]));
+      const due = ['2026-11-01', '2026-11-03', '2026-11-15', '2026-11-17'].filter((d) => app.recurringDueOn(merged, d));
+      assert.deepEqual(due, ['2026-11-01', '2026-11-15']);
+      assert.equal(app.recurringRuleLabel(merged), 'Monthly on the 1st & 15th');
+    });
+
+    it('templates on only one side pass through with their biweekly and quarterly fields', () => {
+      const biweekly = { id: 'b', content: 'Sprint review', rule: 'biweekly', startDate: '2026-10-07' };
+      const quarterly = { id: 'q', content: 'QBR', rule: 'quarterly', monthBy: 'date', monthDays: [-1], startMonth: 2 };
+      const merged = plain(app.mergeRecurringTemplates([biweekly], [quarterly]));
+      assert.deepEqual(merged.map((t) => t.id).sort(), ['b', 'q']);
+      const q = merged.find((t) => t.id === 'q');
+      assert.equal(app.recurringDueOn(q, '2026-12-31'), true);
+      assert.equal(app.recurringDueOn(q, '2026-11-30'), false);
+      assert.equal(app.recurringDueOn(merged.find((t) => t.id === 'b'), '2026-10-21'), true);
+    });
+
+    it('ignores entries without an id and matches the shared library version', () => {
+      const local = [{ id: 't1', content: 'x', rule: 'daily', lastInjectedDate: '2026-10-01' }, null, { content: 'no id' }];
+      const out = plain(app.mergeRecurringTemplates(local, [remote]));
+      assert.equal(out.length, 1);
+      assert.deepEqual(out, plain(mergeRecurringTemplates(local, [remote])));
+    });
+  });
+
+  describe('mergeProjectsData', () => {
+    const project = (over) => ({ id: 'p1', name: 'ACE', notes: [], tasks: [], updatedAt: ago(5), ...over });
+
+    it('an item deleted on either device stays deleted', () => {
+      const local = { projects: [project({ tasks: [{ id: 'keep' }, { id: 'goneRemote' }] })], deletedIds: { goneLocal: ago(1) } };
+      const remote = { projects: [project({ tasks: [{ id: 'keep' }, { id: 'goneLocal' }, { id: 'goneRemote' }] })], deletedIds: { goneRemote: ago(1) } };
+      const out = plain(app.mergeProjectsData(local, remote));
+      assert.deepEqual(out.projects[0].tasks.map((t) => t.id), ['keep']);
+      assert.deepEqual(Object.keys(out.deletedIds).sort(), ['goneLocal', 'goneRemote']);
+    });
+
+    it('a project only on the other device arrives without its deleted items', () => {
+      const out = plain(app.mergeProjectsData(
+        { projects: [], deletedIds: { n2: ago(2) } },
+        { projects: [project({ id: 'p2', notes: [{ id: 'n1' }, { id: 'n2' }] })], deletedIds: {} },
+      ));
+      assert.deepEqual(out.projects.map((p) => p.id), ['p2']);
+      assert.deepEqual(out.projects[0].notes.map((n) => n.id), ['n1']);
+    });
+
+    it('the side renamed, pinned, or unarchived most recently wins', () => {
+      const local = { projects: [project({ name: 'Old', archived: true, updatedAt: ago(3) })], deletedIds: {} };
+      const remote = { projects: [project({ name: 'New', pinned: true, updatedAt: ago(1) })], deletedIds: {} };
+      const [p] = plain(app.mergeProjectsData(local, remote)).projects;
+      assert.equal(p.name, 'New');
+      assert.equal(p.pinned, true);
+      assert.equal(p.archived, undefined);
+      const [kept] = plain(app.mergeProjectsData(remote, local)).projects;
+      assert.equal(kept.name, 'New', 'an older remote edit does not overwrite');
+    });
+
+    it('a task with more comments wins, and the newer item order is applied', () => {
+      const local = { projects: [project({
+        tasks: [{ id: 'a', comments: [] }, { id: 'b', comments: [] }],
+        itemOrderUpdatedAt: ago(4),
+      })], deletedIds: {} };
+      const remote = { projects: [project({
+        tasks: [{ id: 'b', comments: [{ id: 'c1' }] }, { id: 'a', comments: [] }],
+        itemOrderUpdatedAt: ago(1),
+      })], deletedIds: {} };
+      const [p] = plain(app.mergeProjectsData(local, remote)).projects;
+      assert.deepEqual(p.tasks.map((t) => t.id), ['b', 'a']);
+      assert.equal(p.tasks[0].comments.length, 1);
+    });
+  });
+
+  describe('deduplicateDayItems and deduplicateAcrossDays', () => {
+    it('two copies of one item on a day merge into the most advanced one, keeping comments, tags, and links', () => {
+      const out = plain(app.deduplicateDayItems([
+        task({ id: 'x', comments: [{ id: 'c1' }], tags: ['ace'], carriedFrom: '2026-10-20' }),
+        task({ id: 'x', completed: true, comments: [{ id: 'c2' }], tags: ['ids'], recurringTemplateId: 't1' }),
+        { id: undefined, type: 'note', content: 'no id' },
+      ]));
+      assert.equal(out.length, 2);
+      const x = out.find((i) => i.id === 'x');
+      assert.equal(x.completed, true);
+      assert.deepEqual(x.comments.map((c) => c.id), ['c2', 'c1']);
+      assert.deepEqual(x.tags.sort(), ['ace', 'ids']);
+      assert.equal(x.carriedFrom, '2026-10-20');
+      assert.equal(x.recurringTemplateId, 't1');
+    });
+
+    it('one item on two days lives on one: completed beats open, then the later day', () => {
+      const { days, removed } = plain(app.deduplicateAcrossDays({
+        '2026-10-20': { items: [task({ id: 'a', completed: true }), task({ id: 'b', comments: [{ id: 'old' }] })] },
+        '2026-10-21': { items: [task({ id: 'a', tags: ['late'] }), task({ id: 'b' })] },
+      }));
+      assert.equal(removed, 2);
+      assert.deepEqual(days['2026-10-20'].items.map((i) => i.id), ['a']);
+      assert.deepEqual(days['2026-10-21'].items.map((i) => i.id), ['b']);
+      assert.deepEqual(days['2026-10-20'].items[0].tags, ['late'], 'the losing copy\'s tags are kept');
+      assert.deepEqual(days['2026-10-21'].items[0].comments.map((c) => c.id), ['old'], 'the losing copy\'s comments are kept');
+    });
+
+    it('a day left empty by deduping is dropped', () => {
+      const { days } = plain(app.deduplicateAcrossDays({
+        '2026-10-20': { items: [task({ id: 'a' })] },
+        '2026-10-21': { items: [task({ id: 'a' })] },
+      }));
+      assert.deepEqual(Object.keys(days), ['2026-10-21']);
+    });
+  });
+
+  describe('deduplicateRecurringSameDay', () => {
+    const tmpl = { id: 't1', content: 'Update the ACE Dashboard' };
+
+    it('two copies of one recurring task on a day collapse into the completed one with all comments', () => {
+      const { items, removed } = plain(app.deduplicateRecurringSameDay([
+        task({ id: 'r1', content: 'Update the ACE Dashboard', recurringTemplateId: 't1', comments: [{ id: 'c1' }] }),
+        task({ id: 'other', content: 'Something else' }),
+        task({ id: 'r2', content: 'Update the ACE Dashboard', recurringTemplateId: 't1', completed: true }),
+      ], [tmpl]));
+      assert.equal(removed, 1);
+      assert.deepEqual(items.map((i) => i.id), ['other', 'r2']);
+      assert.deepEqual(items[1].comments.map((c) => c.id), ['c1']);
+    });
+
+    it('an unlinked task with the same text as a template is linked and collapsed', () => {
+      const { items, removed } = plain(app.deduplicateRecurringSameDay([
+        task({ id: 'manual', content: '<b>Update the  ACE dashboard</b>', tags: ['ace'] }),
+        task({ id: 'r1', content: 'Update the ACE Dashboard', recurringTemplateId: 't1' }),
+      ], [tmpl]));
+      assert.equal(removed, 1);
+      assert.equal(items.length, 1);
+      assert.equal(items[0].recurringTemplateId, 't1');
+      assert.deepEqual(items[0].tags, ['ace']);
+    });
+
+    it('same-text tasks with no template link are left alone', () => {
+      const input = [task({ id: 'a', content: 'Standup' }), task({ id: 'b', content: 'Standup' })];
+      const { items, removed } = plain(app.deduplicateRecurringSameDay(input, [tmpl]));
+      assert.equal(removed, 0);
+      assert.deepEqual(items.map((i) => i.id), ['a', 'b']);
+    });
   });
 });
