@@ -1292,43 +1292,96 @@ test.describe('Tag colors', { tag: ['@tags', '@options'] }, () => {
     });
   });
 
-  test('Analogous gives tags different shades that stay near the accent hue', async ({ page }) => {
+  test('Shades of accent gives tags clearly different colors, most-used tag first, and survives reload', async ({ page }) => {
     await setupTwoTaggedTasks(page);
+    await addTask(page, `Charlie task #${TAG_A}`);
     await openAppearance(page);
     await page.locator('#tag-color-mode-select').selectOption('analogous');
     await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'analogous');
+    await expect(page.locator('#density-popout')).toBeVisible();
 
-    const accent = await rgbOf(page, await accentColor(page));
+    // TAG_A has two uses, so it gets slot 0 (the accent) and TAG_B the next, most distinct color
+    await expect(chipOn(page, 'Alpha task')).toHaveAttribute('data-shade-slot', '0');
+    await expect(chipOn(page, 'Bravo task')).toHaveAttribute('data-shade-slot', '1');
+    const accent = toHex(await rgbOf(page, await accentColor(page)));
+    await expect.poll(async () => toHex(await rgbOf(page, await colorOf(chipOn(page, 'Alpha task'))))).toBe(accent);
     const a = await rgbOf(page, await colorOf(chipOn(page, 'Alpha task')));
     const b = await rgbOf(page, await colorOf(chipOn(page, 'Bravo task')));
-    expect(toHex(a)).not.toBe(toHex(b));
-    expect(hueGap(hueOf(a), hueOf(accent))).toBeLessThan(60);
-    expect(hueGap(hueOf(b), hueOf(accent))).toBeLessThan(60);
+    expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeGreaterThan(60);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-tag-shade-slots') || '{}')))
+      .toEqual({ [TAG_A]: 0, [TAG_B]: 1 });
 
     await page.reload();
     await dismissAuthModal(page);
     await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'analogous');
+    await expect(chipOn(page, 'Bravo task')).toHaveAttribute('data-shade-slot', '1');
   });
 
-  test('Analogous colors follow the theme when you switch', async ({ page }) => {
+  test('Shades of accent follows the theme: Monokai uses its own colors, other themes a wide two-tone spread', async ({ page }) => {
     await setupTwoTaggedTasks(page);
     await openAppearance(page);
     await page.locator('#tag-color-mode-select').selectOption('analogous');
-    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
-    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
-    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="one-dark"]').click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'one-dark');
-    await page.waitForTimeout(600);
-    const blue = toHex(await rgbOf(page, await colorOf(chipOn(page, 'Alpha task'))));
+    const shades = () => page.evaluate(() => Array.from({ length: 8 }, (_, i) =>
+      getComputedStyle(document.documentElement).getPropertyValue(`--tag-shade-${i}`).trim()));
 
-    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').click();
     await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
     await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="monokai"]').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
-    await page.waitForTimeout(600);
-    const pink = await rgbOf(page, await colorOf(chipOn(page, 'Alpha task')));
-    expect(toHex(pink)).not.toBe(blue);
-    expect(hueGap(hueOf(pink), hueOf(await rgbOf(page, '#f92672')))).toBeLessThan(60);
+    await expect.poll(async () => (await shades())[1]).toBe('#a6e22e');
+    expect((await shades()).slice(0, 4)).toEqual(['#f92672', '#a6e22e', '#66d9ef', '#fd971f']);
+    await expect.poll(async () => toHex(await rgbOf(page, await colorOf(chipOn(page, 'Bravo task'))))).toBe('#a6e22e');
+    await expect(page.locator('#tag-shade-vars')).toHaveCount(1);
+
+    await page.locator('#density-toggle').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="seafoam"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'seafoam');
+    await expect.poll(async () => (await shades())[0]).toBe('#0d9488');
+    const hues = (await Promise.all((await shades()).map((c) => rgbOf(page, c)))).map(hueOf);
+    expect(Math.max(...hues.map((h) => hueGap(h, hues[0])))).toBeGreaterThan(60);
+    expect(new Set(await shades()).size).toBe(8);
+    await expect(page.locator('#tag-shade-vars')).toHaveCount(1);
+  });
+
+  test('Shades of accent works with a custom theme and updates when it is edited', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('work-desk-custom-themes', JSON.stringify([
+        { id: 'custom-test1', name: 'Mine', dark: true, bg: '#101418', surface: '#1c2228', sidebar: '#0a0e12', accent: '#e0b040', text: '#e8ecf3' },
+      ]));
+      localStorage.setItem('work-desk-theme', 'custom-test1');
+      localStorage.setItem('work-desk-tag-color-mode', 'analogous');
+    });
+    await setupTwoTaggedTasks(page);
+    const shade0 = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tag-shade-0').trim());
+    await expect.poll(shade0).toBe('#e0b040');
+    await page.evaluate(() => document.documentElement.style.setProperty('--accent', '#40a0e0'));
+    await expect.poll(shade0).toBe('#40a0e0');
+  });
+
+  test('a pinned color still beats Shades of accent on every slot', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await openAppearance(page);
+    await page.locator('#tag-color-mode-select').selectOption('analogous');
+    await page.keyboard.press('Escape');
+    await page.locator('#desk-view').click({ position: { x: 5, y: 5 } });
+    const chip = chipOn(page, 'Bravo task');
+    await expect(chip).toHaveAttribute('data-shade-slot', /[1-7]/);
+    await chip.click();
+    await page.locator('#tag-color-popover .tag-color-swatch[data-color="#ef4444"]').click();
+    await expect(chip).toHaveClass(/tag-custom/);
+    const pinned = await rgbOf(page, await colorOf(chip));
+    expect(pinned[0]).toBeGreaterThan(pinned[1] + 60);
+  });
+
+  test('Single color and Multi-color chips carry no shade slot', async ({ page }) => {
+    await setupTwoTaggedTasks(page);
+    await expect(chipOn(page, 'Alpha task')).not.toHaveAttribute('data-shade-slot');
+    await openAppearance(page);
+    await page.locator('#tag-color-mode-select').selectOption('analogous');
+    await expect(chipOn(page, 'Alpha task')).toHaveAttribute('data-shade-slot', /\d/);
+    await page.locator('#tag-color-mode-select').selectOption('palette');
+    await expect(chipOn(page, 'Alpha task')).not.toHaveAttribute('data-shade-slot');
   });
 
   test('Options color boxes show each tag\'s displayed color in every mode', async ({ page }) => {
@@ -1749,14 +1802,41 @@ test.describe('Theme filter buttons', { tag: ['@options', '@themes'] }, () => {
     const swatches = page.locator('#customize-theme-grid .theme-swatch');
     await expect(swatches.first()).toBeVisible();
     const count = await swatches.count();
-    expect(count).toBe(32);
+    expect(count).toBe(36);
   });
 
-  test('Light and Dark filters each show 32 swatches', async ({ page }) => {
+  test('Light and Dark filters each show 36 swatches, the same as Medium, filling the 4-column grid', async ({ page }) => {
     await openThemesTab(page);
-    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(32);
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(36);
     await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
-    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(32);
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(36);
+  });
+
+  test('each new v1.21.0 theme swatch applies, persists across reload, and reads well', async ({ page }) => {
+    await openDesk(page);
+    const NEW_121: Array<[string, 'light' | 'medium' | 'dark', string]> = [
+      ['gruvbox-light', 'light', 'Gruvbox Light'], ['rose-pine-dawn', 'light', 'Rosé Pine Dawn'], ['catppuccin-latte', 'light', 'Catppuccin Latte'], ['everforest-light', 'light', 'Everforest'],
+      ['catppuccin-frappe', 'medium', 'Catppuccin Frappé'], ['gruvbox-mid', 'medium', 'Gruvbox Mid'], ['solarized-mid', 'medium', 'Solarized Mid'], ['rosewood', 'medium', 'Rosewood'],
+      ['kanagawa', 'dark', 'Kanagawa'], ['monokai-pro', 'dark', 'Monokai Pro'], ['rose-pine-moon', 'dark', 'Rosé Pine Moon'], ['everforest-dark', 'dark', 'Everforest'],
+    ];
+    for (const [id, tier, name] of NEW_121) {
+      await page.locator('#density-toggle').click();
+      await expect(page.locator('#options-pane-themes')).toBeVisible();
+      await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+      const swatch = page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="${id}"]`);
+      await expect(swatch).toBeVisible();
+      await expect(swatch).toContainText(name);
+      await swatch.click();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', id);
+      await expect(page.locator('#density-popout')).toBeHidden();
+      expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe(id);
+      await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe(tier === 'light' ? 'light' : 'dark');
+    }
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'everforest-dark');
+    // Light-accent themes put dark text on the Add button
+    const addBtn = page.locator('.add-btn').first();
+    await expect.poll(() => addBtn.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(45, 53, 59)');
   });
 
   const NEW_THEMES: Array<[string, 'light' | 'medium' | 'dark']> = [
@@ -2376,6 +2456,226 @@ test.describe('Recurring templates', { tag: ['@recurring'] }, () => {
   });
 });
 
+test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
+  const modal = (page: Page) => page.locator('#recurring-modal');
+  const addForm = (page: Page) => page.locator('#recurring-modal .recurring-add-form');
+  const storedTemplates = (page: Page) =>
+    page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-recurring-work') || '{"templates":[]}').templates);
+
+  async function openRecurring(page: Page, text: string) {
+    await openDesk(page);
+    await page.locator('#recurring-btn').click();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    const editor = addForm(page).locator('.rich-editor');
+    await editor.click();
+    await editor.pressSequentially(text, { delay: 10 });
+  }
+
+  test('every rule button selects, and its options stay inside the open modal', async ({ page }) => {
+    await openRecurring(page, 'Rule tour');
+    const form = addForm(page);
+    for (const rule of ['daily', 'weekdays', 'weekly', 'custom', 'biweekly', 'monthly', 'quarterly']) {
+      await form.locator(`.rule-btn[data-rule="${rule}"]`).click();
+      await expect(form.locator(`.rule-btn[data-rule="${rule}"]`)).toHaveClass(/active/);
+      await expect(form.locator('.recurring-rule-btns .rule-btn.active')).toHaveCount(1);
+      await expect(modal(page)).not.toHaveClass(/hidden/);
+    }
+    await expect(form.locator('.recurring-quarter-months .quarter-btn')).toHaveCount(3);
+    await form.locator('.rule-btn[data-rule="weekly"]').click();
+    await expect(form.locator('.day-picker .day-btn')).toHaveCount(7);
+    await form.locator('.rule-btn[data-rule="daily"]').click();
+    await expect(form.locator('.day-picker')).toHaveCount(0);
+  });
+
+  test('monthly on the 3rd Thursday: weekday mode, adds with a readable label, and every option click keeps the modal open', async ({ page }) => {
+    await openRecurring(page, '1-1 with Laura');
+    const form = addForm(page);
+    await form.locator('.rule-btn[data-rule="monthly"]').click();
+    await form.locator('.month-by-btn', { hasText: 'Day of week' }).click();
+    await expect(form.locator('.month-by-btn', { hasText: 'Day of week' })).toHaveClass(/active/);
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+
+    await form.locator('.modal-btn.primary').click();
+    await expect(page.locator('#toast')).toContainText('Please choose a week and a day');
+    expect(await storedTemplates(page)).toHaveLength(0);
+
+    await form.locator('.month-week-btn', { hasText: '3rd' }).click();
+    await expect(form.locator('.month-week-btn', { hasText: '3rd' })).toHaveClass(/active/);
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    await form.locator('.day-picker .day-btn[title="Thursday"], .day-picker .day-btn[title="Thu"]').click();
+    await expect(form.locator('.day-picker .day-btn.active')).toHaveCount(1);
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+
+    await form.locator('.modal-btn.primary').click();
+    const item = page.locator('.recurring-template-item', { hasText: '1-1 with Laura' });
+    await expect(item.locator('.recurring-rule-badge').first()).toHaveText('Monthly on the 3rd Thu');
+    const [t] = await storedTemplates(page);
+    expect(t).toMatchObject({ rule: 'monthly', monthBy: 'weekday', weeks: [3], days: [4] });
+  });
+
+  test('twice a month by date (1st and 15th), Last day, and the empty-date guard', async ({ page }) => {
+    await openRecurring(page, 'Twice monthly by date');
+    const form = addForm(page);
+    await form.locator('.rule-btn[data-rule="monthly"]').click();
+    await expect(form.locator('.month-by-btn', { hasText: 'Day of month' })).toHaveClass(/active/);
+    await expect(form.locator('.month-day-grid .month-day-btn')).toHaveCount(32);
+    await form.locator('.modal-btn.primary').click();
+    await expect(page.locator('#toast')).toContainText('Please choose at least one day of the month');
+
+    const day = (label: string) => form.locator('.month-day-grid .month-day-btn').getByText(label, { exact: true });
+    await day('15').click();
+    await day('1').click();
+    await day('Last').click();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    await day('Last').click();
+    await expect(form.locator('.month-day-btn.active')).toHaveCount(2);
+    await form.locator('.modal-btn.primary').click();
+    await expect(page.locator('.recurring-template-item', { hasText: 'Twice monthly by date' }).locator('.recurring-rule-badge').first())
+      .toHaveText('Monthly on the 1st & 15th');
+    expect((await storedTemplates(page))[0]).toMatchObject({ rule: 'monthly', monthBy: 'date', monthDays: [1, 15] });
+  });
+
+  test('every 2 weeks takes its weekday from the start date', async ({ page }) => {
+    await openRecurring(page, '1-1 with Sara');
+    const form = addForm(page);
+    await form.locator('.rule-btn[data-rule="biweekly"]').click();
+    const input = form.locator('.recurring-start-date');
+    await expect(input).toBeVisible();
+    await input.fill('2026-10-06');
+    await expect(form.locator('.recurring-schedule-hint')).toContainText('Every other Tuesday, starting Oct 6');
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    await form.locator('.modal-btn.primary').click();
+    await expect(page.locator('.recurring-template-item', { hasText: '1-1 with Sara' }).locator('.recurring-rule-badge').first())
+      .toHaveText('Every other Tue');
+    expect((await storedTemplates(page))[0]).toMatchObject({ rule: 'biweekly', startDate: '2026-10-06', days: [2] });
+  });
+
+  test('quarterly: pick a month set; edit round trip switches to monthly and back, then delete', async ({ page }) => {
+    await openRecurring(page, 'Quarterly review');
+    let form = addForm(page);
+    await form.locator('.rule-btn[data-rule="quarterly"]').click();
+    await form.locator('.month-day-grid .month-day-btn').getByText('1', { exact: true }).click();
+    for (const label of ['Jan · Apr · Jul · Oct', 'Mar · Jun · Sep · Dec', 'Feb · May · Aug · Nov']) {
+      await form.locator('.quarter-btn', { hasText: label }).click();
+      await expect(form.locator('.quarter-btn.active')).toHaveText(label);
+      await expect(modal(page)).not.toHaveClass(/hidden/);
+    }
+    await form.locator('.modal-btn.primary').click();
+    const item = () => page.locator('.recurring-template-item', { hasText: 'Quarterly review' });
+    await expect(item().locator('.recurring-rule-badge').first()).toHaveText('Quarterly on the 1st (Feb, May, Aug, Nov)');
+
+    // Edit: the picker opens on the saved schedule
+    await item().locator('.recurring-action-link', { hasText: 'edit' }).click();
+    form = page.locator('.recurring-template-item').first();
+    await expect(form.locator('.rule-btn[data-rule="quarterly"]')).toHaveClass(/active/);
+    await expect(form.locator('.quarter-btn.active')).toHaveText('Feb · May · Aug · Nov');
+    await expect(form.locator('.month-day-btn.active')).toHaveText('1');
+    // Monthly keeps the picked dates; switch to weekday mode, 1st and 3rd Tuesday
+    await form.locator('.rule-btn[data-rule="monthly"]').click();
+    await expect(form.locator('.month-day-btn.active')).toHaveText('1');
+    await form.locator('.month-by-btn', { hasText: 'Day of week' }).click();
+    await form.locator('.month-week-btn', { hasText: '1st' }).click();
+    await form.locator('.month-week-btn', { hasText: '3rd' }).click();
+    await form.locator('.day-picker .day-btn[title="Tuesday"], .day-picker .day-btn[title="Tue"]').click();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    await form.locator('.modal-btn.primary').click();
+    await expect(item().locator('.recurring-rule-badge').first()).toHaveText('Monthly on the 1st & 3rd Tue');
+    const [t] = await storedTemplates(page);
+    expect(t).toMatchObject({ rule: 'monthly', monthBy: 'weekday', weeks: [1, 3], days: [2] });
+    expect(t.startMonth).toBeUndefined();
+    expect(t.monthDays).toBeUndefined();
+
+    // Cancel leaves it alone
+    await item().locator('.recurring-action-link', { hasText: 'edit' }).click();
+    await page.locator('.recurring-template-item').first().locator('.rule-btn[data-rule="daily"]').click();
+    await page.locator('.recurring-template-item').first().locator('.modal-btn', { hasText: 'Cancel' }).click();
+    await expect(item().locator('.recurring-rule-badge').first()).toHaveText('Monthly on the 1st & 3rd Tue');
+
+    await item().locator('.recurring-action-link.danger', { hasText: 'delete' }).click();
+    await expect(item()).toHaveCount(0);
+    expect(await storedTemplates(page)).toHaveLength(0);
+  });
+
+  test('a monthly template due today lands on the desk; one in another quarter does not', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (localStorage.getItem('work-desk-recurring-work')) return;
+      const now = new Date();
+      localStorage.setItem('work-desk-recurring-work', JSON.stringify({
+        templates: [
+          { id: 'tpl-due', content: 'Due on this date', rule: 'monthly', monthBy: 'date', monthDays: [now.getDate()], days: null, createdAt: now.toISOString(), lastInjectedDate: null },
+          { id: 'tpl-later', content: 'Due next quarter month', rule: 'quarterly', monthBy: 'date', monthDays: [now.getDate()], startMonth: (now.getMonth() + 1) % 3, createdAt: now.toISOString(), lastInjectedDate: null },
+        ],
+        deletedIds: {},
+      }));
+    });
+    await openDesk(page);
+    await expect(page.locator('.item-card', { hasText: 'Due on this date' })).toHaveCount(1);
+    await expect(page.locator('.item-card', { hasText: 'Due next quarter month' })).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('.item-card', { hasText: 'Due on this date' })).toHaveCount(1);
+  });
+
+  test('Ctrl+Enter adds a recurring task and saves an edit', async ({ page }) => {
+    await openRecurring(page, 'Keyboard template');
+    await page.keyboard.press('Control+Enter');
+    const item = () => page.locator('.recurring-template-item', { hasText: 'Keyboard' });
+    await expect(item()).toHaveCount(1);
+    await item().locator('.recurring-action-link', { hasText: 'edit' }).click();
+    const editor = page.locator('.recurring-template-item .rich-editor').first();
+    await editor.click();
+    await editor.press('Control+a');
+    await editor.pressSequentially('Keyboard edited', { delay: 10 });
+    await editor.press('Control+Enter');
+    await expect(page.locator('.recurring-template-item', { hasText: 'Keyboard edited' }).locator('.recurring-rule-badge').first()).toBeVisible();
+    expect((await storedTemplates(page))[0].content).toContain('Keyboard edited');
+  });
+});
+
+test.describe('Ctrl+Enter saves desk edits 1.21.0', { tag: ['@board'] }, () => {
+  test('editing a task: Ctrl+Enter saves, Esc still cancels', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Ctrl enter task');
+    const card = () => page.locator('.item-card', { hasText: 'Ctrl enter task' }).first();
+    await card().locator('.item-content').dblclick();
+    const editor = page.locator('.edit-input');
+    await expect(editor).toBeFocused();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' saved');
+    await page.keyboard.press('Control+Enter');
+    await expect(page.locator('.edit-input')).toHaveCount(0);
+    await expect(page.locator('.item-card', { hasText: 'Ctrl enter task saved' })).toHaveCount(1);
+
+    await page.locator('.item-card', { hasText: 'Ctrl enter task saved' }).locator('.item-content').dblclick();
+    await expect(page.locator('.edit-input')).toBeFocused();
+    await page.keyboard.type(' nope');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.edit-input')).toHaveCount(0);
+    await expect(page.locator('.item-card', { hasText: 'nope' })).toHaveCount(0);
+  });
+
+  test('editing a comment: Ctrl+Enter saves it', async ({ page }) => {
+    await openDesk(page);
+    await addTask(page, 'Comment ctrl task');
+    const card = page.locator('.item-card', { hasText: 'Comment ctrl task' }).first();
+    await card.locator('.card-action', { hasText: /^comment/i }).click();
+    const trigger = card.locator('.add-comment-trigger');
+    if (await trigger.isVisible()) await trigger.click();
+    await card.locator('.add-comment-form .comment-input').click();
+    await page.keyboard.type('First words');
+    await card.locator('.comment-add-btn').click();
+    const comment = page.locator('.comment', { hasText: 'First words' });
+    await comment.hover();
+    await comment.locator('.comment-action-edit').click();
+    const editor = page.locator('.comment-edit-wrap .comment-input');
+    await expect(editor).toBeFocused();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.type('Second words');
+    await page.keyboard.press('Control+Enter');
+    await expect(page.locator('.comment-edit-wrap')).toHaveCount(0);
+    await expect(page.locator('.comment', { hasText: 'Second words' })).toBeVisible();
+  });
+});
+
 // ── Insights tab ───────────────────────────────────────────────────────
 test.describe('Insights tab', { tag: ['@insights'] }, () => {
   async function seedAndOpenInsights(page: Page) {
@@ -2948,7 +3248,7 @@ test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
     await expectClean(page, '#account-menu');
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
-    await expect(page.locator('#changelog-body')).toContainText('faint ✓');
+    await expect(page.locator('#changelog-body')).toContainText('Rosé Pine Dawn');
     await expect(page.locator('#changelog-body')).toContainText('Options → Appearance → Card layout');
     await expect(page.locator('#changelog-body')).toContainText('Back is now just ‹ Back');
     await expectClean(page, '#changelog-body');
@@ -6512,12 +6812,14 @@ test.describe('Formatting in projects 1.19.1', { tag: ['@projects', '@board'] },
     expect(saved.text).toMatch(/^line one\s+line two$/);
 
     await row().locator('.project-comment-body').dblclick();
+    await expect(editor).toBeFocused();
     await page.keyboard.type('zzz');
     await card.getByRole('button', { name: 'cancel', exact: true }).click();
     await expect(row().locator('.project-comment-body')).not.toContainText('zzz');
 
     await row().hover();
     await row().getByRole('button', { name: 'edit', exact: true }).click();
+    await expect(editor).toBeFocused();
     await page.keyboard.type('yyy');
     await page.keyboard.press('Escape');
     await expect(row().locator('.project-comment-body')).not.toContainText('yyy');
