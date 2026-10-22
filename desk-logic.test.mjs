@@ -749,18 +749,21 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
     assert.doesNotMatch(jumpFn[0], /state\.expandedTaskIds\.clear\(\)/);
   });
 
-  it('THEMES contains 96 themes (32 light, 32 medium, 32 dark) with complete wireframe properties', () => {
+  it('THEMES contains 108 themes (36 light, 36 medium, 36 dark) with complete wireframe properties', () => {
     const themesMatch = html.match(/const THEMES = (\[[\s\S]*?\n    \]);/);
     assert.ok(themesMatch, 'THEMES array not found in work-desk.html');
     const themes = new Function(`return ${themesMatch[1]}`)();
-    assert.equal(themes.length, 96);
-    assert.equal(new Set(themes.map((t) => t.id)).size, 96, 'theme ids must be unique');
+    assert.equal(themes.length, 108);
+    assert.equal(new Set(themes.map((t) => t.id)).size, 108, 'theme ids must be unique');
     const light  = themes.filter((t) => !t.dark && !t.medium);
     const medium = themes.filter((t) => t.medium);
     const dark   = themes.filter((t) => t.dark);
-    assert.equal(light.length, 32, 'expected 32 light themes');
-    assert.equal(medium.length, 32, 'expected 32 medium themes');
-    assert.equal(dark.length, 32, 'expected 32 dark themes');
+    assert.equal(light.length, 36, 'expected 36 light themes');
+    assert.equal(medium.length, 36, 'expected 36 medium themes');
+    assert.equal(dark.length, 36, 'expected 36 dark themes');
+    for (const [tier, list] of [['light', light], ['medium', medium], ['dark', dark]]) {
+      assert.equal(list.length % 4, 0, `${tier} themes should fill the 4-column theme grid (add themes in fours)`);
+    }
     for (const t of themes) {
       assert.equal(typeof t.id, 'string');
       assert.equal(typeof t.name, 'string');
@@ -1716,7 +1719,7 @@ describe('Holiday-aware recurring in work-desk.html (HTML invariants)', () => {
 });
 
 describe('Medium themes (HTML invariants)', () => {
-  it('all 32 medium themes have CSS [data-theme] rules with color-scheme: dark', () => {
+  it('all 36 medium themes have CSS [data-theme] rules with color-scheme: dark', () => {
     const mediumIds = [
       'fog','overcast','steel','fjord','nimbus','pewter','horizon','denim',
       'lichen','fern','tundra','moss','basalt','dot-matrix',
@@ -1724,8 +1727,9 @@ describe('Medium themes (HTML invariants)', () => {
       'twilight','haze','plum-mid','mulberry','merlot',
       'ash','graphite','concrete',
       'unit-zero-mid','unit-one-mid','unit-two-mid','unit-eight-mid',
+      'catppuccin-frappe','gruvbox-mid','solarized-mid','rosewood',
     ];
-    assert.equal(mediumIds.length, 32);
+    assert.equal(mediumIds.length, 36);
     for (const id of mediumIds) {
       const block = html.match(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`));
       assert.ok(block, `CSS rule for medium theme "${id}" not found`);
@@ -2250,13 +2254,13 @@ describe('Recurring templates (HTML invariants)', () => {
     assert.match(fnBody[0], /delete/);
   });
 
-  it('openRecurringEditForm has rule picker (daily/weekdays/weekly/custom)', () => {
+  it('add and edit forms share the rule picker (daily/weekdays/weekly/custom and the 1.21.0 rules)', () => {
     const fnBody = html.match(/function openRecurringEditForm[\s\S]*?hostEl\.appendChild\(editActions\)/);
     assert.ok(fnBody, 'openRecurringEditForm extractable');
-    assert.match(fnBody[0], /daily/);
-    assert.match(fnBody[0], /weekdays/);
-    assert.match(fnBody[0], /weekly/);
-    assert.match(fnBody[0], /custom/);
+    assert.match(fnBody[0], /createRecurringSchedulePicker\(template\)/);
+    assert.match(html, /function renderRecurringPanel\(\)[\s\S]*?createRecurringSchedulePicker\(\)/);
+    const rules = html.match(/const RECURRING_RULES = \[[\s\S]*?\];/)[0];
+    for (const r of ['daily', 'weekdays', 'weekly', 'custom', 'biweekly', 'monthly', 'quarterly']) assert.match(rules, new RegExp(`value: '${r}'`));
   });
 
   it('recurring template items include skip-holidays badge', () => {
@@ -2879,7 +2883,7 @@ describe('v1.8.0 themes (HTML invariants)', () => {
     const entry = html.match(/version: '1\.8\.0'[\s\S]*?\n      \},/)[0];
     assert.match(entry, /Retro/);
     assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
-    assert.match(html, /id="help-modal"[\s\S]*96 presets \(32 light, 32 medium, 32 dark/);
+    assert.match(html, /id="help-modal"[\s\S]*108 presets \(36 light, 36 medium, 36 dark/);
   });
 });
 
@@ -3521,7 +3525,7 @@ describe('v1.16.2 tag color labels', () => {
     assert.match(html, /<p class="tag-color-hint">Shades of accent and Multi-color give each tag its own color/);
     assert.match(html, /There are 8 colors per mode, so with more tags some share a color — pin one to change it/);
     const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
-    assert.match(readme, /\*Shades of accent\* \(lighter\/darker\/neighboring shades of the accent\), or \*Multi-color\*/);
+    assert.match(readme, /\*Shades of accent\* \(8 clearly different colors that suit the theme[^)]*\), or \*Multi-color\*/);
     assert.doesNotMatch(readme, /Multi-color \(from theme\)/);
   });
 
@@ -3622,6 +3626,9 @@ describe('Tag colors', () => {
       let pushes = 0;
       const schedulePrefsPush = () => { pushes++; };
       const syncTagColorListRows = () => {};
+      let shadeRefreshes = 0;
+      const refreshTagShades = () => { shadeRefreshes++; };
+      const tagShadeSlot = (tag) => tag.length % 8;
       const document = { querySelectorAll: () => [], documentElement: { dataset: {} }, getElementById: () => null };
       const TAG_COLOR_MODE_KEY = 'work-desk-tag-color-mode';
       const TAG_COLORS_KEY = 'work-desk-tag-colors';
@@ -3639,7 +3646,7 @@ describe('Tag colors', () => {
       ${fnSource('applyTagColorMode')}
       ${fnSource('setTagColor')}
       return { tagPaletteSlot, normalizeTagColorMode, normalizeTagColors, decorateTagChip, applyTagColorMode, setTagColor,
-        state, store, document, pushes: () => pushes };
+        state, store, document, pushes: () => pushes, shadeRefreshes: () => shadeRefreshes };
     `)(stored);
   }
   const fakeChip = () => {
@@ -3696,6 +3703,13 @@ describe('Tag colors', () => {
     f.decorateTagChip(chip, 'urgent');
     assert.equal(chip.dataset.tag, 'urgent');
     assert.equal(chip.dataset.tagSlot, String(f.tagPaletteSlot('urgent')));
+    assert.equal(chip.dataset.shadeSlot, undefined, 'shade slots are only handed out in Shades of accent');
+    f.state.tagColorMode = 'analogous';
+    f.decorateTagChip(chip, 'urgent');
+    assert.equal(chip.dataset.shadeSlot, String('urgent'.length % 8));
+    f.state.tagColorMode = 'palette';
+    f.decorateTagChip(chip, 'urgent');
+    assert.equal(chip.dataset.shadeSlot, undefined);
     assert.ok(chip.classList.has('tag-custom'));
     assert.equal(chip.props['--tag-custom'], '#ef4444');
 
@@ -3740,17 +3754,13 @@ describe('Tag colors', () => {
     assert.match(html, /\.tag-chip \{\s*--tag-fg: var\(--accent\);\s*--tag-bg: var\(--accent-light\);/);
     assert.match(html, /@supports \(color: oklch\(from red l c h\)\) \{\s*html\[data-tag-colors="palette"\] \.tag-chip \{/);
     for (let s = 1; s < 8; s++) assert.match(html, new RegExp(`\\.tag-chip\\[data-tag-slot="${s}"\\] \\{ --tag-hue: ${s * 45}; \\}`));
-    // Analogous: every slot gets a hue/lightness offset; lightness is clamped for readability
-    assert.match(html, /html\[data-tag-colors="analogous"\] \.tag-chip \{[^}]*oklch\(from var\(--accent\) clamp\(0\.4, calc\(l \+ var\(--tag-dl\)\), 0\.86\) c calc\(h \+ var\(--tag-dh\)\)\)/);
-    const offsets = new Set();
+    // Shades of accent: the (0,2,1) base rule sets --tag-fg; (0,3,1) slot rules only pick the shade, so a pinned color still wins
+    assert.match(html, /html\[data-tag-colors="analogous"\] \.tag-chip \{\s*--tag-shade: var\(--tag-shade-0, var\(--accent\)\);\s*--tag-fg: var\(--tag-shade\);/);
     for (let s = 1; s < 8; s++) {
-      const m = html.match(new RegExp(`data-tag-colors="analogous"\\] \\.tag-chip\\[data-tag-slot="${s}"\\] \\{ --tag-dh: (-?\\d+); +--tag-dl: (-?[\\d.]+); \\}`));
-      assert.ok(m, `analogous slot ${s} missing`);
-      assert.ok(Math.abs(Number(m[1])) <= 30, 'analogous hues stay within 30° of the accent');
-      offsets.add(`${m[1]}|${m[2]}`);
+      assert.match(html, new RegExp(`html\\[data-tag-colors="analogous"\\] \\.tag-chip\\[data-shade-slot="${s}"\\] \\{ --tag-shade: var\\(--tag-shade-${s}, var\\(--accent\\)\\); \\}`), `shade slot ${s}`);
     }
-    assert.equal(offsets.size, 7, 'each analogous slot must look different');
-    assert.ok(!offsets.has('0|0'), 'only slot 0 may be the plain accent');
+    assert.doesNotMatch(html, /data-shade-slot="\d"\] \{[^}]*--tag-fg/);
+    assert.doesNotMatch(html, /--tag-dh|--tag-dl/);
     // (0,3,0) custom selector must out-rank the (0,2,1) palette selector
     assert.match(html, /\.tag-chip\.tag-custom\[data-tag\] \{\s*--tag-fg: color-mix\(in oklch, var\(--tag-custom\) \d+%, var\(--text\)\);/);
     assert.match(html, /\.tag-chip-remove \{[^}]*color: inherit;/);
@@ -3781,14 +3791,15 @@ describe('Tag colors', () => {
     const shown = fnSource('displayedTagColorHex');
     assert.match(shown, /state\.tagColors\[tag\]/);
     assert.match(shown, /getComputedStyle\(chip\)\.color/);
-    assert.match(fnSource('applyTagColorMode'), /syncTagColorListRows\(\)/);
+    assert.match(fnSource('applyTagColorMode'), /refreshTagShades\(\);\s*refreshTagChipColors\(\);/);
     assert.match(fnSource('applyTheme'), /syncTagColorListRows\(\)/);
+    assert.match(fnSource('refreshTagShades'), /syncTagColorListRows\(\)/);
   });
 
   it('1.10.0 documents analogous tag colors', () => {
     const entry = html.match(/version: '1\.10\.0'[\s\S]*?\n      \},/)[0];
     assert.match(entry, /Analogous/);
-    assert.match(html, /id="help-modal"[\s\S]*<strong>Shades of accent<\/strong> gives each tag a lighter, darker, or neighboring shade/);
+    assert.match(html, /id="help-modal"[\s\S]*<strong>Shades of accent<\/strong> gives each tag one of 8 clearly different colors that suit the theme/);
   });
 
   it('every tag chip wraps its text in a label so it can be centered', () => {
@@ -5293,10 +5304,9 @@ describe('v1.20.0 sync efficiency, full history, storage warning', () => {
   };
   const quotaError = () => Object.assign(new Error('quota'), { name: 'QuotaExceededError', code: 22 });
 
-  it('1.20.0 is the latest release and documented everywhere', () => {
-    assert.match(html, /const APP_VERSION = '1\.20\.0';/);
+  it('1.20.0 is documented everywhere', () => {
     const entry = html.slice(html.indexOf("version: '1.20.0'"), html.indexOf("version: '1.19.1'"));
-    assert.match(entry, /tag: 'latest'/);
+    assert.doesNotMatch(entry, /tag: 'latest'/);
     assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
     for (const label of ['Added', 'Improved', 'Fixed']) assert.match(entry, new RegExp(`label: '${label}'`));
     assert.match(entry, /Storage warning/);
@@ -5607,5 +5617,434 @@ describe('v1.20.0 sync efficiency, full history, storage warning', () => {
     const script = extractMainScript(html);
     assert.ok(script.indexOf('const unsavedStorage = new Map()') < script.indexOf('const state ='),
       'storage globals must exist before state init, since loading data can write');
+  });
+});
+
+describe('v1.21.0 new themes and Shades of accent', () => {
+  const themes = new Function(`return ${html.match(/const THEMES = (\[[\s\S]*?\n    \]);/)[1]}`)();
+  const byId = Object.fromEntries(themes.map((t) => [t.id, t]));
+  const NEW_LIGHT = ['gruvbox-light', 'rose-pine-dawn', 'everforest-light'];
+  const NEW_DARK = ['kanagawa', 'monokai-pro', 'everforest-dark'];
+  const cssBlock = (id) => [...html.matchAll(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`, 'g'))]
+    .find((m) => /--accent:/.test(m[1]));
+  const cssVar = (block, name) => (block.match(new RegExp(`${name}:\\s*([^;]+);`)) || [])[1];
+  const firstHex = (s) => (s && (s.match(/#[0-9a-f]{6}\b/i) || [])[0]?.toLowerCase()) || null;
+  const shared = html.match(/Shared semantics for all non-default dark themes[\s\S]*?\{/)[0];
+  const palettes = new Function(`${mainScript.match(/const THEME_TAG_PALETTES = \{[\s\S]*?\n    \};/)[0]}\nreturn THEME_TAG_PALETTES;`)();
+  const shadeLib = () => new Function(`
+    const TAG_SHADE_COUNT = 8;
+    const TAG_SHADE_MIN_GAP = 0.07;
+    ${['hexToRgb', 'rgbToHex', 'mixHex', 'srgbToLinear', 'hexToOklab', 'hexToOklch', 'oklabToLinearRgb', 'oklchToHex',
+      'relativeLuminance', 'contrastRatio', 'tagShadeDistance', 'readableTagColor', 'pickTagShadeSecond', 'minTagShadeGap',
+      'spreadTagShades', 'buildTagShades'].map(fnSource).join('\n')}
+    return { hexToOklch, oklchToHex, contrastRatio, mixHex, tagShadeDistance, pickTagShadeSecond, minTagShadeGap, buildTagShades };
+  `)();
+  // The inputs refreshTagShades reads from a theme, taken from its CSS block (text falls back to the shared defaults)
+  const SECOND_VARS = JSON.parse(mainScript.match(/const TAG_SHADE_SECOND_VARS = (\[[^\]]*\]);/)[1].replace(/'/g, '"'));
+  const themeInputs = (id) => {
+    const block = cssBlock(id)?.[1];
+    if (!block) return null;
+    const dark = byId[id].dark || byId[id].medium;
+    return {
+      accent: firstHex(cssVar(block, '--accent')),
+      surface: firstHex(cssVar(block, '--surface')),
+      text: firstHex(cssVar(block, '--text')) || (dark ? '#e8ecf3' : '#1a1f2e'),
+      seconds: SECOND_VARS.map((v) => firstHex(cssVar(block, v))).filter(Boolean),
+    };
+  };
+  const shadesFor = (lib, id) => {
+    const t = themeInputs(id);
+    const palette = palettes[id] || null;
+    return lib.buildTagShades({ ...t, palette, second: palette ? null : lib.pickTagShadeSecond(t.accent, t.seconds) });
+  };
+
+  it('new themes sit in the right tier with a full CSS block, matching swatch accent, and favicon', () => {
+    const favicons = html.match(/const FAVICONS = \{[\s\S]*?\n\s*\};/)[0];
+    for (const id of NEW_LIGHT) assert.ok(byId[id] && !byId[id].dark && !byId[id].medium, `${id} should be light`);
+    for (const id of NEW_DARK) assert.ok(byId[id] && byId[id].dark === true, `${id} should be dark`);
+    for (const id of [...NEW_LIGHT, ...NEW_DARK]) {
+      const block = cssBlock(id)?.[1];
+      assert.ok(block, `CSS block for ${id} missing`);
+      for (const v of ['--bg', '--surface', '--sidebar', '--accent', '--text', '--border', '--text-muted']) {
+        assert.match(block, new RegExp(`${v}:\\s*#`), `${id} missing ${v}`);
+      }
+      assert.equal(firstHex(cssVar(block, '--accent')), byId[id].accent.toLowerCase(), `${id} swatch accent drifted from CSS`);
+      assert.match(favicons, new RegExp(`(^|\\s)'?${id}'?:`, 'm'), `${id} missing from FAVICONS`);
+    }
+    for (const id of NEW_LIGHT) assert.match(cssBlock(id)[1], /color-scheme:\s*light/, id);
+    for (const id of NEW_DARK) assert.ok(shared.includes(`[data-theme="${id}"]`), `${id} not in shared dark list`);
+    assert.deepEqual(NEW_LIGHT.concat(NEW_DARK).map((id) => byId[id].name),
+      ['Gruvbox Light', 'Rosé Pine Dawn', 'Everforest', 'Kanagawa', 'Monokai Pro', 'Everforest']);
+  });
+
+  it('new themes keep body text readable and use dark text on light accent buttons', () => {
+    const lib = shadeLib();
+    for (const id of [...NEW_LIGHT, ...NEW_DARK]) {
+      const block = cssBlock(id)[1];
+      const [surface, text, muted] = ['--surface', '--text', '--text-muted'].map((v) => firstHex(cssVar(block, v)));
+      assert.ok(lib.contrastRatio(text, surface) >= 4.5, `${id} text contrast`);
+      assert.ok(lib.contrastRatio(muted, surface) >= 3, `${id} muted text contrast`);
+    }
+    for (const id of ['kanagawa', 'monokai-pro', 'everforest-dark', 'everforest-light']) {
+      assert.match(html, new RegExp(`\\[data-theme="${id}"\\] \\.add-btn`), `${id} add-btn text override missing`);
+    }
+  });
+
+  it('theme palettes: real themes, 8 colors each, starting with the theme accent', () => {
+    const ids = Object.keys(palettes);
+    assert.ok(ids.length >= 19);
+    for (const id of ['monokai', 'monokai-pro', 'dracula', 'nord', 'solarized-dark', 'gruvbox-dark', 'gruvbox-light', 'catppuccin',
+      'one-dark', 'rose-pine', 'rose-pine-dawn', 'tokyo-storm', 'kanagawa', 'everforest-dark', 'everforest-light', 'mediterranean']) {
+      assert.ok(ids.includes(id), `${id} should have a palette`);
+    }
+    for (const [id, colors] of Object.entries(palettes)) {
+      assert.ok(byId[id], `${id} is not a theme`);
+      assert.equal(colors.length, 8, id);
+      for (const c of colors) assert.match(c, /^#[0-9a-f]{6}$/, `${id} ${c}`);
+      assert.equal(new Set(colors).size, 8, `${id} repeats a color`);
+      assert.equal(colors[0], byId[id].accent.toLowerCase(), `${id} palette should start with its accent`);
+    }
+  });
+
+  it('OKLCH round-trips and clips out-of-gamut colors into sRGB', () => {
+    const lib = shadeLib();
+    for (const hex of ['#c8553d', '#0d9488', '#f92672', '#000000', '#ffffff', '#7aa2f7']) {
+      const { l, c, h } = lib.hexToOklch(hex);
+      const back = lib.oklchToHex(l, c, h);
+      const diff = [1, 3, 5].map((i) => Math.abs(parseInt(back.slice(i, i + 2), 16) - parseInt(hex.slice(i, i + 2), 16)));
+      assert.ok(Math.max(...diff) <= 1, `${hex} → ${back}`);
+    }
+    assert.match(lib.oklchToHex(0.7, 0.5, 140), /^#[0-9a-f]{6}$/, 'impossible chroma still yields a valid color');
+  });
+
+  it('every theme gets 8 readable shades; generated ones keep the six most-used clearly apart', () => {
+    const lib = shadeLib();
+    let generated = 0;
+    for (const t of themes) {
+      if (!t.id || !themeInputs(t.id)?.accent) continue;
+      const shades = shadesFor(lib, t.id);
+      const { surface } = themeInputs(t.id);
+      assert.equal(shades.length, 8, t.id);
+      for (const s of shades) {
+        assert.match(s, /^#[0-9a-f]{6}$/, `${t.id} ${s}`);
+        assert.ok(lib.contrastRatio(s, lib.mixHex(s, surface, 82)) >= 1.95, `${t.id}: ${s} unreadable on its pill`);
+      }
+      const gap = lib.minTagShadeGap(shades.slice(0, 6));
+      if (palettes[t.id]) assert.ok(gap >= 0.06, `${t.id} palette: top colors too close (${gap.toFixed(3)})`);
+      else { generated++; assert.ok(gap >= 0.069, `${t.id}: top colors too close (${gap.toFixed(3)})`); }
+    }
+    assert.ok(generated > 60, 'most themes use generated shades');
+  });
+
+  it('the reported themes now get clearly different shades, and Monokai uses its own colors', () => {
+    const lib = shadeLib();
+    for (const id of ['mediterranean', 'seafoam', 'graphite', 'plum', 'plum-mid']) {
+      assert.ok(lib.minTagShadeGap(shadesFor(lib, id).slice(0, 4)) >= 0.08, `${id} top four`);
+    }
+    const monokai = shadesFor(lib, 'monokai');
+    for (const c of ['#a6e22e', '#66d9ef', '#fd971f', '#ae81ff']) assert.ok(monokai.includes(c), `Monokai missing ${c}`);
+    assert.equal(monokai[0], '#f92672', 'the accent itself is not altered when it already reads');
+  });
+
+  it('two-tone uses the theme\'s second color, or 120° around the wheel for one-hue themes', () => {
+    const lib = shadeLib();
+    assert.equal(lib.pickTagShadeSecond('#c8553d', ['#e07a5f', '#5a76a0', '#13315c']), '#5a76a0', 'skips same-hue and takes the first different hue');
+    assert.equal(lib.pickTagShadeSecond('#0d9488', ['#2dd4bf', '#4f8580', '#eef8f6']), null, 'one-hue theme has no second color');
+    const shades = lib.buildTagShades({ accent: '#0d9488', surface: '#ffffff', text: '#0f2a28' });
+    const hueGap = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
+    const accentHue = lib.hexToOklch('#0d9488').h;
+    assert.ok(shades.some((s) => hueGap(lib.hexToOklch(s).h, accentHue) >= 60), 'shades reach well past the accent hue');
+    assert.equal(shades[0], '#0d9488');
+  });
+
+  it('readable colors are darkened on light themes and lightened on dark ones, capped at the accent\'s own contrast', () => {
+    const lib = shadeLib();
+    const onLight = lib.buildTagShades({ accent: '#c8553d', surface: '#fffdf8', text: '#1b2433', palette: ['#c8553d', '#ffe066'] });
+    assert.ok(lib.hexToOklch(onLight[1]).l < lib.hexToOklch('#ffe066').l, 'pale yellow is darkened on a light theme');
+    const onDark = lib.buildTagShades({ accent: '#f92672', surface: '#3e3d32', text: '#f8f8f2', palette: ['#f92672', '#31748f'] });
+    assert.ok(lib.hexToOklch(onDark[1]).l > lib.hexToOklch('#31748f').l, 'deep teal is lightened on a dark theme');
+    assert.match(fnSource('buildTagShades'), /Math\.max\(2, Math\.min\(3, contrastRatio\(accent, mixHex\(accent, surface, 82\)\)\)\)/);
+  });
+
+  describe('slot assignment', () => {
+    const slotFns = (initial = {}, usage = []) => new Function('initial', 'usage', `
+      const TAG_SHADE_COUNT = 8;
+      const TAG_SHADE_SLOTS_KEY = 'work-desk-tag-shade-slots';
+      const store = { [TAG_SHADE_SLOTS_KEY]: JSON.stringify(initial) };
+      const localStorage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); } };
+      let usageScans = 0, chipRefreshes = 0, prefsStamps = 0;
+      const collectTagUsage = () => { usageScans++; return usage.map((tag) => ({ tag })); };
+      const refreshTagChipColors = () => { chipRefreshes++; };
+      const schedulePrefsPush = () => { prefsStamps++; };
+      const touchPrefsUpdatedAt = () => { prefsStamps++; };
+      const sbSynced = false;
+      const sbSchedulePush = () => {};
+      ${['normalizeTag', 'normalizeTagShadeSlots', 'loadTagShadeSlots', 'sameTagShadeSlots', 'nextTagShadeSlot',
+        'assignTagShadeSlots', 'reconcileTagShadeSlots', 'tagShadeSlot', 'storeTagShadeSlots', 'mergeRemoteTagShadeSlots'].map(fnSource).join('\n')}
+      let liveShadeTags = null;
+      const state = { tagShadeSlots: loadTagShadeSlots() };
+      return { state, store, tagShadeSlot, assignTagShadeSlots, nextTagShadeSlot, mergeRemoteTagShadeSlots, normalizeTagShadeSlots,
+        counts: () => ({ usageScans, chipRefreshes, prefsStamps }) };
+    `)(initial, usage);
+
+    it('fresh assignment follows usage: most-used tag gets the accent, then the most distinct colors', () => {
+      const f = slotFns();
+      const tags = ['ace', 'ids', 'oms', 'p1', 'bug', 'ops', 'kt', 'aic', 'psql'];
+      const slots = f.assignTagShadeSlots({}, tags);
+      assert.deepEqual(tags.map((t) => slots[t]), [0, 1, 2, 3, 4, 5, 6, 7, 0], 'ninth tag shares the least-used color');
+    });
+
+    it('existing assignments never move; new tags take the least-used color among tags still in use', () => {
+      const f = slotFns();
+      const current = { ace: 0, ids: 1, oms: 2, old: 3 };
+      const next = f.assignTagShadeSlots(current, ['oms', 'ace', 'ids', 'new1', 'new2']);
+      assert.equal(next.ace, 0);
+      assert.equal(next.oms, 2);
+      assert.equal(next.new1, 3, 'a retired tag does not hold its color hostage');
+      assert.equal(next.new2, 4);
+      assert.equal(next.old, 3, 'retired tags keep their slot in case they come back');
+      assert.equal(f.nextTagShadeSlot({ a: 0, b: 0, c: 1 }, ['a', 'b', 'c']), 2);
+    });
+
+    it('tagShadeSlot ranks all tags once per session, then hands out slots lazily without stamping prefs', () => {
+      const f = slotFns({}, ['ace', 'ids', 'oms']);
+      assert.equal(f.tagShadeSlot('oms'), 2, 'the first lookup ranks every tag by use');
+      assert.equal(f.tagShadeSlot('ace'), 0);
+      assert.equal(f.tagShadeSlot('brand-new'), 3);
+      assert.equal(f.tagShadeSlot('brand-new'), 3, 'stable');
+      assert.equal(f.counts().usageScans, 1, 'usage is scanned once');
+      assert.deepEqual(JSON.parse(f.store['work-desk-tag-shade-slots']), { ace: 0, ids: 1, oms: 2, 'brand-new': 3 });
+      assert.equal(f.counts().prefsStamps, 0, 'slot assignments must not bump the prefs timestamp');
+    });
+
+    it('a remote device\'s assignment wins per tag, local-only tags are kept, junk is dropped', () => {
+      const f = slotFns({ ace: 0, mine: 5, shared: 2 });
+      assert.equal(f.mergeRemoteTagShadeSlots({ shared: 4, theirs: 1, bad: 9, '#UP': 3, x: 'two' }), true);
+      assert.deepEqual(f.state.tagShadeSlots, { ace: 0, mine: 5, shared: 4, theirs: 1, up: 3 });
+      assert.equal(f.counts().chipRefreshes, 1);
+      assert.equal(f.mergeRemoteTagShadeSlots({ shared: 4 }), false, 'nothing new → no redraw');
+      assert.equal(f.mergeRemoteTagShadeSlots(undefined), false);
+      assert.equal(f.counts().chipRefreshes, 1);
+    });
+
+    it('corrupt stored slots load as empty', () => {
+      const f = slotFns();
+      assert.deepEqual(f.normalizeTagShadeSlots('nope'), {});
+      assert.deepEqual(f.normalizeTagShadeSlots([1, 2]), {});
+    });
+  });
+
+  it('slots sync with prefs: included in uploads, merged before the timestamp check', () => {
+    assert.match(fnSource('readLocalPrefs'), /tagShadeSlots: loadTagShadeSlots\(\)/);
+    const apply = fnSource('applyCloudPrefs');
+    assert.ok(apply.indexOf('mergeRemoteTagShadeSlots(prefs.tagShadeSlots)') < apply.indexOf('if (!force)'),
+      'merged even when the remote prefs are not newer');
+    assert.match(fnSource('storeTagShadeSlots'), /setTimeout\(\(\) => \{ if \(sbSynced\) sbSchedulePush\(\); \}, 0\)/);
+    assert.doesNotMatch(fnSource('storeTagShadeSlots'), /schedulePrefsPush|touchPrefsUpdatedAt/);
+    assert.match(mainScript, /tagShadeSlots: loadTagShadeSlots\(\),\n\s*completeStyle:/, 'state starts from saved slots');
+  });
+
+  it('shades are recomputed for the current theme and written to one style element', () => {
+    const refresh = fnSource('refreshTagShades');
+    assert.match(refresh, /if \(state\.tagColorMode !== 'analogous'\) return;/);
+    assert.match(refresh, /THEME_TAG_PALETTES\[themeId\]/);
+    assert.match(refresh, /if \(key === tagShadeKey\) return;/);
+    assert.match(refresh, /style\.id = 'tag-shade-vars'/);
+    assert.match(refresh, /--tag-shade-\$\{i\}/);
+    assert.match(fnSource('initTagShades'), /attributeFilter: \['data-theme', 'style', 'data-tag-colors'\]/);
+    assert.match(mainScript, /applyTagColorMode\(state\.tagColorMode, \{ fromSync: true \}\);\s*initTagShades\(\);/);
+  });
+
+  it('1.21.0 is the latest release and documented everywhere', () => {
+    assert.match(html, /const APP_VERSION = '1\.21\.0';/);
+    const entry = html.slice(html.indexOf("version: '1.21.0'"), html.indexOf("version: '1.20.0'"));
+    assert.match(entry, /tag: 'latest'/);
+    assert.equal((html.match(/tag: 'latest'/g) || []).length, 1);
+    assert.match(entry, /Twelve new themes: Kanagawa, Monokai Pro, Everforest, and Rosé Pine Moon in Dark; Catppuccin Frappé, Gruvbox Mid, Solarized Mid, and Rosewood in Medium; Gruvbox Light, Rosé Pine Dawn, Everforest, and Catppuccin Latte in Light\. That makes 108 presets, 36 in each group/);
+    assert.match(entry, /Shades of accent tags are easier to tell apart/);
+    assert.match(entry, /most-used tags get the most distinct colors/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    const block = md.slice(md.indexOf('## [1.21.0]'), md.indexOf('## [1.20.0]'));
+    assert.match(block, /### Added\n- \*\*Twelve new themes\*\*[\s\S]*108 presets, 36 in each of Light, Medium, and Dark/);
+    assert.match(block, /### Improved\n[\s\S]*- \*\*Shades of accent tags are easier to tell apart\*\*[\s\S]*- \*\*Most-used tags get the most distinct colors\*\*/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /\*\*108 preset themes\*\* — 36 light \+ 36 medium \+ 36 dark/);
+    assert.match(readme, /\*\*Medium \(36\):\*\*[^\n]*Solarized Mid[^\n]*Gruvbox Mid[^\n]*Rosewood, Catppuccin Frappé/);
+    assert.match(readme, /\*\*Light \(36\):\*\*[^\n]*Catppuccin Latte[^\n]*Everforest[^\n]*Gruvbox Light, Rosé Pine Dawn/);
+    assert.match(readme, /\*\*Dark \(36\):\*\*[^\n]*Kanagawa[^\n]*Monokai Pro[^\n]*Rosé Pine Moon/);
+    assert.match(readme, /your most-used tags get the most distinct colors and keep them/);
+    assert.match(html, /id="help-modal"[\s\S]*Your most-used tags get the most distinct colors, and a tag keeps its color from then on/);
+    assert.match(html, /<p class="tag-color-hint">[^<]*Shades of accent gives your most-used tags the most distinct colors/);
+  });
+
+  it('three new Medium themes balance the tiers and read well', () => {
+    const lib = shadeLib();
+    const favicons = html.match(/const FAVICONS = \{[\s\S]*?\n\s*\};/)[0];
+    const NEW_MEDIUM = { 'catppuccin-frappe': 'Catppuccin Frappé', 'gruvbox-mid': 'Gruvbox Mid', 'solarized-mid': 'Solarized Mid' };
+    for (const [id, name] of Object.entries(NEW_MEDIUM)) {
+      assert.ok(byId[id]?.medium === true && !byId[id].dark, `${id} should be medium`);
+      assert.equal(byId[id].name, name);
+      const block = cssBlock(id)?.[1];
+      assert.ok(block, `CSS block for ${id} missing`);
+      assert.match(block, /color-scheme:\s*dark/);
+      assert.equal(firstHex(cssVar(block, '--accent')), byId[id].accent.toLowerCase(), `${id} swatch accent drifted from CSS`);
+      assert.equal(firstHex(cssVar(block, '--surface')), byId[id].surface.toLowerCase(), `${id} swatch surface drifted from CSS`);
+      const [surface, text, muted] = ['--surface', '--text', '--text-muted'].map((v) => firstHex(cssVar(block, v)));
+      assert.ok(lib.contrastRatio(text, surface) >= 4.5, `${id} text contrast`);
+      assert.ok(lib.contrastRatio(muted, surface) >= 3, `${id} muted text contrast`);
+      assert.match(favicons, new RegExp(`'${id}':`), `${id} missing from FAVICONS`);
+      assert.match(html, new RegExp(`\\[data-theme="${id}"\\] \\.add-btn`), `${id} add-btn text override missing`);
+      assert.ok(palettes[id], `${id} should use its family's colors in Shades of accent`);
+      assert.ok(!shared.includes(`[data-theme="${id}"]`), `${id} is medium, not in the shared dark list`);
+    }
+  });
+
+  it('one more theme per tier (Catppuccin Latte, Rosewood, Rosé Pine Moon) sits in the right tier and reads well', () => {
+    const lib = shadeLib();
+    const favicons = html.match(/const FAVICONS = \{[\s\S]*?\n\s*\};/)[0];
+    const ADDED = [
+      ['catppuccin-latte', 'Catppuccin Latte', 'light'],
+      ['rosewood', 'Rosewood', 'medium'],
+      ['rose-pine-moon', 'Rosé Pine Moon', 'dark'],
+    ];
+    for (const [id, name, tier] of ADDED) {
+      const t = byId[id];
+      assert.ok(t, `${id} missing from THEMES`);
+      assert.equal(t.name, name);
+      assert.equal(tier === 'dark' ? t.dark : tier === 'medium' ? t.medium === true && !t.dark : !t.dark && !t.medium, true, `${id} tier`);
+      const block = cssBlock(id)?.[1];
+      assert.ok(block, `CSS block for ${id} missing`);
+      assert.equal(firstHex(cssVar(block, '--accent')), t.accent.toLowerCase(), `${id} swatch accent drifted from CSS`);
+      assert.equal(firstHex(cssVar(block, '--surface')), t.surface.toLowerCase(), `${id} swatch surface drifted from CSS`);
+      const [surface, text, muted] = ['--surface', '--text', '--text-muted'].map((v) => firstHex(cssVar(block, v)));
+      assert.ok(lib.contrastRatio(text, surface) >= 4.5, `${id} text contrast`);
+      assert.ok(lib.contrastRatio(muted, surface) >= 3, `${id} muted text contrast`);
+      assert.match(favicons, new RegExp(`(^|\\s)'?${id}'?:`, 'm'), `${id} missing from FAVICONS`);
+    }
+    assert.match(cssBlock('catppuccin-latte')[1], /color-scheme:\s*light/);
+    assert.match(cssBlock('rosewood')[1], /color-scheme:\s*dark/);
+    assert.ok(shared.includes('[data-theme="rose-pine-moon"]'), 'Rosé Pine Moon gets the shared dark semantics');
+    for (const id of ['rosewood', 'rose-pine-moon']) {
+      assert.match(html, new RegExp(`\\[data-theme="${id}"\\] \\.add-btn`), `${id} add-btn text override missing`);
+    }
+    assert.ok(palettes['catppuccin-latte'] && palettes['rose-pine-moon'], 'Latte and Moon use their own color sets');
+  });
+});
+
+describe('v1.21.0 recurring schedules and Ctrl+Enter edits', () => {
+  const consts = ['DAY_LABELS', 'MONTH_SHORT'].map((n) => mainScript.match(new RegExp(`const ${n} = \\[[^\\]]*\\];`))[0]).join('\n');
+  const lib = new Function(`
+    ${consts}
+    ${['ordinal', 'joinAnd', 'sortLastAtEnd', 'quarterMonths', 'recurringMonthlyWhen', 'recurringRuleLabel', 'recurringDueOn']
+      .map(fnSource).join('\n')}
+    const RECURRING_SCHEDULE_KEYS = ${mainScript.match(/const RECURRING_SCHEDULE_KEYS = (\[[^\]]*\]);/)[1]};
+    ${fnSource('withRecurringSchedule')}
+    return { ordinal, recurringRuleLabel, recurringDueOn, withRecurringSchedule };
+  `)();
+  const dueDates = (t, from, to) => {
+    const out = [];
+    for (let d = new Date(`${from}T12:00:00`); d <= new Date(`${to}T12:00:00`); d.setDate(d.getDate() + 1)) {
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (lib.recurringDueOn(t, key)) out.push(key);
+    }
+    return out;
+  };
+
+  it('existing rules keep their schedule', () => {
+    assert.deepEqual(dueDates({ rule: 'weekly', days: [4] }, '2026-10-01', '2026-10-31'),
+      ['2026-10-01', '2026-10-08', '2026-10-15', '2026-10-22', '2026-10-29']);
+    assert.equal(dueDates({ rule: 'weekdays' }, '2026-10-19', '2026-10-25').length, 5);
+    assert.equal(dueDates({ rule: 'daily' }, '2026-10-19', '2026-10-25').length, 7);
+    assert.deepEqual(dueDates({ rule: 'custom', days: [1, 3] }, '2026-10-19', '2026-10-25'), ['2026-10-19', '2026-10-21']);
+    assert.equal(lib.recurringDueOn({ rule: 'mystery' }, '2026-10-22'), false);
+  });
+
+  it('every 2 weeks counts from its start date, never before it', () => {
+    const t = { rule: 'biweekly', startDate: '2026-10-06', days: [2] };
+    assert.deepEqual(dueDates(t, '2026-09-01', '2026-11-30'), ['2026-10-06', '2026-10-20', '2026-11-03', '2026-11-17']);
+    assert.deepEqual(dueDates(t, '2027-03-01', '2027-03-31').length, 2, 'stays on track across the DST change');
+    assert.equal(lib.recurringDueOn({ rule: 'biweekly' }, '2026-10-06'), false, 'no start date, never due');
+  });
+
+  it('monthly by weekday: 3rd Thursday (Laura), 1st and 3rd Tuesday (twice a month), last Friday', () => {
+    const laura = { rule: 'monthly', monthBy: 'weekday', weeks: [3], days: [4] };
+    assert.deepEqual(dueDates(laura, '2026-10-01', '2026-12-31'), ['2026-10-15', '2026-11-19', '2026-12-17']);
+    const sara = { rule: 'monthly', monthBy: 'weekday', weeks: [1, 3], days: [2] };
+    assert.deepEqual(dueDates(sara, '2026-10-01', '2026-11-30'), ['2026-10-06', '2026-10-20', '2026-11-03', '2026-11-17']);
+    const lastFri = { rule: 'monthly', monthBy: 'weekday', weeks: [-1], days: [5] };
+    assert.deepEqual(dueDates(lastFri, '2026-10-01', '2026-11-30'), ['2026-10-30', '2026-11-27']);
+    const fourthAndLast = { rule: 'monthly', monthBy: 'weekday', weeks: [4, -1], days: [4] };
+    assert.deepEqual(dueDates(fourthAndLast, '2026-10-01', '2026-10-31'), ['2026-10-22', '2026-10-29']);
+  });
+
+  it('monthly by date: 1st and 15th (twice a month), and the 31st or Last falls on short months\' last day', () => {
+    const twice = { rule: 'monthly', monthBy: 'date', monthDays: [1, 15] };
+    assert.deepEqual(dueDates(twice, '2026-10-01', '2026-11-30'), ['2026-10-01', '2026-10-15', '2026-11-01', '2026-11-15']);
+    assert.deepEqual(dueDates({ rule: 'monthly', monthDays: [31] }, '2026-02-01', '2026-04-30'), ['2026-02-28', '2026-03-31', '2026-04-30']);
+    assert.deepEqual(dueDates({ rule: 'monthly', monthDays: [-1] }, '2028-02-01', '2028-03-31'), ['2028-02-29', '2028-03-31'], 'leap year');
+    assert.deepEqual(dueDates({ rule: 'monthly', monthDays: [30, 31] }, '2026-02-01', '2026-02-28'), ['2026-02-28'], 'only once a day');
+  });
+
+  it('quarterly runs only in its month set', () => {
+    const q = { rule: 'quarterly', monthBy: 'weekday', weeks: [3], days: [4], startMonth: 0 };
+    assert.deepEqual(dueDates(q, '2026-01-01', '2026-12-31'), ['2026-01-15', '2026-04-16', '2026-07-16', '2026-10-15']);
+    assert.deepEqual(dueDates({ ...q, startMonth: 1 }, '2026-10-01', '2026-11-30'), ['2026-11-19']);
+    assert.deepEqual(dueDates({ rule: 'quarterly', monthDays: [1], startMonth: 2 }, '2026-01-01', '2026-12-31'),
+      ['2026-03-01', '2026-06-01', '2026-09-01', '2026-12-01']);
+  });
+
+  it('labels read as plain words', () => {
+    const L = lib.recurringRuleLabel;
+    assert.equal(L({ rule: 'biweekly', startDate: '2026-10-06' }), 'Every other Tue');
+    assert.equal(L({ rule: 'monthly', monthBy: 'weekday', weeks: [3, 1], days: [2] }), 'Monthly on the 1st & 3rd Tue');
+    assert.equal(L({ rule: 'monthly', monthBy: 'weekday', weeks: [-1, 2], days: [5] }), 'Monthly on the 2nd & last Fri');
+    assert.equal(L({ rule: 'monthly', monthBy: 'date', monthDays: [15, 1] }), 'Monthly on the 1st & 15th');
+    assert.equal(L({ rule: 'monthly', monthDays: [-1, 1, 10] }), 'Monthly on the 1st, 10th & last day');
+    assert.equal(L({ rule: 'quarterly', monthBy: 'weekday', weeks: [3], days: [4], startMonth: 1 }), 'Quarterly on the 3rd Thu (Feb, May, Aug, Nov)');
+    assert.equal(L({ rule: 'weekly', days: [1] }), 'Every Mon', 'older rules unchanged');
+    assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 31].map(lib.ordinal),
+      ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '31st']);
+  });
+
+  it('editing a schedule drops the old rule\'s fields and keeps everything else', () => {
+    const before = { id: 't1', content: 'Sync', rule: 'monthly', monthBy: 'weekday', weeks: [3], days: [4], startMonth: 1, tags: ['ace'], lastInjectedDate: '2026-10-15' };
+    const after = lib.withRecurringSchedule(before, { rule: 'daily', days: null });
+    assert.deepEqual(after, { id: 't1', content: 'Sync', rule: 'daily', days: null, tags: ['ace'], lastInjectedDate: '2026-10-15' });
+  });
+
+  it('isDueToday uses the shared schedule check and still skips holidays', () => {
+    const body = fnSource('isDueToday');
+    assert.match(body, /recurringDueOn\(template, today\)/);
+    assert.match(body, /template\.skipHolidays && checkHoliday\(today\)\.isHoliday/);
+  });
+
+  it('the picker validates each rule before saving', () => {
+    const picker = fnSource('createRecurringSchedulePicker');
+    assert.match(picker, /'Please choose at least one day'/);
+    assert.match(picker, /'Please choose at least one day of the month'/);
+    assert.match(picker, /'Please choose a week and a day'/);
+    assert.match(picker, /if \(rule === 'quarterly'\) schedule\.startMonth = startMonth;/);
+  });
+
+  it('Ctrl+Enter saves desk task and comment edits and the recurring forms', () => {
+    assert.match(fnSource('appendEditActions'), /container\.addEventListener\('keydown'[\s\S]*?\(e\.ctrlKey \|\| e\.metaKey\) && e\.key === 'Enter'\) \{ e\.preventDefault\(\); onSave\(\); \}/);
+    assert.match(fnSource('renderRecurringPanel'), /e\.key === 'Enter'\) \{ e\.preventDefault\(\); addBtn\.click\(\); \}/);
+    assert.match(mainScript, /function openRecurringEditForm[\s\S]*?e\.key === 'Enter'\) \{ e\.preventDefault\(\); saveBtn\.click\(\); \}/);
+  });
+
+  it('1.21.0 documents the new schedules and Ctrl+Enter', () => {
+    const entry = html.slice(html.indexOf("version: '1.21.0'"), html.indexOf("version: '1.20.0'"));
+    assert.match(entry, /Recurring tasks can repeat every 2 weeks, monthly, or quarterly/);
+    assert.match(entry, /Ctrl\+Enter \(Cmd\+Enter on Mac\) saves when you edit a task or comment on the desk, or a recurring task/);
+    const md = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf8');
+    const block = md.slice(md.indexOf('## [1.21.0]'), md.indexOf('## [1.20.0]'));
+    assert.match(block, /- \*\*More recurring schedules\*\*[\s\S]*\*\*Every 2 weeks\*\*[\s\S]*\*\*Monthly\*\*[\s\S]*\*\*Quarterly\*\*/);
+    assert.match(block, /### Improved\n- \*\*Ctrl\+Enter saves edits\*\*/);
+    const readme = readFileSync(join(__dirname, '../README.md'), 'utf8');
+    assert.match(readme, /daily \/ weekdays \/ weekly \/ custom days \/ every 2 weeks \/ monthly \/ quarterly/);
+    assert.match(readme, /- \*\*Monthly and quarterly\*\* — \*Day of month\*/);
+    assert.match(html, /id="help-modal"[\s\S]*<strong>Every 2 weeks<\/strong> — pick the first date/);
+    assert.match(html, /id="help-modal"[\s\S]*<strong>Monthly and Quarterly<\/strong> — choose <em>Day of month<\/em>/);
+    assert.match(html, /<strong>Save an edit<\/strong> \(task, note, comment, or recurring task\) — Ctrl\/Cmd \+ Enter/);
   });
 });
