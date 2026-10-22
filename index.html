@@ -3164,7 +3164,6 @@
       text-decoration: none; transition: color 0.15s;
     }
     .changelog-github-link a:hover { color: var(--text); text-decoration: underline; }
-    }
     .sb-account-btn.hidden { display: none; }
 
     .theme-toggle-unused {
@@ -4144,6 +4143,66 @@
     }
 
     .help-modal-body strong { color: var(--text); font-weight: 600; }
+
+    .help-tools {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 24px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .help-search {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.88rem;
+    }
+    .help-search:focus { outline: none; border-color: var(--accent); }
+    .help-index { display: flex; flex-wrap: wrap; gap: 4px; }
+    .help-index button {
+      font: inherit;
+      font-size: 0.74rem;
+      padding: 2px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .help-index button:hover { color: var(--text); border-color: var(--accent); }
+    .help-modal .help-modal-body:has(.help-section) { padding-top: 4px; }
+    .help-section { border-bottom: 1px solid var(--border); }
+    .help-section:last-of-type { border-bottom: none; }
+    .help-section > summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 0;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+    .help-section > summary::-webkit-details-marker { display: none; }
+    .help-section > summary::before {
+      content: '▸';
+      color: var(--accent);
+      font-size: 0.85rem;
+      transition: transform 0.15s;
+    }
+    .help-section[open] > summary::before { transform: rotate(90deg); }
+    .help-section > summary:hover { color: var(--text); }
+    .help-section > :is(ul, ol) { margin-bottom: 12px; }
+    .help-modal-body li[hidden] { display: none; }
+    .help-no-results { padding: 16px 0; text-align: center; }
 
     .help-modal-body code {
       font-size: 0.85em;
@@ -6254,26 +6313,6 @@
       bottom: 50%;
       transform: translateY(50%);
     }
-    #desk-view[data-density="compact"] .item:not(:has(.edit-wrap)) .item-menu-trigger {
-      width: 20px; height: 20px;
-    }
-    /* Compact: menu opens as an absolute floating row above the card */
-    #desk-view[data-density="compact"] .board-column .item-card.menu-open .item:not(:has(.edit-wrap)) {
-      grid-template-areas: unset; /* keep flex layout */
-    }
-    #desk-view[data-density="compact"] .item-card.menu-open .item > .item-actions {
-      position: absolute;
-      bottom: calc(100% + 4px);
-      right: 4px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 4px 6px;
-      box-shadow: 0 4px 16px var(--shadow);
-      z-index: 20;
-      width: auto;
-      flex-wrap: nowrap;
-    }
     #desk-view[data-density="compact"] .board-column .item-actions .edit-btn,
     #desk-view[data-density="compact"] .board-column .item-actions .delete-btn,
     #desk-view[data-density="compact"] .board-column .item-actions .move-btn,
@@ -6957,52 +6996,6 @@
       z-index: 4;
     }
 
-    .item-menu-trigger {
-      width: 22px; height: 22px;
-      border-radius: 5px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-muted);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      opacity: 0.38;
-      transition: opacity 0.15s, border-color 0.15s, color 0.15s, background 0.15s;
-    }
-    .item-menu-trigger svg { width: 11px; height: 9px; display: block; pointer-events: none; }
-    .item-card:hover .item-menu-trigger { opacity: 0.6; }
-    .item-menu-trigger:hover,
-    .item-card.menu-open .item-menu-trigger {
-      opacity: 1 !important;
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-light);
-    }
-
-    /* Comments indicator — pulled out of menu when task has comments */
-    .comments-indicator {
-      width: 22px; height: 22px;
-      border-radius: 5px;
-      border: 1px solid transparent;
-      background: transparent;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      position: relative;
-      color: var(--accent);
-      opacity: 0.65;
-      transition: opacity 0.15s, border-color 0.15s, background 0.15s;
-    }
-    .comments-indicator svg { width: 14px; height: 14px; display: block; pointer-events: none; }
-    .comments-indicator:hover {
-      opacity: 1;
-      border-color: var(--accent);
-      background: var(--accent-light);
-    }
-    .item-card.menu-open .comments-indicator { display: none; }
-    /* The .comment-count-badge inside .comments-indicator inherits its absolute badge styles */
-    .comments-indicator .comment-count-badge {
-      top: -4px; right: -4px;
-    }
-
     /* Actions hidden by default everywhere; shown when menu is open */
     .item > .item-actions {
       display: none;
@@ -7015,39 +7008,7 @@
       margin-top: 0;
       border-top: none;
     }
-    /* Board-column: actions expand as a new grid row */
-    .board-column .item-card.menu-open .item:not(:has(.edit-wrap)) {
-      grid-template-areas:
-        "check"
-        "content"
-        "actions";
-    }
     .board-column .item.note { grid-template-areas: "content"; }
-    .board-column .item-card.menu-open .item.note:not(:has(.edit-wrap)) {
-      grid-template-areas:
-        "content"
-        "actions";
-    }
-    .board-column .item-card.menu-open .item > .item-actions { display: flex; }
-
-    /* Non-board items (notes section etc.): actions float as a popout above the trigger */
-    .item-section .item-card.menu-open .item > .item-actions {
-      display: flex;
-      position: absolute;
-      bottom: calc(100% + 4px);
-      right: 4px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 4px 6px;
-      box-shadow: 0 4px 16px var(--shadow);
-      z-index: 20;
-      width: auto;
-      flex-wrap: nowrap;
-    }
-
-    /* All buttons fully visible when menu is open */
-    .item-card.menu-open .item-actions button { opacity: 1 !important; }
 
     /* Edit mode — existing 3-column layout; trigger hidden; outer actions (delete) shown */
     .board-column .item:has(.edit-wrap) {
@@ -7378,12 +7339,6 @@
         "check tags"
         "content content";
     }
-    .board-column .item-card.menu-open .item.has-tags:not(:has(.edit-wrap)) {
-      grid-template-areas:
-        "check tags"
-        "content content"
-        "actions actions";
-    }
     .item.note.has-tags {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
@@ -7394,12 +7349,6 @@
       row-gap: 6px;
     }
     .item.note.has-tags .item-content { grid-area: content; }
-    .board-column .item-card.menu-open .item.note.has-tags:not(:has(.edit-wrap)) {
-      grid-template-areas:
-        "tags"
-        "content"
-        "actions";
-    }
     .item-section .item.note.has-tags > .item-actions { grid-area: auto; } /* abspos popout: anchor to the whole row */
     /* Compact board rows are a single flex line, so chips take their own line above it */
     #desk-view[data-density="compact"] .board-column .item.has-tags:not(:has(.edit-wrap)) { flex-wrap: wrap; }
@@ -7922,30 +7871,6 @@
         border-top: none;
         justify-content: flex-start;
       }
-      .item-card.menu-open .item:not(:has(.edit-wrap)) {
-        grid-template-areas:
-          "check"
-          "content"
-          "actions";
-      }
-      .item-card.menu-open .item.note:not(:has(.edit-wrap)) {
-        grid-template-areas:
-          "content"
-          "actions";
-      }
-      .item-card.menu-open .item.has-tags:not(:has(.edit-wrap)) {
-        grid-template-areas:
-          "check tags"
-          "content content"
-          "actions actions";
-      }
-      .item-card.menu-open .item.note.has-tags:not(:has(.edit-wrap)) {
-        grid-template-areas:
-          "tags"
-          "content"
-          "actions";
-      }
-      .item-card.menu-open .item > .item-actions { display: flex; }
 
       .board-column .item:has(.edit-wrap) .item-actions,
       .item:has(.edit-wrap) .item-actions {
@@ -8993,232 +8918,148 @@
         <h2 id="help-modal-title" class="modal-title" style="margin:0">How to use Work Desk</h2>
         <button id="help-modal-close" class="help-modal-close" type="button" aria-label="Close">&times;</button>
       </div>
+      <div class="help-tools">
+        <input id="help-search" class="help-search" type="search" placeholder="Search help…" aria-label="Search help" autocomplete="off" spellcheck="false" />
+        <nav id="help-index" class="help-index" aria-label="Help sections"></nav>
+      </div>
       <div class="help-modal-body">
-        <h3>Quick start</h3>
-        <ol>
-          <li>Sign in with your email to enable cloud sync across devices, or click <strong>Continue offline</strong> to use the desk locally.</li>
-          <li>Pick a day on the calendar, or use the arrows at the top of the desk.</li>
-          <li>Choose <strong>Task</strong> or <strong>Note</strong>, type your entry — add <code>#tagname</code> anywhere in the text to tag it — and click <strong>Add</strong>.</li>
-          <li>Everything saves automatically and syncs to the cloud within a few seconds.</li>
-        </ol>
+        <details class="help-section" id="help-quick-start" open>
+          <summary>Quick start</summary>
+          <ol>
+            <li>Sign in with your email to sync across devices, or choose <strong>Continue offline</strong> to keep everything in this browser.</li>
+            <li>Pick a day on the calendar, or use the arrows above the desk.</li>
+            <li>Choose <strong>Task</strong> or <strong>Note</strong>, type it (add <code>#tagname</code> anywhere to tag it), and click <strong>Add</strong>.</li>
+            <li>Click a task's left edge to complete it. Everything saves on its own.</li>
+          </ol>
+        </details>
 
-        <h3>What it does</h3>
-        <ul>
-          <li><strong>Daily desk</strong> — tasks and notes organized by day in New, Active, and Completed / Shelved columns</li>
-          <li><strong>Work, Personal &amp; Projects</strong> — three separate contexts, toggled in the sidebar</li>
-          <li><strong>Projects</strong> — a dedicated space for long-running ideas, collaborations, or side projects not tied to daily tasks</li>
-          <li><strong>Tags</strong> — type <code>#word</code> in any task or note, or click <em>tag</em> on a card — your two most-used tags appear next to the box as one-click picks (they narrow as you type, and skip tags the card already has); the box stays open until you add a tag, press Esc, or click outside it; tags show as small chips in the top-right corner and are searchable with <code>#tagname</code></li>
-          <li><strong>Comments &amp; updates</strong> — add threaded notes under tasks; notes get timestamped updates the same way</li>
-          <li><strong>Search</strong> — click the search box for a floating results overlay across any day; use the <strong>Work / Personal / All</strong> chip to change scope (<strong>All</strong> also searches Projects — clicking a project result opens that project with the item outlined), or search <code>#tagname</code> to filter by tag. Words on separate lines of a task still match (e.g. "vendor about" finds "Call vendor ↵ about the renewal"). Finished tasks are marked <strong>✓ Done</strong> or <strong>Shelved</strong></li>
-          <li><strong>Carry forward</strong> — a one-click button that only appears when there's something to carry; turn on <strong>Auto carry each day</strong> in Options → Behavior to pull it in automatically every time you open the desk</li>
-          <li><strong>Recurring tasks</strong> — templates that auto-add on a schedule you define; optionally skip holidays</li>
-          <li><strong>Holiday-aware scheduling</strong> — US federal holidays built in; add custom dates in Options → Behavior → Holidays; calendar marks the actual holiday date and the federal observed weekday off when they differ (e.g. Independence Day on Jul 4, observed Friday when the 4th falls on a Saturday)</li>
-          <li><strong>Insights</strong> — weekly, monthly, and yearly views with productivity metrics, week-over-week comparison, carry-over analysis, completion streaks, and hoverable charts</li>
-          <li><strong>Full history</strong> — every day you've used stays on your desk, in Search, and in Insights; nothing is trimmed after a year</li>
-          <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark, including Retro, Dot Matrix, Phosphor, Kanagawa, Everforest, Catppuccin Latte and Frappé, Rosewood, and Rosé Pine Dawn and Moon) with mini wireframe previews in Options → Themes, filterable by Light/Med/Dark. The four Unit themes (Zero, One, Two, Eight) come in every tier, each with a thin color stripe across the top header; plus a Custom tab to create up to 5 of your own themes from 5 base colors</li>
-          <li><strong>Cloud sync</strong> — your data is backed up to the cloud and available on any device you sign in to; devices merge changes automatically. Deleting a task or note removes it from every device; <strong>Undo</strong> brings it back everywhere</li>
-          <li><strong>Installable</strong> — install as a home screen app on mobile or desktop for a native app experience</li>
-          <li><strong>Staying up to date</strong> — the app loads the latest version whenever you're online (the saved copy is only used offline). If the app has been open in the background when a new version ships, a <em>Work Desk x.y.z is available</em> message with a <strong>Reload</strong> button appears when you come back to it</li>
-          <li><strong>What's New</strong> — when there's an unread update, a highlighted <strong>What's new</strong> link with a pulsing dot appears under the subtitle; click it to see the changes, and it goes away when you close the window. The version number (<strong>v1.x.x</strong>) at the very bottom of the sidebar opens the same changelog any time</li>
-        </ul>
+        <details class="help-section" id="help-cards">
+          <summary>Cards &amp; columns</summary>
+          <ul>
+            <li><strong>Columns</strong> — tasks move through New, Active, and Completed / Shelved; notes have their own area. The bar above the board shows today's mix (hover for counts)</li>
+            <li><strong>Complete button</strong> — click or tap a task's left edge; click again to reopen. Pick another edge style, or a checkbox, in Options → Appearance → Card layout</li>
+            <li><strong>Action bar</strong> — <em>edit</em>, <em>move</em> (to another day), <em>comment</em> (<em>add update</em> on notes), and <em>tag</em>. Double-click a card to edit it</li>
+            <li><strong>Overflow menu (⋮)</strong> — Start, Shelve / Unshelve, Send to Work or Personal, Send to project…, Convert to note or task, and Delete. <strong>Undo</strong> in the toast brings back what you deleted</li>
+            <li><strong>Shelve</strong> — for a task that isn't done but isn't today's focus; it waits under Shelved until you unshelve it</li>
+            <li><strong>Drag</strong> — move tasks between columns or reorder within one (on touch screens, press and drag). On desktop the space below a column also takes the drop, and a dashed strip shows where it lands</li>
+            <li><strong>Carry forward</strong> — the button appears when earlier days left tasks open. Turn on <em>Auto carry each day</em> in Options → Behavior to do it automatically</li>
+            <li><strong>Formatting</strong> — click <strong>Aa</strong> next to the add box for bold, italic, underline, and bullets</li>
+            <li><strong>Completed tasks</strong> fade and get a strikethrough (Options → Behavior → Tasks); hover to read them</li>
+          </ul>
+        </details>
 
-        <h3>Task &amp; note cards</h3>
-        <ul>
-          <li><strong>Complete button</strong> — click (or tap) a task's left edge to finish it; click it again to reopen. Dragging that starts on the edge doesn't count as a click. Project tasks use the same edge, and finishing one moves it to that project's Archived list</li>
-          <li><strong>Edge styles</strong> — Options → Appearance → Card layout → <em>Complete button</em>. The <strong>"Done" label</strong> (default) reads DONE, then DONE? on hover, DOING while you drag the card, DONE! once finished, and UNDO? when you hover a finished card. Other choices are Bar, Raised bar, Switch, Circle, Square, Diamond, Faint ✓, and Plain edge; <strong>Checkbox</strong> brings back the checkbox. Compact cards are too short for the label, so it shows a bar there</li>
-          <li><strong>Action bar</strong> — common actions sit along the bottom of each card: <em>edit</em>, <em>move</em>, <em>comment</em> / <em>add update</em>, and <em>tag</em></li>
-          <li><strong>Overflow menu (⋮)</strong> — less common actions live here: delete, convert, send to Work/Personal, shelve/unshelve, and start (move to Active)</li>
-          <li><strong>Convert</strong> — switch a task into a note or vice versa from the overflow menu</li>
-          <li><strong>Shelving</strong> — move a task to Shelved when it isn't done but isn't today's focus; unshelf it later from the Done/Shelved column</li>
-          <li><strong>Move to another day</strong> — reschedule a task; it leaves today and appears on the new date; a confirmation toast confirms where it went</li>
-          <li><strong>Send to Work / Personal</strong> — moves a task or note to the other context list</li>
-          <li><strong>Send to project…</strong> — moves a task or note into a project you pick (or <em>+ New project…</em>), keeping its comments and tags; Undo in the toast puts it back</li>
-          <li><strong>Completed tasks</strong> — fade to 62% opacity and show strikethrough (toggle this off in Options → Behavior → Tasks); hover to see them clearly</li>
-        </ul>
+        <details class="help-section" id="help-tags">
+          <summary>Tags</summary>
+          <ul>
+            <li><strong>Add</strong> — type <code>#word</code> anywhere while writing, or click <em>tag</em>; your two most-used tags show up as one-click picks. <code>#ACE</code> and <code>#ace</code> are the same tag</li>
+            <li><strong>Remove</strong> — click the <strong>×</strong> on a chip</li>
+            <li><strong>Tag colors</strong> — Options → Appearance → Tags: <strong>Single color (accent)</strong> (default), <strong>Shades of accent</strong>, or <strong>Multi-color</strong>. Your most-used tags get the most distinct colors and keep them on every device. Click a chip to pin your own color; <em>Reset to auto</em> removes it</li>
+            <li><strong>Tag position</strong> — Options → Appearance → Card layout: Own row (default), Slim headroom, or Action bar</li>
+            <li><strong>Find</strong> — search <code>#tagname</code> to see every tagged task and note</li>
+          </ul>
+        </details>
 
-        <h3>Tags</h3>
-        <ul>
-          <li><strong>Type it inline</strong> — write <code>#ace</code> (or any <code>#word</code>) anywhere in a task or note and it's pulled out into a tag automatically when you save; a lone hashtag with no other text is left as visible text instead</li>
-          <li><strong>Or use the button</strong> — click <em>tag</em> in the action bar to add one without touching the card's text</li>
-          <li><strong>Case-insensitive</strong> — <code>#ACE</code> and <code>#ace</code> are always treated as the same tag; chips are always shown in uppercase</li>
-          <li><strong>Chips</strong> — shown in the top-right corner of the card; click the <strong>×</strong> on a chip to remove that tag</li>
-          <li><strong>Tag position</strong> — Options → Appearance → Card layout: <strong>Own row</strong> (default) puts chips on a row above the text; <strong>Slim headroom</strong> gives every task a short tag row with smaller chips, so text starts at the same height whether or not it has tags (long tags shorten with …; needs the edge complete button, so with Checkbox it works like Own row); <strong>Action bar</strong> puts chips next to <strong>⋮</strong>, and on narrow cards they move to a second line together with ⋮, right-aligned. Compact cards always keep chips on their own line</li>
-          <li><strong>Tag colors</strong> — Options → Appearance → Tags → <em>Tag colors</em>: <strong>Single color (accent)</strong> (default) keeps every tag in the accent color; <strong>Shades of accent</strong> gives each tag one of 8 clearly different colors that suit the theme: the theme's own colors where it has a well-known set (Monokai, Dracula, Nord, Solarized, Gruvbox, Catppuccin, One Dark, Rosé Pine, Tokyo, Kanagawa, Everforest, Mediterranean), otherwise a blend from the accent toward the theme's second color. Your most-used tags get the most distinct colors, and a tag keeps its color from then on; <strong>Multi-color</strong> spreads tags around the color wheel at the accent's brightness. Both follow the theme when you switch, and each tag keeps the same color on every device. There are 8 colors per mode, so with more tags some share a color — pin one to change it</li>
-          <li><strong>Custom tag color</strong> — click any tag chip on a card to pick a preset swatch or a custom color, or set colors from the tag list in Options → Appearance; a custom color overrides either mode, and <em>Reset to auto</em> / <em>auto</em> removes it</li>
-          <li><strong>Find by tag</strong> — search <code>#tagname</code> in the sidebar search box to see every tagged task and note</li>
-        </ul>
+        <details class="help-section" id="help-comments">
+          <summary>Comments &amp; updates</summary>
+          <ul>
+            <li>Click <em>comment</em> on a task, or <em>add update</em> on a note, for a timestamped thread with bold, italic, underline, and bullets</li>
+            <li>Hover a comment for <em>edit</em>, <em>delete</em>, <em>→ task</em>, and <em>→ note</em>. Splitting one off keeps the tags, links back to the original, and can be undone</li>
+            <li><strong>Keep comments open</strong> (Options → Behavior) lets several threads stay open, even across days and refreshes</li>
+          </ul>
+        </details>
 
-        <h3>Comments &amp; updates</h3>
-        <ul>
-          <li><strong>Tasks</strong> — click <em>comment</em> on a card to open the thread; add timestamped comments with bold, italic, underline, and bullet formatting</li>
-          <li><strong>Notes</strong> — use <em>add update</em> for the same threaded follow-ups (handy for living documents)</li>
-          <li><strong>Indent</strong> — comments sit slightly indented under the card so they read as replies, not another task</li>
-          <li><strong>Keep comments open</strong> — in Options → Behavior, turn this on so opening comments on one task doesn't collapse another; it also survives day navigation and page refresh once enabled</li>
-          <li><strong>Multi-line</strong> — press Enter for new lines; numbered lists like <code>1)</code> and bullets stay formatted when you save</li>
-          <li><strong>Hover actions</strong> — edit, delete, <em>→ task</em>, and <em>→ note</em> appear as plain text links on hover</li>
-          <li><strong>Split to task / note</strong> — click <em>→ task</em> or <em>→ note</em> to turn a comment into its own item on the same day; the parent's tags carry over, a breadcrumb comment links back, and the original comment gets a "→ moved to…" annotation; an Undo toast lets you reverse it</li>
-        </ul>
+        <details class="help-section" id="help-recurring">
+          <summary>Recurring tasks</summary>
+          <ul>
+            <li>Open the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
+            <li>Schedules: <strong>Daily</strong>, <strong>Weekdays</strong>, <strong>Weekly</strong>, <strong>Custom</strong> days, <strong>Every 2 weeks</strong> (from a start date), <strong>Monthly</strong>, and <strong>Quarterly</strong></li>
+            <li><strong>Monthly and Quarterly</strong> — <em>Day of month</em> picks dates (the 1st and 15th, or <em>Last</em>; a 29th–31st falls on the last day of shorter months). <em>Day of week</em> picks weeks and a weekday (the 3rd Thursday, or the 1st and 3rd Tuesday). Quarterly also asks which months</li>
+            <li><strong>When they appear</strong> — a due task is added to today when the app opens, syncs, or you switch desks, once per day, so deleting or completing it won't bring it back. Days the app wasn't opened aren't filled in afterward</li>
+            <li>Recurring tasks show a <strong><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></strong> badge. Tags on a template carry to every task, and <em>Skip holidays</em> skips federal and custom holidays</li>
+            <li><strong>Edit or delete</strong> — use the Recurring panel, or <em>Edit recurring</em> in a recurring task's ⋮ menu. The panel flags templates with the same text</li>
+          </ul>
+        </details>
 
-        <h3>Projects</h3>
-        <ul>
-          <li><strong>What it's for</strong> — capture notes and tasks for long-running projects, side ideas, or collaborations that don't fit the daily workflow</li>
-          <li><strong>Create a project</strong> — click the <strong>Projects</strong> tab in the sidebar, then click <strong>+</strong> to add a new project</li>
-          <li><strong>Notes | Tasks tabs</strong> — each project organizes content into two tabs so you're never scrolling through both at once</li>
-          <li><strong>Note preview</strong> — long notes are truncated to a few lines with a <em>show more</em> toggle; turn this off in Options → Behavior → <strong>Truncate long notes</strong></li>
-          <li><strong>Archive</strong> — click <em>archive</em> on any note or task to move it into a collapsed <strong>Archived (n)</strong> section at the bottom of its tab; completing a task automatically archives it, and reopening it puts it back in the list</li>
-          <li><strong>Double-click to edit</strong> — double-click a note's content or a task's text to jump straight into the editor</li>
-          <li><strong>Formatting</strong> — project notes, tasks, and comments use the same toolbar as the desk: <strong>B</strong>, <em>I</em>, <u>U</u>, and • bullets (or <kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd>); <kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves and <kbd>Esc</kbd> cancels</li>
-          <li><strong>Rename / Delete</strong> — the <strong>Rename</strong> and <strong>Delete</strong> buttons in the project header; Delete asks before removing the project and everything in it</li>
-          <li><strong>Project list counts</strong> — each project shows its open tasks and active notes; archived notes and finished tasks aren't counted</li>
-          <li><strong>Pin and reorder</strong> — click the pin on a project in the list (or <strong>Pin</strong> in the project header) to keep it at the top, above a thin line; drag projects to put them in any order within the pinned or unpinned group. Keyboard: focus a project and press <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>. On phones, use <strong>More → Move up / Move down</strong> in the project header</li>
-          <li><strong>Reorder notes and tasks</strong> — drag a card up or down, or focus it and press <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>; archived items keep their own list</li>
-          <li><strong>Progress</strong> — the header shows how many of the project's tasks are done, with a thin bar; the project list shows the same bar</li>
-          <li><strong>More menu</strong> — in the project header: <strong>Copy as Markdown</strong> (open tasks as checkboxes plus notes, with comments and tags, ready for Jira, Confluence, or Slack), <strong>Archive project</strong> (moves it into a collapsed <em>Archived projects</em> group at the bottom of the list; <strong>Unarchive</strong> brings it back), and <strong>Move up / Move down</strong></li>
-          <li><strong>Tags</strong> — click <em>tag</em> on a note or task, or type <code>#word</code> while writing one; chips sit at the top of the card and remove with ×. Search <code>#tagname</code> with the scope chip on <strong>All</strong> to find tagged project items</li>
-          <li><strong>to desk</strong> — moves a note or task to your Work or Personal desk on the day you pick (today by default), with its comments and tags; Undo in the toast puts it back</li>
-          <li><strong>Customize button</strong> — the gear icon in the project header opens the same Themes / Appearance / Behavior options available on the desk</li>
-          <li><strong>Cloud sync</strong> — projects sync to the cloud alongside your Work and Personal data</li>
-        </ul>
+        <details class="help-section" id="help-projects">
+          <summary>Projects</summary>
+          <ul>
+            <li>Click <strong>Projects</strong> in the sidebar, then <strong>+</strong>. Each project has <strong>Notes</strong> and <strong>Tasks</strong> tabs</li>
+            <li>Cards work like the desk: the same editor, tags, comments, and complete edge. Double-click to edit</li>
+            <li><strong>Archive</strong> — <em>archive</em> moves an item into the collapsed <strong>Archived</strong> list; completing a task archives it, and reopening brings it back</li>
+            <li><strong>Pin and reorder</strong> — pin keeps a project at the top; drag projects, notes, and tasks to reorder them, or press <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></li>
+            <li><strong>More menu</strong> — Copy as Markdown (for Jira, Confluence, or Slack), Archive project, and Move up / Move down. <strong>Rename</strong> and <strong>Delete</strong> sit beside it</li>
+            <li><strong>to desk</strong> sends an item to Work or Personal on the day you pick; <strong>Send to project…</strong> on a desk card goes the other way. Undo puts it back</li>
+          </ul>
+        </details>
 
-        <h3>Board layout</h3>
-        <ul>
-          <li><strong>Today's Progress</strong> — the sidebar mini card always shows today's completion percentage, even while you're viewing a different day; click it to jump straight back to today</li>
-          <li><strong>Left accent bar</strong> — each card has a colored left border matching its column (New = accent, Active = hover accent, Done = done color, Notes = muted)</li>
-          <li><strong>Progress bar</strong> — the segmented bar above the board shows today's task mix; hover segments for counts</li>
-          <li><strong>Column counts</strong> — the Done/Shelved header shows <em>completed / shelved</em> counts separately</li>
-          <li>Drag tasks between columns or reorder within a column (desktop)</li>
-          <li><strong>Drop below a column</strong> — on desktop, the empty space under a column counts as that column while you drag, all the way down the page. The far left margin counts as New and the far right as Completed. A dashed strip labeled <em>Drop in Active</em> (or New / Completed) shows where the task will go, so you don't have to scroll back up to the box. Below Completed / Shelved it marks the task Completed; to shelve, drop on the Shelved box. The gaps between columns and the Notes area don't accept drops</li>
-        </ul>
+        <details class="help-section" id="help-navigation">
+          <summary>Navigation &amp; search</summary>
+          <ul>
+            <li><strong>Calendar</strong> — dots mark days with data, and yellow badges count tasks left open on past days. The <strong>Today chip</strong> beside the month jumps back</li>
+            <li><strong>Arrows</strong> step a day at a time, and <strong>Back to today</strong> returns. On narrow screens, or with the sidebar at the top or bottom, a week strip replaces the calendar</li>
+            <li><strong>On launch</strong> — the app reopens your last desk and day; change it with <em>Open desk</em> and <em>On launch</em> in Options → Behavior → General</li>
+            <li><strong>Search</strong> — the sidebar box matches text, comments, and <code>#tags</code> on every day. The scope chip switches between Work, Personal, and All (All includes Projects). Click a result to jump to it</li>
+            <li><strong>What's new</strong> — a link under the subtitle means there's an update; the version in the account menu opens the changelog any time</li>
+          </ul>
+        </details>
 
-        <h3>Options menu</h3>
-        <ul>
-          <li>Open with the customize button (⚙) near the date, or <strong>Options</strong> in the account menu at the bottom of the sidebar; settings are split into <strong>Themes</strong>, <strong>Appearance</strong>, and <strong>Behavior</strong> tabs</li>
-          <li><strong>Summary list</strong> — Appearance and Behavior open on a short list, each row with a one-line note of what's inside (e.g. <em>Card layout: Density, complete button, tag spot</em>); hover a row to see its current settings. Click a row to open that section; <strong>‹ Back</strong> or <strong>Esc</strong> goes back, and Esc again closes Options. On/off settings are switches, and a <em>New</em> tag marks settings added in this release until you open that section</li>
-          <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) with mini wireframe previews, filterable by Light/Med/Dark, plus a Custom tab to create up to 5 of your own themes. The line under the filter names your current theme; click <strong>Show</strong> to jump to its group</li>
-          <li><strong>Appearance</strong> — Card layout (Comfortable/Compact, Complete button style, Tag position), Typography (text size Small/Default/Large, 8 font families), Layout (sidebar left, right, top, or bottom), Effects (card glow on hover, gradient header), Background (patterned background), and Tags (tag colors). The tag list shows your 8 most-used tags (<strong>Show all</strong> for the rest); <strong>Reset</strong> appears next to a tag only when you've pinned a color</li>
-          <li><strong>Behavior</strong> — organized into General, Tasks, Projects, Insights, and Holidays sections; includes Startup view, week start day (Sunday/Monday), Quieter weekends, Keep comments open, Auto-collapse Completed (3–20 threshold), Auto carry each day, celebration confetti, Confirm before delete, Strike-through completed tasks, Truncate long notes, US federal holidays toggle, and custom holiday management</li>
-          <li><strong>Patterned background</strong> — Options → Appearance → Background. Turn on <em>Patterned background</em>, pick one of 12 patterns (Graph paper, Isometric, Herringbone, Greek key, and more; the name of the one you picked shows under the grid), and drag <em>Strength</em> from 2% (barely there) to 45%. The pattern follows your theme's colors and only shows behind the board; cards stay solid. Arrow keys move between patterns. Turning it off remembers your choice</li>
-          <li><strong>Sidebar at the top or bottom</strong> — Options → Appearance → Sidebar position. The sidebar becomes a bar across the screen: tabs, search, Today's Progress, and the account button in one row (it wraps to two on narrower windows). The calendar is replaced by the week strip above the board, the account menu opens downward from a top bar, and the collapse button is hidden. With the bar at the bottom, search results and toasts open above it. Phones keep their usual layout</li>
-          <li><strong>Custom holidays</strong> — upcoming holidays are listed with their weekday; past ones are tucked away behind <strong>Show past</strong></li>
-          <li><strong>Reset to defaults</strong> — the link at the bottom of Appearance or Behavior puts that tab's settings back to how a new install starts. Your theme, pinned tag colors, and custom holidays are kept</li>
-        </ul>
+        <details class="help-section" id="help-insights">
+          <summary>Insights</summary>
+          <ul>
+            <li>Pick <strong>Week</strong>, <strong>Month</strong>, or <strong>Year</strong>; the arrows step back, and <em>This week</em> (or month or year) returns</li>
+            <li><strong>Summary</strong> — completion rate, average completions, carry-over rate, most productive day, and a comparison with the period before</li>
+            <li><strong>Tasks by Tag</strong>, <strong>Lingering Tasks</strong> (oldest open), and <strong>Shelved Review</strong>, where <em>Bring back</em> moves a task to today's Active column</li>
+            <li><strong>Carry-over analysis</strong> shows when tasks were left unfinished, with the dates behind each weekday (e.g. Wed: Sep 9 (2) · Sep 23 (1))</li>
+            <li><strong>Streaks</strong> come with a heatmap. <strong>Weekends don't break streaks</strong> unless you turn that off in Options → Behavior → Insights</li>
+            <li><strong>Charts</strong> switch between bar, line, stacked, and pie. Click a day in the table, chart, or heatmap to open it on the desk</li>
+          </ul>
+        </details>
 
-        <h3>Navigation</h3>
-        <ul>
-          <li><strong>Calendar</strong> — pick any day (it fills with your theme color); dots mean data exists; yellow number badges on past days count open tasks left behind (rose on amber-accent themes, the same color as Insights <em>carried over</em>). The legend underneath spells this out; its Left open sample is just the color, not a count</li>
-          <li><strong>Today chip</strong> — after browsing the calendar to another month, click <strong>Today</strong> beside the month name to jump back</li>
-          <li><strong>Quieter weekends</strong> — Options → Behavior → General grays the Saturday and Sunday numbers on the calendar: Off, Work only, or Both desks</li>
-          <li><strong>Open desk</strong> — Options → Behavior → General chooses the desk the app starts on: Last used, Work, or Personal. <em>On launch</em> separately picks the day (last viewed or Today)</li>
-          <li><strong>Calendar legend and Today's Progress</strong> — Options → Appearance → Layout has switches to hide the calendar legend and the sidebar's Today's Progress card</li>
-          <li><strong>Arrow buttons</strong> — step day by day at the top of the desk</li>
-          <li><strong>Today</strong> — click <strong>Back to today</strong> beside the date to return instantly</li>
-          <li><strong>Week strip</strong> — on narrower screens a compact week picker appears above the board; use <strong>&lt;</strong> / <strong>&gt;</strong> to jump week by week (start day follows your Options → Behavior setting)</li>
-          <li><strong>On refresh</strong> — the app reopens to whatever tab and date you last had open; set Startup view to <em>Always open Today</em> in Options → Behavior if you'd rather it always land on today's Work desk</li>
-        </ul>
+        <details class="help-section" id="help-options">
+          <summary>Options</summary>
+          <ul>
+            <li>Open with ⚙ near the date or <strong>Options</strong> in the account menu. Each tab opens on a short list; click a row to open it, and <strong>‹ Back</strong> or <strong>Esc</strong> to return</li>
+            <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) with previews and a Light/Med/Dark filter, plus up to 5 <strong>Custom</strong> themes from 5 colors</li>
+            <li><strong>Appearance</strong> — card layout, text size and font, sidebar position (left, right, top, or bottom), effects, a patterned background, and tag colors</li>
+            <li><strong>Behavior</strong> — startup, week start, quieter weekends, comments, auto-collapse and auto carry, confetti, delete confirmation, strikethrough, long notes, and holidays (US federal plus your own dates)</li>
+            <li><strong>Reset to defaults</strong> at the bottom of a tab resets just that tab; your theme, pinned tag colors, and custom holidays stay. A <em>New</em> tag marks settings from the latest release</li>
+          </ul>
+        </details>
 
-        <h3>Search</h3>
-        <ul>
-          <li>Click into the sidebar search box to open a floating results overlay that stays clear of the input so you can keep typing</li>
-          <li>Matches task/note text, comments, and — with <code>#tagname</code> — tags, across every day</li>
-          <li>Use the <strong>Work / Personal / All</strong> chip next to the box to search one context, or Work, Personal, and Projects together</li>
-          <li>Click a result to jump straight to that day and item; press <strong>Escape</strong> or the <strong>×</strong> to close, or click outside the overlay</li>
-        </ul>
+        <details class="help-section" id="help-sync">
+          <summary>Sync, backup &amp; storage</summary>
+          <ul>
+            <li><strong>Signed in</strong>, changes sync a few seconds after you edit, and devices merge rather than overwrite. Deleting removes an item everywhere, and Undo brings it back everywhere. Your settings sync too</li>
+            <li><strong>Continue offline</strong> keeps data in this browser only, so clearing site data erases it. Use <strong>Sign in to sync</strong> in the account menu when you're ready</li>
+            <li><strong>Account menu</strong> — the button at the bottom of the sidebar shows sync status (☁️ / 🔄 / ✓ / !) and holds Options, Help, What's new, Export, Import, Repair duplicates, Sign in / Sign out, and the version</li>
+            <li><strong>Export and Import</strong> — <em>Desk</em> covers the tab you're on; <em>All Desks</em> bundles Work, Personal, and Projects. Importing asks whether to <strong>Merge</strong> with your data or <strong>Replace</strong> it</li>
+            <li><strong>Repair duplicates</strong> cleans up copies that sync may have left behind</li>
+            <li><strong>Browser storage</strong> holds about 5 MB; at 80% full a banner suggests Export All. While you type, incoming changes wait until you click away</li>
+            <li>When a new version ships while the app is open, a message offers <strong>Reload</strong></li>
+          </ul>
+        </details>
 
-        <h3>Recurring tasks</h3>
-        <ul>
-          <li>Open via the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
-          <li>Templates auto-add on the schedule you set: <strong>Daily</strong>, <strong>Weekdays</strong>, <strong>Weekly</strong>, <strong>Custom</strong> days, <strong>Every 2 weeks</strong>, <strong>Monthly</strong>, or <strong>Quarterly</strong></li>
-          <li><strong>Every 2 weeks</strong> — pick the first date; it repeats every other week on that weekday</li>
-          <li><strong>Monthly and Quarterly</strong> — choose <em>Day of month</em> to pick dates (e.g. the 1st and 15th, or <em>Last</em> for the last day; a 29th–31st falls on the last day in shorter months), or <em>Day of week</em> to pick weeks and a weekday (e.g. the 3rd Thursday, or the 1st and 3rd Tuesday for twice a month). Quarterly also asks which months it runs in</li>
-          <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds or saves a recurring task</li>
-          <li><strong>When they appear</strong> — a due task is added to <em>today</em> whenever the app opens or refreshes, syncs (if signed in: every 5 minutes and when you switch back to the tab), or you switch between Work and Personal. You don't need to be viewing today. Each one is added once per day, so deleting or completing it won't bring it back. Days the app wasn't opened aren't filled in afterward, and future days show their recurring tasks only once that day arrives. In offline mode, a tab left open overnight picks up the new day after a refresh</li>
-          <li>Injected tasks show a <strong><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></strong> badge on the card</li>
-          <li><strong>Edit or delete</strong> — click <em>edit</em> or <em>delete</em> on any template in the recurring panel, or use the overflow menu (⋮) on an injected task card and choose <em>Edit recurring</em></li>
-          <li><strong>Tags on templates</strong> — add tags via the <em>tag</em> link or type <code>#tagname</code> in the content; every injected task inherits them</li>
-          <li><strong>Skip holidays</strong> — tick the checkbox to skip US federal and custom holidays; requires holidays to be enabled in Options → Behavior</li>
-          <li>Duplicate detection — the panel highlights templates with identical content so you can clean up extras</li>
-        </ul>
+        <details class="help-section" id="help-phone">
+          <summary>Phone &amp; install</summary>
+          <ul>
+            <li><strong>Install</strong> — use your browser's install option, or on iPhone <strong>Share → Add to Home Screen</strong>. Installed, it opens in its own window and works offline</li>
+            <li><strong>Phone menu</strong> — the top bar keeps your tabs, search, and Help; the <strong>menu button</strong> holds your account, backup, Options, and What's new. The dot beside it shows sync status</li>
+            <li>The add bar stays at the bottom, the week strip picks the day, and a task's left edge is wider for tapping</li>
+          </ul>
+        </details>
 
-        <h3>Insights</h3>
-        <ul>
-          <li>Switch between <strong>Week</strong>, <strong>Month</strong>, and <strong>Year</strong> views, and step back/forward with the arrows</li>
-          <li><strong>Productivity summary</strong> — completion rate, average daily completions, carry-over rate, and your most productive day</li>
-          <li><strong>Click a day to open it</strong> — click a row in the Day-by-day table, a bar in the breakdown chart, or any heatmap square to jump to that day on the Desk. In Year view, clicking a month bar opens that month in Insights instead</li>
-          <li><strong>This week / This month / This year</strong> — after stepping to another period with the arrows, this button next to them takes you back to the current one</li>
-          <li><strong>Week-over-week, Month-over-month, Year-over-year</strong> — compares completions, carry-overs, and completion rate with the previous period. A month or year still in progress is compared with the same number of days at the start of the last one (e.g. Oct 1–6 vs Sep 1–6), so early-month numbers aren't measured against a whole month</li>
-          <li><strong>Tasks by Tag</strong> — done, open, shelved, and carried counts for each tag in the period. A task with two tags counts under both, and untagged tasks show as <em>No tag</em>. Long lists show the top 8 with a <em>Show all</em> link</li>
-          <li><strong>Lingering Tasks</strong> — your five oldest open tasks right now (regardless of the period), with how long each has been open, when it was created, and the day it was last carried from. <em>Open</em> jumps to it on the Desk</li>
-          <li><strong>Shelved Review</strong> — shelved tasks sitting on days in the period. <em>Bring back</em> unshelves the task and moves it onto today's Active column (the same task, not a copy); <em>Open</em> jumps to the day it's on. The footer shows how many tasks are shelved in total and the oldest one's date. Tasks are dated by the day they sit on, since the app doesn't record when something was shelved</li>
-          <li><strong>Carry-over analysis</strong> — each carry-over is counted on the day the task was left unfinished. Month and Year add a trend chart (by week or by month; Year stops at the current month), and each weekday bar shows the specific dates behind it on the same line (e.g. Wed: Sep 9 (2) · Sep 23 (1)); hover a row to see the full list when it's too long to fit</li>
-          <li><strong>Streak tracking</strong> — current and longest streaks based on days with desk activity, plus a heatmap matched to the period you're viewing. Each block is a day (darker means more tasks), labeled by weekday, date, or month underneath</li>
-          <li><strong>Weekends don't break streaks</strong> (Options → Behavior → Insights, on by default) — Fri → Mon stays consecutive for streak counting; if you work a Saturday or Sunday it still counts, but an idle weekend does not reset the streak</li>
-          <li><strong>Charts</strong> — switch between bar, line, stacked, and pie; hover any segment or point for exact counts</li>
-          <li><strong>Activity heatmap</strong> (year view) — GitHub-style grid showing completion intensity by day; color adapts to your active theme</li>
-          <li>Day-by-day detail table shows full breakdown including carried-over and newly created counts; dates use the real day label (e.g. <em>Mon, Sep 21</em>), with today marked as <em>Tue, Sep 22 (Today)</em></li>
-        </ul>
+        <details class="help-section" id="help-shortcuts" open>
+          <summary>Keyboard shortcuts</summary>
+          <ul>
+            <li><strong>Add a task, note, or comment</strong> — Ctrl/Cmd + Enter</li>
+            <li><strong>Save an edit</strong> (task, note, comment, or recurring task) — Ctrl/Cmd + Enter</li>
+            <li><strong>Bold / Italic / Underline</strong> — Ctrl/Cmd + B / I / U</li>
+            <li><strong>Reorder a project, note, or project task</strong> — Alt + ↑ / ↓</li>
+            <li><strong>Cancel an edit or close a menu</strong> — Escape</li>
+          </ul>
+        </details>
 
-        <h3>Cloud sync &amp; data</h3>
-        <ul>
-          <li>Sign in with email to enable sync; your data is stored in the cloud and isolated per account</li>
-          <li><strong>Continue offline</strong> — you can use the desk without signing in; data stays in this browser only and can be wiped if site data is cleared. Use <strong>Sign in to sync</strong> in the account menu at the bottom of the sidebar when you’re ready to create an account or sync</li>
-          <li><strong>Synced preferences</strong> — theme, card density, strike-through, Keep comments open, Auto-collapse Completed, Auto carry, week start day, startup view, quieter weekends, confetti, confirm before delete, weekends don't break streaks, font size, font family, sidebar position, card glow, gradient header, tag colors, and holiday settings all follow your account across devices</li>
-          <li><strong>Account menu</strong> — the button at the bottom of the sidebar shows your email and sync status (☁️ / 🔄 / ✓ / ! with <em>Synced</em>, <em>Syncing…</em>, or <em>Sync error</em>). Click it for Options, Help, What's new, Export, Import, Repair duplicates, Sign in / Sign out, and the version</li>
-          <li>Use <strong>Sign out</strong> in the account menu to switch accounts</li>
-          <li>Changes push to the cloud a few seconds after you edit; focusing the tab or waiting a few minutes also pulls updates from other devices</li>
-          <li><strong>Light sync checks</strong> — between edits, the app only asks the cloud whether anything changed and downloads your data only when another device (or an add-task shortcut) saved something; it also does a full sync each time it opens and at least every 4 hours. Uploads are skipped when nothing changed</li>
-          <li><strong>Several tabs</strong> — with the desk open in more than one tab, a change saved in one tab shows up in the others right away</li>
-          <li><strong>Typing comes first</strong> — while you're writing a comment, editing a task, or adding to a column, updates from the cloud or another tab wait until you click away, so nothing you're typing is reset</li>
-          <li>Opening on a new device: sign in and your history loads automatically (devices merge rather than overwrite)</li>
-          <li><strong>Backup / restore</strong> — <em>Export/Import Desk</em> saves or restores the current tab (Work, Personal, or Projects) individually; <em>Export/Import All</em> bundles every desk into a single file for a complete backup; importing a file from a different desk shows a confirmation warning before proceeding</li>
-          <li><strong>Repair duplicates</strong> — cleans duplicate task IDs within a day and across days, and collapses same-day copies of the same recurring task if sync ever left extras behind</li>
-          <li><strong>Full history</strong> — all of your days are kept on this device and in the cloud; older days are no longer removed after a year</li>
-          <li><strong>Browser storage</strong> — the desk lives in this browser's storage, which holds about 5 MB per site. From half full, the account menu shows how much is used; at 80% a banner suggests <strong>Export All</strong> (and <strong>Sign in</strong> if you're not signed in). If storage fills up, new changes stay on screen and still sync when signed in, and the banner says so. × hides the banner for the rest of the browser session unless usage climbs another 5%</li>
-        </ul>
-
-        <h3>Mobile &amp; PWA</h3>
-        <ul>
-          <li>Install as a home screen app: on Chrome/Edge tap <strong>Install and create shortcut</strong> (or address bar install icon on desktop)</li>
-          <li>On iPhone/Safari: tap <strong>Share → Add to Home Screen</strong></li>
-          <li>Once installed, opens in its own window without browser chrome and works offline</li>
-          <li>Use the action links under each card (edit / move / comment) and the <strong>⋮</strong> overflow menu for the rest</li>
-          <li>Tap a task's <strong>left edge</strong> to complete it (it's wider on touch screens), or the checkbox if you picked Checkbox</li>
-          <li>The add bar sticks to the bottom of the screen so you can capture a task without scrolling up</li>
-          <li>The week strip above the board replaces the sidebar calendar on smaller screens</li>
-          <li><strong>Phone menu</strong> — the top bar keeps your tabs, search, and Help. Tap the <strong>menu button</strong> (three lines, top right) for your account and Sign in / Sign out, Export / Import, Repair duplicates, <strong>Options</strong>, and <strong>What's new</strong>. Close it with ×, a tap outside, Esc, or a swipe down on the handle</li>
-          <li>The <strong>dot</strong> beside the menu button shows sync: filled when synced, outlined while syncing, red on an error, hollow when you're not signed in. A small dot on the menu button means you're not signed in</li>
-          <li>On phones, Options opens as a sheet from the bottom and the Today's Progress card is hidden — the progress bar and <strong>Back to today</strong> at the top of the desk cover it</li>
-        </ul>
-
-        <h3>Tips</h3>
-        <ul>
-          <li>Type <code>#tagname</code> while writing a task or note to tag it on the spot — no extra clicks needed</li>
-          <li>Double-click a task, note, or comment to edit it on desktop</li>
-          <li>Click <strong>Aa</strong> next to the input box to show bold, italic, underline, and bullet formatting buttons</li>
-          <li>After deleting, click <strong>Undo</strong> in the toast before it disappears</li>
-          <li>Press <strong>Ctrl+Enter</strong> (or <strong>Cmd+Enter</strong>) in the add box or a comment box to submit without clicking Add, or while editing to save without clicking Save</li>
-          <li>Use the sidebar collapse button (‹) to give the board more room</li>
-          <li>Completing a task triggers a small confetti burst (turn it off in Options → Behavior)</li>
-          <li>The theme picker adapts the entire UI including the activity heatmap and progress bar colors; use the <strong>Custom</strong> tab to create your own theme from 5 picked colors</li>
-          <li>Click the version number (<strong>v1.x.x</strong>) at the bottom of the sidebar to see the full changelog (on phones: menu → What's new); a <strong>What's new</strong> link under the subtitle means there's something new</li>
-        </ul>
-
-        <h3>Keyboard shortcuts</h3>
-        <ul>
-          <li><strong>Add task/note</strong> — Ctrl/Cmd + Enter</li>
-          <li><strong>Add comment/update</strong> — Ctrl/Cmd + Enter</li>
-          <li><strong>Save an edit</strong> (task, note, comment, or recurring task) — Ctrl/Cmd + Enter</li>
-          <li><strong>Bold</strong> — Ctrl/Cmd + B</li>
-          <li><strong>Italic</strong> — Ctrl/Cmd + I</li>
-          <li><strong>Underline</strong> — Ctrl/Cmd + U</li>
-          <li><strong>Cancel edit / close menu</strong> — Escape</li>
-        </ul>
-
-        <h3>Possible future improvements</h3>
-        <ul>
-          <li><strong>Data encryption</strong> — opt-in PIN or passphrase-based AES-256 encryption of stored data so the Supabase DB owner cannot read tasks in plain text; PIN (4–6 digits) blocks casual viewing, a full passphrase blocks determined attacks</li>
-          <li><strong>Local weather</strong> — an opt-in, small readout like 72°F ☀️ in the header or sidebar, using Open-Meteo (free, no API key). Off by default because turning it on asks for your location</li>
-          <li><strong>Suggested colors for custom themes</strong> — pick one color or a mood (or use a color wheel or hex code) and let the app fill in the rest of the theme, plus a <em>Surprise me</em> option</li>
-        </ul>
+        <p id="help-no-results" class="help-no-results hidden">Nothing in Help matches that. Try a shorter word.</p>
       </div>
       <div class="help-modal-footer">
         <button id="help-modal-dismiss" class="modal-btn primary" type="button">Got it</button>
@@ -9395,6 +9236,10 @@
             'Ctrl+Enter (Cmd+Enter on Mac) saves when you edit a task or comment on the desk, or a recurring task',
             'Shades of accent tags are easier to tell apart. Themes with a well-known color set (Monokai, Dracula, Nord, Solarized, Gruvbox, Catppuccin, One Dark, Rosé Pine, Tokyo, Kanagawa, Everforest, Mediterranean) use their own colors; other themes blend from the accent toward the theme\'s second color, with a check that no two colors look alike',
             'Your most-used tags get the most distinct colors, and a tag keeps its color from then on (synced across devices). Tag colors change once when you update; pinned colors are untouched',
+            'Help is shorter and easier to find your way around: a search box shows only the matching lines, a row of section links jumps to a topic, and sections fold open and closed (Quick start and Keyboard shortcuts start open)',
+          ] },
+          { label: 'Fixed', items: [
+            'A stray brace in the stylesheet made the browser skip the style rule after it',
           ] },
         ],
       },
@@ -10470,7 +10315,6 @@
     let toastTimer = null;
     let undoTimer = null;
     let pendingUndo = null;
-    let openMenuId = null;
     let confettiCanvas = null;
     let confettiAnim = null;
 
@@ -11727,146 +11571,14 @@
       { cmd: 'insertUnorderedList', label: '•', title: 'Bullet list' },
     ];
 
-    const ICON_PENCIL = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" fill="currentColor" stroke="#334155" stroke-width="1.4" stroke-linejoin="round"/>
-      <path d="M13.5 6.5l3 3" stroke="#334155" stroke-width="1.4" stroke-linecap="round"/>
-    </svg>`;
 
-    const ICON_SPEECH_BUBBLE = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M7 6.5A2.5 2.5 0 0 1 9.5 4h5A2.5 2.5 0 0 1 17 6.5V12a2.5 2.5 0 0 1-2.5 2.5H12l-2 1.8V14.5H9.5A2.5 2.5 0 0 1 7 12V6.5z" fill="currentColor" fill-opacity="0.35" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-    </svg>`;
 
-    const ICON_SHELF = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 7h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z" fill="currentColor" fill-opacity="0.3" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-      <path d="M4 7l2-3h12l2 3" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-      <path d="M10 12h4" stroke="#334155" stroke-width="1.4" stroke-linecap="round"/>
-    </svg>`;
 
-    const ICON_UNSHELF = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 4v9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-      <path d="M8.5 8.5L12 5l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M5 17h14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-    </svg>`;
 
-    const ICON_CALENDAR = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="4" y="5" width="16" height="15" rx="2" fill="currentColor" fill-opacity="0.3" stroke="currentColor" stroke-width="1.4"/>
-      <path d="M4 9h16" stroke="currentColor" stroke-width="1.4"/>
-      <path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-    </svg>`;
 
-    const ICON_SEND = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      <path d="M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M3 7c0-1.1.9-2 2-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.4"/>
-      <path d="M3 17c0 1.1.9 2 2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.4"/>
-    </svg>`;
 
-    const ICON_TRASH = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 7h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" stroke="currentColor" stroke-width="1.4"/>
-      <path d="M7 7l.8 12.2c.1 1.3 1.2 2.3 2.5 2.3h5.4c1.3 0 2.4-1 2.5-2.3L19 7" fill="currentColor" fill-opacity="0.35" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-      <path d="M10 11v5M14 11v5" stroke="#334155" stroke-width="1.3" stroke-linecap="round"/>
-    </svg>`;
 
-    const ICON_HAMBURGER = `<svg viewBox="0 0 12 10" fill="currentColor" aria-hidden="true">
-      <rect x="0" y="0"   width="12" height="1.6" rx="0.8"/>
-      <rect x="0" y="4.2" width="12" height="1.6" rx="0.8"/>
-      <rect x="0" y="8.4" width="12" height="1.6" rx="0.8"/>
-    </svg>`;
 
-    const ICON_CONVERT = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 8h13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      <path d="M14 5l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M20 16H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      <path d="M10 13l-3 3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
-
-    function setTooltip(btn, text) {
-      btn.dataset.tooltip = text;
-      btn.title = text;
-      btn.setAttribute('aria-label', text);
-    }
-
-    function createEditButton(onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'edit-btn';
-      setTooltip(btn, 'Edit');
-      btn.innerHTML = ICON_PENCIL;
-      btn.addEventListener('click', onClick);
-      return btn;
-    }
-
-    function createDeleteButton(onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'delete-btn';
-      setTooltip(btn, 'Delete');
-      btn.innerHTML = ICON_TRASH;
-      btn.addEventListener('click', onClick);
-      return btn;
-    }
-
-    function createCommentDeleteButton(onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'comment-delete';
-      setTooltip(btn, 'Delete comment');
-      btn.innerHTML = ICON_TRASH;
-      btn.addEventListener('click', onClick);
-      return btn;
-    }
-
-    function createShelfButton(isShelved, onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'shelf-btn' + (isShelved ? ' unshelf' : '');
-      setTooltip(btn, isShelved ? 'Restore to active' : 'Shelve');
-      btn.innerHTML = isShelved ? ICON_UNSHELF : ICON_SHELF;
-      btn.addEventListener('click', onClick);
-      return btn;
-    }
-
-    function createStartButton(onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'board-action-btn';
-      btn.textContent = 'Start';
-      setTooltip(btn, 'Move to Active');
-      btn.addEventListener('click', onClick);
-      return btn;
-    }
-
-    function createMoveButton(onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'move-btn';
-      setTooltip(btn, 'Move to another day');
-      btn.innerHTML = ICON_CALENDAR;
-      btn.addEventListener('click', onClick);
-      return btn;
-    }
-
-    function createSendToListButton(onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'send-btn';
-      const otherLabel = state.listContext === 'work' ? 'Personal' : 'Work';
-      setTooltip(btn, `Send to ${otherLabel} list`);
-      btn.innerHTML = ICON_SEND;
-      btn.addEventListener('click', onClick);
-      return btn;
-    }
-
-    function createConvertButton(isTask, onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'convert-btn';
-      setTooltip(btn, isTask ? 'Convert to note' : 'Convert to task');
-      btn.innerHTML = ICON_CONVERT;
-      btn.addEventListener('click', onClick);
-      return btn;
-    }
 
     function convertItem(id) {
       const found = findItem(id);
@@ -11894,27 +11606,6 @@
       saveData();
       showToast(wasTask ? 'Task converted to note' : 'Note converted to task');
       render();
-    }
-
-    function createCommentsButton(commentCount, isExpanded, onClick) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'comments-toggle' +
-        (isExpanded ? ' active' : '') +
-        (commentCount > 0 ? ' has-comments' : '');
-      const label = commentCount > 0 ? `Comments (${commentCount})` : 'Comments';
-      setTooltip(btn, label);
-      btn.innerHTML = ICON_SPEECH_BUBBLE;
-
-      if (commentCount > 0) {
-        const badge = document.createElement('span');
-        badge.className = 'comment-count-badge';
-        badge.textContent = commentCount > 9 ? '9+' : String(commentCount);
-        btn.appendChild(badge);
-      }
-
-      btn.addEventListener('click', onClick);
-      return btn;
     }
 
     function escapeHtml(str) {
@@ -12906,24 +12597,6 @@
       // Reset project customize button state
       if (els.projectCustomizeBtn) {
         els.projectCustomizeBtn.setAttribute('aria-expanded', 'false');
-      }
-    }
-
-    function openItemMenu(id) {
-      if (openMenuId && openMenuId !== id) {
-        const prev = document.getElementById(`item-${openMenuId}`);
-        if (prev) prev.classList.remove('menu-open');
-      }
-      openMenuId = id;
-      const card = document.getElementById(`item-${id}`);
-      if (card) card.classList.add('menu-open');
-    }
-
-    function closeItemMenu() {
-      if (openMenuId) {
-        const card = document.getElementById(`item-${openMenuId}`);
-        if (card) card.classList.remove('menu-open');
-        openMenuId = null;
       }
     }
 
@@ -19918,7 +19591,6 @@
       card.id = `item-${item.id}`;
       card.className = `item-card${item.type === 'note' ? ' note-card' : ''}${isShelved ? ' shelved-card' : ''}`;
       if (state.highlightItemId === item.id) card.classList.add('search-highlight');
-      if (openMenuId === item.id) card.classList.add('menu-open');
 
       if (item.type === 'task' && !isEditing) {
         setupTaskDrag(card, item.id);
@@ -23541,7 +23213,59 @@
       }
     });
 
+    const helpSearch = document.getElementById('help-search');
+    const helpIndex = document.getElementById('help-index');
+    const helpSections = [...els.helpModal.querySelectorAll('.help-section')];
+    const helpOpenByDefault = new Map(helpSections.map(s => [s, s.open]));
+    const helpText = (el) => el.textContent.replace(/\s+/g, ' ').toLowerCase();
+
+    function filterHelp(query) {
+      const q = query.replace(/\s+/g, ' ').trim().toLowerCase();
+      let anyMatch = false;
+      for (const section of helpSections) {
+        const items = [...section.querySelectorAll('li')];
+        if (!q) {
+          section.hidden = false;
+          section.open = helpOpenByDefault.get(section);
+          items.forEach(li => { li.hidden = false; });
+          continue;
+        }
+        const titleMatch = helpText(section.querySelector('summary')).includes(q);
+        let hits = 0;
+        for (const li of items) {
+          li.hidden = !(titleMatch || helpText(li).includes(q));
+          if (!li.hidden) hits++;
+        }
+        section.hidden = hits === 0;
+        section.open = hits > 0;
+        if (hits) anyMatch = true;
+      }
+      document.getElementById('help-no-results').classList.toggle('hidden', !q || anyMatch);
+      helpIndex.querySelectorAll('button').forEach((btn, i) => btn.classList.toggle('hidden', helpSections[i].hidden));
+    }
+
+    for (const section of helpSections) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = section.querySelector('summary').textContent;
+      btn.addEventListener('click', () => {
+        section.open = true;
+        section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      });
+      helpIndex.appendChild(btn);
+    }
+    helpSearch.addEventListener('input', () => filterHelp(helpSearch.value));
+    helpSearch.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !helpSearch.value) return;
+      e.stopPropagation();
+      helpSearch.value = '';
+      filterHelp('');
+    });
+
     function openHelpModal() {
+      helpSearch.value = '';
+      filterHelp('');
+      els.helpModal.querySelector('.help-modal-body').scrollTop = 0;
       els.helpModal.classList.remove('hidden');
     }
 
@@ -23699,17 +23423,10 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !els.helpModal.classList.contains('hidden')) closeHelpModal();
       if (e.key === 'Escape' && !changelogModal.classList.contains('hidden')) closeChangelog();
-      if (e.key === 'Escape' && openMenuId) closeItemMenu();
       if (e.key === 'Escape' && !document.getElementById('send-modal').classList.contains('hidden')) closeSendModal();
     });
 
     document.getElementById('send-modal-cancel').addEventListener('click', closeSendModal);
-
-    document.addEventListener('click', (e) => {
-      if (!openMenuId) return;
-      const card = document.getElementById(`item-${openMenuId}`);
-      if (card && !card.contains(e.target)) closeItemMenu();
-    }, true);
 
     // Close overflow menus when clicking outside
     document.addEventListener('click', (e) => {
