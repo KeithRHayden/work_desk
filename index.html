@@ -4471,7 +4471,7 @@
     }
 
     .toast {
-      position: fixed; bottom: 24px; right: 24px;
+      position: fixed; bottom: calc(24px + var(--add-dock-h, 0px)); right: 24px;
       background: var(--sidebar); color: var(--sidebar-active);
       padding: 12px 18px; border-radius: 8px;
       font-size: 0.9rem; box-shadow: var(--shadow);
@@ -5743,38 +5743,44 @@
       justify-content: flex-end;
       flex-shrink: 0;
     }
-    .recurring-template-list { display: flex; flex-direction: column; gap: 8px; }
+    .recurring-template-list { display: flex; flex-direction: column; }
     .recurring-template-item {
-      display: flex;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      gap: 6px 10px;
-      padding: 12px 14px;
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 10rem) 6.5rem 28px;
+      grid-template-areas: "main schedule next more";
+      gap: 4px 12px;
+      align-items: start;
+      padding: 10px 2px;
+      border-bottom: 1px solid var(--border);
     }
-    .recurring-template-content {
-      flex: 1;
-      min-width: 0;
-      font-size: 0.88rem;
-      line-height: 1.4;
-      word-break: break-word;
+    .recurring-template-item:last-child { border-bottom: 0; }
+    .recurring-template-item.editing {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 14px; margin: 4px 0;
+      border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
     }
-    .recurring-rule-badge {
-      font-size: 0.68rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 2px 7px;
-      border-radius: 10px;
-      background: var(--accent-light);
-      color: var(--accent);
-      white-space: nowrap;
-      flex-shrink: 0;
-      margin-top: 2px;
+    .recurring-template-main { grid-area: main; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+    .recurring-template-content { font-size: 0.88rem; line-height: 1.4; word-break: break-word; }
+    .recurring-template-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .recurring-template-tags .tag-chip { font-size: 0.66rem; }
+    .recurring-schedule-cell { grid-area: schedule; }
+    .recurring-next-due { grid-area: next; white-space: nowrap; }
+    .recurring-schedule-cell, .recurring-next-due { font-size: 0.78rem; line-height: 1.4; color: var(--text-muted); padding-top: 2px; }
+    .recurring-skip-mark { margin-left: 2px; color: var(--accent); cursor: help; }
+    .recurring-more-wrap { grid-area: more; position: relative; justify-self: end; }
+    .recurring-more-btn {
+      width: 28px; height: 24px; padding: 0; border: 0; border-radius: 6px;
+      background: none; color: var(--text-muted); font-size: 1rem; line-height: 1; cursor: pointer;
     }
-    .recurring-template-actions { display: flex; gap: 10px; flex-shrink: 0; align-items: flex-start; margin-top: 2px; }
+    .recurring-more-btn:hover, .recurring-more-btn[aria-expanded="true"] { background: var(--panel-bg); color: var(--text); }
+    .recurring-more-menu {
+      position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; min-width: 128px;
+      display: flex; flex-direction: column; gap: 1px; padding: 4px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+    }
+    .recurring-more-menu.up { top: auto; bottom: calc(100% + 4px); }
+    .recurring-more-menu[hidden] { display: none; }
     .recurring-action-link {
       background: none; border: none; cursor: pointer; padding: 0;
       font-size: 0.76rem; color: var(--text-muted);
@@ -5782,22 +5788,22 @@
     }
     .recurring-action-link:hover { color: var(--accent); text-decoration: underline; }
     .recurring-action-link.danger:hover { color: var(--danger, #ef4444); }
-    .recurring-empty {
-      text-align: center;
-      padding: 24px;
-      color: var(--text-muted);
-      font-size: 0.88rem;
-      font-style: italic;
+    .recurring-more-menu .recurring-action-link { padding: 7px 10px; border-radius: 5px; font-size: 0.82rem; color: var(--text); text-align: left; }
+    .recurring-more-menu .recurring-action-link:hover { background: var(--panel-bg); color: var(--accent); text-decoration: none; }
+    .recurring-more-menu .recurring-action-link.danger { color: var(--danger, #ef4444); }
+    .recurring-dup-hint { font-size: 0.7rem; color: var(--danger, #ef4444); }
+    .recurring-footnote { margin: -10px 0 0; font-size: 0.72rem; color: var(--text-muted); }
+    .recurring-template-main .tag-input-wrap { align-self: flex-start; }
+    .recurring-add-form { display: flex; flex-direction: column; gap: 8px; }
+    .recurring-quick-row { display: flex; gap: 6px; align-items: stretch; }
+    .recurring-quick-row .rich-editor { min-height: 38px; padding: 7px 12px; font-size: 0.9rem; }
+    .recurring-rule-select {
+      flex: 0 0 auto; max-width: 9.5rem;
+      font: inherit; font-size: 0.82rem; padding: 0 8px; min-height: 38px;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--input-bg, var(--surface)); color: var(--text); cursor: pointer;
     }
-    .recurring-add-form {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      background: var(--surface);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+    .recurring-add-btn { flex: 0 0 auto; }
+    .recurring-skip-toggle.customize-toggle { align-self: flex-start; margin: 0; padding: 2px 4px; background: none; font-size: 0.76rem; color: var(--text-muted); }
     .recurring-add-title {
       font-size: 0.82rem;
       font-weight: 600;
@@ -5805,8 +5811,19 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
+    .recurring-edit-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+    .recurring-edit-row .recurring-rule-select { min-height: 32px; }
     .recurring-rule-label { font-size: 0.8rem; color: var(--text-muted); }
-    .recurring-rule-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    @media (max-width: 600px) {
+      .recurring-template-item {
+        grid-template-columns: minmax(0, 1fr) auto 28px;
+        grid-template-areas: "main main more" "schedule next next";
+      }
+      .recurring-next-due { justify-self: end; }
+      .recurring-quick-row { flex-wrap: wrap; }
+      .recurring-quick-row .rich-editor-wrap { flex: 1 0 100%; }
+      .recurring-rule-select { flex: 1; max-width: none; }
+    }
     .rule-btn {
       padding: 5px 12px;
       border-radius: 6px;
@@ -7475,6 +7492,13 @@
       html[data-complete-style="label"] .complete-edge::before,
       html[data-complete-style="label"] .complete-edge.is-done::before { font-size: 11px; }
     }
+    /* Touch screens wide enough for the desktop layout (a tablet in landscape): an in-between edge */
+    @media (min-width: 769px) and (hover: none), (min-width: 769px) and (pointer: coarse) {
+      html[data-complete-edge="on"] :is(.task-card, .project-task-card) .complete-edge { width: 28px; }
+      html[data-complete-edge="on"] .item-card.task-card .item.task { padding-left: 40px; }
+      html[data-complete-edge="on"] .project-task-card { padding-left: 40px; }
+      html[data-complete-edge="on"] .item-card.task-card .card-action-bar { padding-left: 36px; }
+    }
     .tag-chip {
       --tag-fg: var(--accent);
       --tag-bg: var(--accent-light);
@@ -8636,7 +8660,7 @@
                   <!-- Behavior Tab Pane -->
                   <div class="options-pane hidden" id="options-pane-behavior">
                     <div class="options-summary">
-                      <button type="button" class="options-row" data-options-open="general"><span class="options-row-icon" aria-hidden="true">⚑</span><span class="options-row-text"><span class="options-row-name">General<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-desc">Start desk, launch view, week start, weekends</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="general"><span class="options-row-icon" aria-hidden="true">⚑</span><span class="options-row-text"><span class="options-row-name">General<span class="options-new-tag" data-new-in="1.22.0">New</span></span><span class="options-row-desc">Start desk, launch view, week start, weekends, full screen</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="tasks"><span class="options-row-icon" aria-hidden="true">☑</span><span class="options-row-text"><span class="options-row-name">Tasks</span><span class="options-row-desc">Delete, carry-forward, collapse, confetti</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="projects"><span class="options-row-icon" aria-hidden="true">▣</span><span class="options-row-text"><span class="options-row-name">Projects</span><span class="options-row-desc">Long project notes</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="insights"><span class="options-row-icon" aria-hidden="true">↗</span><span class="options-row-text"><span class="options-row-name">Insights</span><span class="options-row-desc">Streak rules</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
@@ -8675,6 +8699,13 @@
                         <option value="both">Both desks</option>
                       </select>
                     </div>
+                    <label class="customize-toggle" id="fullscreen-row" title="Hide the status bar and app tray on this device">
+                      <input id="fullscreen-toggle" type="checkbox" />
+                      <span class="customize-toggle-text">
+                        <span>Full screen<span class="options-new-tag" data-new-in="1.22.0">New</span></span>
+                        <span class="customize-toggle-sub">Hide the status bar and app tray on this device; swipe from an edge to see them</span>
+                      </span>
+                    </label>
                     </section>
 
                     <section class="options-section" data-options-section="tasks" aria-label="Tasks" hidden>
@@ -8927,7 +8958,7 @@
           </ol>
         </details>
 
-        <details class="help-section" id="help-cards" data-short="Cards">
+        <details class="help-section" id="help-cards" data-short="Cards" open>
           <summary>Cards &amp; columns</summary>
           <ul>
             <li><strong>Columns</strong> — tasks move through New, Active, and Completed / Shelved; notes have their own area. The bar above the board shows today's mix (hover for counts)</li>
@@ -8942,7 +8973,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-tags">
+        <details class="help-section" id="help-tags" open>
           <summary>Tags</summary>
           <ul>
             <li><strong>Add</strong> — type <code>#word</code> anywhere while writing, or click <em>tag</em>; your two most-used tags show up as one-click picks. <code>#ACE</code> and <code>#ace</code> are the same tag</li>
@@ -8953,7 +8984,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-comments" data-short="Comments">
+        <details class="help-section" id="help-comments" data-short="Comments" open>
           <summary>Comments &amp; updates</summary>
           <ul>
             <li>Click <em>comment</em> on a task, or <em>add update</em> on a note, for a timestamped thread with bold, italic, underline, and bullets</li>
@@ -8962,19 +8993,20 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-recurring" data-short="Recurring">
+        <details class="help-section" id="help-recurring" data-short="Recurring" open>
           <summary>Recurring tasks</summary>
           <ul>
-            <li>Open the <strong>Recurring</strong> tab next to Task and Note in the add form</li>
+            <li>Open the <strong>Recurring</strong> tab next to Task and Note in the add form. Type the task, pick a schedule from <strong>Repeats</strong>, and press <strong>Add</strong></li>
+            <li>Each row shows the schedule and when it's <strong>next due</strong>; <strong>*</strong> marks one that skips holidays</li>
             <li>Schedules: <strong>Daily</strong>, <strong>Weekdays</strong>, <strong>Weekly</strong>, <strong>Custom</strong> days, <strong>Every 2 weeks</strong> (from a start date), <strong>Monthly</strong>, and <strong>Quarterly</strong></li>
             <li><strong>Monthly and Quarterly</strong> — <em>Day of month</em> picks dates (the 1st and 15th, or <em>Last</em>; a 29th–31st falls on the last day of shorter months). <em>Day of week</em> picks weeks and a weekday (the 3rd Thursday, or the 1st and 3rd Tuesday). Quarterly also asks which months</li>
             <li><strong>When they appear</strong> — a due task is added to today when the app opens, syncs, or you switch desks, once per day, so deleting or completing it won't bring it back. Days the app wasn't opened aren't filled in afterward</li>
             <li>Recurring tasks show a <strong><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></strong> badge. Tags on a template carry to every task, and <em>Skip holidays</em> skips federal and custom holidays</li>
-            <li><strong>Edit or delete</strong> — use the Recurring panel, or <em>Edit recurring</em> in a recurring task's ⋮ menu. The panel flags templates with the same text</li>
+            <li><strong>Edit, tag, or delete</strong> — use a row's <strong>⋮</strong> menu in the Recurring panel, or <em>Edit recurring</em> in a recurring task's ⋮ menu. The panel flags templates with the same text</li>
           </ul>
         </details>
 
-        <details class="help-section" id="help-projects">
+        <details class="help-section" id="help-projects" open>
           <summary>Projects</summary>
           <ul>
             <li>Click <strong>Projects</strong> in the sidebar, then <strong>+</strong>. Each project has <strong>Notes</strong> and <strong>Tasks</strong> tabs</li>
@@ -8986,7 +9018,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-navigation" data-short="Navigation">
+        <details class="help-section" id="help-navigation" data-short="Navigation" open>
           <summary>Navigation &amp; search</summary>
           <ul>
             <li><strong>Calendar</strong> — dots mark days with data, and yellow badges count tasks left open on past days. The <strong>Today chip</strong> beside the month jumps back</li>
@@ -8997,7 +9029,7 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-insights">
+        <details class="help-section" id="help-insights" open>
           <summary>Insights</summary>
           <ul>
             <li>Pick <strong>Week</strong>, <strong>Month</strong>, or <strong>Year</strong>; the arrows step back, and <em>This week</em> (or month or year) returns</li>
@@ -9009,18 +9041,18 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-options">
+        <details class="help-section" id="help-options" open>
           <summary>Options</summary>
           <ul>
             <li>Open with ⚙ near the date or <strong>Options</strong> in the account menu. Each tab opens on a short list; click a row to open it, and <strong>‹ Back</strong> or <strong>Esc</strong> to return</li>
             <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) with previews and a Light/Med/Dark filter, plus up to 5 <strong>Custom</strong> themes from 5 colors</li>
             <li><strong>Appearance</strong> — card layout, text size and font, sidebar position (left, right, top, or bottom), effects, a patterned background, and tag colors</li>
-            <li><strong>Behavior</strong> — startup, week start, quieter weekends, comments, auto-collapse and auto carry, confetti, delete confirmation, strikethrough, long notes, and holidays (US federal plus your own dates)</li>
+            <li><strong>Behavior</strong> — startup, week start, quieter weekends, full screen, comments, auto-collapse and auto carry, confetti, delete confirmation, strikethrough, long notes, and holidays (US federal plus your own dates)</li>
             <li><strong>Reset to defaults</strong> at the bottom of a tab resets just that tab; your theme, pinned tag colors, and custom holidays stay. A <em>New</em> tag marks settings from the latest release</li>
           </ul>
         </details>
 
-        <details class="help-section" id="help-sync" data-short="Sync &amp; data">
+        <details class="help-section" id="help-sync" data-short="Sync &amp; data" open>
           <summary>Sync, backup &amp; storage</summary>
           <ul>
             <li><strong>Signed in</strong>, changes sync a few seconds after you edit, and devices merge rather than overwrite. Deleting removes an item everywhere, and Undo brings it back everywhere. Your settings sync too</li>
@@ -9033,23 +9065,27 @@
           </ul>
         </details>
 
-        <details class="help-section" id="help-phone" data-short="Phone">
+        <details class="help-section" id="help-phone" data-short="Phone" open>
           <summary>Phone &amp; install</summary>
           <ul>
             <li><strong>Install</strong> — use your browser's install option, or on iPhone <strong>Share → Add to Home Screen</strong>. Installed, it opens in its own window and works offline</li>
             <li><strong>Phone menu</strong> — the top bar keeps your tabs, search, and Help; the <strong>menu button</strong> holds your account, backup, Options, and What's new. The dot beside it shows sync status</li>
-            <li>The add bar stays at the bottom, the week strip picks the day, and a task's left edge is wider for tapping</li>
+            <li>The add bar stays at the bottom, the week strip picks the day, and a task's left edge is wider for tapping (a bit narrower on a tablet in landscape)</li>
+            <li><strong>Full screen</strong> — Options → Behavior → General hides the status bar and app tray on that device only; swipe from an edge to see them</li>
           </ul>
         </details>
 
         <details class="help-section" id="help-shortcuts" data-short="Shortcuts" open>
           <summary>Keyboard shortcuts</summary>
           <ul>
+            <li><strong>Start a new task / note</strong> — T / N (when you aren't typing in a box)</li>
+            <li><strong>Previous / next day</strong> — [ / ]</li>
             <li><strong>Add a task, note, or comment</strong> — Ctrl/Cmd + Enter</li>
             <li><strong>Save an edit</strong> (task, note, comment, or recurring task) — Ctrl/Cmd + Enter</li>
             <li><strong>Bold / Italic / Underline</strong> — Ctrl/Cmd + B / I / U</li>
             <li><strong>Reorder a project, note, or project task</strong> — Alt + ↑ / ↓</li>
-            <li><strong>Cancel an edit or close a menu</strong> — Escape</li>
+            <li><strong>Move around a menu</strong> — ↑ / ↓</li>
+            <li><strong>Cancel an edit, close a menu, or leave the add box</strong> — Escape</li>
           </ul>
         </details>
 
@@ -9106,7 +9142,7 @@
     <div class="modal-box">
       <div class="recurring-modal-header">
         <p class="modal-title"><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg> Recurring Tasks</p>
-        <p class="modal-text">Templates are automatically added to your New column each time they're due.</p>
+        <p class="modal-text">Each one lands in your New column on the days it's due.</p>
       </div>
       <div id="recurring-modal-body" class="recurring-modal-body"></div>
       <div class="recurring-modal-footer">
@@ -9161,6 +9197,7 @@
     const CARD_GLOW_KEY = 'work-desk-card-glow';
     const GRADIENT_HEADER_KEY = 'work-desk-gradient-header';
     const SHOW_CAL_LEGEND_KEY = 'work-desk-show-cal-legend';
+    const FULLSCREEN_KEY = 'work-desk-fullscreen';
     const SHOW_TODAY_PROGRESS_KEY = 'work-desk-show-today-progress';
     const LAUNCH_DESK_KEY = 'work-desk-launch-desk';
     const LAUNCH_DESK_VALUES = ['last', 'work', 'personal'];
@@ -9217,12 +9254,34 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.21.1';
+    const APP_VERSION = '1.22.0';
     const CHANGELOG = [
+      {
+        version: '1.22.0',
+        date: 'Oct 22, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Keyboard shortcuts for adding without a mouse: T starts a new task and N a new note, and [ and ] step to the previous or next day. They work whenever you aren\'t typing in a box and nothing is open on top',
+            'Full screen (Options → Behavior → General) hides the status bar and app tray on a tablet or phone; swipe from an edge to see them. It\'s saved on each device, so your tablet can be full screen while your phone isn\'t',
+          ] },
+          { label: 'Improved', items: [
+            'Help opens with every section expanded, so you can scroll straight through. Tap a heading to fold it away',
+            'A cleaner Recurring Tasks panel: type a task, pick how often it repeats from one dropdown, and press Add, all on one line. Your recurring tasks line up in columns showing the schedule and when each one is next due, with Edit, Add tag, and Delete tucked into a ⋮ menu',
+            'On a tablet in landscape (a touch screen showing the desktop layout), a task\'s tap-to-complete left edge is now a medium 28px instead of the phone\'s wide 40px',
+          ] },
+          { label: 'Fixed', items: [
+            'A card\'s ⋮ menu works from the keyboard: opening it moves to the first item, the arrow keys move between items, and Esc closes it and returns to ⋮. The Recurring menu and the account menu (bottom of the sidebar) work the same way; in the account menu, Esc closes an open Export or Import list first',
+            'Esc in the add box now leaves it (your text stays), so T, N, [ and ] work again right after adding',
+            'On a phone, messages like "Working offline" appear above the add bar instead of covering it',
+            'The T, N, [ and ] shortcuts now work in the phone layout too, including a tablet in portrait',
+            'When editing a recurring task, pressing Esc in "+ tag" no longer adds the tag anyway, and a second "+ tag" opened right after pressing Enter no longer disappears',
+          ] },
+        ],
+      },
       {
         version: '1.21.1',
         date: 'Oct 22, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Improved', items: [
             'Shades of accent matches the screen again: tags use the accent and the theme\'s background tint (Monokai\'s olive, Mediterranean\'s navy), spread by lightness so they stay distinct, and never turn into a rainbow',
@@ -11181,18 +11240,6 @@
         return grid;
       }
 
-      function makeSection(label, list) {
-        const section = document.createElement('div');
-        section.className = 'theme-section';
-
-        const lbl = document.createElement('p');
-        lbl.className = 'theme-section-label';
-        lbl.textContent = label;
-        section.appendChild(lbl);
-        section.appendChild(renderGrid(list));
-        return section;
-      }
-
       if (currentThemeFilter === 'light') {
         elThemeGrid.appendChild(renderGrid(light));
       } else if (currentThemeFilter === 'medium') {
@@ -11587,8 +11634,6 @@
       const pCol2 = q('[data-preview-col2]');
       if (pCol2) pCol2.style.background = s.surface;
     }
-
-    function closeThemePicker() { closeDensityPopout(); }
 
     let addEditor = null;
 
@@ -12132,6 +12177,15 @@
       els.addEditorHost.appendChild(wrap);
       bindCtrlEnterSubmit(editor, els.addForm, els.addBtn);
 
+      // On a phone the add bar is pinned to the bottom; toasts sit above it instead of covering it
+      const syncAddDock = () => {
+        const docked = els.addForm.offsetHeight > 0 && getComputedStyle(els.addForm).position === 'fixed';
+        document.documentElement.style.setProperty('--add-dock-h', docked ? `${els.addForm.offsetHeight}px` : '0px');
+      };
+      if (typeof ResizeObserver === 'function') new ResizeObserver(syncAddDock).observe(els.addForm);
+      window.addEventListener('resize', syncAddDock);
+      syncAddDock();
+
       els.formatToggleBtn.addEventListener('click', () => {
         const expanded = els.addForm.classList.toggle('format-expanded');
         els.formatToggleBtn.classList.toggle('active', expanded);
@@ -12504,6 +12558,32 @@
       }
     }
 
+    function canFullscreen() {
+      return typeof document.documentElement.requestFullscreen === 'function' && document.fullscreenEnabled !== false;
+    }
+
+    function enterFullscreen() {
+      if (document.fullscreenElement || !canFullscreen()) return;
+      document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+    }
+
+    // Kept on this device only (not synced), so a tablet can be full screen while a phone isn't
+    function initFullscreen() {
+      const toggle = document.getElementById('fullscreen-toggle');
+      if (!toggle) return;
+      if (!canFullscreen()) { document.getElementById('fullscreen-row').hidden = true; return; }
+      toggle.checked = localStorage.getItem(FULLSCREEN_KEY) === 'on';
+      toggle.addEventListener('change', () => {
+        localStorage.setItem(FULLSCREEN_KEY, toggle.checked ? 'on' : 'off');
+        if (toggle.checked) enterFullscreen();
+        else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      });
+      // Browsers only allow full screen right after a tap or key press, so the first one after launch enters it
+      const onGesture = () => { if (toggle.checked) enterFullscreen(); };
+      document.addEventListener('click', onGesture, true);
+      document.addEventListener('keydown', onGesture, true);
+    }
+
     const OPTIONS_TASK_TOGGLES = ['confirm-delete-toggle', 'auto-carry-toggle-popout', 'auto-collapse-completed-toggle', 'keep-comments-open-toggle', 'confetti-toggle', 'strike-completed-toggle'];
     function readOptionsSummaryPrefs() {
       const on = (id) => !!document.getElementById(id)?.checked;
@@ -12655,6 +12735,7 @@
           'truncate-notes-toggle': true,
           'streak-skip-weekends-toggle': true,
           'us-federal-holidays-toggle': true,
+          'fullscreen-toggle': false,
         },
         selects: {
           'startup-view-select': 'last_viewed',
@@ -12752,6 +12833,7 @@
       document.getElementById('show-today-progress-toggle')?.addEventListener('change', (e) => applyShowTodayProgress(e.target.checked));
 
       initBgPattern();
+      initFullscreen();
 
       // Tag colors
       applyTagColorMode(state.tagColorMode, { fromSync: true });
@@ -13553,7 +13635,7 @@
     }
 
     // ── Tag colors ────────────────────────────────────────────────────────────
-    // Palette slot is derived from the tag name so a tag keeps its color on every device.
+    // Fallback when a tag has no rendered chip to read its color from; normal coloring assigns slots by use.
     function tagPaletteSlot(tag) {
       let h = 0;
       for (const ch of String(tag)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
@@ -17370,11 +17452,12 @@
 
       const el = document.createElement('div');
       el.className = 'recurring-schedule';
-      const ruleBtns = document.createElement('div');
-      ruleBtns.className = 'recurring-rule-btns';
+      const ruleSelect = document.createElement('select');
+      ruleSelect.className = 'recurring-rule-select';
+      ruleSelect.setAttribute('aria-label', 'Repeats');
       const options = document.createElement('div');
       options.className = 'recurring-schedule-options';
-      el.appendChild(ruleBtns);
+      el.appendChild(ruleSelect);
       el.appendChild(options);
 
       const toggleIn = (list, value) => (list.includes(value) ? list.filter(v => v !== value) : [...list, value]);
@@ -17452,21 +17535,14 @@
         }
       }
 
-      RECURRING_RULES.forEach(r => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'rule-btn' + (r.value === rule ? ' active' : '');
-        btn.dataset.rule = r.value;
-        btn.textContent = r.label;
-        btn.addEventListener('click', () => {
-          if (rule === r.value) return;
-          const wasMonthly = rule === 'monthly' || rule === 'quarterly';
-          rule = r.value;
-          if (!(wasMonthly && (rule === 'monthly' || rule === 'quarterly'))) days = [];
-          ruleBtns.querySelectorAll('.rule-btn').forEach(b => b.classList.toggle('active', b === btn));
-          renderOptions();
-        });
-        ruleBtns.appendChild(btn);
+      RECURRING_RULES.forEach(r => ruleSelect.appendChild(new Option(r.label, r.value)));
+      ruleSelect.value = rule;
+      ruleSelect.addEventListener('change', () => {
+        if (rule === ruleSelect.value) return;
+        const wasMonthly = rule === 'monthly' || rule === 'quarterly';
+        rule = ruleSelect.value;
+        if (!(wasMonthly && (rule === 'monthly' || rule === 'quarterly'))) days = [];
+        renderOptions();
       });
       renderOptions();
 
@@ -17497,7 +17573,32 @@
         }
       }
 
-      return { el, read };
+      return { el, ruleSelect, options, read };
+    }
+
+    // The next date a template lands on the desk; today counts unless today's copy is already there
+    function recurringNextDue(template, fromKey = todayKey(), horizonDays = 400) {
+      const d = new Date(fromKey + 'T12:00:00');
+      for (let i = 0; i < horizonDays; i++, d.setDate(d.getDate() + 1)) {
+        const key = formatDateKey(d);
+        if (i === 0 && template.lastInjectedDate === key) continue;
+        if (!recurringDueOn(template, key)) continue;
+        if (template.skipHolidays && checkHoliday(key).isHoliday) continue;
+        return key;
+      }
+      return null;
+    }
+
+    function formatNextDue(dateKey, fromKey = todayKey()) {
+      if (!dateKey) return '';
+      const d = new Date(dateKey + 'T12:00:00');
+      const from = new Date(fromKey + 'T12:00:00');
+      const days = Math.round((d - from) / 86400000);
+      if (days === 0) return 'Today';
+      if (days === 1) return 'Tomorrow';
+      return d.getFullYear() === from.getFullYear()
+        ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+        : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
     function openRecurringModal() {
@@ -17507,6 +17608,170 @@
 
     function closeRecurringModal() {
       els.recurringModal.classList.add('hidden');
+    }
+
+    function closeRecurringMenus() {
+      els.recurringModalBody.querySelectorAll('.recurring-more-menu:not([hidden])').forEach(menu => {
+        menu.hidden = true;
+        menu.parentElement.querySelector('.recurring-more-btn')?.setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    function updateRecurringTemplate(id, change) {
+      const templates = loadRecurringTemplates();
+      const idx = templates.findIndex(x => x.id === id);
+      if (idx === -1) return false;
+      templates[idx] = change(templates[idx]);
+      saveRecurringTemplates(templates);
+      return true;
+    }
+
+    function buildSkipHolidaysToggle(checked, id) {
+      const label = document.createElement('label');
+      label.className = 'customize-toggle recurring-skip-toggle';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      if (id) cb.id = id;
+      cb.checked = !!checked;
+      const text = document.createElement('span');
+      text.className = 'customize-toggle-text';
+      text.innerHTML = '<span>Skip holidays</span>';
+      label.append(cb, text);
+      return { label, cb };
+    }
+
+    function openRecurringTagEntry(host, template) {
+      host.querySelector('.tag-input-wrap')?.remove();
+      const close = () => renderRecurringPanel();
+      const entry = buildTagEntry(template.tags, (val) => {
+        const tag = normalizeTag(val);
+        if (!tag) return false;
+        if (normalizeTagList(template.tags).includes(tag)) { showToast('Tag already exists'); return false; }
+        if (!updateRecurringTemplate(template.id, t => ({ ...t, tags: [...normalizeTagList(t.tags), tag] }))) return false;
+        showToast(`Tag "${tag.toUpperCase()}" added`);
+        renderRecurringPanel();
+        return true;
+      }, close);
+      host.appendChild(entry);
+      const onOutside = (e) => {
+        if (!entry.isConnected) { document.removeEventListener('click', onOutside, true); return; }
+        if (entry.contains(e.target)) return;
+        document.removeEventListener('click', onOutside, true);
+        close();
+      };
+      setTimeout(() => document.addEventListener('click', onOutside, true), 0);
+    }
+
+    function buildRecurringRow(t, today, isDuplicate) {
+      const item = document.createElement('div');
+      item.className = 'recurring-template-item';
+      item.dataset.templateId = t.id;
+
+      const main = document.createElement('div');
+      main.className = 'recurring-template-main';
+      const content = document.createElement('div');
+      content.className = 'recurring-template-content rich-content';
+      content.innerHTML = sanitizeHtml(t.content);
+      main.appendChild(content);
+
+      const tags = normalizeTagList(t.tags);
+      if (tags.length) {
+        const chipRow = document.createElement('div');
+        chipRow.className = 'recurring-template-tags';
+        tags.forEach(tag => {
+          const chip = document.createElement('span');
+          chip.className = 'tag-chip';
+          decorateTagChip(chip, tag);
+          chip.appendChild(tagChipLabel(tag.toUpperCase()));
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'tag-chip-remove';
+          removeBtn.textContent = '\u00d7';
+          removeBtn.setAttribute('aria-label', `Remove ${tag}`);
+          removeBtn.addEventListener('click', () => {
+            updateRecurringTemplate(t.id, x => ({ ...x, tags: normalizeTagList(x.tags).filter(v => v !== tag) }));
+            renderRecurringPanel();
+          });
+          chip.appendChild(removeBtn);
+          chipRow.appendChild(chip);
+        });
+        main.appendChild(chipRow);
+      }
+      if (isDuplicate) {
+        const dupHint = document.createElement('div');
+        dupHint.className = 'recurring-dup-hint';
+        dupHint.textContent = 'Duplicate — consider deleting one of these';
+        main.appendChild(dupHint);
+      }
+
+      const schedule = document.createElement('div');
+      schedule.className = 'recurring-schedule-cell';
+      const badge = document.createElement('span');
+      badge.className = 'recurring-rule-badge';
+      badge.textContent = recurringRuleLabel(t);
+      schedule.appendChild(badge);
+      if (t.skipHolidays) {
+        const mark = document.createElement('span');
+        mark.className = 'recurring-skip-mark';
+        mark.textContent = '*';
+        mark.title = 'Skips holidays';
+        schedule.appendChild(mark);
+      }
+
+      const next = document.createElement('div');
+      next.className = 'recurring-next-due';
+      const nextKey = recurringNextDue(t, today);
+      next.textContent = nextKey ? formatNextDue(nextKey, today) : '—';
+      next.title = nextKey
+        ? `Next on ${new Date(nextKey + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`
+        : 'Not due in the next year';
+
+      const moreWrap = document.createElement('div');
+      moreWrap.className = 'recurring-more-wrap';
+      const moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'recurring-more-btn';
+      moreBtn.textContent = '⋮';
+      moreBtn.setAttribute('aria-label', 'Recurring task actions');
+      moreBtn.setAttribute('aria-haspopup', 'menu');
+      moreBtn.setAttribute('aria-expanded', 'false');
+      const menu = document.createElement('div');
+      menu.className = 'recurring-more-menu';
+      menu.setAttribute('role', 'menu');
+      menu.hidden = true;
+      const addMenuItem = (label, onPick, danger = false) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'recurring-action-link' + (danger ? ' danger' : '');
+        btn.setAttribute('role', 'menuitem');
+        btn.textContent = label;
+        btn.addEventListener('click', () => { closeRecurringMenus(); onPick(); });
+        menu.appendChild(btn);
+      };
+      addMenuItem('Edit', () => openRecurringEditForm(item, t));
+      addMenuItem('Add tag', () => openRecurringTagEntry(main, t));
+      addMenuItem('Delete', () => {
+        markRecurringTemplateDeleted(t.id);
+        showToast('Recurring task removed');
+        renderRecurringPanel();
+      }, true);
+      moreBtn.addEventListener('click', () => {
+        const opening = menu.hidden;
+        closeRecurringMenus();
+        menu.hidden = !opening;
+        moreBtn.setAttribute('aria-expanded', String(opening));
+        if (!opening) return;
+        // Open upward when the list ends below, so the menu doesn't make the modal scroll
+        menu.classList.remove('up');
+        const room = els.recurringModalBody.getBoundingClientRect().bottom - moreBtn.getBoundingClientRect().bottom;
+        menu.classList.toggle('up', room < menu.offsetHeight + 8);
+        menu.querySelector('button').focus({ preventScroll: true });
+      });
+      menu.addEventListener('keydown', (e) => { if (moveMenuFocus(menu, e.key)) e.preventDefault(); });
+      moreWrap.append(moreBtn, menu);
+
+      item.append(main, schedule, next, moreWrap);
+      return item;
     }
 
     function renderRecurringPanel() {
@@ -17521,165 +17786,25 @@
         contentCounts.set(key, (contentCounts.get(key) || 0) + 1);
       });
 
-      // Template list
-      const listWrap = document.createElement('div');
-      listWrap.className = 'recurring-template-list';
-
-      if (templates.length === 0) {
-        // no empty message needed — add form is above
-      } else {
-        templates.forEach(t => {
-          const item = document.createElement('div');
-          item.className = 'recurring-template-item';
-
-          const content = document.createElement('div');
-          content.className = 'recurring-template-content rich-content';
-          content.innerHTML = sanitizeHtml(t.content);
-
-          const badge = document.createElement('span');
-          badge.className = 'recurring-rule-badge';
-          badge.textContent = recurringRuleLabel(t);
-
-          const actions = document.createElement('div');
-          actions.className = 'recurring-template-actions';
-
-          const editLink = document.createElement('button');
-          editLink.type = 'button';
-          editLink.className = 'recurring-action-link';
-          editLink.textContent = 'edit';
-          editLink.addEventListener('click', () => openRecurringEditForm(item, t));
-
-          const delLink = document.createElement('button');
-          delLink.type = 'button';
-          delLink.className = 'recurring-action-link danger';
-          delLink.textContent = 'delete';
-          delLink.addEventListener('click', () => {
-            markRecurringTemplateDeleted(t.id);
-            showToast('Recurring task removed');
-            renderRecurringPanel();
-          });
-
-          const tagLink = document.createElement('button');
-          tagLink.type = 'button';
-          tagLink.className = 'recurring-action-link';
-          tagLink.textContent = 'tag';
-          tagLink.addEventListener('click', () => {
-            const input = prompt('Add tag (e.g. ace):');
-            if (!input) return;
-            const tag = normalizeTag(input);
-            if (!tag) return;
-            const templates = loadRecurringTemplates();
-            const idx = templates.findIndex(x => x.id === t.id);
-            if (idx === -1) return;
-            const existing = normalizeTagList(templates[idx].tags);
-            if (existing.includes(tag)) { showToast('Tag already exists'); return; }
-            templates[idx].tags = [...existing, tag];
-            saveRecurringTemplates(templates);
-            showToast(`Tag "${tag.toUpperCase()}" added`);
-            renderRecurringPanel();
-          });
-
-          actions.appendChild(editLink);
-          actions.appendChild(tagLink);
-          actions.appendChild(delLink);
-          item.appendChild(content);
-
-          // Tag chips
-          const tplTags = normalizeTagList(t.tags);
-          if (tplTags.length) {
-            const chipRow = document.createElement('div');
-            chipRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; width:100%; margin-top:4px;';
-            tplTags.forEach(tag => {
-              const chip = document.createElement('span');
-              chip.className = 'tag-chip';
-              chip.style.fontSize = '0.68rem';
-              decorateTagChip(chip, tag);
-              chip.appendChild(tagChipLabel(tag.toUpperCase()));
-              const removeBtn = document.createElement('button');
-              removeBtn.type = 'button';
-              removeBtn.className = 'tag-chip-remove';
-              removeBtn.textContent = '\u00d7';
-              removeBtn.addEventListener('click', () => {
-                const templates = loadRecurringTemplates();
-                const idx = templates.findIndex(x => x.id === t.id);
-                if (idx === -1) return;
-                templates[idx].tags = normalizeTagList(templates[idx].tags).filter(x => x !== tag);
-                saveRecurringTemplates(templates);
-                renderRecurringPanel();
-              });
-              chip.appendChild(removeBtn);
-              chipRow.appendChild(chip);
-            });
-            item.appendChild(chipRow);
-          }
-
-          item.appendChild(badge);
-          if (t.skipHolidays) {
-            const skipBadge = document.createElement('span');
-            skipBadge.className = 'recurring-rule-badge';
-            skipBadge.style.cssText = 'opacity:0.7; font-size:0.66rem;';
-            skipBadge.textContent = 'skip holidays';
-            item.appendChild(skipBadge);
-          }
-          item.appendChild(actions);
-
-          // Flag duplicate content so user can clean up
-          const ck = recurringContentKey(t.content);
-          if (contentCounts.get(ck) > 1) {
-            const dupHint = document.createElement('div');
-            dupHint.style.cssText = 'font-size:0.7rem; color:var(--danger,#ef4444); margin-top:4px; width:100%;';
-            dupHint.textContent = 'Duplicate — consider deleting one of these';
-            item.appendChild(dupHint);
-          }
-
-          listWrap.appendChild(item);
-        });
-      }
-      // Add form (rendered first, above existing list)
+      // Quick-add bar: description, Repeats, Add on one line; schedule details appear below only when needed
       const form = document.createElement('div');
       form.className = 'recurring-add-form';
-
-      const formTitle = document.createElement('p');
-      formTitle.className = 'recurring-add-title';
-      formTitle.textContent = 'Add recurring task';
-      form.appendChild(formTitle);
-
-      const { wrap: editorWrap, editor } = createRichEditor({
+      const { wrap: editorWrap, editor, toolbar } = createRichEditor({
         className: 'recurring-editor',
-        placeholder: 'Task description…',
+        placeholder: 'Add a recurring task…',
       });
-      form.appendChild(editorWrap);
-
-      // Rule selector
-      const ruleLabel = document.createElement('p');
-      ruleLabel.className = 'recurring-rule-label';
-      ruleLabel.textContent = 'Repeats';
-      form.appendChild(ruleLabel);
-
+      toolbar.remove();
       const schedulePicker = createRecurringSchedulePicker();
-      form.appendChild(schedulePicker.el);
-
-      // Skip holidays checkbox
-      const skipHolidayWrap = document.createElement('label');
-      skipHolidayWrap.className = 'customize-toggle';
-      skipHolidayWrap.style.cssText = 'margin: 2px 0 4px; font-size: 0.78rem;';
-      const skipHolidayCb = document.createElement('input');
-      skipHolidayCb.type = 'checkbox';
-      skipHolidayCb.id = 'recurring-skip-holidays';
-      skipHolidayWrap.appendChild(skipHolidayCb);
-      const skipHolidayText = document.createElement('span');
-      skipHolidayText.className = 'customize-toggle-text';
-      skipHolidayText.innerHTML = '<span>Skip holidays</span>';
-      skipHolidayWrap.appendChild(skipHolidayText);
-      form.appendChild(skipHolidayWrap);
-
-      const addActions = document.createElement('div');
-      addActions.className = 'recurring-add-actions';
-
       const addBtn = document.createElement('button');
       addBtn.type = 'button';
-      addBtn.className = 'modal-btn primary';
+      addBtn.className = 'modal-btn primary recurring-add-btn';
       addBtn.textContent = 'Add';
+      const quickRow = document.createElement('div');
+      quickRow.className = 'recurring-quick-row';
+      quickRow.append(editorWrap, schedulePicker.ruleSelect, addBtn);
+      const skip = buildSkipHolidaysToggle(false, 'recurring-skip-holidays');
+      form.append(quickRow, schedulePicker.options, skip.label);
+
       addBtn.addEventListener('click', () => {
         let content = sanitizeHtml(getEditorHtml(editor));
         if (isEmptyHtml(content)) { showToast('Please enter a task description'); return; }
@@ -17692,7 +17817,7 @@
           id: newId(),
           content,
           ...picked.schedule,
-          skipHolidays: skipHolidayCb.checked,
+          skipHolidays: skip.cb.checked,
           createdAt: new Date().toISOString(),
           lastInjectedDate: null,
         };
@@ -17705,23 +17830,23 @@
         showToast(`Recurring task added (${recurringRuleLabel(template)})`);
         renderRecurringPanel();
       });
-
-      form.appendChild(addActions);
-      addActions.appendChild(addBtn);
       editor.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
       });
       body.appendChild(form);
 
-      // Existing templates section
-      if (templates.length > 0) {
-        const existingHeader = document.createElement('p');
-        existingHeader.className = 'recurring-add-title';
-        existingHeader.style.marginTop = '12px';
-        existingHeader.textContent = `Existing templates (${templates.length})`;
-        body.appendChild(existingHeader);
+      if (!templates.length) return;
+      const list = document.createElement('div');
+      list.className = 'recurring-template-list';
+      const today = todayKey();
+      templates.forEach(t => list.appendChild(buildRecurringRow(t, today, contentCounts.get(recurringContentKey(t.content)) > 1)));
+      body.appendChild(list);
+      if (templates.some(t => t.skipHolidays)) {
+        const note = document.createElement('p');
+        note.className = 'recurring-footnote';
+        note.textContent = '* skips holidays';
+        body.appendChild(note);
       }
-      body.appendChild(listWrap);
     }
 
     function openRecurringEditForm(hostEl, template, opts = {}) {
@@ -17731,40 +17856,31 @@
       if (addForm) addForm.classList.add('hidden');
 
       hostEl.innerHTML = '';
-      hostEl.style.flexDirection = 'column';
+      hostEl.classList.add('editing');
 
       const formTitle = document.createElement('p');
       formTitle.className = 'recurring-add-title';
       formTitle.textContent = 'Edit recurring task';
       hostEl.appendChild(formTitle);
 
-      const { wrap: editorWrap, editor } = createRichEditor({
+      const { wrap: editorWrap, editor, toolbar } = createRichEditor({
         className: 'recurring-editor',
         placeholder: 'Task description…',
       });
+      toolbar.remove();
       setEditorHtml(editor, template.content);
       hostEl.appendChild(editorWrap);
 
-      const ruleLabel = document.createElement('p');
+      const schedulePicker = createRecurringSchedulePicker(template);
+      const skip = buildSkipHolidaysToggle(template.skipHolidays);
+      const skipHolidayCb = skip.cb;
+      const repeatsRow = document.createElement('div');
+      repeatsRow.className = 'recurring-edit-row';
+      const ruleLabel = document.createElement('span');
       ruleLabel.className = 'recurring-rule-label';
       ruleLabel.textContent = 'Repeats';
-      hostEl.appendChild(ruleLabel);
-
-      const schedulePicker = createRecurringSchedulePicker(template);
-      hostEl.appendChild(schedulePicker.el);
-
-      const skipHolidayWrap = document.createElement('label');
-      skipHolidayWrap.className = 'customize-toggle';
-      skipHolidayWrap.style.cssText = 'margin: 2px 0 4px; font-size: 0.78rem;';
-      const skipHolidayCb = document.createElement('input');
-      skipHolidayCb.type = 'checkbox';
-      skipHolidayCb.checked = !!template.skipHolidays;
-      skipHolidayWrap.appendChild(skipHolidayCb);
-      const skipHolidayText = document.createElement('span');
-      skipHolidayText.className = 'customize-toggle-text';
-      skipHolidayText.innerHTML = '<span>Skip holidays</span>';
-      skipHolidayWrap.appendChild(skipHolidayText);
-      hostEl.appendChild(skipHolidayWrap);
+      repeatsRow.append(ruleLabel, schedulePicker.ruleSelect, skip.label);
+      hostEl.append(repeatsRow, schedulePicker.options);
 
       // Tag section
       let editTags = normalizeTagList(template.tags);
@@ -17804,14 +17920,22 @@
         tagInput.placeholder = 'tag name';
         tagInput.className = 'custom-holiday-input';
         tagInput.style.cssText = 'width:80px; flex:0 0 auto; font-size:0.74rem;';
+        // Enter / Esc re-render, which blurs the input; its delayed blur commit must not run again.
+        let tagInputDone = false;
         const commitTagInput = () => {
+          if (tagInputDone) return;
+          tagInputDone = true;
           const val = normalizeTag(tagInput.value);
           if (val && !editTags.includes(val)) editTags.push(val);
           renderEditTagChips();
         };
         tagInput.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') { e.preventDefault(); commitTagInput(); }
-          else if (e.key === 'Escape') renderEditTagChips();
+          else if (e.key === 'Escape') {
+            e.preventDefault();
+            tagInputDone = true;
+            renderEditTagChips();
+          }
         });
         tagInput.addEventListener('blur', () => setTimeout(commitTagInput, 100));
         tagSection.appendChild(addTagBtn);
@@ -19098,10 +19222,6 @@
       card.addEventListener('pointercancel', finishDrag);
     }
 
-    function startTask(id) {
-      moveTaskToColumn(id, 'active');
-    }
-
     function toggleShelf(id) {
       for (const date of Object.keys(state.data.days)) {
         const day = state.data.days[date];
@@ -19841,19 +19961,23 @@
         overflowBtn.className = 'card-overflow-btn';
         overflowBtn.textContent = '⋮';
         overflowBtn.setAttribute('aria-label', 'More options');
+        overflowBtn.setAttribute('aria-haspopup', 'menu');
+        overflowBtn.setAttribute('aria-expanded', 'false');
 
         const overflowMenu = document.createElement('div');
         overflowMenu.className = 'card-overflow-menu hidden';
+        overflowMenu.setAttribute('role', 'menu');
 
         // Overflow menu items
         const addMenuItem = (label, onClick, danger = false) => {
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.textContent = label;
+          btn.setAttribute('role', 'menuitem');
           if (danger) btn.classList.add('danger');
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            overflowMenu.classList.add('hidden');
+            closeCardMenus();
             onClick();
           });
           overflowMenu.appendChild(btn);
@@ -19889,9 +20013,25 @@
         overflowBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           const isOpen = !overflowMenu.classList.contains('hidden');
-          // Close all other overflow menus first
-          document.querySelectorAll('.card-overflow-menu').forEach(m => m.classList.add('hidden'));
-          if (!isOpen) overflowMenu.classList.remove('hidden');
+          closeCardMenus();
+          if (isOpen) return;
+          overflowMenu.classList.remove('hidden');
+          overflowBtn.setAttribute('aria-expanded', 'true');
+          overflowMenu.querySelector('button')?.focus({ preventScroll: true });
+        });
+        overflowWrap.addEventListener('keydown', (e) => {
+          if (overflowMenu.classList.contains('hidden')) return;
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            closeCardMenus();
+            overflowBtn.focus({ preventScroll: true });
+          } else if (moveMenuFocus(overflowMenu, e.key)) {
+            e.preventDefault();
+          }
+        });
+        overflowWrap.addEventListener('focusout', (e) => {
+          if (!overflowMenu.classList.contains('hidden') && e.relatedTarget && !overflowWrap.contains(e.relatedTarget)) closeCardMenus();
         });
 
         overflowWrap.appendChild(overflowBtn);
@@ -23231,6 +23371,53 @@
       });
     });
 
+    function closeCardMenus() {
+      document.querySelectorAll('.card-overflow-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
+      document.querySelectorAll('.card-overflow-btn[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    }
+
+    function moveMenuFocus(menu, key) {
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(key)) return false;
+      const items = [...menu.querySelectorAll('button:not(:disabled)')].filter(b => b.getClientRects().length);
+      if (!items.length) return false;
+      const i = items.indexOf(document.activeElement);
+      const next = key === 'Home' ? 0 : key === 'End' ? items.length - 1
+        : (i + (key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[i < 0 && key === 'ArrowUp' ? items.length - 1 : next].focus({ preventScroll: true });
+      return true;
+    }
+
+    function isTypingTarget(el) {
+      return !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+    }
+
+    function isOverlayOpen() {
+      return !!document.querySelector('.modal:not(.hidden), #density-popout:not(.hidden), #search-overlay:not(.hidden), #mobile-menu-sheet:not(.hidden), #account-menu:not(.hidden), #tag-color-popover, .card-overflow-menu:not(.hidden)');
+    }
+
+    function handleDeskShortcut(e) {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented) return;
+      if (isTypingTarget(e.target) || isTypingTarget(document.activeElement) || isOverlayOpen()) return;
+      const key = e.key.toLowerCase();
+      if (key === 't' || key === 'n') {
+        if (!els.addForm.getClientRects().length) return;
+        const btn = [...els.typeBtns].find(b => b.dataset.type === (key === 't' ? 'task' : 'note'));
+        e.preventDefault();
+        btn.click();
+      } else if (e.key === '[' || e.key === ']') {
+        const arrow = e.key === '[' ? els.prevDay : els.nextDay;
+        if (!arrow.getClientRects().length) return;
+        e.preventDefault();
+        arrow.click();
+      }
+    }
+    document.addEventListener('keydown', handleDeskShortcut);
+    els.addEditorHost.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !addEditor || e.target !== addEditor) return;
+      e.preventDefault();
+      addEditor.blur();
+    });
+
     els.addForm.addEventListener('submit', (e) => {
       e.preventDefault();
       if (!addEditor) return;
@@ -23492,7 +23679,13 @@
 
     accountMenuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      accountMenu.classList.contains('hidden') ? openAccountMenu() : closeAccountMenu();
+      if (!accountMenu.classList.contains('hidden')) { closeAccountMenu(); return; }
+      openAccountMenu();
+      accountMenu.querySelector('.account-menu-item')?.focus({ preventScroll: true });
+    });
+    accountMenu.addEventListener('keydown', (e) => { if (moveMenuFocus(accountMenu, e.key)) e.preventDefault(); });
+    document.getElementById('sidebar-account').addEventListener('focusout', (e) => {
+      if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) closeAccountMenu();
     });
     document.getElementById('account-menu-options').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -23508,6 +23701,12 @@
     });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || accountMenu.classList.contains('hidden')) return;
+      const openBackup = accountMenu.querySelector('.backup-dropdown:not(.hidden)');
+      if (openBackup) {
+        closeBackupMenus();
+        openBackup.parentElement.querySelector('.backup-btn')?.focus({ preventScroll: true });
+        return;
+      }
       closeAccountMenu();
       accountMenuBtn.focus({ preventScroll: true });
     });
@@ -23534,9 +23733,7 @@
 
     // Close overflow menus when clicking outside
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.card-overflow-btn')) {
-        document.querySelectorAll('.card-overflow-menu').forEach(m => m.classList.add('hidden'));
-      }
+      if (!e.target.closest('.card-overflow-btn')) closeCardMenus();
     });
 
     els.importCancel.addEventListener('click', () => {
@@ -23844,6 +24041,18 @@
     els.recurringClose.addEventListener('click', closeRecurringModal);
     els.recurringModal.addEventListener('click', (e) => {
       if (e.target === els.recurringModal) closeRecurringModal();
+      else if (!e.target.closest?.('.recurring-more-wrap')) closeRecurringMenus();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || els.recurringModal.classList.contains('hidden')) return;
+      if (els.recurringModalBody.querySelector('.recurring-more-menu:not([hidden])')) {
+        const btn = els.recurringModalBody.querySelector('.recurring-more-btn[aria-expanded="true"]');
+        closeRecurringMenus();
+        btn?.focus({ preventScroll: true });
+        return;
+      }
+      if (isTypingTarget(e.target)) return;
+      closeRecurringModal();
     });
 
     const storageBanner = document.getElementById('storage-banner');
