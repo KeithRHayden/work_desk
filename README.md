@@ -15,7 +15,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Drag and drop** — reorder within a day or move between columns; on desktop, the empty space below a column accepts drops for that column, with a *Drop in …* strip showing where the task will land
 - **Shelving** — park a task without deleting it
 - **Carry forward** — a one-click button that only appears when there's something to carry; enable auto-carry (Options → Behavior) to pull it in every time you open the desk
-- **Recurring templates** — daily / weekdays / weekly / custom days / every 2 weeks / monthly / quarterly; monthly and quarterly go on dates (the 1st and 15th, the last day) or weekdays (the 3rd Thursday, the 1st and 3rd Tuesday); injects once per due day (completed instances count)
+- **Recurring templates** — daily / weekdays / weekly / custom days / every 2 weeks / monthly / quarterly; monthly and quarterly go on dates (the 1st and 15th, the last day) or weekdays (the 3rd Thursday, the 1st and 3rd Tuesday); injects once per due day (completed instances count). The panel has a one-line quick-add bar (text, **Repeats** dropdown, Add) and lists templates in columns with the schedule and **next due** date; Edit, Add tag, and Delete are in each row's ⋮ menu (the same menu icon as cards)
 - **Comments / updates** — timestamped follow-ups on tasks; split any comment into its own task or note with one click (→ task / → note)
 - **Move to another day** — keeps a single ID (no dual-day clones)
 
@@ -89,9 +89,10 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **What's New** — after an update, a highlighted "What's new" link with a pulsing dot appears under the sidebar subtitle (and a dot on the account button); it opens the changelog and disappears once you close it. *What's new* or the version number in the account menu opens the changelog any time
 - **Sticky bottom add bar** on mobile so capture stays reachable while scrolling
 - Installable home-screen app and service worker offline shell
+- **Full screen** — Options → Behavior → General hides the status bar and app tray (swipe from an edge to see them). Saved per device, not synced; with it on, the first tap after the app opens enters full screen, since browsers only allow it right after a tap or key press
 - **Always the latest version online** — the service worker (`sw.js`) loads the page network-first and only falls back to the saved copy offline, so a new deploy shows on the first load; an app left open in the background offers a **Reload** when a newer version ships
 - **Stale-copy protection** — each sync records the app version; if an out-of-date copy opens and sees cloud data from a newer version, it reloads instead of carrying tasks or overwriting settings
-- Touch-friendly week strip and tap-to-complete (the complete edge widens to 40px on touch screens)
+- Touch-friendly week strip and tap-to-complete (the complete edge widens to 40px on touch screens in the phone layout, and 28px on touch screens showing the desktop layout, like a tablet in landscape)
 
 ## How it behaves
 
@@ -144,7 +145,7 @@ The details behind the features above: when things happen automatically, and wha
 - **Tag box** — clicking *tag* on a card opens a text field with your two most-used tags; it stays open until you add a tag, press Esc, or click outside it
 - **Today's Progress** — the sidebar card always shows today, whichever day you're viewing
 - **What's new** — the link under the subtitle appears once per new version and disappears after you close the changelog
-- **Help** — the **?** beside the title opens a short guide in folding sections (Quick start and Keyboard shortcuts start open). The search box at the top filters every section down to the matching lines, and the grid of short section names under it (four across, three on a phone) jumps to a section. Esc in the search box clears it; Esc again closes Help. The mechanics on this page live here rather than in Help
+- **Help** — the **?** beside the title opens a short guide in folding sections, all open each time Help opens (tap a heading to fold it away). **T** / **N** start a new task / note and **[** / **]** change the day whenever you aren't typing. The search box at the top filters every section down to the matching lines, and the grid of short section names under it (four across, three on a phone) jumps to a section. Esc in the search box clears it; Esc again closes Help. The mechanics on this page live here rather than in Help
 - **Local history** — every day is kept in this browser's copy; the storage warning tells you when it's getting full
 
 ## Tech stack
@@ -222,12 +223,15 @@ work-desk/
 
 | Action | Shortcut |
 |--------|----------|
+| Start a new task / note (when not typing) | `T` / `N` |
+| Previous / next day (when not typing) | `[` / `]` |
 | Add task / note | `Ctrl/Cmd + Enter` |
 | Add comment / update | `Ctrl/Cmd + Enter` |
 | Save an edit (task, note, comment, recurring task) | `Ctrl/Cmd + Enter` |
 | Bold / Italic / Underline | `Ctrl/Cmd + B` / `I` / `U` |
 | Reorder a project, note, or project task | `Alt + ↑` / `Alt + ↓` |
-| Cancel / close | `Escape` |
+| Move around a menu (card ⋮, recurring ⋮, account, project More) | `↑` / `↓` (`Home` / `End` for first / last) |
+| Cancel / close a menu, or leave the add box | `Escape` |
 
 ## Data storage
 
@@ -259,7 +263,7 @@ Layout/CSS coverage: unit invariants assert critical selectors (e.g. desktop pag
 Desktop screenshot baselines (`e2e/smoke.spec.ts-snapshots/`) cover the desk at 1440/1024/820px, Insights, the collapsed sidebar, the Options panel, and the Export menu; any pixel change fails the suite. Regenerate them only for an intended desktop change: `npx playwright test -g "Desktop layout baselines" --update-snapshots`. The phone menu suite checks every menu control, the 768/769px boundary, resizing with the menu open, and that no button is duplicated.
 
 
-E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), search overlay (result count, `#tagname` filtering, close/outside-click), project tasks (mid-edit preservation, empty-save deletion, cancel revert, tombstone tracking, double-click editing), dynamic add-form placeholder, project note list padding, settings popout 3-tab split (Themes/Appearance/Behavior), theme filter buttons (Light/Med/Dark/Custom switching), custom theme builder (add/edit/delete/apply/persist/max-5 cap), comments (add/edit/delete/badge/collapse/split to task or note/undo/text hover actions), recurring templates (add/edit/delete/persist), Insights tab (period selector, navigation, charts, summary stats, day-by-day date labels), streak weekend toggle (default, effect on streaks, persistence), Desk vs Projects view separation, project lifecycle (empty state, rename, delete confirm/cancel, notes, tabs, persistence, sidebar counts), Work/Personal context isolation, day navigation and Back to today, desk notes, carry forward, and the Help / What's New modals. The auth modal is dismissed via **Continue offline**.
+E2E covers add → New, complete/uncomplete, reload persistence, export tombstones, move-to-date ID uniqueness, hashtag tagging (extraction, case-insensitivity, add/remove via the tag button), search overlay (result count, `#tagname` filtering, close/outside-click), project tasks (mid-edit preservation, empty-save deletion, cancel revert, tombstone tracking, double-click editing), dynamic add-form placeholder, project note list padding, settings popout 3-tab split (Themes/Appearance/Behavior), theme filter buttons (Light/Med/Dark/Custom switching), custom theme builder (add/edit/delete/apply/persist/max-5 cap), comments (add/edit/delete/badge/collapse/split to task or note/undo/text hover actions), recurring templates (add/edit/delete/persist), Insights tab (period selector, navigation, charts, summary stats, day-by-day date labels), streak weekend toggle (default, effect on streaks, persistence), Desk vs Projects view separation, project lifecycle (empty state, rename, delete confirm/cancel, notes, tabs, persistence, sidebar counts), Work/Personal context isolation, day navigation and Back to today, desk notes, carry forward, and the Help / What's New modals. The auth modal is dismissed via **Continue offline**. `e2e/sync.spec.ts` runs cloud sync and account creation against a stand-in for the Supabase project (`FakeCloud`): sign-in and sign-out, uploads and downloads, outages, and **Create account** with email confirmation on or off, form validation, and server errors.
 
 ## Browser support
 
