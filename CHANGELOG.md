@@ -6,6 +6,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.22.0] — 2026-10-22
+
+### Added
+- **Keyboard shortcuts for a keyboard-only tablet** — **T** starts a new task and **N** a new note (selects the type in the add bar and puts the cursor in it), and **[** / **]** step to the previous / next day. They only fire when you aren't typing in a box, no modifier key is held, and nothing is open on top (Options, Help, search results, menus, dialogs), so they never get in the way of typing
+- **Full screen** — a toggle in Options → Behavior → General hides the status bar and app tray; swipe down from the top or up from the bottom to see them. Browsers only allow full screen right after a tap or key press, so with it on, the first tap after the app opens switches to full screen (and so does the next tap if you leave it with Back). Saved on each device and not synced, so a tablet can be full screen while a phone isn't. Hidden where the browser doesn't support full screen
+
+### Improved
+- **Help opens fully expanded** — every section starts open each time Help opens, so it reads top to bottom. Tap a heading to fold it; the section links still jump to (and reopen) a section
+- **Cleaner Recurring Tasks panel** — a quick-add bar on top: the task text, a **Repeats** dropdown (Daily, Weekdays, Weekly, Custom, Every 2 weeks, Monthly, Quarterly), and **Add** on one line, with no formatting toolbar. Day, date, and month choices only appear for schedules that need them. Below it, your recurring tasks line up in columns: the task and its tags, the schedule (`*` marks one that skips holidays), and **next due** (*Today*, *Tomorrow*, *Tue, Oct 27*), which accounts for holidays and for a task already added today. **Edit**, **Add tag**, and **Delete** moved into a **⋮** menu on each row, the same icon cards use; Add tag opens the tag picker right in the row, and a tag's × removes it. Esc closes an open menu first, then the panel. On a phone each row stacks the schedule and next due under the task
+- **Done edge on a tablet in landscape** — touch screens showing the desktop layout (wider than 768px) get a 28px tap-to-complete edge, between the 18px mouse edge and the phone's 40px
+
+### Fixed
+- **Card ⋮ menu from the keyboard** — opening it moves focus to the first item; ↑ / ↓ (and Home / End) move between items; Esc closes it and puts focus back on ⋮; tabbing away closes it. The ⋮ button now tells screen readers whether the menu is open. Before, Esc did nothing once you were inside the menu, which Help already promised. The Recurring panel's ⋮ menu gets the same arrow keys, and desk shortcuts are ignored while a card menu is open
+- **Account menu from the keyboard** — the menu at the bottom of the sidebar now opens on *Options* instead of leaving focus on its button; ↑ / ↓ / Home / End move through whatever is showing (skipping Sign in or Sign out, whichever is hidden, and stepping into an open Export or Import list); Esc closes an open Export / Import list first, then the menu; tabbing out closes it. It now behaves like the card, recurring, and project menus
+- **Esc leaves the add box** — after adding with Ctrl+Enter, focus stays in the add box for the next one; Esc now steps out of it (keeping any text), so T / N / [ / ] work again without tabbing away first
+- **Phone messages no longer cover the add bar** — toasts (like *Working offline*) sit just above the pinned add bar, and follow its height as it grows
+- **Shortcuts in the phone layout** — T / N / [ / ] checked whether the add bar was showing in a way that always failed once the bar is pinned to the bottom, so they did nothing on a phone-width screen (including a tablet in portrait). They work there now
+- **Tags in the recurring Edit form** — pressing Esc in **+ tag** cleared the box, but a delayed save on click-away still added what you'd typed a moment later. That save also re-drew the tag row, so a second **+ tag** opened right after pressing Enter could vanish mid-typing. Enter, Esc, and clicking away now each finish the box once. New E2E tests cover the Edit form's tag row (× removes, + tag on Enter or click-away, Esc cancels, no duplicates, removing every tag saves none), `#tag` in the text becoming a tag on Save, and the empty-description and missing-day guards, which brings the Edit form from 79% to full coverage
+- **Account creation is tested** — the sync tests' stand-in Supabase now answers sign-ups, so **Create account** is covered for missing or short passwords (caught before anything is sent), email confirmation on (asks you to check your email, stays signed out) and off (signs in and backs up right away), and a server error like *User already registered*. No app changes
+- **Cleanup** — removed three functions nothing called (`makeSection`, `closeThemePicker`, `startTask`) and corrected the comment on the tag color fallback
+
 ## [1.21.1] — 2026-10-22
 
 ### Improved
