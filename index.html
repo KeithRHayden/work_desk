@@ -3953,14 +3953,18 @@
       color: var(--text-muted);
       margin-top: 10px;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 12px;
+      gap: 4px 12px;
     }
+    .project-item-meta > span { white-space: nowrap; }
 
     .project-item-actions {
       display: flex;
-      gap: 8px;
+      flex-wrap: wrap;
+      gap: 2px 8px;
       font-size: 0.78rem;
+      min-width: 0;
     }
     .project-item-actions button {
       background: transparent;
@@ -3968,6 +3972,7 @@
       color: var(--text-muted);
       cursor: pointer;
       padding: 2px 4px;
+      white-space: nowrap;
     }
     .project-item-actions button:hover {
       color: var(--accent);
@@ -4925,6 +4930,24 @@
     .week-day-num { font-size: 0.88rem; font-weight: 500; line-height: 1.2; }
 
     .insights-panel { display: flex; flex-direction: column; gap: 28px; max-width: 1240px; margin: 0 auto; width: 100%; }
+    #insights-view { container: insights / inline-size; }
+    /* One column: the wrappers drop out and `order` restores the classic card sequence */
+    .insights-cols, .insights-col { display: contents; }
+    .insights-panel .productivity-metrics-card { order: 1; }
+    .insights-panel .comparison-card { order: 2; }
+    .insights-panel .carryover-card { order: 3; }
+    .insights-panel .tags-card { order: 4; }
+    .insights-panel .lingering-card { order: 5; }
+    .insights-panel .shelved-card { order: 6; }
+    .insights-panel .recurring-card { order: 7; }
+    .insights-panel .chains-card { order: 8; }
+    .insights-panel .trend-card { order: 9; }
+    .insights-panel > :not(.insights-header):not(.insights-cols) { order: 10; }
+    @container insights (min-width: 1500px) {
+      .insights-panel { max-width: 2000px; }
+      .insights-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: start; order: 1; }
+      .insights-col { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+    }
 
     .insights-header {
       display: flex;
@@ -5042,6 +5065,21 @@
     }
 
     .legend-item { display: flex; align-items: center; gap: 6px; }
+
+    .insight-hidden-note {
+      margin: -8px 0 16px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .insight-hidden-change {
+      background: none;
+      border: 0;
+      padding: 0;
+      font: inherit;
+      color: var(--accent);
+      text-decoration: underline;
+      cursor: pointer;
+    }
 
     .legend-swatch {
       width: 10px;
@@ -5599,9 +5637,40 @@
       color: var(--accent);
     }
     .insight-show-all:hover { text-decoration: underline; }
+    .insight-card-empty { font-size: 0.85rem; color: var(--text-muted); }
+
+    .recurring-breakdown { grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) auto; }
+    .recurring-name { white-space: nowrap; text-overflow: ellipsis; color: var(--text); }
+    .recurring-flag {
+      margin-left: 6px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      background: color-mix(in srgb, var(--carried) 28%, transparent);
+      color: var(--text);
+    }
+    .recurring-open { display: block; }
+
+    .chains-stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 4px 0 6px; }
+    .chains-stat { display: flex; flex-direction: column; gap: 2px; }
+    .chains-stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .chains-stat-label { font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+    .chain-dots { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
+    .chain-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--carried); }
+    .chain-dot.done { background: var(--accent); }
+    .insight-task-btn.shelve { background: var(--accent-light); border-color: transparent; color: var(--accent); font-weight: 600; }
+
+    .trend-bars { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .trend-bars .tag-breakdown-track { height: 7px; }
+    .trend-fill { height: 100%; min-width: 2px; border-radius: inherit; }
+    .trend-fill.now { background: var(--accent); }
+    .trend-fill.was, .legend-swatch.was { background: #94a3b8; }
+    .trend-delta { margin-left: 6px; font-weight: 600; }
 
     @media (max-width: 600px) {
       .tag-breakdown { grid-template-columns: 90px minmax(0, 1fr); }
+      .recurring-breakdown { grid-template-columns: 130px minmax(0, 1fr); }
       .tag-breakdown-counts { grid-column: 1 / -1; margin-top: -4px; }
       .insight-task-row { flex-direction: column; align-items: stretch; }
       .insight-task-actions { justify-content: flex-end; }
@@ -8051,6 +8120,21 @@
         font-size: 0.72rem;
       }
 
+      /* Phones: views on top, desks underneath, as in the desktop sidebar */
+      @media (max-width: 600px) {
+        .sidebar-tabs { flex-direction: column; }
+        .context-tabs {
+          border-left: none !important;
+          margin-left: 0 !important;
+          padding-left: 0 !important;
+          border-top: 1px solid var(--sidebar-border) !important;
+          margin-top: 3px !important;
+          padding-top: 3px !important;
+        }
+        .app-tab { padding: 7px 8px; font-size: 0.8rem; }
+        .context-tabs .app-tab { padding: 6px 8px; font-size: 0.76rem; }
+      }
+
       .main {
         height: auto;
         overflow-y: visible;
@@ -8692,7 +8776,7 @@
                       </select>
                     </div>
                     <div class="customize-select-row customize-select-row-sub">
-                      <label for="quiet-weekends-select"><span>Quieter weekends<span class="options-new-tag" data-new-in="1.17.0">New</span></span><span class="customize-toggle-sub">Gray Sat/Sun on the calendar</span></label>
+                      <label for="quiet-weekends-select"><span>Quieter weekends<span class="options-new-tag" data-new-in="1.17.0">New</span></span><span class="customize-toggle-sub">On the calendar and in Insights</span></label>
                       <select id="quiet-weekends-select" aria-label="Quieter weekends">
                         <option value="off">Off</option>
                         <option value="work">Work only</option>
@@ -9035,9 +9119,13 @@
             <li>Pick <strong>Week</strong>, <strong>Month</strong>, or <strong>Year</strong>; the arrows step back, and <em>This week</em> (or month or year) returns</li>
             <li><strong>Summary</strong> — completion rate, average completions, carry-over rate, most productive day, and a comparison with the period before</li>
             <li><strong>Tasks by Tag</strong>, <strong>Lingering Tasks</strong> (oldest open), and <strong>Shelved Review</strong>, where <em>Bring back</em> moves a task to today's Active column</li>
+            <li><strong>Recurring Follow-through</strong> shows how often each recurring task got done on the days it came up (days you didn't open the desk don't count); under 50% after 3 or more chances gets a <em>Rarely done</em> flag</li>
+            <li><strong>Carry Chains</strong> lists tasks carried forward 3 or more times, with <em>Shelve</em> to park one that keeps slipping. Carries are counted from 1.23.0 on</li>
+            <li><strong>Tag Trend</strong> compares each tag's share of your tasks with the period before (to the same point if this one isn't over). It needs 10 tasks on each side before showing arrows</li>
             <li><strong>Carry-over analysis</strong> shows when tasks were left unfinished, with the dates behind each weekday (e.g. Wed: Sep 9 (2) · Sep 23 (1))</li>
             <li><strong>Streaks</strong> come with a heatmap. <strong>Weekends don't break streaks</strong> unless you turn that off in Options → Behavior → Insights</li>
             <li><strong>Charts</strong> switch between bar, line, stacked, and pie. Click a day in the table, chart, or heatmap to open it on the desk</li>
+            <li>The <strong>Month</strong> chart stops at today, and with <strong>Quieter weekends</strong> on for that desk it leaves out empty Saturdays and Sundays; a note under the legend says how many and links to the setting</li>
           </ul>
         </details>
 
@@ -9069,7 +9157,7 @@
           <summary>Phone &amp; install</summary>
           <ul>
             <li><strong>Install</strong> — use your browser's install option, or on iPhone <strong>Share → Add to Home Screen</strong>. Installed, it opens in its own window and works offline</li>
-            <li><strong>Phone menu</strong> — the top bar keeps your tabs, search, and Help; the <strong>menu button</strong> holds your account, backup, Options, and What's new. The dot beside it shows sync status</li>
+            <li><strong>Phone menu</strong> — the top bar keeps your tabs (Desk and Insights, with Work, Personal, and Projects underneath), search, and Help; the <strong>menu button</strong> holds your account, backup, Options, and What's new. The dot beside it shows sync status</li>
             <li>The add bar stays at the bottom, the week strip picks the day, and a task's left edge is wider for tapping (a bit narrower on a tablet in landscape)</li>
             <li><strong>Full screen</strong> — Options → Behavior → General hides the status bar and app tray on that device only; swipe from an edge to see them</li>
           </ul>
@@ -9254,12 +9342,41 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.22.0';
+    const APP_VERSION = '1.23.0';
     const CHANGELOG = [
+      {
+        version: '1.23.0',
+        date: 'Oct 27, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Insights: Recurring Follow-through card. Each recurring task gets a bar of Done, Still open, and Missed for the days it came up, lowest rate first. Days you didn\'t open the desk don\'t count against it. Under 50% after 3 or more chances gets a Rarely done flag, and Open Recurring tasks jumps to the list',
+            'Insights: Carry Chains card. Tasks carried forward 3 or more times, oldest first, with how long each has been rolling, one dot per carry, and Shelve to park one that keeps slipping. Carries are counted from this version on',
+            'Insights: Tag Trend card. Each tag\'s share of your tasks compared with last week, month, or year (to the same point while the period is still going), with arrows for moves of 5 points or more and a one-line takeaway. It waits for 10 tasks on each side before comparing',
+          ] },
+          { label: 'Improved', items: [
+            'On a phone, Work, Personal, and Projects now sit under Desk and Insights, as on desktop, instead of squeezed onto one row',
+          ] },
+          { label: 'Fixed', items: [
+            'Adding a task with a column\'s + Add task box now clears the box. The text stayed behind, so tapping Add again added the same task twice',
+            'On a phone, a project note\'s actions (edit, add update, tag, to desk, archive, delete) wrap onto a second row instead of breaking labels in two or running off the card',
+          ] },
+        ],
+      },
+      {
+        version: '1.22.1',
+        date: 'Oct 27, 2026',
+        sections: [
+          { label: 'Improved', items: [
+            'The Daily breakdown in Insights (Month view) stops at today instead of listing the rest of the month as zeros',
+            'With Quieter weekends on for a desk, the Daily breakdown leaves out Saturdays and Sundays that have nothing on them (busy weekends stay). A note under the legend says how many are hidden, and Change opens the setting',
+            'Insights uses a wide screen: on a large monitor, the summary cards sit in two columns (Summary, Carry-Over, and Lingering on the left; Month-over-Month, Tags, and Shelved on the right), each card only as tall as its content. Laptops, tablets, and phones keep the single column',
+          ] },
+        ],
+      },
       {
         version: '1.22.0',
         date: 'Oct 22, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Keyboard shortcuts for adding without a mouse: T starts a new task and N a new note, and [ and ] step to the previous or next day. They work whenever you aren\'t typing in a box and nothing is open on top',
@@ -10172,7 +10289,6 @@
 
     migrateLegacyStorage();
 
-    // Keep in sync with lib/desk-logic.mjs AUTO_COLLAPSE_AT_OPTIONS / normalizeAutoCollapseAt
     const AUTO_COLLAPSE_AT_OPTIONS = [3, 5, 8, 10, 15, 20];
 
     function normalizeAutoCollapseAt(n) {
@@ -13005,6 +13121,7 @@
           localStorage.setItem(QUIET_WEEKENDS_KEY, state.quietWeekends);
           schedulePrefsPush();
           renderCalendar();
+          if (state.activeTab === 'insights') renderInsights();
         });
       }
 
@@ -13486,10 +13603,8 @@
       if (!found) return;
 
       const item = cloneData(found.item);
-      // Clear carriedFrom when sending to another context - this is intentional organization
-      if (item.type === 'task' && item.carriedFrom) {
-        delete item.carriedFrom;
-      }
+      // Sending to another context is intentional organization, not a carry-over
+      if (item.type === 'task') clearCarryStamps(item);
       const targetContext = state.listContext === 'work' ? 'personal' : 'work';
       const targetLabel = targetContext === 'work' ? 'Work' : 'Personal';
       const date = found.date;
@@ -13531,10 +13646,8 @@
       // Prefer the copy from the source day we found; strip EVERY occurrence of this ID
       // so move can't leave the same ID on two days.
       const item = JSON.parse(JSON.stringify(found.item));
-      // Clear carriedFrom when manually moving - this is intentional rescheduling, not a carry-over
-      if (item.type === 'task' && item.carriedFrom) {
-        delete item.carriedFrom;
-      }
+      // Moving by hand is intentional rescheduling, not a carry-over
+      if (item.type === 'task') clearCarryStamps(item);
       for (const date of Object.keys(state.data.days)) {
         const day = state.data.days[date];
         const remaining = day.items.filter(i => i.id !== itemId);
@@ -14374,6 +14487,10 @@
         if (item.carriedFrom && typeof item.carriedFrom === 'string') {
           normalized.carriedFrom = item.carriedFrom;
         }
+        if (Number.isInteger(item.carryCount) && item.carryCount > 0) normalized.carryCount = item.carryCount;
+        if (typeof item.carryStart === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.carryStart)) {
+          normalized.carryStart = item.carryStart;
+        }
       }
       // Preserve comments for both tasks and notes
       if (Array.isArray(item.comments) && item.comments.length > 0) {
@@ -14554,6 +14671,7 @@
           if (!merged.carriedFrom && other.carriedFrom) {
             merged = { ...merged, carriedFrom: other.carriedFrom };
           }
+          merged = mergeCarryStamps(merged, other);
           // Preserve recurringTemplateId from either copy
           if (!merged.recurringTemplateId && other.recurringTemplateId) {
             merged = { ...merged, recurringTemplateId: other.recurringTemplateId };
@@ -15935,6 +16053,7 @@
           : winner;
         const unionedTags = mergeTags(merged.tags, loser.tags);
         if (unionedTags) merged = { ...merged, tags: unionedTags };
+        merged = mergeCarryStamps(merged, loser);
         if (!merged.recurringTemplateId && loser.recurringTemplateId) {
           return { ...merged, recurringTemplateId: loser.recurringTemplateId };
         }
@@ -16893,6 +17012,37 @@
       return day.items.filter(i => i.type === 'task' && !i.completed && !i.shelved).length;
     }
 
+    // Carrying moves a task, so these stamps are the only record of how long it has been rolling.
+    // A task carried before 1.23.0 has carriedFrom but no count, which reads as one carry.
+    function carryCountOf(task) {
+      if (Number.isInteger(task.carryCount) && task.carryCount > 0) return task.carryCount;
+      return typeof task.carriedFrom === 'string' && task.carriedFrom ? 1 : 0;
+    }
+
+    function stampCarry(task, sourceDateKey) {
+      task.carryCount = carryCountOf(task) + 1;
+      if (!task.carryStart) task.carryStart = task.carriedFrom || sourceDateKey;
+      task.carriedFrom = sourceDateKey;
+    }
+
+    // Sending or moving a task on purpose, or bringing it back from the shelf, starts it fresh
+    function clearCarryStamps(task) {
+      delete task.carriedFrom;
+      delete task.carryCount;
+      delete task.carryStart;
+    }
+
+    // Two copies of one task: keep the longer chain and the earlier start
+    function mergeCarryStamps(merged, other) {
+      const count = Math.max(carryCountOf(merged), carryCountOf(other));
+      const start = [merged.carryStart, other.carryStart].filter(Boolean).sort()[0];
+      if (count === carryCountOf(merged) && start === merged.carryStart) return merged;
+      const next = { ...merged };
+      if (count > 0) next.carryCount = count;
+      if (start) next.carryStart = start;
+      return next;
+    }
+
     function carryForwardUnfinished(sourceDate, options = {}) {
       const { auto = false, allPastDays = false } = options;
       const today = todayKey();
@@ -16921,10 +17071,7 @@
             if (existingIds.has(item.id)) continue;
             existingIds.add(item.id);
             const cloned = JSON.parse(JSON.stringify(item));
-            // Mark as carried from this source date for accurate insights tracking
-            if (cloned.type === 'task') {
-              cloned.carriedFrom = sourceDateKey;
-            }
+            if (cloned.type === 'task') stampCarry(cloned, sourceDateKey);
             toAdd.push(cloned);
           }
         }
@@ -16995,10 +17142,7 @@
       // Deep clone items to preserve all properties including comments (same IDs = move)
       const clonedItems = toAdd.map(i => {
         const cloned = JSON.parse(JSON.stringify(i));
-        // Mark as carried from source date for accurate insights tracking
-        if (cloned.type === 'task') {
-          cloned.carriedFrom = sourceDate;
-        }
+        if (cloned.type === 'task') stampCarry(cloned, sourceDate);
         return cloned;
       });
       for (const item of clonedItems) clearItemDeleted(item.id);
@@ -18220,6 +18364,7 @@
           : winner;
         const unionedTags = mergeTags(merged.tags, loser.tags);
         if (unionedTags) merged = { ...merged, tags: unionedTags };
+        merged = mergeCarryStamps(merged, loser);
         if (!merged.recurringTemplateId && loser.recurringTemplateId) {
           return { ...merged, recurringTemplateId: loser.recurringTemplateId };
         }
@@ -20124,6 +20269,8 @@
           const submitTask = () => {
             const val = input.value.trim();
             if (val) {
+              // Cleared before render so the redraw doesn't restore the saved text as a draft
+              input.value = '';
               addItem(val, { boardColumn: columnClass, itemType: 'task' });
               state.addingInColumn = columnClass;
               render();
@@ -20468,6 +20615,21 @@
       return { range, totals, daily, segments, completionRate };
     }
 
+    // Month chart: skip empty days not reached yet, and empty Sat/Sun when Quieter weekends covers this desk.
+    // `segments` and `daily` line up one-to-one by day.
+    function trimMonthSegments(segments, daily, { hideEmptyWeekends, today }) {
+      let hiddenWeekends = 0;
+      const kept = segments.filter((seg, i) => {
+        if (daily[i].hasActivity) return true;
+        if (seg.dayKey > today) return false;
+        const dow = dateFromKey(seg.dayKey).getDay();
+        if (!hideEmptyWeekends || (dow !== 0 && dow !== 6)) return true;
+        hiddenWeekends++;
+        return false;
+      });
+      return { segments: kept, hiddenWeekends };
+    }
+
     // Compute week-over-week comparison
     function computeWeekComparison(currentData, anchorKey) {
       const lastWeekAnchor = (() => {
@@ -20579,10 +20741,11 @@
 
     // A period still in progress is compared with the same number of days at the start of the previous one,
     // so the first week of a month isn't measured against all of last month.
-    function computePeriodComparison(period, anchorKey, today) {
+    function comparablePeriodRanges(period, anchorKey, today) {
       const range = getPeriodRange(period, anchorKey);
       const prevAnchor = dateFromKey(range.startKey);
-      if (period === 'month') prevAnchor.setMonth(prevAnchor.getMonth() - 1);
+      if (period === 'week') prevAnchor.setDate(prevAnchor.getDate() - 7);
+      else if (period === 'month') prevAnchor.setMonth(prevAnchor.getMonth() - 1);
       else prevAnchor.setFullYear(prevAnchor.getFullYear() - 1);
       const prevRange = getPeriodRange(period, formatDateKey(prevAnchor));
       const toDate = isKeyInRange(today, range);
@@ -20595,7 +20758,19 @@
         const k = formatDateKey(e);
         if (k < previousEnd) previousEnd = k;
       }
-      const current = summarizeRange(range.startKey, currentEnd);
+      return {
+        current: { startKey: range.startKey, endKey: currentEnd },
+        previous: { startKey: prevRange.startKey, endKey: previousEnd },
+        toDate,
+      };
+    }
+
+    function computePeriodComparison(period, anchorKey, today) {
+      const ranges = comparablePeriodRanges(period, anchorKey, today);
+      const { toDate } = ranges;
+      const prevRange = ranges.previous;
+      const previousEnd = prevRange.endKey;
+      const current = summarizeRange(ranges.current.startKey, ranges.current.endKey);
       const previous = summarizeRange(prevRange.startKey, previousEnd);
       const currentRate = current.completionRate ?? 0;
       const previousRate = previous.completionRate ?? 0;
@@ -20637,6 +20812,141 @@
       });
       const rows = [...byTag.values()].sort((a, b) => b.total - a.total || a.tag.localeCompare(b.tag));
       return { rows, untagged: untagged.total ? untagged : null };
+    }
+
+    // How often each recurring task got done on the days it came up, lowest rate first.
+    // A due day only counts if the desk was used that day, so days away aren't misses.
+    // Copies are matched by the day they were created, since carrying moves them.
+    function computeRecurringFollowThrough(range, today, templates = loadRecurringTemplates()) {
+      const end = range.endKey < today ? range.endKey : today;
+      if (end < range.startKey || !templates.length) return [];
+      const usedDays = new Set();
+      const copies = new Map();
+      const seen = new Set();
+      for (const [dayKey, day] of Object.entries(state.data.days || {})) {
+        const items = day.items || [];
+        if (items.length) usedDays.add(dayKey);
+        for (const item of items) {
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
+          const created = createdDateKey(item) || dayKey;
+          usedDays.add(created);
+          if (item.type !== 'task' || !item.recurringTemplateId) continue;
+          if (created < range.startKey || created > end) continue;
+          if (!copies.has(item.recurringTemplateId)) copies.set(item.recurringTemplateId, []);
+          copies.get(item.recurringTemplateId).push({ item, created });
+        }
+      }
+      const rows = [];
+      for (const t of templates) {
+        const born = (t.createdAt || '').slice(0, 10);
+        const from = born > range.startKey ? born : range.startKey;
+        const chances = new Set();
+        if (from <= end) {
+          eachDateInRange(from, end, (k) => {
+            if (!usedDays.has(k) || !recurringDueOn(t, k)) return;
+            if (t.skipHolidays && checkHoliday(k).isHoliday) return;
+            chances.add(k);
+          });
+        }
+        const mine = copies.get(t.id) || [];
+        for (const c of mine) chances.add(c.created);
+        const total = chances.size;
+        if (!total) continue;
+        const done = Math.min(total, mine.filter(c => c.item.completed).length);
+        const open = Math.min(total - done, mine.filter(c => !c.item.completed && !c.item.shelved).length);
+        rows.push({
+          id: t.id,
+          name: plainTextPreview(t.content, 80) || '(empty task)',
+          total,
+          done,
+          open,
+          missed: total - done - open,
+          rate: Math.round((done / total) * 100),
+          rarely: total >= 3 && done / total < 0.5,
+        });
+      }
+      rows.sort((a, b) => a.rate - b.rate || b.total - a.total || a.name.localeCompare(b.name));
+      return rows;
+    }
+
+    const CARRY_CHAIN_MIN = 3;
+
+    // Tasks carried CARRY_CHAIN_MIN+ times whose run of carries overlaps the range, oldest run first
+    function computeCarryChains(range) {
+      const seen = new Set();
+      const chains = [];
+      for (const [dayKey, day] of Object.entries(state.data.days || {})) {
+        for (const item of day.items || []) {
+          if (item.type !== 'task' || seen.has(item.id)) continue;
+          seen.add(item.id);
+          const count = carryCountOf(item);
+          const start = item.carryStart || item.carriedFrom;
+          if (count < CARRY_CHAIN_MIN || !start) continue;
+          const last = item.carriedFrom || start;
+          if (start > range.endKey || last < range.startKey) continue;
+          const status = item.completed ? 'done' : item.shelved ? 'shelved' : 'open';
+          chains.push({ item, dayKey, count, start, status });
+        }
+      }
+      chains.sort((a, b) => a.start.localeCompare(b.start) || b.count - a.count || String(a.item.id).localeCompare(String(b.item.id)));
+      const sum = chains.reduce((n, c) => n + c.count, 0);
+      return {
+        chains,
+        open: chains.filter(c => c.status === 'open').length,
+        average: chains.length ? Math.round((sum / chains.length) * 10) / 10 : 0,
+      };
+    }
+
+    const TAG_TREND_MIN_TASKS = 10;
+    const TAG_TREND_NOTABLE = 5;
+
+    function countTasksByTag(startKey, endKey) {
+      const byTag = new Map();
+      let total = 0;
+      let untagged = 0;
+      eachDateInRange(startKey, endKey, (dayKey) => {
+        for (const item of state.data.days[dayKey]?.items || []) {
+          if (item.type !== 'task') continue;
+          total++;
+          const tags = normalizeTagList(item.tags);
+          if (!tags.length) untagged++;
+          for (const t of tags) byTag.set(t, (byTag.get(t) || 0) + 1);
+        }
+      });
+      return { total, byTag, untagged };
+    }
+
+    // Each tag's share of tasks this period vs the previous one (to the same point when in progress).
+    // mode: 'compare', 'too-few' (under TAG_TREND_MIN_TASKS on either side) or 'no-previous'.
+    function computeTagTrend(period, anchorKey, today) {
+      const ranges = comparablePeriodRanges(period, anchorKey, today);
+      const cur = countTasksByTag(ranges.current.startKey, ranges.current.endKey);
+      if (!cur.total) return null;
+      const prev = countTasksByTag(ranges.previous.startKey, ranges.previous.endKey);
+      const mode = !prev.total ? 'no-previous'
+        : cur.total < TAG_TREND_MIN_TASKS || prev.total < TAG_TREND_MIN_TASKS ? 'too-few'
+        : 'compare';
+      const share = (n, total) => (total ? Math.round((n / total) * 100) : 0);
+      const row = (tag, c, p) => {
+        const now = share(c, cur.total);
+        const was = share(p, prev.total);
+        return { tag, now, was, delta: now - was, count: c };
+      };
+      const tags = new Set([...cur.byTag.keys(), ...(mode === 'compare' ? prev.byTag.keys() : [])]);
+      const rows = [...tags]
+        .map(t => row(t, cur.byTag.get(t) || 0, prev.byTag.get(t) || 0))
+        .sort((a, b) => b.now - a.now || b.was - a.was || a.tag.localeCompare(b.tag));
+      const untagged = cur.untagged || (mode === 'compare' && prev.untagged) ? row(null, cur.untagged, prev.untagged) : null;
+      let rise = null;
+      let drop = null;
+      if (mode === 'compare') {
+        for (const r of untagged ? [...rows, untagged] : rows) {
+          if (r.delta >= TAG_TREND_NOTABLE && (!rise || r.delta > rise.delta)) rise = r;
+          if (r.delta <= -TAG_TREND_NOTABLE && (!drop || r.delta < drop.delta)) drop = r;
+        }
+      }
+      return { mode, rows, untagged, rise, drop, ranges, currentTotal: cur.total, previousTotal: prev.total };
     }
 
     // Oldest still-open tasks right now. Tasks scheduled on a future day aren't lingering.
@@ -20681,7 +20991,7 @@
       if (!found || found.item.type !== 'task' || !found.item.shelved) return;
       const today = todayKey();
       const item = { ...JSON.parse(JSON.stringify(found.item)), shelved: false, boardColumn: 'active' };
-      delete item.carriedFrom;
+      clearCarryStamps(item);
       for (const date of Object.keys(state.data.days)) {
         const day = state.data.days[date];
         const remaining = day.items.filter(i => i.id !== id);
@@ -21597,6 +21907,206 @@
       return card;
     }
 
+    function insightLegend(items) {
+      const legend = document.createElement('div');
+      legend.className = 'insight-legend';
+      for (const [swatch, label] of items) {
+        const item = document.createElement('span');
+        item.className = 'legend-item';
+        const sw = document.createElement('span');
+        sw.className = `legend-swatch ${swatch}`;
+        item.append(sw, label);
+        legend.appendChild(item);
+      }
+      return legend;
+    }
+
+    function insightFoot(text) {
+      const foot = document.createElement('p');
+      foot.className = 'insight-card-foot';
+      foot.textContent = text;
+      return foot;
+    }
+
+    function renderRecurringCard(range, today) {
+      const rows = computeRecurringFollowThrough(range, today);
+      if (!rows.length) return null;
+      const card = insightCard('recurring-card', 'Recurring Follow-through',
+        'How often each recurring task got done on the days it came up, lowest first');
+      card.appendChild(insightLegend([['completed', 'Done'], ['carried', 'Still open'], ['shelved', 'Missed']]));
+      const expanded = !!state.insightsExpanded?.recurring;
+      const list = document.createElement('div');
+      list.className = 'tag-breakdown recurring-breakdown';
+      for (const r of expanded ? rows : rows.slice(0, INSIGHTS_LIST_CAP)) {
+        const row = document.createElement('div');
+        row.className = 'tag-breakdown-row';
+        row.dataset.templateId = r.id;
+        const name = document.createElement('span');
+        name.className = 'tag-breakdown-name recurring-name';
+        name.textContent = r.name;
+        name.title = r.name;
+        const track = document.createElement('div');
+        track.className = 'tag-breakdown-track';
+        track.title = `${r.done} done, ${r.open} still open, ${r.missed} missed`;
+        const fill = document.createElement('div');
+        fill.className = 'tag-breakdown-fill';
+        fill.style.width = '100%';
+        for (const [key, val] of [['completed', r.done], ['carried', r.open], ['shelved', r.missed]]) {
+          if (!val) continue;
+          const seg = document.createElement('div');
+          seg.className = `insight-bar-seg ${key}`;
+          seg.style.flex = String(val);
+          fill.appendChild(seg);
+        }
+        track.appendChild(fill);
+        const counts = document.createElement('span');
+        counts.className = 'tag-breakdown-counts';
+        counts.textContent = `${r.done} of ${r.total} done · ${r.rate}%`;
+        if (r.rarely) {
+          const flag = document.createElement('span');
+          flag.className = 'recurring-flag';
+          flag.textContent = 'Rarely done';
+          counts.appendChild(flag);
+        }
+        row.append(name, track, counts);
+        list.appendChild(row);
+      }
+      card.appendChild(list);
+      if (rows.length > INSIGHTS_LIST_CAP) card.appendChild(insightShowAllButton('recurring', rows.length));
+      card.appendChild(insightFoot('Missed means deleted, shelved, or not done that day. Under 50% after 3 or more chances gets a Rarely done flag.'));
+      const link = document.createElement('button');
+      link.type = 'button';
+      link.className = 'insight-show-all recurring-open';
+      link.dataset.openRecurring = '';
+      link.textContent = 'Open Recurring tasks';
+      card.appendChild(link);
+      return card;
+    }
+
+    function renderCarryChainsCard(range, period) {
+      const { chains, open, average } = computeCarryChains(range);
+      const card = insightCard('chains-card', 'Carry Chains',
+        `Tasks carried forward ${CARRY_CHAIN_MIN} or more times, oldest first`);
+      if (!chains.length) {
+        const empty = document.createElement('p');
+        empty.className = 'insight-card-empty';
+        empty.textContent = `Nothing slipped ${CARRY_CHAIN_MIN} or more times this ${period}.`;
+        card.append(empty, insightFoot('Carries are counted from version 1.23.0 on.'));
+        return card;
+      }
+      const stats = document.createElement('div');
+      stats.className = 'chains-stats';
+      for (const [value, label] of [[chains.length, `Slipped ${CARRY_CHAIN_MIN}+ times`], [open, 'Still open'], [average, 'Average carries']]) {
+        const stat = document.createElement('div');
+        stat.className = 'chains-stat';
+        stat.innerHTML = `<span class="chains-stat-value">${value}</span><span class="chains-stat-label">${label}</span>`;
+        stats.appendChild(stat);
+      }
+      card.appendChild(stats);
+      const expanded = !!state.insightsExpanded?.chains;
+      for (const { item, dayKey, count, start, status } of expanded ? chains : chains.slice(0, INSIGHTS_LIST_CAP)) {
+        let meta = `Carried ${count} times · `;
+        if (status === 'open') meta += `rolling since ${insightShortDate(start)} · still open`;
+        else if (status === 'done') meta += `done ${insightShortDate(dayKey)} after ${insightAgo(daysBetweenKeys(start, dayKey))}`;
+        else meta += `shelved ${insightShortDate(dayKey)}`;
+        const actions = [insightActionButton('Open', 'open', { openItem: item.id, day: dayKey })];
+        if (status === 'open') actions.unshift(insightActionButton('Shelve', 'shelve', { shelveItem: item.id }));
+        const row = insightTaskRow(item, meta, actions);
+        row.dataset.chainStatus = status;
+        const dots = document.createElement('span');
+        dots.className = 'chain-dots';
+        dots.setAttribute('aria-hidden', 'true');
+        for (let i = 0; i < Math.min(count, 10); i++) dots.appendChild(Object.assign(document.createElement('span'), { className: 'chain-dot' }));
+        if (status === 'done') dots.appendChild(Object.assign(document.createElement('span'), { className: 'chain-dot done' }));
+        row.querySelector('.insight-task-meta').appendChild(dots);
+        card.appendChild(row);
+      }
+      if (chains.length > INSIGHTS_LIST_CAP) card.appendChild(insightShowAllButton('chains', chains.length));
+      return card;
+    }
+
+    function tagTrendLabels(period, ranges) {
+      const start = dateFromKey(ranges.current.startKey);
+      const prevStart = dateFromKey(ranges.previous.startKey);
+      if (period === 'year') return [String(start.getFullYear()), String(prevStart.getFullYear())];
+      if (period === 'month') {
+        const opts = { month: 'long', ...(start.getFullYear() !== prevStart.getFullYear() ? { year: 'numeric' } : {}) };
+        return [start.toLocaleDateString('en-US', opts), prevStart.toLocaleDateString('en-US', opts)];
+      }
+      if (ranges.toDate) return ['This week', 'Last week'];
+      return [`Week of ${insightShortDate(ranges.current.startKey)}`, `Week of ${insightShortDate(ranges.previous.startKey)}`];
+    }
+
+    function renderTagTrendCard(period, anchorKey, today) {
+      const trend = computeTagTrend(period, anchorKey, today);
+      if (!trend) return null;
+      const [nowLabel, wasLabel] = tagTrendLabels(period, trend.ranges);
+      const compare = trend.mode === 'compare';
+      const card = insightCard('trend-card', 'Tag Trend', compare
+        ? `Each tag's share of your tasks, ${nowLabel} compared with ${wasLabel}`
+        : `Each tag's share of your tasks, ${nowLabel}`);
+      card.dataset.trendMode = trend.mode;
+      if (compare) card.appendChild(insightLegend([['completed', nowLabel], ['was', wasLabel]]));
+      const expanded = !!state.insightsExpanded?.trend;
+      const shown = expanded ? trend.rows : trend.rows.slice(0, INSIGHTS_LIST_CAP);
+      const all = trend.untagged ? [...shown, trend.untagged] : shown;
+      const max = Math.max(...all.flatMap(r => [r.now, compare ? r.was : 0]), 1);
+      const list = document.createElement('div');
+      list.className = 'tag-breakdown trend-breakdown';
+      const bar = (pct, cls) => {
+        const track = document.createElement('div');
+        track.className = 'tag-breakdown-track';
+        const fill = document.createElement('div');
+        fill.className = `trend-fill ${cls}`;
+        fill.style.width = `${(pct / max) * 100}%`;
+        track.appendChild(fill);
+        return track;
+      };
+      for (const r of all) {
+        const row = document.createElement('div');
+        row.className = 'tag-breakdown-row';
+        row.dataset.tag = r.tag ?? '';
+        const name = document.createElement('span');
+        name.className = 'tag-breakdown-name';
+        if (r.tag) name.appendChild(insightTagChips([r.tag]));
+        else name.textContent = 'No tag';
+        const bars = document.createElement('div');
+        bars.className = 'trend-bars';
+        bars.appendChild(bar(r.now, 'now'));
+        if (compare) bars.appendChild(bar(r.was, 'was'));
+        const counts = document.createElement('span');
+        counts.className = 'tag-breakdown-counts';
+        counts.textContent = compare ? `${r.now}% (was ${r.was}%)` : `${r.now}%`;
+        if (compare) {
+          const delta = document.createElement('span');
+          const notable = Math.abs(r.delta) >= TAG_TREND_NOTABLE;
+          delta.className = `trend-delta ${!notable ? 'change-neutral' : r.delta > 0 ? 'change-good' : 'change-bad'}`;
+          delta.textContent = r.delta === 0 ? '±0' : `${r.delta > 0 ? '▲' : '▼'} ${Math.abs(r.delta)} pts`;
+          counts.appendChild(delta);
+        }
+        row.append(name, bars, counts);
+        list.appendChild(row);
+      }
+      card.appendChild(list);
+      if (trend.rows.length > INSIGHTS_LIST_CAP) card.appendChild(insightShowAllButton('trend', trend.rows.length));
+      const who = (r) => (r.tag ? r.tag.toUpperCase() : 'Untagged tasks');
+      let foot;
+      if (trend.mode === 'no-previous') {
+        foot = `No tasks in ${wasLabel === 'Last week' ? 'last week' : wasLabel.replace(/^Week of/, 'the week of')} to compare with.`;
+      }
+      else if (trend.mode === 'too-few') {
+        foot = `Not enough tasks to compare yet (${trend.currentTotal} vs ${trend.previousTotal}; needs ${TAG_TREND_MIN_TASKS} in each).`;
+      } else if (trend.rise && trend.drop) {
+        foot = `Biggest shift: ${who(trend.drop)} dropped ${-trend.drop.delta} points while ${who(trend.rise)} rose ${trend.rise.delta}.`;
+      } else if (trend.rise) foot = `Biggest shift: ${who(trend.rise)} rose ${trend.rise.delta} points.`;
+      else if (trend.drop) foot = `Biggest shift: ${who(trend.drop)} dropped ${-trend.drop.delta} points.`;
+      else foot = `No tag moved ${TAG_TREND_NOTABLE} points or more.`;
+      const footEl = insightFoot(foot);
+      footEl.classList.add('trend-foot');
+      card.appendChild(footEl);
+      return card;
+    }
+
     function renderInsights() {
       const data = computeInsights(state.insightsPeriod, state.insightsAnchor);
       const { range, totals, daily, segments, completionRate } = data;
@@ -21677,6 +22187,10 @@
           render();
         } else if (el.dataset.bringBack) {
           bringBackShelvedTask(el.dataset.bringBack);
+        } else if (el.dataset.shelveItem) {
+          moveTaskToColumn(el.dataset.shelveItem, 'shelved');
+        } else if (el.dataset.openRecurring !== undefined) {
+          openRecurringModal();
         } else if (el.dataset.openItem) {
           openDayFromInsights(el.dataset.day, el.dataset.openItem);
         } else if (el.dataset.openMonth) {
@@ -21693,7 +22207,7 @@
           render();
         }
       };
-      const ACTION_SELECTOR = '[data-insights-current], [data-bring-back], [data-open-item], [data-open-month], [data-open-day], [data-toggle-list]';
+      const ACTION_SELECTOR = '[data-insights-current], [data-bring-back], [data-shelve-item], [data-open-recurring], [data-open-item], [data-open-month], [data-open-day], [data-toggle-list]';
       panel.addEventListener('click', (e) => {
         const el = e.target.closest(ACTION_SELECTOR);
         if (el && panel.contains(el)) activate(el);
@@ -21769,7 +22283,16 @@
           </div>
         </div>
       `;
-      panel.appendChild(metricsCard);
+      // Two columns only when Insights is wide (see .insights-cols); otherwise one column in the classic order
+      const cols = document.createElement('div');
+      cols.className = 'insights-cols';
+      const leftCol = document.createElement('div');
+      const rightCol = document.createElement('div');
+      leftCol.className = 'insights-col';
+      rightCol.className = 'insights-col';
+      cols.append(leftCol, rightCol);
+      panel.appendChild(cols);
+      leftCol.appendChild(metricsCard);
 
       // Period-over-period comparison
       if (totals.activeDays > 0) {
@@ -21817,7 +22340,7 @@
             </div>
           </div>
         `;
-        panel.appendChild(compCard);
+        rightCol.appendChild(compCard);
       }
 
       // Carry-Over Analysis
@@ -21878,15 +22401,18 @@
             ${dayBars}
           </div>
         `;
-        panel.appendChild(carryCard);
+        leftCol.appendChild(carryCard);
       }
 
-      for (const card of [
-        renderTagBreakdownCard(range),
-        renderLingeringCard(todayKey()),
-        renderShelvedCard(range, todayKey()),
+      for (const [card, col] of [
+        [renderTagBreakdownCard(range), rightCol],
+        [renderLingeringCard(todayKey()), leftCol],
+        [renderShelvedCard(range, todayKey()), rightCol],
+        [renderRecurringCard(range, todayKey()), leftCol],
+        [renderCarryChainsCard(range, state.insightsPeriod), rightCol],
+        [renderTagTrendCard(state.insightsPeriod, state.insightsAnchor, todayKey()), rightCol],
       ]) {
-        if (card) panel.appendChild(card);
+        if (card) col.appendChild(card);
       }
 
       // Streak Tracking
@@ -22029,14 +22555,39 @@
         '<span class="legend-item"><span class="legend-swatch unfinished"></span>Open (new today)</span>' +
         '<span class="legend-item"><span class="legend-swatch carried"></span>Open (carried over)</span>';
       chartSection.appendChild(legend);
-      
+
+      let chartSegments = segments;
+      let hiddenWeekends = 0;
+      if (state.insightsPeriod === 'month') {
+        ({ segments: chartSegments, hiddenWeekends } = trimMonthSegments(segments, daily, {
+          hideEmptyWeekends: quietWeekendsActive(state.quietWeekends, state.listContext),
+          today: todayKey(),
+        }));
+      }
+      if (hiddenWeekends && state.insightsChartType !== 'pie') {
+        const note = document.createElement('p');
+        note.className = 'insight-hidden-note';
+        const where = state.quietWeekends === 'both' ? 'both desks' : 'Work';
+        note.textContent = `${hiddenWeekends} empty weekend day${hiddenWeekends === 1 ? '' : 's'} hidden · Quieter weekends is on for ${where} · `;
+        const change = document.createElement('button');
+        change.type = 'button';
+        change.className = 'insight-hidden-change';
+        change.textContent = 'Change';
+        change.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openOptionsAt('behavior', 'general', 'quiet-weekends-select');
+        });
+        note.appendChild(change);
+        chartSection.appendChild(note);
+      }
+
       // Render chart based on selected type
       if (state.insightsChartType === 'bar') {
-        chartSection.appendChild(renderInsightBars(segments));
+        chartSection.appendChild(renderInsightBars(chartSegments));
       } else if (state.insightsChartType === 'line') {
-        chartSection.appendChild(renderLineChart(segments));
+        chartSection.appendChild(renderLineChart(chartSegments));
       } else if (state.insightsChartType === 'stacked') {
-        chartSection.appendChild(renderStackedChart(segments));
+        chartSection.appendChild(renderStackedChart(chartSegments));
       } else if (state.insightsChartType === 'pie') {
         chartSection.appendChild(renderPieChart(segments));
       }
@@ -23675,6 +24226,21 @@
         popout.classList.add('options-floating');
         document.body.appendChild(popout);
       }
+    }
+
+    function openOptionsAt(tab, sectionId, focusId) {
+      const popout = document.getElementById('density-popout');
+      if (PHONE_QUERY.matches) {
+        openDensityPopout();
+        document.body.appendChild(popout);
+      } else {
+        openOptionsFromMenu();
+      }
+      popout.querySelector(`.options-nav-btn[data-options-tab="${tab}"]`)?.click();
+      openOptionsSection(document.getElementById(`options-pane-${tab}`), sectionId);
+      const target = document.getElementById(focusId);
+      target?.scrollIntoView({ block: 'nearest' });
+      target?.focus({ preventScroll: true });
     }
 
     accountMenuBtn.addEventListener('click', (e) => {
