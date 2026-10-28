@@ -170,6 +170,14 @@ test.describe('Desktop layout baselines', { tag: ['@visual'] }, () => {
     await shot(page, 'insights-1440.png');
   });
 
+  test('insights at 1920px (two columns)', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await seedLayout(page);
+    await page.locator('#tab-insights').click();
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    await shot(page, 'insights-1920.png');
+  });
+
   test('collapsed sidebar at 1440px', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await seedLayout(page, { 'work-desk-sidebar-collapsed': '1' });
@@ -647,6 +655,28 @@ test.describe('UI audit fixes (1.12.1)', { tag: ['@board'] }, () => {
     const badge = page.locator('.cal-day-badge').first();
     await expect(badge).toBeVisible();
     expect(await badge.evaluate(el => getComputedStyle(el).color)).toBe('rgb(251, 191, 36)');
+  });
+
+  test('done edge: 28px on a touch screen with the desktop layout, 40px on a phone, 18px with a mouse', async ({ page, context }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await seedAudit(page);
+    const edge = page.locator('.item-card', { hasText: 'Review PR for IDS batching' }).locator('.complete-edge');
+    const width = async () => Math.round((await edge.boundingBox())!.width);
+    await expect.poll(width).toBe(18);
+
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'pointer', value: 'coarse' }, { name: 'hover', value: 'none' }] });
+    await expect.poll(width).toBe(28);
+    const card = page.locator('.item-card', { hasText: 'Review PR for IDS batching' });
+    const text = (await card.locator('.item-content').boundingBox())!;
+    const edgeBox = (await edge.boundingBox())!;
+    expect(text.x).toBeGreaterThanOrEqual(edgeBox.x + edgeBox.width);
+
+    await page.setViewportSize({ width: 800, height: 1280 });
+    await expect.poll(width).toBe(28);
+    await page.setViewportSize({ width: 600, height: 960 });
+    await expect.poll(width).toBe(40);
   });
 
   test('touch screens: bigger controls and a tap halo around small icons', async ({ page, context }) => {
@@ -2487,7 +2517,8 @@ test.describe('Recurring templates', { tag: ['@recurring'] }, () => {
     await page.locator('#recurring-modal .modal-btn.primary').click();
     await expect(page.locator('.recurring-template-item', { hasText: 'Original recurring' })).toBeVisible();
 
-    await page.locator('.recurring-action-link', { hasText: 'edit' }).first().click();
+    await page.locator('.recurring-template-item').first().locator('.recurring-more-btn').click();
+    await page.locator('.recurring-template-item').first().locator('.recurring-action-link', { hasText: 'edit' }).click();
     const editEditor = page.locator('.recurring-template-item .rich-editor').first();
     await expect(editEditor).toBeVisible();
     await editEditor.click();
@@ -2508,7 +2539,8 @@ test.describe('Recurring templates', { tag: ['@recurring'] }, () => {
     await page.locator('#recurring-modal .modal-btn.primary').click();
     await expect(page.locator('.recurring-template-item', { hasText: 'To be deleted' })).toBeVisible();
 
-    await page.locator('.recurring-action-link.danger', { hasText: 'delete' }).first().click();
+    await page.locator('.recurring-template-item').first().locator('.recurring-more-btn').click();
+    await page.locator('.recurring-template-item').first().locator('.recurring-action-link.danger', { hasText: 'delete' }).click();
     await expect(page.locator('.recurring-template-item', { hasText: 'To be deleted' })).toHaveCount(0);
   });
 
@@ -2544,26 +2576,28 @@ test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
     await editor.pressSequentially(text, { delay: 10 });
   }
 
-  test('every rule button selects, and its options stay inside the open modal', async ({ page }) => {
+  test('every Repeats choice selects, and its options stay inside the open modal', async ({ page }) => {
     await openRecurring(page, 'Rule tour');
     const form = addForm(page);
+    const select = form.locator('.recurring-rule-select');
+    await expect(select).toHaveValue('weekdays');
+    await expect(select.locator('option')).toHaveText(['Daily', 'Weekdays', 'Weekly', 'Custom', 'Every 2 weeks', 'Monthly', 'Quarterly']);
     for (const rule of ['daily', 'weekdays', 'weekly', 'custom', 'biweekly', 'monthly', 'quarterly']) {
-      await form.locator(`.rule-btn[data-rule="${rule}"]`).click();
-      await expect(form.locator(`.rule-btn[data-rule="${rule}"]`)).toHaveClass(/active/);
-      await expect(form.locator('.recurring-rule-btns .rule-btn.active')).toHaveCount(1);
+      await select.selectOption(rule);
+      await expect(select).toHaveValue(rule);
       await expect(modal(page)).not.toHaveClass(/hidden/);
     }
     await expect(form.locator('.recurring-quarter-months .quarter-btn')).toHaveCount(3);
-    await form.locator('.rule-btn[data-rule="weekly"]').click();
+    await form.locator('.recurring-rule-select').selectOption('weekly');
     await expect(form.locator('.day-picker .day-btn')).toHaveCount(7);
-    await form.locator('.rule-btn[data-rule="daily"]').click();
+    await form.locator('.recurring-rule-select').selectOption('daily');
     await expect(form.locator('.day-picker')).toHaveCount(0);
   });
 
   test('monthly on the 3rd Thursday: weekday mode, adds with a readable label, and every option click keeps the modal open', async ({ page }) => {
     await openRecurring(page, '1-1 with Laura');
     const form = addForm(page);
-    await form.locator('.rule-btn[data-rule="monthly"]').click();
+    await form.locator('.recurring-rule-select').selectOption('monthly');
     await form.locator('.month-by-btn', { hasText: 'Day of week' }).click();
     await expect(form.locator('.month-by-btn', { hasText: 'Day of week' })).toHaveClass(/active/);
     await expect(modal(page)).not.toHaveClass(/hidden/);
@@ -2589,7 +2623,7 @@ test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
   test('twice a month by date (1st and 15th), Last day, and the empty-date guard', async ({ page }) => {
     await openRecurring(page, 'Twice monthly by date');
     const form = addForm(page);
-    await form.locator('.rule-btn[data-rule="monthly"]').click();
+    await form.locator('.recurring-rule-select').selectOption('monthly');
     await expect(form.locator('.month-by-btn', { hasText: 'Day of month' })).toHaveClass(/active/);
     await expect(form.locator('.month-day-grid .month-day-btn')).toHaveCount(32);
     await form.locator('.modal-btn.primary').click();
@@ -2611,7 +2645,7 @@ test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
   test('every 2 weeks takes its weekday from the start date', async ({ page }) => {
     await openRecurring(page, '1-1 with Sara');
     const form = addForm(page);
-    await form.locator('.rule-btn[data-rule="biweekly"]').click();
+    await form.locator('.recurring-rule-select').selectOption('biweekly');
     const input = form.locator('.recurring-start-date');
     await expect(input).toBeVisible();
     await input.fill('2026-10-06');
@@ -2626,7 +2660,7 @@ test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
   test('quarterly: pick a month set; edit round trip switches to monthly and back, then delete', async ({ page }) => {
     await openRecurring(page, 'Quarterly review');
     let form = addForm(page);
-    await form.locator('.rule-btn[data-rule="quarterly"]').click();
+    await form.locator('.recurring-rule-select').selectOption('quarterly');
     await form.locator('.month-day-grid .month-day-btn').getByText('1', { exact: true }).click();
     for (const label of ['Jan · Apr · Jul · Oct', 'Mar · Jun · Sep · Dec', 'Feb · May · Aug · Nov']) {
       await form.locator('.quarter-btn', { hasText: label }).click();
@@ -2638,13 +2672,14 @@ test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
     await expect(item().locator('.recurring-rule-badge').first()).toHaveText('Quarterly on the 1st (Feb, May, Aug, Nov)');
 
     // Edit: the picker opens on the saved schedule
+    await item().locator('.recurring-more-btn').click();
     await item().locator('.recurring-action-link', { hasText: 'edit' }).click();
     form = page.locator('.recurring-template-item').first();
-    await expect(form.locator('.rule-btn[data-rule="quarterly"]')).toHaveClass(/active/);
+    await expect(form.locator('.recurring-rule-select')).toHaveValue('quarterly');
     await expect(form.locator('.quarter-btn.active')).toHaveText('Feb · May · Aug · Nov');
     await expect(form.locator('.month-day-btn.active')).toHaveText('1');
     // Monthly keeps the picked dates; switch to weekday mode, 1st and 3rd Tuesday
-    await form.locator('.rule-btn[data-rule="monthly"]').click();
+    await form.locator('.recurring-rule-select').selectOption('monthly');
     await expect(form.locator('.month-day-btn.active')).toHaveText('1');
     await form.locator('.month-by-btn', { hasText: 'Day of week' }).click();
     await form.locator('.month-week-btn', { hasText: '1st' }).click();
@@ -2659,11 +2694,13 @@ test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
     expect(t.monthDays).toBeUndefined();
 
     // Cancel leaves it alone
+    await item().locator('.recurring-more-btn').click();
     await item().locator('.recurring-action-link', { hasText: 'edit' }).click();
-    await page.locator('.recurring-template-item').first().locator('.rule-btn[data-rule="daily"]').click();
+    await page.locator('.recurring-template-item').first().locator('.recurring-rule-select').selectOption('daily');
     await page.locator('.recurring-template-item').first().locator('.modal-btn', { hasText: 'Cancel' }).click();
     await expect(item().locator('.recurring-rule-badge').first()).toHaveText('Monthly on the 1st & 3rd Tue');
 
+    await item().locator('.recurring-more-btn').click();
     await item().locator('.recurring-action-link.danger', { hasText: 'delete' }).click();
     await expect(item()).toHaveCount(0);
     expect(await storedTemplates(page)).toHaveLength(0);
@@ -2693,6 +2730,7 @@ test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
     await page.keyboard.press('Control+Enter');
     const item = () => page.locator('.recurring-template-item', { hasText: 'Keyboard' });
     await expect(item()).toHaveCount(1);
+    await item().locator('.recurring-more-btn').click();
     await item().locator('.recurring-action-link', { hasText: 'edit' }).click();
     const editor = page.locator('.recurring-template-item .rich-editor').first();
     await editor.click();
@@ -2701,6 +2739,297 @@ test.describe('Recurring schedules 1.21.0', { tag: ['@recurring'] }, () => {
     await editor.press('Control+Enter');
     await expect(page.locator('.recurring-template-item', { hasText: 'Keyboard edited' }).locator('.recurring-rule-badge').first()).toBeVisible();
     expect((await storedTemplates(page))[0].content).toContain('Keyboard edited');
+  });
+});
+
+test.describe('Recurring Tasks layout 1.22.0', { tag: ['@recurring'] }, () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+  const modal = (page: Page) => page.locator('#recurring-modal');
+  const row = (page: Page, text: string) => page.locator('.recurring-template-item', { hasText: text });
+  const stored = (page: Page) =>
+    page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-recurring-work') || '{"templates":[]}').templates);
+
+  async function openWith(page: Page, templates: object[]) {
+    await page.clock.setFixedTime(new Date('2026-10-22T10:00:00'));
+    await page.addInitScript((list) => {
+      if (localStorage.getItem('rec-seeded')) return;
+      localStorage.setItem('rec-seeded', '1');
+      localStorage.setItem('work-desk-recurring-work', JSON.stringify({ templates: list, deletedIds: {} }));
+    }, templates);
+    await openDesk(page);
+    await page.locator('#recurring-btn').click();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+  }
+  const tpl = (id: string, content: string, extra: object = {}) =>
+    ({ id, content, rule: 'weekdays', days: null, createdAt: '2026-10-01T09:00:00', lastInjectedDate: '2026-10-22', ...extra });
+
+  test('quick-add bar: description, Repeats, and Add sit on one line with no formatting toolbar', async ({ page }) => {
+    await openWith(page, []);
+    const bar = modal(page).locator('.recurring-quick-row');
+    const boxes = await Promise.all(['.rich-editor', '.recurring-rule-select', '.recurring-add-btn'].map((s) => bar.locator(s).boundingBox()));
+    const mids = boxes.map((b) => Math.round(b!.y + b!.height / 2));
+    expect(Math.max(...mids) - Math.min(...mids)).toBeLessThanOrEqual(2);
+    expect(boxes[0]!.x).toBeLessThan(boxes[1]!.x);
+    expect(boxes[1]!.x).toBeLessThan(boxes[2]!.x);
+    await expect(modal(page).locator('.recurring-add-form .format-toolbar')).toHaveCount(0);
+    await expect(modal(page).locator('.recurring-schedule-options')).toBeHidden();
+    await bar.locator('.recurring-rule-select').selectOption('custom');
+    await expect(modal(page).locator('.recurring-add-form .day-picker')).toBeVisible();
+
+    await page.locator('label:has(#recurring-skip-holidays)').click();
+    await expect(page.locator('#recurring-skip-holidays')).toBeChecked();
+    await modal(page).locator('.recurring-add-form .day-btn[title="Tuesday"], .recurring-add-form .day-btn[title="Tue"]').click();
+    await bar.locator('.rich-editor').click();
+    await page.keyboard.type('Team sync #ace');
+    await bar.locator('.recurring-add-btn').click();
+    await expect(row(page, 'Team sync').locator('.recurring-rule-badge')).toHaveText('Tue');
+    await expect(row(page, 'Team sync').locator('.recurring-skip-mark')).toHaveText('*');
+    await expect(row(page, 'Team sync').locator('.recurring-template-tags .tag-chip')).toHaveText(/ACE/);
+    await expect(modal(page).locator('.recurring-footnote')).toHaveText('* skips holidays');
+  });
+
+  test('each row shows its schedule and next due date in columns', async ({ page }) => {
+    await openWith(page, [
+      tpl('a', 'Update the ACE Dashboard', { skipHolidays: true, tags: ['ace'] }),
+      tpl('b', 'Submit timesheet', { rule: 'weekly', days: [5] }),
+      tpl('c', 'Sprint planning prep', { rule: 'biweekly', startDate: '2026-10-13', days: [2] }),
+      tpl('d', 'Due today, not on the desk yet', { rule: 'daily', lastInjectedDate: null }),
+    ]);
+    await expect(row(page, 'Update the ACE').locator('.recurring-next-due')).toHaveText('Tomorrow');
+    await expect(row(page, 'Submit timesheet').locator('.recurring-next-due')).toHaveText('Tomorrow');
+    await expect(row(page, 'Sprint planning').locator('.recurring-next-due')).toHaveText('Tue, Oct 27');
+    await expect(row(page, 'Sprint planning').locator('.recurring-next-due')).toHaveAttribute('title', 'Next on Tuesday, October 27, 2026');
+    await expect(modal(page).locator('.recurring-next-due').last()).toHaveText(/Today|Tomorrow/);
+    const xs = await modal(page).locator('.recurring-next-due').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
+    expect(new Set(xs).size).toBe(1);
+    const sched = await modal(page).locator('.recurring-schedule-cell').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
+    expect(new Set(sched).size).toBe(1);
+    await expect(row(page, 'Update the ACE').locator('.recurring-skip-mark')).toHaveAttribute('title', 'Skips holidays');
+    await expect(row(page, 'Submit timesheet').locator('.recurring-skip-mark')).toHaveCount(0);
+  });
+
+  test('the ⋮ menu opens, closes on an outside click and on Esc, and Esc again closes the modal', async ({ page }) => {
+    await openWith(page, [tpl('a', 'Menu row'), tpl('b', 'Other row')]);
+    const more = row(page, 'Menu row').locator('.recurring-more-btn');
+    const menu = row(page, 'Menu row').locator('.recurring-more-menu');
+    await expect(menu).toBeHidden();
+    await more.click();
+    await expect(menu).toBeVisible();
+    await expect(more).toHaveAttribute('aria-expanded', 'true');
+    await expect(menu.locator('.recurring-action-link')).toHaveText(['Edit', 'Add tag', 'Delete']);
+
+    const scrollTop = () => modal(page).locator('.recurring-modal-body').evaluate((el) => el.scrollTop);
+    expect(await scrollTop()).toBe(0);
+    await modal(page).locator('.recurring-modal-header').click();
+    await expect(menu).toBeHidden();
+
+    // The last row's menu opens upward so it doesn't push the list into a scroll
+    const otherMenu = row(page, 'Other row').locator('.recurring-more-menu');
+    await row(page, 'Other row').locator('.recurring-more-btn').click();
+    await expect(otherMenu).toBeVisible();
+    await expect(otherMenu).toHaveClass(/up/);
+    expect(await scrollTop()).toBe(0);
+    await modal(page).locator('.recurring-template-content', { hasText: 'Other row' }).click();
+    await expect(page.locator('.recurring-more-menu:not([hidden])')).toHaveCount(0);
+
+    await more.click();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    await expect(more).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(modal(page)).toHaveClass(/hidden/);
+  });
+
+  test('Edit replaces the row with a form and the modal stays open; Save and Cancel bring the row back', async ({ page }) => {
+    await openWith(page, [tpl('a', 'Editable row')]);
+    await row(page, 'Editable row').locator('.recurring-more-btn').click();
+    await row(page, 'Editable row').locator('.recurring-action-link', { hasText: 'Edit' }).click();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    const form = page.locator('.recurring-template-item.editing');
+    await expect(form).toBeVisible();
+    await expect(form.locator('.format-toolbar')).toHaveCount(0);
+    await expect(form.locator('.recurring-rule-select')).toHaveValue('weekdays');
+    await form.locator('.recurring-rule-select').selectOption('daily');
+    await form.locator('label.recurring-skip-toggle').click();
+    await form.locator('.modal-btn.primary').click();
+    await expect(row(page, 'Editable row').locator('.recurring-rule-badge')).toHaveText('Every day');
+    expect((await stored(page))[0]).toMatchObject({ rule: 'daily', skipHolidays: true });
+
+    await row(page, 'Editable row').locator('.recurring-more-btn').click();
+    await row(page, 'Editable row').locator('.recurring-action-link', { hasText: 'Edit' }).click();
+    await page.locator('.recurring-template-item.editing .modal-btn', { hasText: 'Cancel' }).click();
+    await expect(page.locator('.recurring-template-item.editing')).toHaveCount(0);
+    await expect(row(page, 'Editable row').locator('.recurring-next-due')).toBeVisible();
+  });
+
+  test('Edit form tags: × removes, + tag adds on Enter or click-away, Esc cancels, #tag in the text becomes a tag', async ({ page }) => {
+    await openWith(page, [tpl('a', 'Tagged row', { tags: ['ace', 'dco'] })]);
+    await row(page, 'Tagged row').locator('.recurring-more-btn').click();
+    await row(page, 'Tagged row').locator('.recurring-action-link', { hasText: 'Edit' }).click();
+    const form = page.locator('.recurring-template-item.editing');
+    const chips = form.locator('.tag-chip');
+    const addTag = form.locator('.recurring-action-link', { hasText: '+ tag' });
+    const tagInput = form.locator('input[placeholder="tag name"]');
+    await expect(chips).toHaveText([/ACE/, /DCO/]);
+
+    await chips.filter({ hasText: 'DCO' }).locator('.tag-chip-remove').click();
+    await expect(chips).toHaveText([/ACE/]);
+    await expect(form).toBeVisible();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+
+    await addTag.click();
+    await expect(tagInput).toBeFocused();
+    await tagInput.fill('gsar');
+    await tagInput.press('Enter');
+    await expect(chips).toHaveText([/ACE/, /GSAR/]);
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+
+    await addTag.click();
+    await tagInput.fill('nope');
+    await tagInput.press('Escape');
+    await expect(tagInput).toHaveCount(0);
+    await page.waitForTimeout(300);
+    await expect(chips).toHaveText([/ACE/, /GSAR/]);
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+
+    await addTag.click();
+    await tagInput.fill('ace');
+    await tagInput.press('Enter');
+    await expect(chips).toHaveText([/ACE/, /GSAR/]);
+
+    await addTag.click();
+    await tagInput.fill('blurred');
+    await form.locator('.recurring-add-title').click();
+    await expect(chips).toHaveText([/ACE/, /GSAR/, /BLURRED/]);
+
+    const editor = form.locator('.rich-editor');
+    await editor.click();
+    await editor.press('Control+a');
+    await editor.pressSequentially('Tagged row renamed #weekly', { delay: 10 });
+    await form.locator('.modal-btn.primary').click();
+    await expect(page.locator('.recurring-template-item.editing')).toHaveCount(0);
+    await expect(row(page, 'Tagged row renamed').locator('.recurring-template-tags .tag-chip')).toHaveText([/ACE/, /GSAR/, /BLURRED/, /WEEKLY/]);
+    const [t] = await stored(page);
+    expect(t.tags).toEqual(['ace', 'gsar', 'blurred', 'weekly']);
+    expect(t.content).toContain('Tagged row renamed');
+    expect(t.content).not.toContain('#weekly');
+  });
+
+  test('Edit form: removing every tag saves none; an empty description or missing day is refused and the form stays open', async ({ page }) => {
+    await openWith(page, [tpl('a', 'Guarded row', { tags: ['ace'] })]);
+    await row(page, 'Guarded row').locator('.recurring-more-btn').click();
+    await row(page, 'Guarded row').locator('.recurring-action-link', { hasText: 'Edit' }).click();
+    const form = page.locator('.recurring-template-item.editing');
+    const save = form.locator('.modal-btn.primary');
+
+    const editor = form.locator('.rich-editor');
+    await editor.click();
+    await editor.press('Control+a');
+    await editor.press('Delete');
+    await save.click();
+    await expect(page.locator('#toast')).toContainText('Please enter a task description');
+    await expect(form).toBeVisible();
+
+    await editor.pressSequentially('Guarded row', { delay: 10 });
+    await form.locator('.recurring-rule-select').selectOption('weekly');
+    await save.click();
+    await expect(page.locator('#toast')).toContainText('Please choose at least one day');
+    await expect(form).toBeVisible();
+    expect((await stored(page))[0]).toMatchObject({ rule: 'weekdays', tags: ['ace'] });
+
+    await form.locator('.day-picker .day-btn[title="Friday"], .day-picker .day-btn[title="Fri"]').click();
+    await form.locator('.tag-chip', { hasText: 'ACE' }).locator('.tag-chip-remove').click();
+    await expect(form.locator('.tag-chip')).toHaveCount(0);
+    await save.click();
+    await expect(row(page, 'Guarded row').locator('.recurring-rule-badge')).toHaveText('Every Fri');
+    await expect(row(page, 'Guarded row').locator('.recurring-template-tags .tag-chip')).toHaveCount(0);
+    const [t] = await stored(page);
+    expect(t).toMatchObject({ rule: 'weekly', days: [5] });
+    expect(t.tags).toBeUndefined();
+  });
+
+  test('Add tag uses the tag picker: type and Enter, pick a suggestion, Esc cancels, × removes', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (localStorage.getItem('work-desk-data-work-seeded')) return;
+      localStorage.setItem('work-desk-data-work-seeded', '1');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-20': { date: '2026-10-20', items: [
+        { id: 'x1', type: 'task', content: 'Old', completed: false, shelved: false, boardColumn: 'new', comments: [], tags: ['dco'], createdAt: '2026-10-20T09:00:00' },
+      ] } }, deletedIds: {} }));
+    });
+    let dialogs = 0;
+    page.on('dialog', (d) => { dialogs++; d.dismiss(); });
+    await openWith(page, [tpl('a', 'Taggable row')]);
+    const r = () => row(page, 'Taggable row');
+
+    await r().locator('.recurring-more-btn').click();
+    await r().locator('.recurring-action-link', { hasText: 'Add tag' }).click();
+    const input = r().locator('.tag-input-inline');
+    await expect(input).toBeFocused();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    await input.fill('gsar');
+    await input.press('Enter');
+    await expect(r().locator('.recurring-template-tags .tag-chip')).toHaveText([/GSAR/]);
+
+    await r().locator('.recurring-more-btn').click();
+    await r().locator('.recurring-action-link', { hasText: 'Add tag' }).click();
+    await r().locator('.tag-suggestion', { hasText: /dco/i }).click();
+    await expect(r().locator('.recurring-template-tags .tag-chip')).toHaveCount(2);
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+
+    await r().locator('.recurring-more-btn').click();
+    await r().locator('.recurring-action-link', { hasText: 'Add tag' }).click();
+    await r().locator('.tag-input-inline').press('Escape');
+    await expect(r().locator('.tag-input-inline')).toHaveCount(0);
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+
+    await r().locator('.recurring-more-btn').click();
+    await r().locator('.recurring-action-link', { hasText: 'Add tag' }).click();
+    await modal(page).locator('.recurring-modal-header').click();
+    await expect(r().locator('.tag-input-inline')).toHaveCount(0);
+
+    await r().locator('.tag-chip', { hasText: /GSAR/ }).locator('.tag-chip-remove').click();
+    await expect(r().locator('.recurring-template-tags .tag-chip')).toHaveText([/DCO/]);
+    expect((await stored(page))[0].tags).toEqual(['dco']);
+    expect(dialogs).toBe(0);
+  });
+
+  test('Delete from the menu removes the row', async ({ page }) => {
+    await openWith(page, [tpl('a', 'Doomed row'), tpl('b', 'Kept row')]);
+    await row(page, 'Doomed row').locator('.recurring-more-btn').click();
+    await row(page, 'Doomed row').locator('.recurring-action-link.danger', { hasText: 'Delete' }).click();
+    await expect(row(page, 'Doomed row')).toHaveCount(0);
+    await expect(row(page, 'Kept row')).toBeVisible();
+    await expect(page.locator('#toast')).toContainText('Recurring task removed');
+  });
+
+  test('phone: the schedule and next due drop under the text, and the add bar wraps', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openWith(page, [tpl('a', 'A fairly long recurring task name for a phone')]);
+    const r = row(page, 'A fairly long');
+    const text = (await r.locator('.recurring-template-content').boundingBox())!;
+    const next = (await r.locator('.recurring-next-due').boundingBox())!;
+    const more = (await r.locator('.recurring-more-btn').boundingBox())!;
+    expect(next.y).toBeGreaterThan(text.y + text.height - 2);
+    expect(more.y).toBeLessThan(text.y + text.height);
+    const scroll = await modal(page).locator('.recurring-modal-body').evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(scroll).toBeLessThanOrEqual(0);
+    const editor = (await modal(page).locator('.recurring-quick-row .rich-editor').boundingBox())!;
+    const select = (await modal(page).locator('.recurring-quick-row .recurring-rule-select').boundingBox())!;
+    expect(select.y).toBeGreaterThan(editor.y + editor.height - 2);
+  });
+
+  test('Edit recurring from a card\'s ⋮ menu still opens the edit form', async ({ page }) => {
+    await openWith(page, [tpl('a', 'From the card', { lastInjectedDate: null, rule: 'daily' })]);
+    await page.locator('#recurring-close').click();
+    const card = page.locator('.item-card', { hasText: 'From the card' });
+    await expect(card).toBeVisible();
+    await card.locator('.card-overflow-btn').click();
+    await card.locator('.card-overflow-menu button', { hasText: 'Edit recurring' }).click();
+    await expect(modal(page)).not.toHaveClass(/hidden/);
+    await expect(page.locator('.recurring-template-item.editing .recurring-rule-select')).toHaveValue('daily');
+    await page.locator('.recurring-template-item.editing .modal-btn', { hasText: 'Cancel' }).click();
+    await expect(modal(page)).toHaveClass(/hidden/);
   });
 });
 
@@ -3322,8 +3651,8 @@ test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await expect(page.locator('#changelog-body')).toContainText('Rosé Pine Dawn');
-    await expect(page.locator('#changelog-body')).toContainText('Options → Appearance → Card layout');
-    await expect(page.locator('#changelog-body')).toContainText('Back is now just ‹ Back');
+    await expect(page.locator('#changelog-body')).toContainText('Options → Behavior → General');
+    await expect(page.locator('#changelog-body')).toContainText('Alt+↑ / Alt+↓ moves the selected project');
     await expectClean(page, '#changelog-body');
     await page.locator('#changelog-modal-dismiss').click();
 
@@ -3378,10 +3707,11 @@ test.describe('Help and What\'s New modals', { tag: ['@docs'] }, () => {
       };
     });
     expect(grid).toEqual({ rows: 3, columns: 4, widths: 1, clipped: 0 });
-    await expect(modal.locator('.help-section[open] > summary')).toHaveText(['Quick start', 'Keyboard shortcuts']);
+    await expect(modal.locator('.help-section:not([open])')).toHaveCount(0);
+    await expect(modal.locator('.help-section[open]')).toHaveCount(12);
 
     const insights = modal.locator('#help-insights');
-    await expect(insights.locator('li').first()).toBeHidden();
+    await expect(insights.locator('li').first()).not.toBeInViewport();
     await chips.filter({ hasText: 'Insights' }).click();
     await expect(insights).toHaveAttribute('open', '');
     await expect(insights.locator('li').first()).toBeInViewport();
@@ -3389,8 +3719,9 @@ test.describe('Help and What\'s New modals', { tag: ['@docs'] }, () => {
 
     await insights.locator('summary').click();
     await expect(insights).not.toHaveAttribute('open', '');
-    await modal.locator('#help-projects > summary').click();
-    await expect(modal.locator('#help-projects')).toHaveAttribute('open', '');
+    await expect(insights.locator('li').first()).toBeHidden();
+    await chips.filter({ hasText: 'Insights' }).click();
+    await expect(insights).toHaveAttribute('open', '', { timeout: 2000 });
     await expect(modal.locator('#help-projects li', { hasText: 'Copy as Markdown' })).toBeVisible();
   });
 
@@ -3421,20 +3752,25 @@ test.describe('Help and What\'s New modals', { tag: ['@docs'] }, () => {
     await expect(search).toHaveValue('');
     await expect(modal).toBeVisible();
     await expect(page.locator('#help-no-results')).toBeHidden();
-    await expect(modal.locator('.help-section[open] > summary')).toHaveText(['Quick start', 'Keyboard shortcuts']);
+    await expect(modal.locator('.help-section:not([open])')).toHaveCount(0);
     await expect(modal.locator('.help-section:not([hidden])')).toHaveCount(await modal.locator('.help-section').count());
     await search.press('Escape');
     await expect(modal).toBeHidden();
   });
 
-  test('Help resets its search and sections each time it opens', async ({ page }) => {
+  test('Help resets its search and sections each time it opens, with every section open', async ({ page }) => {
     await openDesk(page);
     await page.locator('#help-btn').click();
     await page.locator('#help-search').fill('tags');
     await page.locator('#help-modal-dismiss').click();
     await page.locator('#help-btn').click();
     await expect(page.locator('#help-search')).toHaveValue('');
-    await expect(page.locator('#help-modal .help-section[open] > summary')).toHaveText(['Quick start', 'Keyboard shortcuts']);
+    await expect(page.locator('#help-modal .help-section:not([open])')).toHaveCount(0);
+    await page.locator('#help-cards > summary').click();
+    await expect(page.locator('#help-cards')).not.toHaveAttribute('open', '');
+    await page.locator('#help-modal-dismiss').click();
+    await page.locator('#help-btn').click();
+    await expect(page.locator('#help-cards')).toHaveAttribute('open', '');
     await expect(page.locator('#help-index button.hidden')).toHaveCount(0);
   });
 
@@ -4987,15 +5323,21 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
     await expect(page.locator('#card-glow-toggle')).not.toBeChecked();
   });
 
-  test('1.19.0 adds no Options settings, so no New tags show', async ({ page }) => {
+  test('New tags from an earlier minor release (1.22.0 Full screen, 1.18.0 Card layout) no longer show', async ({ page }) => {
     await open117(page);
+    const minor = await page.evaluate(() => APP_VERSION.split('.').slice(0, 2).join('.'));
+    test.skip(minor === '1.22', 'Full screen is still new in 1.22.x');
     await openTab(page, 'appearance');
     await expect(page.locator('[data-options-open="card-layout"] .options-new-tag')).toBeHidden();
-    await expect(page.locator('#density-popout .options-new-tag:not([hidden])')).toHaveCount(0);
     await page.locator('[data-options-open="card-layout"]').click();
     for (const id of ['complete-style-select', 'tag-position-select']) {
       await expect(page.locator(`label[for="${id}"] .options-new-tag`)).toBeHidden();
     }
+    await openTab(page, 'behavior');
+    await expect(page.locator('#options-pane-behavior [data-options-open="general"] .options-new-tag')).toBeHidden();
+    await page.locator('#options-pane-behavior [data-options-open="general"]').click();
+    await expect(page.locator('label:has(#fullscreen-toggle) .options-new-tag')).toBeHidden();
+    await expect(page.locator('#density-popout .options-new-tag:not([hidden])')).toHaveCount(0);
   });
   test('phone: sections and back work in the Options sheet', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -7319,6 +7661,463 @@ test.describe('Insights chart types', { tag: ['@insights'] }, () => {
   });
 });
 
+test.describe('Daily breakdown trimming 1.22.1', { tag: ['@insights', '@options'] }, () => {
+  // Today is Wed Oct 14, 2026. Weekends so far: Sat 3, Sun 4, Sat 10, Sun 11 (busy on Work)
+  async function openMonth(page: Page, quiet: 'off' | 'work' | 'both', viewport = { width: 1280, height: 900 }) {
+    await page.setViewportSize(viewport);
+    await page.clock.setFixedTime(new Date('2026-10-14T10:00:00'));
+    await page.addInitScript((q) => {
+      if (localStorage.getItem('trim-seeded')) return;
+      localStorage.setItem('trim-seeded', '1');
+      const done = (id: string, day: string) => ({
+        id, type: 'task', content: `Done ${id}`, completed: true, shelved: false,
+        boardColumn: 'active', comments: [], createdAt: `${day}T09:00:00`,
+      });
+      const days = (list: string[], prefix: string) =>
+        Object.fromEntries(list.map((d, i) => [d, { date: d, items: [done(`${prefix}${i}`, d)] }]));
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({
+        days: days(['2026-09-15', '2026-10-01', '2026-10-05', '2026-10-07', '2026-10-11', '2026-10-14'], 'w'), deletedIds: {},
+      }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: days(['2026-10-02'], 'p'), deletedIds: {} }));
+      localStorage.setItem('work-desk-insights-period', 'month');
+      localStorage.setItem('work-desk-insights-anchor', '2026-10-14');
+      localStorage.setItem('work-desk-quiet-weekends', q);
+    }, quiet);
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('#insights-view .insight-bars')).toBeVisible();
+  }
+  const view = (page: Page) => page.locator('#insights-view');
+  const rows = (page: Page) => view(page).locator('.insight-bar-label');
+  const note = (page: Page) => view(page).locator('.insight-hidden-note');
+  const chartBtn = (page: Page, name: string) => view(page).locator('.chart-type-btn', { hasText: name });
+
+  test('Quieter weekends off: the month stops at today and keeps every weekend, with no note', async ({ page }) => {
+    await openMonth(page, 'off');
+    await expect(rows(page)).toHaveCount(14);
+    await expect(rows(page).first()).toHaveText('1 – Thu');
+    await expect(rows(page).last()).toHaveText('14 – Wed');
+    await expect(note(page)).toHaveCount(0);
+  });
+
+  test('Work only: empty weekends drop out on Work with a note on Bar, Line, and Stacked but not Pie; Personal keeps them', async ({ page }) => {
+    await openMonth(page, 'work');
+    await expect(rows(page)).toHaveCount(11);
+    await expect(rows(page).filter({ hasText: /^(3|4|10) – / })).toHaveCount(0);
+    await expect(rows(page).filter({ hasText: '11 – Sun' })).toHaveCount(1);
+    await expect(note(page)).toHaveText('3 empty weekend days hidden · Quieter weekends is on for Work · Change');
+
+    for (const [name, wrap] of [['Line', '.line-chart-wrap'], ['Stacked', '.stacked-chart-wrap']] as const) {
+      await chartBtn(page, name).click();
+      await expect(view(page).locator(`${wrap} canvas`)).toBeVisible();
+      await expect(note(page)).toContainText('3 empty weekend days hidden');
+    }
+    await chartBtn(page, 'Pie').click();
+    await expect(view(page).locator('.pie-chart-wrap canvas')).toBeVisible();
+    await expect(note(page)).toHaveCount(0);
+    await chartBtn(page, 'Bar').click();
+    await expect(note(page)).toBeVisible();
+
+    await page.locator('#tab-personal').click();
+    await expect(rows(page)).toHaveCount(14);
+    await expect(note(page)).toHaveCount(0);
+  });
+
+  test('a past month is not cut short, and Week view is never trimmed', async ({ page }) => {
+    await openMonth(page, 'work');
+    await view(page).getByRole('button', { name: 'Previous period' }).click();
+    await expect(view(page).locator('.insights-subtitle')).toContainText('September 2026');
+    await expect(rows(page)).toHaveCount(22);
+    await expect(rows(page).last()).toHaveText('30 – Wed');
+    await expect(note(page)).toHaveText('8 empty weekend days hidden · Quieter weekends is on for Work · Change');
+
+    await view(page).locator('.period-tab', { hasText: 'Week' }).click();
+    await expect(rows(page)).toHaveCount(7);
+    await expect(note(page)).toHaveCount(0);
+  });
+
+  test('Change opens Options at Quieter weekends; switching it updates the chart while Options stays open', async ({ page }) => {
+    await openMonth(page, 'work');
+    await note(page).locator('.insight-hidden-change').click();
+    const popout = page.locator('#density-popout');
+    await expect(popout).toBeVisible();
+    await expect(popout.locator('.options-nav-btn[data-options-tab="behavior"]')).toHaveClass(/active/);
+    await expect(popout.locator('[data-options-section="general"]')).toBeVisible();
+    const select = page.locator('#quiet-weekends-select');
+    await expect(select).toBeFocused();
+    await expect(select).toBeInViewport();
+    const hint = popout.locator('label[for="quiet-weekends-select"] .customize-toggle-sub');
+    await expect(hint).toHaveText('On the calendar and in Insights');
+    expect(await hint.evaluate((el) => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight))).toBeLessThan(1.5);
+
+    await select.selectOption('off');
+    await expect(popout).toBeVisible();
+    await expect(note(page)).toHaveCount(0);
+    await expect(rows(page)).toHaveCount(14);
+
+    await select.selectOption('both');
+    await expect(popout).toBeVisible();
+    await expect(note(page)).toHaveText('3 empty weekend days hidden · Quieter weekends is on for both desks · Change');
+
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(popout).toBeHidden();
+    await page.locator('#tab-personal').click();
+    await expect(rows(page)).toHaveCount(10);
+    await expect(note(page)).toHaveText('4 empty weekend days hidden · Quieter weekends is on for both desks · Change');
+  });
+
+  test('phone: Change opens the Options sheet at the setting', async ({ page }) => {
+    await openMonth(page, 'work', { width: 390, height: 844 });
+    await note(page).locator('.insight-hidden-change').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#quiet-weekends-select')).toBeFocused();
+    await expect(page.locator('#quiet-weekends-select')).toBeInViewport();
+  });
+});
+
+test.describe('Insights two columns on wide screens 1.22.1', { tag: ['@insights', '@phone'] }, () => {
+  const CARDS = ['productivity-metrics-card', 'comparison-card', 'carryover-card', 'tags-card', 'lingering-card', 'shelved-card'];
+  async function openInsights(page: Page, viewport: { width: number; height: number }, touch = false) {
+    await page.setViewportSize(viewport);
+    await page.clock.setFixedTime(new Date('2026-10-27T10:00:00'));
+    await page.addInitScript(() => {
+      if (localStorage.getItem('cols-seeded')) return;
+      localStorage.setItem('cols-seeded', '1');
+      const days: Record<string, object> = {};
+      let n = 0;
+      for (let d = 1; d <= 27; d++) {
+        const key = `2026-10-${String(d).padStart(2, '0')}`;
+        const items = [];
+        for (let i = 0; i < 4; i++) {
+          n++;
+          items.push({
+            id: `t${n}`, type: 'task', content: `Task ${n}`, completed: n % 9 !== 0 && !(d < 20 && n % 31 === 0),
+            shelved: n % 9 === 0, boardColumn: 'active', comments: [], tags: n % 3 ? ['ace'] : [],
+            createdAt: `${key}T09:00:00`, ...(n % 13 === 0 ? { carriedFrom: '2026-10-01' } : {}),
+          });
+        }
+        days[key] = { date: key, items };
+      }
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-insights-period', 'month');
+      localStorage.setItem('work-desk-insights-anchor', '2026-10-27');
+    });
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    if (touch && viewport.width <= 768) await page.locator('#tab-insights').evaluate((el: HTMLElement) => el.click());
+    else await page.locator('#tab-insights').click();
+    await expect(page.locator('.insights-panel .shelved-card')).toBeVisible();
+  }
+  const boxes = (page: Page) => page.evaluate((cards) => cards.map((c) => {
+    const b = document.querySelector(`.insights-panel .${c}`)!.getBoundingClientRect();
+    return { c, x: Math.round(b.left), y: Math.round(b.top), bottom: Math.round(b.bottom), w: Math.round(b.width) };
+  }), CARDS);
+  const noSideScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+
+  test('1920px: Summary, Carry-Over, Lingering on the left; Month-over-Month, Tags, Shelved on the right, each at its own height', async ({ page }) => {
+    await openInsights(page, { width: 1920, height: 1080 });
+    const [summary, comparison, carry, tags, lingering, shelved] = await boxes(page);
+    expect(summary.y).toBe(comparison.y);
+    expect(comparison.x).toBeGreaterThan(summary.x + summary.w);
+    for (const left of [carry, lingering]) expect(left.x).toBe(summary.x);
+    for (const right of [tags, shelved]) expect(right.x).toBe(comparison.x);
+    expect(carry.y).toBeGreaterThan(summary.bottom);
+    expect(lingering.y).toBeGreaterThan(carry.bottom);
+    expect(tags.y).toBeGreaterThan(comparison.bottom);
+    expect(shelved.y).toBeGreaterThan(tags.bottom);
+    // Natural heights: the left column's second card starts right under Summary, not level with Tags
+    expect(carry.y - summary.bottom).toBeLessThan(40);
+    expect(carry.y).not.toBe(tags.y);
+    expect(summary.w).toBeGreaterThan(700);
+    const streak = (await page.locator('.insights-panel .streak-card').boundingBox())!;
+    expect(streak.width).toBeGreaterThan(summary.w * 2);
+    expect(await noSideScroll(page)).toBe(true);
+  });
+
+  test('one column below the breakpoint, in the classic order, and resizing switches live', async ({ page }) => {
+    await openInsights(page, { width: 1440, height: 900 });
+    let b = await boxes(page);
+    expect(new Set(b.map((x) => x.x)).size).toBe(1);
+    expect(b.map((x) => x.c)).toEqual([...b].sort((p, q) => p.y - q.y).map((x) => x.c));
+
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await expect.poll(async () => new Set((await boxes(page)).map((x) => x.x)).size).toBe(2);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect.poll(async () => new Set((await boxes(page)).map((x) => x.x)).size).toBe(1);
+  });
+
+  for (const [label, viewport] of [['phone 390', { width: 390, height: 844 }], ['tablet portrait 820', { width: 820, height: 1180 }], ['tablet landscape 1366', { width: 1366, height: 1024 }]] as const) {
+    test(`${label}: a single full-width column, nothing squeezed side by side`, async ({ page }) => {
+      await openInsights(page, viewport, true);
+      const b = await boxes(page);
+      expect(new Set(b.map((x) => x.x)).size).toBe(1);
+      const panel = (await page.locator('.insights-panel').boundingBox())!;
+      for (const card of b) expect(card.w).toBe(Math.round(panel.width));
+      expect(b.map((x) => x.c)).toEqual(CARDS);
+      expect(b.map((x) => x.c)).toEqual([...b].sort((p, q) => p.y - q.y).map((x) => x.c));
+      expect(await noSideScroll(page)).toBe(true);
+    });
+  }
+});
+
+test.describe('Insights Recurring, Carry Chains, Tag Trend 1.23.0', { tag: ['@insights', '@recurring'] }, () => {
+  type Seed = { chains?: boolean; manyTemplates?: boolean; manyTags?: boolean; septTasks?: boolean };
+  // Today is Tue Oct 27, 2026. September leans IDS, October leans ACE.
+  async function seed(page: Page, opts: Seed = {}, viewport = { width: 1280, height: 900 }) {
+    await page.setViewportSize(viewport);
+    await page.clock.setFixedTime(new Date('2026-10-27T10:00:00'));
+    await page.addInitScript((o: Seed) => {
+      if (localStorage.getItem('cards-seeded')) return;
+      localStorage.setItem('cards-seeded', '1');
+      const days: Record<string, { date: string; items: object[] }> = {};
+      const add = (key: string, item: object) => { (days[key] ||= { date: key, items: [] }).items.push(item); };
+      let n = 0;
+      const task = (created: string, extra: object = {}) => ({ id: `t${++n}`, type: 'task', content: `Task ${n}`, completed: true,
+        shelved: false, boardColumn: 'active', comments: [], createdAt: `${created}T15:00:00.000Z`, ...extra });
+      const k = (m: number, d: number) => `2026-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const weekday = (key: string) => { const w = new Date(`${key}T12:00:00`).getDay(); return w > 0 && w < 6; };
+      if (o.septTasks !== false) {
+        for (let d = 1; d <= 30; d++) if (weekday(k(9, d))) for (const t of ['ids', 'ids', 'ace', 'dco']) add(k(9, d), task(k(9, d), { tags: [t] }));
+      }
+      const octTags = o.manyTags ? ['ace', 'dco', 'ids', 'gsar', 'p1', 'oms', 'aic', 'psql', 'mq'] : ['ace', 'ace', 'dco', 'ids'];
+      for (let d = 1; d <= 26; d++) {
+        if (!weekday(k(10, d))) continue;
+        for (const t of octTags) add(k(10, d), task(k(10, d), { tags: [t] }));
+        add(k(10, d), task(k(10, d), { content: 'Update the ACE Dashboard', recurringTemplateId: 'r1', completed: d !== 14 }));
+      }
+      add(k(10, 2), task(k(10, 2), { content: 'Weekly status email to Laura', recurringTemplateId: 'r2' }));
+      add(k(10, 7), task(k(10, 7), { content: 'Sprint planning prep', recurringTemplateId: 'r3' }));
+      add(k(10, 27), task(k(10, 21), { content: 'Sprint planning prep', recurringTemplateId: 'r3', completed: false, carriedFrom: k(10, 26) }));
+      if (o.chains !== false) {
+        const chain = (content: string, count: number, start: string, extra: object) =>
+          ({ content, carryCount: count, carryStart: start, carriedFrom: k(10, 26), completed: false, ...extra });
+        add(k(10, 27), task(k(10, 5), { id: 'c-groom', ...chain('Groom the user stories', 8, k(10, 5), { tags: ['ace'] }) }));
+        add(k(10, 27), task(k(10, 9), { id: 'c-share', ...chain('Share the markdown file', 6, k(10, 9), {}) }));
+        add(k(10, 21), task(k(10, 12), { id: 'c-done', ...chain('Reach out to Marlene', 5, k(10, 12), { carriedFrom: k(10, 20), completed: true }) }));
+        add(k(10, 27), task(k(10, 24), { id: 'c-two', ...chain('Only carried twice', 2, k(10, 24), {}) }));
+      }
+      const templates: object[] = [
+        { id: 'r1', content: 'Update the ACE Dashboard', rule: 'weekdays', createdAt: '2026-09-01T12:00:00.000Z', lastInjectedDate: k(10, 26) },
+        { id: 'r2', content: 'Weekly status email to Laura', rule: 'weekly', days: [5], createdAt: '2026-09-01T12:00:00.000Z', lastInjectedDate: k(10, 23) },
+        { id: 'r3', content: 'Sprint planning prep', rule: 'biweekly', startDate: k(10, 7), createdAt: '2026-09-01T12:00:00.000Z', lastInjectedDate: k(10, 21) },
+      ];
+      if (o.manyTemplates) {
+        for (let i = 1; i <= 7; i++) templates.push({ id: `x${i}`, content: `Extra daily ${i}`, rule: 'daily', createdAt: '2026-10-20T12:00:00.000Z', lastInjectedDate: k(10, 27) });
+      }
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-recurring-work', JSON.stringify({ templates, deletedIds: {} }));
+      localStorage.setItem('work-desk-insights-period', 'month');
+      localStorage.setItem('work-desk-insights-anchor', k(10, 27));
+    }, opts);
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+  }
+  async function openInsights(page: Page, opts: Seed = {}, viewport?: { width: number; height: number }) {
+    await seed(page, opts, viewport);
+    await page.locator('#tab-insights').evaluate((el: HTMLElement) => el.click());
+    await expect(page.locator('.insights-panel .trend-card')).toBeVisible();
+  }
+  const rowsText = (page: Page, card: string, row: string) =>
+    page.locator(`.${card} ${row}`).evaluateAll((els) => els.map((e) => (e as HTMLElement).innerText.replace(/\s+/g, ' ').trim()));
+
+  test('Recurring Follow-through: lowest rate first, Rarely done flag, and Open Recurring tasks opens the list', async ({ page }) => {
+    await openInsights(page);
+    const card = page.locator('.recurring-card');
+    await expect(card.locator('.insight-card-title')).toHaveText('Recurring Follow-through');
+    await expect(card.locator('.legend-item')).toHaveText(['Done', 'Still open', 'Missed']);
+    // Weekdays Oct 1–27 = 19 chances: 17 done; Oct 14's copy and today's fresh one still open
+    expect(await rowsText(page, 'recurring-card', '.tag-breakdown-row')).toEqual([
+      'Weekly status email to Laura 1 of 4 done · 25%Rarely done',
+      'Sprint planning prep 1 of 2 done · 50%',
+      'Update the ACE Dashboard 17 of 19 done · 89%',
+    ]);
+    await expect(card.locator('.tag-breakdown-row[data-template-id="r1"] .tag-breakdown-track')).toHaveAttribute('title', '17 done, 2 still open, 0 missed');
+    await expect(card.locator('.recurring-flag')).toHaveCount(1);
+    await card.locator('.recurring-open').click();
+    await expect(page.locator('#recurring-modal')).toBeVisible();
+    await expect(page.locator('#recurring-modal')).toContainText('Weekly status email to Laura');
+  });
+
+  test('Recurring in Week view hides templates with no chance that week and does not flag a single miss', async ({ page }) => {
+    await openInsights(page);
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    // Oct 26–27: the weekday template has 2 chances; the Friday and biweekly ones none
+    expect(await rowsText(page, 'recurring-card', '.tag-breakdown-row')).toEqual(['Update the ACE Dashboard 1 of 2 done · 50%']);
+    await page.locator('.insights-nav .nav-arrow[aria-label="Previous period"]').click();
+    expect(await rowsText(page, 'recurring-card', '.tag-breakdown-row')).toEqual([
+      'Sprint planning prep 0 of 1 done · 0%',
+      'Weekly status email to Laura 0 of 1 done · 0%',
+      'Update the ACE Dashboard 5 of 5 done · 100%',
+    ]);
+    await expect(page.locator('.recurring-card .recurring-flag')).toHaveCount(0);
+  });
+
+  test('Recurring with more than 8 templates: Show all and Show fewer', async ({ page }) => {
+    await openInsights(page, { manyTemplates: true });
+    const card = page.locator('.recurring-card');
+    await expect(card.locator('.tag-breakdown-row')).toHaveCount(8);
+    await card.locator('.insight-show-all', { hasText: 'Show all (10)' }).click();
+    await expect(page.locator('.recurring-card .tag-breakdown-row')).toHaveCount(10);
+    await page.locator('.recurring-card .insight-show-all', { hasText: 'Show fewer' }).click();
+    await expect(page.locator('.recurring-card .tag-breakdown-row')).toHaveCount(8);
+  });
+
+  test('Carry Chains: totals, rows oldest first with dots, Shelve parks one, Open jumps to it', async ({ page }) => {
+    await openInsights(page);
+    const card = page.locator('.chains-card');
+    await expect(card.locator('.chains-stat-value')).toHaveText(['3', '2', '6.3']);
+    await expect(card.locator('.chains-stat-label')).toHaveText(['Slipped 3+ times', 'Still open', 'Average carries']);
+    await expect(card.locator('.insight-task-meta')).toHaveText([
+      'Carried 8 times · rolling since Oct 5 · still open',
+      'Carried 6 times · rolling since Oct 9 · still open',
+      'Carried 5 times · done Oct 21 after 9 days',
+    ]);
+    await expect(card.locator('.insight-task-row[data-item-id="c-groom"] .chain-dot')).toHaveCount(8);
+    await expect(card.locator('.insight-task-row[data-item-id="c-done"] .chain-dot.done')).toHaveCount(1);
+    await expect(card.locator('.insight-task-row[data-item-id="c-done"] .insight-task-btn.shelve')).toHaveCount(0);
+    await expect(card.locator('.insight-task-row[data-item-id="c-two"]')).toHaveCount(0);
+
+    await card.locator('.insight-task-row[data-item-id="c-share"] .insight-task-btn.shelve').click();
+    await expect(page.locator('#toast')).toContainText('Task shelved');
+    await expect(page.locator('#insights-view')).toBeVisible();
+    const shared = page.locator('.chains-card .insight-task-row[data-item-id="c-share"]');
+    await expect(shared).toHaveAttribute('data-chain-status', 'shelved');
+    await expect(shared.locator('.insight-task-meta')).toHaveText('Carried 6 times · shelved Oct 27');
+    await expect(page.locator('.chains-card .chains-stat-value').nth(1)).toHaveText('1');
+    await expect(page.locator('.shelved-card .insight-task-row[data-item-id="c-share"]')).toBeVisible();
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!).days['2026-10-27'].items.find((i: { id: string }) => i.id === 'c-share'));
+    expect([stored.shelved, stored.carryCount]).toEqual([true, 6]);
+
+    await page.locator('.chains-card .insight-task-row[data-item-id="c-groom"] .insight-task-btn.open').click();
+    await expect(page.locator('#insights-view')).toBeHidden();
+    await expect(page.locator('#item-c-groom')).toHaveClass(/search-highlight/);
+  });
+
+  test('Carry Chains with none in the period says so', async ({ page }) => {
+    await openInsights(page, { chains: false });
+    const card = page.locator('.chains-card');
+    await expect(card.locator('.insight-card-empty')).toHaveText('Nothing slipped 3 or more times this month.');
+    await expect(card.locator('.insight-card-foot')).toHaveText('Carries are counted from version 1.23.0 on.');
+    await expect(card.locator('.chains-stats')).toHaveCount(0);
+  });
+
+  test('carrying forward adds to the count, keeps the start, and the chain shows up in Insights', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-27T10:00:00'));
+    await page.addInitScript(() => {
+      if (localStorage.getItem('carry-seeded')) return;
+      localStorage.setItem('carry-seeded', '1');
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ deletedIds: {}, days: { '2026-10-26': { date: '2026-10-26', items: [
+        { id: 'roll', type: 'task', content: 'Keeps rolling', completed: false, shelved: false, boardColumn: 'active', comments: [],
+          createdAt: '2026-10-20T15:00:00.000Z', carriedFrom: '2026-10-23', carryCount: 2, carryStart: '2026-10-20' },
+      ] } } }));
+    });
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    await page.locator('#carry-forward-btn').click();
+    await expect(page.locator('.item-card', { hasText: 'Keeps rolling' })).toBeVisible();
+    const item = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work')!).days['2026-10-27'].items[0]);
+    expect([item.carryCount, item.carryStart, item.carriedFrom]).toEqual([3, '2026-10-20', '2026-10-26']);
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('.chains-card .insight-task-meta')).toHaveText('Carried 3 times · rolling since Oct 20 · still open');
+  });
+
+  test('Tag Trend: October against September to the same day, arrows for 5+ points, and the biggest shift', async ({ page }) => {
+    await openInsights(page);
+    const card = page.locator('.trend-card');
+    await expect(card).toHaveAttribute('data-trend-mode', 'compare');
+    await expect(card.locator('.carryover-hint')).toHaveText("Each tag's share of your tasks, October compared with September");
+    await expect(card.locator('.legend-item')).toHaveText(['October', 'September']);
+    const rows = await rowsText(page, 'trend-card', '.tag-breakdown-row');
+    // DCO and IDS tie on share now; the bigger share last month (IDS) goes first
+    expect(rows.map((r) => r.split(' ')[0])).toEqual(['ACE', 'IDS', 'DCO', 'No']);
+    expect(rows[0]).toMatch(/^ACE \d+% \(was 25%\)▲ \d+ pts$/);
+    expect(rows[1]).toMatch(/^IDS \d+% \(was 50%\)▼ \d+ pts$/);
+    await expect(card.locator('.tag-breakdown-row[data-tag="ace"] .trend-delta')).toHaveClass(/change-good/);
+    await expect(card.locator('.tag-breakdown-row[data-tag="ids"] .trend-delta')).toHaveClass(/change-bad/);
+    await expect(card.locator('.trend-fill.was')).toHaveCount(4);
+    await expect(card.locator('.trend-foot')).toHaveText(/^Biggest shift: IDS dropped \d+ points while (ACE|Untagged tasks) rose \d+\.$/);
+  });
+
+  test('Tag Trend: Week compares with last week; a year with no last year shows shares only and says so', async ({ page }) => {
+    await openInsights(page);
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    // Oct 26–27 has 10 tasks, and so do the same two days last week
+    const card = page.locator('.trend-card');
+    await expect(card).toHaveAttribute('data-trend-mode', 'compare');
+    await expect(card.locator('.legend-item')).toHaveText(['This week', 'Last week']);
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await expect(card).toHaveAttribute('data-trend-mode', 'no-previous');
+    await expect(card.locator('.trend-foot')).toHaveText('No tasks in 2025 to compare with.');
+    await expect(card.locator('.trend-fill.was')).toHaveCount(0);
+    await expect(card.locator('.trend-delta')).toHaveCount(0);
+  });
+
+  test('Tag Trend: under 10 tasks on a side gives no arrows and explains why', async ({ page }) => {
+    await openInsights(page, { septTasks: false });
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    await page.locator('.insights-nav .nav-arrow[aria-label="Previous period"]').click();
+    await page.locator('.insights-nav .nav-arrow[aria-label="Previous period"]').click();
+    await page.locator('.insights-nav .nav-arrow[aria-label="Previous period"]').click();
+    await page.locator('.insights-nav .nav-arrow[aria-label="Previous period"]').click();
+    // Week of Sep 28: Oct 1–2 have tasks; the week before has none at all
+    const card = page.locator('.trend-card');
+    await expect(card).toHaveAttribute('data-trend-mode', 'no-previous');
+    await expect(card.locator('.trend-foot')).toHaveText('No tasks in the week of Sep 21 to compare with.');
+    // Week of Oct 5 against a trimmed week of Sep 28 (4 tasks)
+    await page.locator('.insights-nav .nav-arrow[aria-label="Next period"]').click();
+    await page.evaluate(() => {
+      const data = JSON.parse(localStorage.getItem('work-desk-data-work')!);
+      data.days['2026-10-01'].items = data.days['2026-10-01'].items.slice(0, 2);
+      data.days['2026-10-02'].items = data.days['2026-10-02'].items.slice(0, 2);
+      localStorage.setItem('work-desk-data-work', JSON.stringify(data));
+    });
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.locator('#tab-insights').click();
+    await expect(card).toHaveAttribute('data-trend-mode', 'too-few');
+    await expect(card.locator('.trend-foot')).toHaveText(/^Not enough tasks to compare yet \(\d+ vs 4; needs 10 in each\)\.$/);
+    await expect(card.locator('.trend-delta')).toHaveCount(0);
+  });
+
+  test('Tag Trend with more than 8 tags: Show all and Show fewer, No tag row stays', async ({ page }) => {
+    await openInsights(page, { manyTags: true });
+    const card = page.locator('.trend-card');
+    // 9 tags: 8 shown plus No tag
+    await expect(card.locator('.tag-breakdown-row')).toHaveCount(9);
+    await card.locator('.insight-show-all', { hasText: /^Show all \(9\)$/ }).click();
+    await expect(page.locator('.trend-card .tag-breakdown-row')).toHaveCount(10);
+    await expect(page.locator('.trend-card .tag-breakdown-row').last()).toHaveAttribute('data-tag', '');
+    await page.locator('.trend-card .insight-show-all', { hasText: 'Show fewer' }).click();
+    await expect(page.locator('.trend-card .tag-breakdown-row')).toHaveCount(9);
+  });
+
+  test('wide: Recurring on the left, Carry Chains and Tag Trend on the right; phone: one column after the older cards', async ({ page }) => {
+    await openInsights(page, {}, { width: 1920, height: 1080 });
+    const x = (cls: string) => page.locator(`.insights-panel .${cls}`).evaluate((e) => Math.round(e.getBoundingClientRect().left));
+    const left = await x('productivity-metrics-card');
+    const right = await x('comparison-card');
+    expect(right).toBeGreaterThan(left);
+    expect(await x('recurring-card')).toBe(left);
+    expect(await x('chains-card')).toBe(right);
+    expect(await x('trend-card')).toBe(right);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const order = ['lingering-card', 'recurring-card', 'chains-card', 'trend-card'];
+    await expect.poll(async () => new Set(await Promise.all(order.map(x))).size).toBe(1);
+    const tops = await Promise.all(order.map((c) => page.locator(`.insights-panel .${c}`).evaluate((e) => e.getBoundingClientRect().top)));
+    expect(tops).toEqual([...tops].sort((a, b) => a - b));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+});
+
 test.describe('Touch drag', { tag: ['@phone', '@board'] }, () => {
   test.use({ viewport: { width: 1024, height: 900 }, hasTouch: true, isMobile: true });
 
@@ -7413,5 +8212,493 @@ test.describe('Project item archive', { tag: ['@projects'] }, () => {
     await expect(page.locator('#project-tasks-list .project-task-card', { hasText: 'Alpha task' }).first()).toBeVisible();
     await expect(page.locator('#project-tasks-archive-wrap .project-archive-toggle')).toContainText('Archived (1)');
     expect((await storedProjects(page)).projects[0].tasks.find((t: { id: string }) => t.id === 'pt1').archived).toBeFalsy();
+  });
+});
+
+test.describe('Keyboard shortcuts 1.22.0', { tag: ['@board', '@calendar'] }, () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  const editor = (page: Page) => page.locator('#add-editor-host .rich-editor');
+  const activeType = (page: Page) => page.locator('.type-btn.active[data-type]');
+  const blur = (page: Page) => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
+  test('T starts a task and N a note, from the keyboard alone', async ({ page }) => {
+    await openDesk(page);
+    await blur(page);
+    await page.keyboard.press('n');
+    await expect(activeType(page)).toHaveAttribute('data-type', 'note');
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('Keyboard note');
+    await page.keyboard.press('Control+Enter');
+    await expect(page.locator('.item-card', { hasText: 'Keyboard note' })).toBeVisible();
+
+    await blur(page);
+    await page.keyboard.press('t');
+    await expect(activeType(page)).toHaveAttribute('data-type', 'task');
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('Keyboard task with n and t');
+    await expect(activeType(page)).toHaveAttribute('data-type', 'task');
+    await page.keyboard.press('Control+Enter');
+    await expect(page.locator('.task-card', { hasText: 'Keyboard task with n and t' })).toBeVisible();
+  });
+
+  test('[ and ] step through days, and Today comes back', async ({ page }) => {
+    await openDesk(page);
+    await blur(page);
+    const title = page.locator('#date-title');
+    const today = await title.textContent();
+    await page.keyboard.press(']');
+    await expect(editor(page)).toHaveAttribute('data-placeholder', 'Add a task for tomorrow…');
+    await page.keyboard.press('[');
+    await page.keyboard.press('[');
+    await expect(editor(page)).toHaveAttribute('data-placeholder', 'Add a task for yesterday…');
+    await page.keyboard.press(']');
+    await expect(title).toHaveText(today || '');
+  });
+
+  test('shortcuts stay quiet while Options, Help, or a modifier is in play', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.keyboard.press('n');
+    await page.keyboard.press(']');
+    await expect(activeType(page)).toHaveAttribute('data-type', 'task');
+    await expect(editor(page)).toHaveAttribute('data-placeholder', 'Add a task for today…');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#density-popout')).toBeHidden();
+
+    await page.locator('#help-btn').click();
+    await page.locator('#help-modal-dismiss').focus();
+    await page.keyboard.press('n');
+    await expect(activeType(page)).toHaveAttribute('data-type', 'task');
+    await page.keyboard.press('Escape');
+
+    await blur(page);
+    await page.keyboard.press('Alt+n');
+    await page.keyboard.press('Control+]');
+    await expect(activeType(page)).toHaveAttribute('data-type', 'task');
+    await expect(editor(page)).toHaveAttribute('data-placeholder', 'Add a task for today…');
+  });
+});
+
+test.describe('Keyboard menus, add-box Esc, and phone toasts 1.22.0', { tag: ['@board', '@phone'] }, () => {
+  const editor = (page: Page) => page.locator('#add-editor-host .rich-editor');
+  const card = (page: Page) => page.locator('.item-card', { hasText: 'Keyboard menu task' });
+
+  async function openSeeded(page: Page, viewport = { width: 1280, height: 800 }) {
+    await page.setViewportSize(viewport);
+    await page.clock.setFixedTime(new Date('2026-10-22T10:00:00'));
+    await page.addInitScript(() => {
+      if (localStorage.getItem('kb-seeded')) return;
+      localStorage.setItem('kb-seeded', '1');
+      const item = { id: 'k1', type: 'task', content: 'Keyboard menu task', completed: false, shelved: false, boardColumn: 'new', comments: [], tags: [], createdAt: '2026-10-22T09:00:00' };
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-22': { date: '2026-10-22', items: [item] } }, deletedIds: {} }));
+    });
+    await openDesk(page);
+  }
+
+  test('the card ⋮ menu: Enter opens it on the first item, arrows move, Esc closes back to ⋮, and shortcuts work again', async ({ page }) => {
+    await openSeeded(page);
+    const more = card(page).locator('.card-overflow-btn');
+    const menu = card(page).locator('.card-overflow-menu');
+    await expect(more).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+    await more.focus();
+    await page.keyboard.press('Enter');
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveAttribute('role', 'menu');
+    await expect(more).toHaveAttribute('aria-expanded', 'true');
+    const items = menu.getByRole('menuitem');
+    await expect(items.first()).toBeFocused();
+    await expect(items.first()).toHaveText('Start');
+    await page.keyboard.press('ArrowDown');
+    await expect(items.nth(1)).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(items.last()).toBeFocused();
+    await expect(items.last()).toHaveText('Delete');
+    await page.keyboard.press('ArrowDown');
+    await expect(items.first()).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(items.last()).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(items.first()).toBeFocused();
+
+    await page.keyboard.press('t');
+    await expect(menu).toBeVisible();
+    await expect(editor(page)).not.toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(more).toBeFocused();
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+    await expect(card(page)).toBeVisible();
+
+    await page.keyboard.press('n');
+    await expect(editor(page)).toBeFocused();
+    await expect(page.locator('.type-btn.active[data-type]')).toHaveAttribute('data-type', 'note');
+  });
+
+  test('the card ⋮ menu: picking an item with Enter runs it, and tabbing out closes the menu', async ({ page }) => {
+    await openSeeded(page);
+    const more = card(page).locator('.card-overflow-btn');
+    const menu = card(page).locator('.card-overflow-menu');
+    await more.focus();
+    await page.keyboard.press('Enter');
+    const count = await menu.getByRole('menuitem').count();
+    for (let i = 0; i < count; i++) await page.keyboard.press('Tab');
+    await expect(menu).toBeHidden();
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+
+    await more.focus();
+    await page.keyboard.press('Enter');
+    await expect(menu.getByRole('menuitem').first()).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.board-column.active .item-card', { hasText: 'Keyboard menu task' })).toBeVisible();
+    await expect(page.locator('.card-overflow-menu:not(.hidden)')).toHaveCount(0);
+  });
+
+  test('the card ⋮ menu still opens and closes with the mouse', async ({ page }) => {
+    await openSeeded(page);
+    const more = card(page).locator('.card-overflow-btn');
+    const menu = card(page).locator('.card-overflow-menu');
+    await more.click();
+    await expect(menu).toBeVisible();
+    await more.click();
+    await expect(menu).toBeHidden();
+    await more.click();
+    await page.locator('#date-title').click();
+    await expect(menu).toBeHidden();
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('Esc leaves the add box and keeps the text, so ] changes the day', async ({ page }) => {
+    await openSeeded(page);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('t');
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('Half typed');
+    await page.keyboard.press('Escape');
+    await expect(editor(page)).not.toBeFocused();
+    await expect(editor(page)).toHaveText('Half typed');
+    const title = page.locator('#date-title');
+    const before = await title.textContent();
+    await page.keyboard.press(']');
+    await expect(title).not.toHaveText(before!);
+    await expect(editor(page)).toHaveText('Half typed');
+    await page.keyboard.press('[');
+    await expect(title).toHaveText(before!);
+    await page.keyboard.press('t');
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.press('Control+Enter');
+    await expect(page.locator('.task-card', { hasText: 'Half typed' })).toBeVisible();
+    await expect(editor(page)).toBeFocused();
+  });
+
+  test('on a phone, the offline message sits above the add bar instead of covering it', async ({ page }) => {
+    await openSeeded(page, { width: 390, height: 844 });
+    const toast = page.locator('#toast');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText('Working offline');
+    const t = (await toast.boundingBox())!;
+    const form = (await page.locator('#add-form').boundingBox())!;
+    expect(t.y + t.height).toBeLessThanOrEqual(form.y);
+  });
+
+  test('on a phone (or a tablet in portrait), T, N, [ and ] work with the pinned add bar', async ({ page }) => {
+    await openSeeded(page, { width: 700, height: 1000 });
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('n');
+    await expect(editor(page)).toBeFocused();
+    await expect(page.locator('.type-btn.active[data-type]')).toHaveAttribute('data-type', 'note');
+    await page.keyboard.press('Escape');
+    await expect(editor(page)).not.toBeFocused();
+    await page.keyboard.press('t');
+    await expect(page.locator('.type-btn.active[data-type]')).toHaveAttribute('data-type', 'task');
+    await page.keyboard.press('Escape');
+    const title = page.locator('#date-title');
+    const before = await title.textContent();
+    await page.keyboard.press(']');
+    await expect(title).not.toHaveText(before!);
+    await page.keyboard.press('[');
+    await expect(title).toHaveText(before!);
+  });
+
+  test('on a desktop, toasts keep their bottom corner spot', async ({ page }) => {
+    await openSeeded(page);
+    const toast = page.locator('#toast');
+    await expect(toast).toBeVisible();
+    const t = (await toast.boundingBox())!;
+    expect(800 - (t.y + t.height)).toBeGreaterThanOrEqual(20);
+    expect(800 - (t.y + t.height)).toBeLessThanOrEqual(28);
+  });
+});
+
+test.describe('Account menu keyboard 1.22.0', { tag: ['@sidebar'] }, () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  const btn = (page: Page) => page.locator('#account-menu-btn');
+  const menu = (page: Page) => page.locator('#account-menu');
+  const visibleItems = (page: Page) => menu(page).locator('button:not(:disabled):visible');
+
+  async function openWithKeyboard(page: Page) {
+    await openDesk(page);
+    await btn(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(menu(page)).toBeVisible();
+  }
+
+  test('Enter opens it on Options; ↑ / ↓ / Home / End walk the visible items and wrap; Esc closes back to the button', async ({ page }) => {
+    await openWithKeyboard(page);
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#account-menu-options')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#account-menu-help')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#account-menu-whatsnew')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#export-btn')).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(visibleItems(page).last()).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#account-menu-options')).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(visibleItems(page).last()).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(page.locator('#account-menu-options')).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect(btn(page)).toBeFocused();
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('Esc closes an open Export list first, then the menu', async ({ page }) => {
+    await openWithKeyboard(page);
+    await page.locator('#export-btn').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#export-menu')).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#export-desk-opt')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#export-all-opt')).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#export-menu')).toBeHidden();
+    await expect(menu(page)).toBeVisible();
+    await expect(page.locator('#export-btn')).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect(btn(page)).toBeFocused();
+  });
+
+  test('Enter on an item runs it, and tabbing out of the menu closes it', async ({ page }) => {
+    await openWithKeyboard(page);
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('#help-modal')).not.toHaveClass(/hidden/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#help-modal')).toHaveClass(/hidden/);
+
+    await btn(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(menu(page)).toBeVisible();
+    for (let i = 0; i < 20 && (await menu(page).isVisible()); i++) await page.keyboard.press('Tab');
+    await expect(menu(page)).toBeHidden();
+    await expect(btn(page)).toHaveAttribute('aria-expanded', 'false');
+    expect(await page.evaluate(() => !!document.activeElement?.closest('#sidebar-account'))).toBe(false);
+  });
+
+  test('the mouse still opens it, and an outside click closes it', async ({ page }) => {
+    await openDesk(page);
+    await btn(page).click();
+    await expect(menu(page)).toBeVisible();
+    await btn(page).click();
+    await expect(menu(page)).toBeHidden();
+    await btn(page).click();
+    await page.locator('#date-title').click();
+    await expect(menu(page)).toBeHidden();
+    await btn(page).click();
+    await page.locator('#account-menu-options').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+  });
+});
+
+test.describe('Full screen option 1.22.0', { tag: ['@options'] }, () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  const isFull = (page: Page) => page.evaluate(() => !!document.fullscreenElement);
+  const stored = (page: Page) => page.evaluate(() => localStorage.getItem('work-desk-fullscreen'));
+
+  test('the toggle enters and leaves full screen and is remembered on this device', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await openOptionsSectionFor(page, '#fullscreen-toggle');
+    const toggle = page.locator('#fullscreen-toggle');
+    await expect(toggle).not.toBeChecked();
+    await page.locator('label:has(#fullscreen-toggle)').click();
+    await expect(toggle).toBeChecked();
+    expect(await stored(page)).toBe('on');
+    await expect.poll(() => isFull(page)).toBe(true);
+    await expect(page.locator('#density-popout')).toBeVisible();
+
+    await page.locator('label:has(#fullscreen-toggle)').click();
+    await expect(toggle).not.toBeChecked();
+    expect(await stored(page)).toBe('off');
+    await expect.poll(() => isFull(page)).toBe(false);
+  });
+
+  test('when on, the first tap after launch goes full screen, and the next tap after leaving it goes back', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('work-desk-fullscreen', 'on'));
+    await page.goto(DESK_URL);
+    await expect(page.locator('#auth-offline-btn')).toBeVisible();
+    expect(await isFull(page)).toBe(false);
+    await page.locator('#auth-offline-btn').click();
+    await expect.poll(() => isFull(page)).toBe(true);
+    await page.evaluate(() => document.exitFullscreen());
+    await expect.poll(() => isFull(page)).toBe(false);
+    await page.locator('#date-title').click();
+    await expect.poll(() => isFull(page)).toBe(true);
+    await page.locator('#density-toggle').click();
+    await openOptionsSectionFor(page, '#fullscreen-toggle');
+    await expect(page.locator('#fullscreen-toggle')).toBeChecked();
+  });
+
+  test('Reset Behavior turns it off', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('work-desk-fullscreen', 'on'));
+    await openDesk(page);
+    page.on('dialog', (d) => d.accept());
+    await page.locator('#density-toggle').click();
+    await openOptionsSectionFor(page, '#fullscreen-toggle');
+    await page.locator('#options-pane-behavior .options-section:not([hidden]) [data-options-back]').click();
+    await page.locator('[data-options-reset="behavior"]').click();
+    await expect.poll(() => stored(page)).toBe('off');
+    await openOptionsSectionFor(page, '#fullscreen-toggle');
+    await expect(page.locator('#fullscreen-toggle')).not.toBeChecked();
+  });
+});
+
+test.describe('Column add box clears after Add 1.23.0', { tag: ['@board'] }, () => {
+  const newColumn = (page: Page) => page.locator('.board-column.new');
+  const cardsWith = (page: Page, text: string) => page.locator('.item-card', { hasText: text });
+  const openDeskWithBoard = async (page: Page) => {
+    await openDesk(page);
+    await addTask(page, 'Board seed');
+  };
+
+  test('clicking Add clears the box and keeps it open; a second Add on the empty box adds nothing', async ({ page }) => {
+    await openDeskWithBoard(page);
+    await newColumn(page).locator('.col-add-btn').click();
+    const input = newColumn(page).locator('.col-inline-input');
+    await input.fill('Bug fixes from mobile');
+    await newColumn(page).locator('.col-inline-btn.primary').click();
+    await expect(cardsWith(page, 'Bug fixes from mobile')).toHaveCount(1);
+    await expect(input).toBeVisible();
+    await expect(input).toHaveValue('');
+
+    await newColumn(page).locator('.col-inline-btn.primary').click();
+    await expect(cardsWith(page, 'Bug fixes from mobile')).toHaveCount(1);
+    await expect(input).toBeHidden();
+  });
+
+  test('Enter clears the box too, so two tasks in a row come out separately', async ({ page }) => {
+    await openDeskWithBoard(page);
+    await newColumn(page).locator('.col-add-btn').click();
+    const input = newColumn(page).locator('.col-inline-input');
+    await input.fill('First quick task');
+    await input.press('Enter');
+    await expect(input).toHaveValue('');
+    await expect(input).toBeFocused();
+    await input.fill('Second quick task');
+    await input.press('Enter');
+    await expect(cardsWith(page, 'First quick task')).toHaveCount(1);
+    await expect(cardsWith(page, 'Second quick task')).toHaveCount(1);
+    await expect(input).toHaveValue('');
+  });
+
+  test('Cancel closes the box without adding', async ({ page }) => {
+    await openDeskWithBoard(page);
+    await newColumn(page).locator('.col-add-btn').click();
+    await newColumn(page).locator('.col-inline-input').fill('Never added');
+    await newColumn(page).locator('.col-inline-btn.cancel').click();
+    await expect(newColumn(page).locator('.col-inline-input')).toBeHidden();
+    await expect(cardsWith(page, 'Never added')).toHaveCount(0);
+  });
+});
+
+test.describe('Phone layout fixes 1.23.0', { tag: ['@phone', '@projects', '@sidebar'] }, () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  async function openProjectNote(page: Page) {
+    await page.addInitScript(() => {
+      if (localStorage.getItem('v1230-phone-seeded')) return;
+      localStorage.setItem('v1230-phone-seeded', '1');
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-projects', JSON.stringify({ deletedIds: {}, projects: [
+        { id: 'p1', name: 'RMA Processes', createdAt: '2026-10-13T09:00:00', tasks: [], notes: [
+          { id: 'n1', type: 'note', content: '<p>Osight:</p><p>R1792279633438442</p>', archived: false, createdAt: '2026-10-17T09:00:00',
+            comments: [{ id: 'c1', content: 'Called vendor', createdAt: '2026-10-18T09:00:00' }] },
+        ] },
+      ] }));
+    });
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('.project-list-item', { hasText: 'RMA Processes' }).click();
+    await expect(page.locator('#project-detail .project-item-card')).toBeVisible();
+  }
+
+  test('project note actions wrap inside the card, each on one line', async ({ page }) => {
+    await openProjectNote(page);
+    const card = page.locator('#project-detail .project-item-card').first();
+    const box = (await card.boundingBox())!;
+    const buttons = card.locator('.project-item-actions button');
+    expect(await buttons.count()).toBeGreaterThanOrEqual(5);
+    const rows = await buttons.evaluateAll((els) => els.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { text: el.textContent, left: r.left, right: r.right, height: r.height, lineHeight: parseFloat(getComputedStyle(el).lineHeight) || r.height };
+    }));
+    for (const b of rows) {
+      expect(b.right, `${b.text} stays inside the card`).toBeLessThanOrEqual(box.x + box.width + 0.5);
+      expect(b.left, `${b.text} stays inside the card`).toBeGreaterThanOrEqual(box.x - 0.5);
+      expect(b.height, `${b.text} is one line`).toBeLessThan(b.lineHeight * 1.8);
+    }
+    expect(await card.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    await card.locator('.project-item-actions button', { hasText: 'delete' }).click({ trial: true });
+    await card.locator('.project-item-actions button', { hasText: /^archive$/ }).click();
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-projects')!).projects[0].notes[0].archived)).toBe(true);
+  });
+
+  test('desk tabs sit under Desk / Insights on a phone, and each still switches', async ({ page }) => {
+    await openDesk(page);
+    const desk = (await page.locator('#tab-desk').boundingBox())!;
+    const insights = (await page.locator('#tab-insights').boundingBox())!;
+    const work = (await page.locator('#tab-work').boundingBox())!;
+    const projects = (await page.locator('#tab-projects').boundingBox())!;
+    expect(Math.abs(desk.y - insights.y)).toBeLessThan(1);
+    expect(work.y).toBeGreaterThanOrEqual(desk.y + desk.height);
+    expect(Math.abs(work.y - projects.y)).toBeLessThan(1);
+    expect(work.x).toBeLessThan(desk.x + desk.width);
+
+    await page.locator('#tab-personal').click();
+    await expect(page.locator('#tab-personal')).toHaveClass(/active/);
+    await page.locator('#tab-insights').click();
+    await expect(page.locator('#tab-insights')).toHaveClass(/active/);
+    await page.locator('#tab-desk').click();
+    await page.locator('#tab-projects').click();
+    await expect(page.locator('#tab-projects')).toHaveClass(/active/);
+    await page.locator('#tab-work').click();
+    await expect(page.locator('#tab-work')).toHaveClass(/active/);
+  });
+
+  test('on a tablet the tabs stay on one row', async ({ page }) => {
+    await page.setViewportSize({ width: 720, height: 1000 });
+    await openDesk(page);
+    const desk = (await page.locator('#tab-desk').boundingBox())!;
+    const work = (await page.locator('#tab-work').boundingBox())!;
+    expect(Math.abs(work.y - desk.y)).toBeLessThan(2);
+    expect(work.x).toBeGreaterThan(desk.x + desk.width);
   });
 });
