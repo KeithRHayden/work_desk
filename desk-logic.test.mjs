@@ -4,42 +4,6 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import {
-  normalizeItem,
-  deduplicateDayItems,
-  deduplicateRecurringSameDay,
-  deduplicateAcrossDays,
-  planRecurringInject,
-  applyCarryThenInject,
-  advanceLastInjectedDate,
-  mergeRecurringTemplates,
-  scoreItemForMerge,
-  pickMergedItem,
-  dayHasRecurringInstance,
-  isDueOnDate,
-  recurringContentKey,
-  toggleTaskCompleted,
-  resolveBoardColumn,
-  mergeImportDaysData,
-  mergeDeletedIds,
-  moveItemInDays,
-  carryUnfinishedFromPastDays,
-  mergeDaysData,
-  pickBestIdPlacement,
-  AUTO_COLLAPSE_AT_OPTIONS,
-  normalizeAutoCollapseAt,
-  shouldAutoCollapseCompleted,
-  normalizeTag,
-  normalizeTagList,
-  mergeTags,
-  extractHashtags,
-  mergeItemComments,
-  mergeProjectsData,
-  nthWeekdayOfMonth,
-  lastWeekdayOfMonth,
-  getUSFederalHolidays,
-  checkHoliday,
-} from '../lib/desk-logic.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(__dirname, '../work-desk.html'), 'utf8');
@@ -49,6 +13,111 @@ function extractMainScript(source) {
   const blocks = [...source.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map((m) => m[1]);
   assert.ok(blocks.length, 'expected at least one script block');
   return blocks.sort((a, b) => b.length - a.length)[0];
+}
+
+// Top-level declarations of the app script (4-space indent), by name. Consts are only kept when their
+// initializer is a literal, so loading them can't touch the DOM.
+const appDecls = (() => {
+  const script = extractMainScript(html);
+  const decls = new Map();
+  const nextTopLevel = /\n {4}(?! )(\}?)[^\n]*/g;
+  for (const m of script.matchAll(/^ {4}(?:async )?function (\w+)\(/gm)) {
+    nextTopLevel.lastIndex = m.index + 1;
+    const next = nextTopLevel.exec(script);
+    const end = !next ? script.length : next[1] ? next.index + 6 : next.index;
+    if (!decls.has(m[1])) decls.set(m[1], { kind: 'function', pos: m.index, src: script.slice(m.index, end) });
+  }
+  for (const m of script.matchAll(/^ {4}(const|let) (\w+) = ([^\n]*)/gm)) {
+    if (decls.has(m[2]) || !/^(\[|\{|'|"|`|\d|-\d|\/|true|false|null|new (Set|Map)\()/.test(m[3])) continue;
+    let end = m.index + m[0].length;
+    if (!m[3].replace(/\s*\/\/.*$/, '').trimEnd().endsWith(';')) {
+      nextTopLevel.lastIndex = end;
+      const c = nextTopLevel.exec(script);
+      if (!c || !/^\n {4}[\]})][^\n]*;\s*$/.test(c[0])) continue;
+      end = c.index + c[0].length;
+    }
+    const src = script.slice(m.index, end);
+    if (!/\b(document|window|localStorage)\b/.test(src)) decls.set(m[2], { kind: 'const', pos: m.index, src });
+  }
+  return decls;
+})();
+
+/**
+ * Real app functions (and everything they call) running in this realm. `globals` replaces app
+ * declarations or browser APIs by name: state, saveData, render, and so on.
+ */
+const noop = () => {};
+const APP_SIDE_EFFECT_STUBS = {
+  saveData: noop, render: noop, renderInBackground: noop, showToast: noop, celebrateTaskComplete: noop,
+  clearPendingUndo: noop, syncCalendarViewToSelected: noop, clearMoveModal: noop, sbSchedulePush: noop, schedulePrefsPush: noop,
+  saveProjectsData: noop, readStorage: () => null, writeStorage: () => true,
+  loadRecurringTemplates: () => [], saveRecurringTemplates: noop, loadRecurringDeletedIds: () => ({}),
+};
+
+function appFns(names, globals = {}) {
+  globals = { ...APP_SIDE_EFFECT_STUBS, ...globals };
+  const need = new Set();
+  const visit = (name) => {
+    if (need.has(name) || name in globals || !appDecls.has(name)) return;
+    need.add(name);
+    for (const id of new Set(appDecls.get(name).src.match(/[A-Za-z_$][\w$]*/g))) visit(id);
+  };
+  names.forEach(visit);
+  const missing = names.filter((n) => !need.has(n) && !(n in globals));
+  assert.deepEqual(missing, [], 'requested names must be top-level declarations in work-desk.html');
+  const decls = [...need].map((n) => appDecls.get(n)).sort((a, b) => a.pos - b.pos);  const src = [
+    ...decls.filter((d) => d.kind === 'function').map((d) => d.src),
+    ...decls.filter((d) => d.kind === 'const').map((d) => d.src),
+    `return { ${names.join(', ')} };`,
+  ].join('\n');
+  return new Function(...Object.keys(globals), src)(...Object.values(globals));
+}
+
+// The mocked page has no HTML parser; content matching only needs the text
+const stripTags = (h) => String(h || '').replace(/<[^>]*>/g, '');
+
+const appState = { data: { days: {}, deletedIds: {} }, listContext: 'work', useFederalHolidays: true, customHolidays: [] };
+const {
+  normalizeItem, deduplicateDayItems, deduplicateRecurringSameDay, deduplicateAcrossDays, dayHasRecurringInstance,
+  recurringContentKey, recurringDueOn, mergeRecurringTemplates, mergeDeletedIds, mergeDaysData, mergeProjectsData,
+  AUTO_COLLAPSE_AT_OPTIONS, normalizeAutoCollapseAt, normalizeTag, normalizeTagList, mergeTags, extractHashtags,
+  nthWeekdayOfMonth, lastWeekdayOfMonth, getUSFederalHolidays, applyTaskDropState,
+} = appFns([
+  'normalizeItem', 'deduplicateDayItems', 'deduplicateRecurringSameDay', 'deduplicateAcrossDays', 'dayHasRecurringInstance',
+  'recurringContentKey', 'recurringDueOn', 'mergeRecurringTemplates', 'mergeDeletedIds', 'mergeDaysData', 'mergeProjectsData',
+  'AUTO_COLLAPSE_AT_OPTIONS', 'normalizeAutoCollapseAt', 'normalizeTag', 'normalizeTagList', 'mergeTags', 'extractHashtags',
+  'nthWeekdayOfMonth', 'lastWeekdayOfMonth', 'getUSFederalHolidays', 'applyTaskDropState',
+], { state: appState, stripHtmlTags: stripTags });
+
+// The app reads holiday settings from state
+function checkHoliday(dateKey, { useFederal = true, customHolidays = [] } = {}) {
+  const { checkHoliday: real } = appFns(['checkHoliday'], {
+    state: { ...appState, useFederalHolidays: useFederal, customHolidays },
+  });
+  return real(dateKey);
+}
+
+/**
+ * A desk in memory, driven through the app's own actions (carry forward, move, toggle, inject, import).
+ * Rendering, toasts, and saving are no-ops; recurring templates live in `templates`.
+ */
+function deskSandbox({ days = {}, deletedIds = {}, templates = [], today = '2026-08-12', selectedDate = today } = {}) {
+  const state = { ...appState, data: { days: structuredClone(days), deletedIds: structuredClone(deletedIds) }, selectedDate };
+  const recurring = { templates: structuredClone(templates) };
+  let n = 0;
+  const fns = appFns(
+    ['carryForwardUnfinished', 'moveItem', 'toggleItem', 'moveTaskToColumn', 'injectDueTemplates', 'markTemplateInjectedForDate', 'isDueToday', 'mergeImportInto', 'findItem'],
+    {
+      state,
+      todayKey: () => today,
+      newId: () => `new-${++n}`,
+      stripHtmlTags: stripTags,
+      loadRecurringTemplates: () => recurring.templates,
+      saveRecurringTemplates: (t) => { recurring.templates = t; },
+      clearItemDeleted: (id) => { delete state.data.deletedIds?.[id]; },
+    },
+  );
+  return { ...fns, state, recurring };
 }
 
 /** Runs the app script in a mocked DOM; its top-level function declarations land on the returned context. */
@@ -268,52 +337,33 @@ describe('recurring inject', () => {
     lastInjectedDate: null,
   };
 
+  const today = '2026-08-12';
+  const withToday = (items) => ({ [today]: { date: today, items } });
+
   it('does not inject when a completed instance already exists today', () => {
-    const result = planRecurringInject({
-      templates: [template],
-      today: '2026-08-12',
-      todayItems: [
-        task({
-          id: 'done',
-          content: '<p>Update the ACE Dashboard</p>',
-          recurringTemplateId: 'tmpl-ace',
-          completed: true,
-        }),
-      ],
-      newId: () => 'should-not-create',
-    });
-    assert.equal(result.injectedCount, 0);
-    assert.equal(result.items.length, 1);
-    assert.equal(result.updatedTemplates[0].lastInjectedDate, '2026-08-12');
+    const desk = deskSandbox({ today, templates: [template], days: withToday([
+      task({ id: 'done', content: '<p>Update the ACE Dashboard</p>', recurringTemplateId: 'tmpl-ace', completed: true }),
+    ]) });
+    assert.equal(desk.injectDueTemplates(), 0);
+    assert.equal(desk.state.data.days[today].items.length, 1);
+    assert.equal(desk.recurring.templates[0].lastInjectedDate, today);
   });
 
-  it('does not inject when orphan content matches (stripped template id)', () => {
-    const result = planRecurringInject({
-      templates: [template],
-      today: '2026-08-12',
-      todayItems: [
-        task({
-          id: 'orphan',
-          content: '<p>Update the ACE Dashboard</p>',
-          completed: true,
-        }),
-      ],
-      newId: () => 'should-not-create',
-    });
-    assert.equal(result.injectedCount, 0);
-    assert.equal(dayHasRecurringInstance({ items: result.items }, template), true);
+  it('does not inject when orphan content matches (stripped template id), and stamps the orphan', () => {
+    const desk = deskSandbox({ today, templates: [template], days: withToday([
+      task({ id: 'orphan', content: '<p>Update the ACE Dashboard</p>', completed: true }),
+    ]) });
+    assert.equal(desk.injectDueTemplates(), 0);
+    const day = desk.state.data.days[today];
+    assert.equal(dayHasRecurringInstance(day, template), true);
+    assert.equal(day.items[0].recurringTemplateId, 'tmpl-ace');
   });
 
   it('injects once when today is empty and due', () => {
-    let n = 0;
-    const result = planRecurringInject({
-      templates: [template],
-      today: '2026-08-12',
-      todayItems: [],
-      newId: () => `new-${++n}`,
-    });
-    assert.equal(result.injectedCount, 1);
-    assert.equal(result.items[0].recurringTemplateId, 'tmpl-ace');
+    const desk = deskSandbox({ today, templates: [template] });
+    assert.equal(desk.injectDueTemplates(), 1);
+    assert.equal(desk.state.data.days[today].items[0].recurringTemplateId, 'tmpl-ace');
+    assert.equal(desk.injectDueTemplates(), 0, 'a second run the same day adds nothing');
   });
 
   it('collapses two same-template copies preferring completed', () => {
@@ -350,18 +400,13 @@ describe('recurring inject', () => {
   });
 
   it('injects only once when two templates share the same content', () => {
-    let n = 0;
-    const result = planRecurringInject({
-      templates: [
-        { id: 'tmpl-a', content: '<p>Update the ACE Dashboard</p>', rule: 'weekdays', lastInjectedDate: null },
-        { id: 'tmpl-b', content: '<p>Update the ACE Dashboard</p>', rule: 'weekdays', lastInjectedDate: null },
-      ],
-      today: '2026-08-17',
-      todayItems: [],
-      newId: () => `new-${++n}`,
-    });
-    assert.equal(result.injectedCount, 1);
-    assert.equal(result.items.filter(i => recurringContentKey(i.content) === 'update the ace dashboard').length, 1);
+    const desk = deskSandbox({ today: '2026-08-17', templates: [
+      { id: 'tmpl-a', content: '<p>Update the ACE Dashboard</p>', rule: 'weekdays', lastInjectedDate: null },
+      { id: 'tmpl-b', content: '<p>Update the ACE Dashboard</p>', rule: 'weekdays', lastInjectedDate: null },
+    ] });
+    assert.equal(desk.injectDueTemplates(), 1);
+    const items = desk.state.data.days['2026-08-17'].items;
+    assert.equal(items.filter(i => recurringContentKey(i.content) === 'update the ace dashboard').length, 1);
   });
 });
 
@@ -374,32 +419,19 @@ describe('carry then inject order', () => {
   };
 
   it('carry-then-inject does not duplicate an open recurring task from yesterday', () => {
-    let n = 0;
-    const { days } = applyCarryThenInject({
-      yesterday: '2026-08-11',
-      today: '2026-08-12',
-      templates: [template],
-      newId: () => `inj-${++n}`,
-      days: {
-        '2026-08-11': {
-          date: '2026-08-11',
-          items: [
-            task({
-              id: 'yest',
-              content: 'Update ACE',
-              recurringTemplateId: 'tmpl-ace',
-            }),
-          ],
-        },
-      },
-    });
-    const todayItems = days['2026-08-12'].items.filter(i => i.recurringTemplateId === 'tmpl-ace');
+    const desk = deskSandbox({ today: '2026-08-12', templates: [template], days: {
+      '2026-08-11': { date: '2026-08-11', items: [task({ id: 'yest', content: 'Update ACE', recurringTemplateId: 'tmpl-ace' })] },
+    } });
+    desk.carryForwardUnfinished('2026-08-11');
+    assert.equal(desk.injectDueTemplates(), 0);
+    const todayItems = desk.state.data.days['2026-08-12'].items.filter(i => i.recurringTemplateId === 'tmpl-ace');
     assert.equal(todayItems.length, 1);
     assert.equal(todayItems[0].id, 'yest');
+    assert.equal(todayItems[0].carriedFrom, '2026-08-11');
   });
 
   it('auto-carry pulls unfinished open tasks from all past days with ID dedupe', () => {
-    const { days, carriedCount } = carryUnfinishedFromPastDays({
+    const desk = deskSandbox({ today: '2026-08-12', days: {
       '2026-08-09': {
         date: '2026-08-09',
         items: [
@@ -419,9 +451,11 @@ describe('carry then inject order', () => {
         date: '2026-08-12',
         items: [task({ id: 'today-only', content: 'Already today' })],
       },
-    }, '2026-08-12');
+    } });
+    desk.carryForwardUnfinished(null, { auto: true, allPastDays: true });
+    const { days } = desk.state.data;
 
-    assert.equal(carriedCount, 2);
+    assert.equal(days['2026-08-12'].items.filter(i => i.carriedFrom).length, 2);
     // Completed/shelved stay on the old day; only open unfinished moved
     assert.deepEqual(
       days['2026-08-09'].items.map(i => i.id).sort(),
@@ -434,24 +468,34 @@ describe('carry then inject order', () => {
   });
 });
 
-describe('toggleTaskCompleted / boardColumn', () => {
+describe('toggleItem / boardColumn', () => {
+  const toggled = (item) => {
+    const desk = deskSandbox({ days: { '2026-08-12': { date: '2026-08-12', items: [item] } } });
+    desk.toggleItem(item.id);
+    return desk.state.data.days['2026-08-12'].items[0];
+  };
+
   it('uncomplete preserves New column', () => {
-    const done = task({ id: 'a', boardColumn: 'new', completed: true });
-    const open = toggleTaskCompleted(done);
+    const open = toggled(task({ id: 'a', boardColumn: 'new', completed: true }));
     assert.equal(open.completed, false);
     assert.equal(open.boardColumn, 'new');
   });
 
   it('defaults unknown boardColumn to active', () => {
-    assert.equal(resolveBoardColumn({}), 'active');
-    assert.equal(toggleTaskCompleted(task({ id: 'a', boardColumn: 'weird', completed: true })).boardColumn, 'active');
+    assert.equal(toggled(task({ id: 'a', boardColumn: 'weird', completed: true })).boardColumn, 'active');
+    assert.equal(applyTaskDropState(task({ id: 'b', boardColumn: undefined }), 'completed').boardColumn, 'active');
+  });
+
+  it('completing a shelved task unshelves it; uncompleting keeps it unshelved', () => {
+    const done = toggled(task({ id: 'a', shelved: true }));
+    assert.deepEqual([done.completed, done.shelved], [true, false]);
   });
 });
 
 describe('import/export tombstones', () => {
-  it('mergeImportDaysData keeps deletedIds and strips resurrected items', () => {
+  it('mergeImportInto keeps deletedIds and strips resurrected items', () => {
     const ts = '2026-08-12T10:00:00.000Z';
-    const merged = mergeImportDaysData(
+    const merged = deskSandbox().mergeImportInto(
       {
         days: {
           '2026-08-12': { date: '2026-08-12', items: [task({ id: 'keep' }), task({ id: 'gone' })] },
@@ -480,60 +524,81 @@ describe('import/export tombstones', () => {
   });
 });
 
-describe('moveItemInDays', () => {
-  it('removes the ID from every day before placing on target', () => {
-    const { days, moved } = moveItemInDays({
-      '2026-08-10': { date: '2026-08-10', items: [task({ id: 'x', content: 'Older' })] },
-      '2026-08-11': { date: '2026-08-11', items: [task({ id: 'x', content: 'Newer' }), task({ id: 'y' })] },
-    }, 'x', '2026-08-13');
-    assert.equal(moved, true);
+describe('moveItem', () => {
+  const twoCopies = {
+    '2026-08-10': { date: '2026-08-10', items: [task({ id: 'x', content: 'Older' })] },
+    '2026-08-11': { date: '2026-08-11', items: [task({ id: 'x', content: 'Newer', carriedFrom: '2026-08-10', carryCount: 3, carryStart: '2026-08-08' }), task({ id: 'y' })] },
+  };
+
+  it('moves the copy on the viewed day, removes the ID from every day, and clears carry stamps', () => {
+    const desk = deskSandbox({ days: twoCopies, selectedDate: '2026-08-11' });
+    desk.moveItem('x', '2026-08-13');
+    const { days } = desk.state.data;
     assert.equal(days['2026-08-10'], undefined);
     assert.equal(days['2026-08-11'].items.map(i => i.id).join(), 'y');
     assert.equal(days['2026-08-13'].items.length, 1);
     assert.equal(days['2026-08-13'].items[0].content, 'Newer');
+    for (const k of ['carriedFrom', 'carryCount', 'carryStart']) assert.equal(k in days['2026-08-13'].items[0], false, k);
+  });
+
+  it('falls back to the first day holding the ID when the viewed day does not have it', () => {
+    const desk = deskSandbox({ days: twoCopies, selectedDate: '2026-08-12' });
+    desk.moveItem('x', '2026-08-13');
+    const { days } = desk.state.data;
+    assert.equal(days['2026-08-13'].items[0].content, 'Older');
+    assert.equal(Object.values(days).flatMap(d => d.items).filter(i => i.id === 'x').length, 1);
   });
 });
 
 describe('lastInjectedDate advancement', () => {
   it('completing a past-day instance must not stamp today', () => {
-    const templates = [{ id: 't1', lastInjectedDate: '2026-08-10', content: 'x', rule: 'daily' }];
-    const next = advanceLastInjectedDate(templates, 't1', '2026-08-11');
-    assert.equal(next[0].lastInjectedDate, '2026-08-11');
-    assert.equal(isDueOnDate(next[0], '2026-08-12'), true);
+    const desk = deskSandbox({ today: '2026-08-12', templates: [{ id: 't1', lastInjectedDate: '2026-08-10', content: 'x', rule: 'daily' }] });
+    desk.markTemplateInjectedForDate('t1', '2026-08-11');
+    assert.equal(desk.recurring.templates[0].lastInjectedDate, '2026-08-11');
+    assert.equal(desk.isDueToday(desk.recurring.templates[0]), true);
+    desk.markTemplateInjectedForDate('t1', '2026-08-09');
+    assert.equal(desk.recurring.templates[0].lastInjectedDate, '2026-08-11', 'never moves backwards');
   });
 
   it('deleting today instance stamps today and blocks re-inject', () => {
-    const templates = [{ id: 't1', lastInjectedDate: null, content: 'x', rule: 'daily' }];
-    const next = advanceLastInjectedDate(templates, 't1', '2026-08-12');
-    assert.equal(isDueOnDate(next[0], '2026-08-12'), false);
+    const desk = deskSandbox({ today: '2026-08-12', templates: [{ id: 't1', lastInjectedDate: null, content: 'x', rule: 'daily' }] });
+    desk.markTemplateInjectedForDate('t1', '2026-08-12');
+    assert.equal(desk.isDueToday(desk.recurring.templates[0]), false);
+    assert.equal(desk.injectDueTemplates(), 0);
   });
 });
 
 describe('sync merge scoring', () => {
-  it('shelved local beats remote open task with one comment', () => {
-    const local = task({ id: 'a', shelved: true, comments: [] });
-    const remote = task({
-      id: 'a',
-      comments: [{ id: 'c1', content: 'hi', createdAt: '2026-08-12T00:00:00.000Z' }],
-    });
-    assert.ok(scoreItemForMerge(local) > scoreItemForMerge(remote));
-    const picked = pickMergedItem(local, remote);
+  const sameDay = (local, remote) => mergeDaysData(
+    { days: { '2026-08-12': { date: '2026-08-12', items: [local] } }, deletedIds: {} },
+    { days: { '2026-08-12': { date: '2026-08-12', items: [remote] } }, deletedIds: {} },
+  ).days['2026-08-12'].items;
+
+  it('shelved local beats remote open task with one comment, and keeps the comment', () => {
+    const [picked, ...rest] = sameDay(
+      task({ id: 'a', shelved: true, comments: [] }),
+      task({ id: 'a', comments: [{ id: 'c1', content: 'hi', createdAt: '2026-08-12T00:00:00.000Z' }] }),
+    );
+    assert.equal(rest.length, 0);
     assert.equal(picked.shelved, true);
     assert.equal(picked.comments.length, 1);
   });
 
   it('completed local beats remote open with comments', () => {
-    const local = task({ id: 'a', completed: true });
-    const remote = task({
-      id: 'a',
-      comments: [
-        { id: 'c1', content: 'a', createdAt: 'x' },
-        { id: 'c2', content: 'b', createdAt: 'x' },
-      ],
-    });
-    const picked = pickMergedItem(local, remote);
+    const [picked] = sameDay(
+      task({ id: 'a', completed: true }),
+      task({ id: 'a', comments: [{ id: 'c1', content: 'a', createdAt: 'x' }, { id: 'c2', content: 'b', createdAt: 'x' }] }),
+    );
     assert.equal(picked.completed, true);
     assert.equal(picked.comments.length, 2);
+  });
+
+  it('the longer carry run survives a merge', () => {
+    const [picked] = sameDay(
+      task({ id: 'a', carriedFrom: '2026-08-11', carryCount: 2, carryStart: '2026-08-10' }),
+      task({ id: 'a', completed: true, carriedFrom: '2026-08-11', carryCount: 4, carryStart: '2026-08-07' }),
+    );
+    assert.deepEqual([picked.carryCount, picked.carryStart], [4, '2026-08-07']);
   });
 });
 
@@ -595,18 +660,13 @@ describe('mergeDaysData (cross-device / stale local)', () => {
     assert.equal(merged.days['2026-08-10']?.items?.[0]?.id, 'task-2');
   });
 
-  it('pickBestIdPlacement prefers completed over newer open day', () => {
-    const openToday = {
-      date: '2026-08-15',
-      item: task({ id: 'x', content: 'X' }),
-    };
-    const doneEarlier = {
-      date: '2026-08-12',
-      item: task({ id: 'x', content: 'X', completed: true }),
-    };
-    const best = pickBestIdPlacement(openToday, doneEarlier);
-    assert.equal(best.date, '2026-08-12');
-    assert.equal(best.item.completed, true);
+  it('deduplicateAcrossDays prefers completed over a newer open day', () => {
+    const { days } = deduplicateAcrossDays({
+      '2026-08-15': { date: '2026-08-15', items: [task({ id: 'x', content: 'X' })] },
+      '2026-08-12': { date: '2026-08-12', items: [task({ id: 'x', content: 'X', completed: true })] },
+    });
+    assert.deepEqual(Object.keys(days), ['2026-08-12']);
+    assert.equal(days['2026-08-12'].items[0].completed, true);
   });
 });
 
@@ -896,13 +956,13 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
   it('manual move clears carriedFrom', () => {
     const moveItemFn = html.match(/function moveItem\(itemId, targetDate\)\s*\{[\s\S]*?\n    \}/);
     assert.ok(moveItemFn, 'moveItem function not found');
-    assert.match(moveItemFn[0], /delete item\.carriedFrom/);
+    assert.match(moveItemFn[0], /clearCarryStamps\(item\)/);
   });
 
   it('send to other context clears carriedFrom', () => {
     const sendFn = html.match(/function sendItemToOtherContext\(itemId\)\s*\{[\s\S]*?\n    \}/);
     assert.ok(sendFn, 'sendItemToOtherContext function not found');
-    assert.match(sendFn[0], /delete item\.carriedFrom/);
+    assert.match(sendFn[0], /clearCarryStamps\(item\)/);
   });
 
   it('analyzeDayItems uses carriedFrom for accurate counting', () => {
@@ -1119,6 +1179,442 @@ describe('installed app manifest', () => {
   });
 });
 
+describe('Full screen option', () => {
+  it('lives in Behavior > General, is off by default, and is stored on this device only', () => {
+    assert.match(html, /<section class="options-section" data-options-section="general"[\s\S]*?<input id="fullscreen-toggle" type="checkbox" \/>[\s\S]*?<\/section>/);
+    assert.match(mainScript, /const FULLSCREEN_KEY = 'work-desk-fullscreen';/);
+    assert.match(mainScript, /'fullscreen-toggle': false,/);
+    const init = fnSource('initFullscreen');
+    assert.match(init, /if \(!canFullscreen\(\)\) \{ document\.getElementById\('fullscreen-row'\)\.hidden = true; return; \}/);
+    assert.match(init, /document\.addEventListener\('click', onGesture, true\);/);
+    assert.match(init, /document\.exitFullscreen\(\)/);
+    for (const fn of ['buildPrefsPayload', 'readOptionsSummaryPrefs']) {
+      if (mainScript.includes(`function ${fn}(`)) assert.doesNotMatch(fnSource(fn), /FULLSCREEN_KEY|fullscreen/i, `${fn} must not sync it`);
+    }
+    assert.match(fnSource('enterFullscreen'), /if \(document\.fullscreenElement \|\| !canFullscreen\(\)\) return;\s*document\.documentElement\.requestFullscreen\(\{ navigationUI: 'hide' \}\)\.catch/);
+  });
+});
+
+describe('desk keyboard shortcuts', () => {
+  it('T and N pick Task or Note in the add bar, [ and ] change the day', () => {
+    const fn = fnSource('handleDeskShortcut');
+    assert.match(fn, /key === 't' \|\| key === 'n'/);
+    assert.match(fn, /b\.dataset\.type === \(key === 't' \? 'task' : 'note'\)/);
+    assert.match(fn, /e\.key === '\[' \? els\.prevDay : els\.nextDay/);
+  });
+  it('never fire while typing, with a modifier held, or behind an open menu or dialog', () => {
+    const fn = fnSource('handleDeskShortcut');
+    assert.match(fn, /if \(e\.ctrlKey \|\| e\.metaKey \|\| e\.altKey \|\| e\.isComposing \|\| e\.defaultPrevented\) return;/);
+    assert.match(fn, /isTypingTarget\(e\.target\) \|\| isTypingTarget\(document\.activeElement\) \|\| isOverlayOpen\(\)/);
+    assert.match(fnSource('isTypingTarget'), /el\.isContentEditable \|\| \/\^\(INPUT\|TEXTAREA\|SELECT\)\$\//);
+    for (const sel of ['.modal:not(.hidden)', '#density-popout:not(.hidden)', '#search-overlay:not(.hidden)', '#mobile-menu-sheet:not(.hidden)', '#account-menu:not(.hidden)']) {
+      assert.ok(fnSource('isOverlayOpen').includes(sel), sel);
+    }
+  });
+  it('are listed in Help', () => {
+    assert.match(html, /<li><strong>Start a new task \/ note<\/strong> — T \/ N/);
+    assert.match(html, /<li><strong>Previous \/ next day<\/strong> — \[ \/ \]<\/li>/);
+  });
+});
+
+describe('1.22.0 keyboard menus, add-box Esc, and phone toasts', () => {
+  const menuFocus = () => {
+    const doc = { activeElement: null };
+    const item = (label, shown = true) => ({ label, getClientRects: () => (shown ? [{}] : []), focus() { doc.activeElement = this; } });
+    const items = [item('Start'), item('Hidden sign-in', false), item('Shelve'), item('Delete')];
+    const menu = { querySelectorAll: () => items };
+    const moveMenuFocus = new Function('document', `${fnSource('moveMenuFocus')}\nreturn moveMenuFocus;`)(doc);
+    return { doc, items, menu, moveMenuFocus };
+  };
+
+  it('moveMenuFocus walks the visible items with ↑ / ↓ (wrapping), Home and End, and ignores other keys', () => {
+    const { doc, menu, moveMenuFocus } = menuFocus();
+    const at = () => doc.activeElement?.label;
+    assert.equal(moveMenuFocus(menu, 'ArrowDown'), true);
+    assert.equal(at(), 'Start', 'from outside, ↓ goes to the first item');
+    moveMenuFocus(menu, 'ArrowDown');
+    assert.equal(at(), 'Shelve', 'hidden items are skipped');
+    moveMenuFocus(menu, 'End');
+    assert.equal(at(), 'Delete');
+    moveMenuFocus(menu, 'ArrowDown');
+    assert.equal(at(), 'Start', '↓ on the last item wraps to the first');
+    moveMenuFocus(menu, 'ArrowUp');
+    assert.equal(at(), 'Delete', '↑ on the first item wraps to the last');
+    moveMenuFocus(menu, 'Home');
+    assert.equal(at(), 'Start');
+    assert.equal(moveMenuFocus(menu, 'Enter'), false);
+    assert.equal(moveMenuFocus(menu, 'Tab'), false);
+  });
+
+  it('↑ from outside the menu goes to the last item', () => {
+    const { doc, menu, moveMenuFocus } = menuFocus();
+    moveMenuFocus(menu, 'ArrowUp');
+    assert.equal(doc.activeElement.label, 'Delete');
+  });
+
+  it('the account menu opens on its first item, walks with the arrows, and Esc closes an open Export / Import list first', () => {
+    const open = mainScript.match(/accountMenuBtn\.addEventListener\('click', \(e\) => \{[\s\S]*?\n    \}\);/)[0];
+    assert.match(open, /openAccountMenu\(\);\s*accountMenu\.querySelector\('\.account-menu-item'\)\?\.focus\(\{ preventScroll: true \}\);/);
+    assert.match(mainScript, /accountMenu\.addEventListener\('keydown', \(e\) => \{ if \(moveMenuFocus\(accountMenu, e\.key\)\) e\.preventDefault\(\); \}\);/);
+    assert.match(mainScript, /getElementById\('sidebar-account'\)\.addEventListener\('focusout'[\s\S]*?closeAccountMenu\(\);/);
+    const esc = mainScript.match(/if \(e\.key !== 'Escape' \|\| accountMenu\.classList\.contains\('hidden'\)\) return;[\s\S]*?accountMenuBtn\.focus\(\{ preventScroll: true \}\);/)[0];
+    assert.match(esc, /const openBackup = accountMenu\.querySelector\('\.backup-dropdown:not\(\.hidden\)'\);[\s\S]*?closeBackupMenus\(\);[\s\S]*?\.backup-btn'\)\?\.focus[\s\S]*?return;/);
+    assert.match(fnSource('moveMenuFocus'), /\.filter\(b => b\.getClientRects\(\)\.length\)/);
+  });
+
+  it('the card ⋮ menu is a labelled menu that focuses its first item, closes on Esc back to ⋮, and on tabbing away', () => {
+    const card = html.match(/const overflowBtn = document\.createElement\('button'\);[\s\S]*?actionEnd\.appendChild\(overflowWrap\);/)[0];
+    assert.match(card, /overflowBtn\.setAttribute\('aria-haspopup', 'menu'\);/);
+    assert.match(card, /overflowMenu\.setAttribute\('role', 'menu'\);/);
+    assert.match(card, /btn\.setAttribute\('role', 'menuitem'\);/);
+    assert.match(card, /overflowBtn\.setAttribute\('aria-expanded', 'true'\);\s*overflowMenu\.querySelector\('button'\)\?\.focus\(\{ preventScroll: true \}\);/);
+    assert.match(card, /if \(e\.key === 'Escape'\) \{[\s\S]*?closeCardMenus\(\);\s*overflowBtn\.focus\(\{ preventScroll: true \}\);/);
+    assert.match(card, /moveMenuFocus\(overflowMenu, e\.key\)/);
+    assert.match(card, /addEventListener\('focusout'[\s\S]*?!overflowWrap\.contains\(e\.relatedTarget\)\) closeCardMenus\(\);/);
+    assert.match(fnSource('closeCardMenus'), /setAttribute\('aria-expanded', 'false'\)/);
+    assert.ok(fnSource('isOverlayOpen').includes('.card-overflow-menu:not(.hidden)'), 'shortcuts stay quiet while a card menu is open');
+  });
+
+  it('the recurring row menu uses the same ⋮ icon and arrow keys', () => {
+    const row = fnSource('buildRecurringRow');
+    assert.match(row, /moreBtn\.textContent = '⋮';/);
+    assert.match(row, /menu\.addEventListener\('keydown', \(e\) => \{ if \(moveMenuFocus\(menu, e\.key\)\) e\.preventDefault\(\); \}\);/);
+  });
+
+  it('shortcuts check visibility with getClientRects, since the pinned phone add bar has no offsetParent', () => {
+    const fn = fnSource('handleDeskShortcut');
+    assert.match(fn, /if \(!els\.addForm\.getClientRects\(\)\.length\) return;/);
+    assert.match(fn, /if \(!arrow\.getClientRects\(\)\.length\) return;/);
+    assert.doesNotMatch(fn, /offsetParent/);
+    assert.doesNotMatch(fnSource('initAddEditor'), /offsetParent/);
+  });
+
+  it('Esc in the add box leaves it without clearing the text', () => {
+    const block = mainScript.match(/els\.addEditorHost\.addEventListener\('keydown', \(e\) => \{[\s\S]*?\n    \}\);/)[0];
+    assert.match(block, /if \(e\.key !== 'Escape' \|\| !addEditor \|\| e\.target !== addEditor\) return;/);
+    assert.match(block, /addEditor\.blur\(\);/);
+    assert.doesNotMatch(block, /clearAddEditor/);
+  });
+
+  it('toasts sit above the pinned phone add bar', () => {
+    assert.match(html, /\.toast \{\s*position: fixed; bottom: calc\(24px \+ var\(--add-dock-h, 0px\)\);/);
+    const init = fnSource('initAddEditor');
+    assert.match(init, /getComputedStyle\(els\.addForm\)\.position === 'fixed'/);
+    assert.match(init, /setProperty\('--add-dock-h', docked \? `\$\{els\.addForm\.offsetHeight\}px` : '0px'\)/);
+    assert.match(init, /new ResizeObserver\(syncAddDock\)\.observe\(els\.addForm\)/);
+  });
+
+  it('recurring Edit form: Enter, Esc, and the delayed blur each finish "+ tag" only once', () => {
+    const edit = fnSource('openRecurringEditForm');
+    assert.match(edit, /const commitTagInput = \(\) => \{\s*if \(tagInputDone\) return;\s*tagInputDone = true;/);
+    assert.match(edit, /e\.key === 'Escape'\) \{\s*e\.preventDefault\(\);\s*tagInputDone = true;\s*renderEditTagChips\(\);/);
+    assert.match(edit, /addEventListener\('blur', \(\) => setTimeout\(commitTagInput, 100\)\)/);
+  });
+
+  it('the unused helpers are gone and Help lists the menu keys', () => {
+    for (const name of ['makeSection', 'closeThemePicker', 'startTask']) {
+      assert.doesNotMatch(html, new RegExp(`function ${name}\\(`), name);
+    }
+    assert.match(html, /<li><strong>Move around a menu<\/strong> — ↑ \/ ↓<\/li>/);
+    assert.match(html, /<li><strong>Cancel an edit, close a menu, or leave the add box<\/strong> — Escape<\/li>/);
+  });
+});
+
+describe('1.22.1 Month chart trims future days and empty weekends', () => {
+  const dateFromKey = (k) => new Date(`${k}T12:00:00`);
+  const trim = (...args) => new Function('dateFromKey', `${fnSource('trimMonthSegments')}\nreturn trimMonthSegments;`)(dateFromKey)(...args);
+  // Oct 2026: the 3rd and 4th are Sat/Sun, the 5th a Monday
+  const days = [
+    ['2026-10-02', true], ['2026-10-03', false], ['2026-10-04', true], ['2026-10-05', false],
+    ['2026-10-06', false], ['2026-10-07', true], ['2026-10-10', false],
+  ];
+  const segments = days.map(([dayKey]) => ({ dayKey }));
+  const daily = days.map(([dayKey, hasActivity]) => ({ dayKey, hasActivity }));
+  const keys = (r) => r.segments.map((s) => s.dayKey);
+
+  it('drops empty days after today but keeps a future day that has something on it', () => {
+    const r = trim(segments, daily, { hideEmptyWeekends: false, today: '2026-10-05' });
+    assert.deepEqual(keys(r), ['2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-07']);
+    assert.equal(r.hiddenWeekends, 0, 'future days are not counted as hidden weekends');
+  });
+
+  it('with Quieter weekends, drops empty Sat/Sun up to today and counts them; a busy weekend day stays', () => {
+    const r = trim(segments, daily, { hideEmptyWeekends: true, today: '2026-10-31' });
+    assert.deepEqual(keys(r), ['2026-10-02', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07']);
+    assert.equal(r.hiddenWeekends, 2, 'the empty Sat 3rd and Sat 10th');
+  });
+
+  it('a past month keeps every weekday, empty or not', () => {
+    const r = trim(segments, daily, { hideEmptyWeekends: false, today: '2026-11-15' });
+    assert.equal(r.segments.length, segments.length);
+  });
+
+  it('renderInsights trims only the Month chart, hides the note on Pie, and Change opens Options at the setting', () => {
+    const src = fnSource('renderInsights');
+    assert.match(src, /if \(state\.insightsPeriod === 'month'\) \{\s*\(\{ segments: chartSegments, hiddenWeekends \} = trimMonthSegments\(segments, daily, \{\s*hideEmptyWeekends: quietWeekendsActive\(state\.quietWeekends, state\.listContext\),/);
+    assert.match(src, /if \(hiddenWeekends && state\.insightsChartType !== 'pie'\)/);
+    assert.match(src, /openOptionsAt\('behavior', 'general', 'quiet-weekends-select'\)/);
+    for (const r of ['renderInsightBars', 'renderLineChart', 'renderStackedChart']) assert.match(src, new RegExp(`${r}\\(chartSegments\\)`));
+    assert.match(src, /renderPieChart\(segments\)/);
+    assert.match(mainScript, /renderCalendar\(\);\s*if \(state\.activeTab === 'insights'\) renderInsights\(\);/);
+  });
+});
+
+describe('1.22.1 Insights two columns on wide screens', () => {
+  it('cards go into a left and right column; the columns only switch on when the Insights area is 1500px or wider', () => {
+    const src = fnSource('renderInsights');
+    assert.match(src, /cols\.className = 'insights-cols';/);
+    for (const card of ['metricsCard', 'carryCard']) assert.match(src, new RegExp(`leftCol\\.appendChild\\(${card}\\)`));
+    assert.match(src, /rightCol\.appendChild\(compCard\)/);
+    assert.match(src, /\[renderTagBreakdownCard\(range\), rightCol\],\s*\[renderLingeringCard\(todayKey\(\)\), leftCol\],\s*\[renderShelvedCard\(range, todayKey\(\)\), rightCol\],/);
+    assert.match(html, /#insights-view \{ container: insights \/ inline-size; \}/);
+    assert.match(html, /\.insights-cols, \.insights-col \{ display: contents; \}/);
+    assert.match(html, /@container insights \(min-width: 1500px\) \{\s*\.insights-panel \{ max-width: 2000px; \}\s*\.insights-cols \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  });
+
+  it('in one column, CSS order puts the cards back in the classic sequence', () => {
+    const order = ['productivity-metrics-card', 'comparison-card', 'carryover-card', 'tags-card', 'lingering-card', 'shelved-card'];
+    order.forEach((cls, i) => assert.match(html, new RegExp(`\\.insights-panel \\.${cls} \\{ order: ${i + 1}; \\}`), cls));
+  });
+});
+
+// Real app functions, run against a fake desk. Built lazily: mainScript is defined further down.
+function insightsSandbox(days, { templates = [], holidays = [] } = {}) {
+  const names = ['dateFromKey', 'formatDateKey', 'eachDateInRange', 'getPeriodRange', 'isKeyInRange', 'daysBetweenKeys',
+    'createdDateKey', 'normalizeTag', 'normalizeTagList', 'quarterMonths', 'recurringDueOn', 'carryCountOf',
+    'comparablePeriodRanges', 'computeRecurringFollowThrough', 'computeCarryChains', 'countTasksByTag', 'computeTagTrend'];
+  const src = [
+    'const CARRY_CHAIN_MIN = 3; const TAG_TREND_MIN_TASKS = 10; const TAG_TREND_NOTABLE = 5;',
+    ...names.map(fnSource),
+    `return { ${names.join(', ')} };`,
+  ].join('\n');
+  const state = { data: { days } };
+  const deps = {
+    state,
+    loadRecurringTemplates: () => templates,
+    checkHoliday: (k) => ({ isHoliday: holidays.includes(k) }),
+    plainTextPreview: (h) => String(h || '').replace(/<[^>]+>/g, '').trim(),
+  };
+  return new Function(...Object.keys(deps), src)(...Object.values(deps));
+}
+
+function deskDays(entries) {
+  const days = {};
+  for (const [dayKey, item] of entries) (days[dayKey] ||= { date: dayKey, items: [] }).items.push(item);
+  return days;
+}
+
+let seedId = 0;
+const seedTask = (createdKey, extra = {}) => ({
+  id: `s${++seedId}`, type: 'task', content: `Task ${seedId}`, completed: false, shelved: false,
+  boardColumn: 'active', createdAt: `${createdKey}T15:00:00.000Z`, ...extra,
+});
+
+describe('1.23.0 carry stamps', () => {
+  const carry = () => new Function(`${['carryCountOf', 'stampCarry', 'clearCarryStamps', 'mergeCarryStamps'].map(fnSource).join('\n')}
+    return { carryCountOf, stampCarry, clearCarryStamps, mergeCarryStamps };`)();
+
+  it('each carry adds one, the first carry sets the start, and a pre-1.23.0 carry reads as one', () => {
+    const { carryCountOf, stampCarry } = carry();
+    const fresh = { id: 'a' };
+    assert.equal(carryCountOf(fresh), 0);
+    stampCarry(fresh, '2026-10-05');
+    assert.deepEqual(fresh, { id: 'a', carryCount: 1, carryStart: '2026-10-05', carriedFrom: '2026-10-05' });
+    stampCarry(fresh, '2026-10-06');
+    assert.deepEqual(fresh, { id: 'a', carryCount: 2, carryStart: '2026-10-05', carriedFrom: '2026-10-06' });
+    const legacy = { id: 'b', carriedFrom: '2026-09-30' };
+    assert.equal(carryCountOf(legacy), 1);
+    stampCarry(legacy, '2026-10-01');
+    assert.deepEqual(legacy, { id: 'b', carryCount: 2, carryStart: '2026-09-30', carriedFrom: '2026-10-01' });
+  });
+
+  it('clearing removes all three stamps; merging keeps the longer run and the earlier start', () => {
+    const { clearCarryStamps, mergeCarryStamps } = carry();
+    const t = { id: 'a', carryCount: 4, carryStart: '2026-10-01', carriedFrom: '2026-10-04', tags: ['x'] };
+    clearCarryStamps(t);
+    assert.deepEqual(t, { id: 'a', tags: ['x'] });
+    const a = { id: 'a', carryCount: 2, carryStart: '2026-10-03', carriedFrom: '2026-10-04' };
+    const b = { id: 'a', carryCount: 5, carryStart: '2026-10-01', completed: true };
+    assert.deepEqual(mergeCarryStamps(a, b), { ...a, carryCount: 5, carryStart: '2026-10-01' });
+    assert.equal(mergeCarryStamps(b, a), b, 'nothing to take: same object back');
+    assert.equal(mergeCarryStamps({ id: 'c' }, { id: 'c' }).carryCount, undefined, 'no stamps on either side adds none');
+  });
+
+  it('app normalizeItem keeps valid carry stamps through sync and drops bad ones', () => {
+    const normalize = new Function('normalizeTagList', `${fnSource('normalizeItem')}\nreturn normalizeItem;`)((t) => (Array.isArray(t) ? t : []));
+    const base = { id: 'a', type: 'task', content: 'x', createdAt: '2026-10-01T00:00:00Z', carriedFrom: '2026-10-04' };
+    const kept = normalize({ ...base, carryCount: 4, carryStart: '2026-10-01' });
+    assert.equal(kept.carryCount, 4);
+    assert.equal(kept.carryStart, '2026-10-01');
+    const bad = normalize({ ...base, carryCount: 0, carryStart: 'yesterday' });
+    assert.equal('carryCount' in bad, false);
+    assert.equal('carryStart' in bad, false);
+    assert.equal(normalize({ ...base, type: 'note', carryCount: 3 }).carryCount, undefined, 'notes never carry stamps');
+  });
+
+  it('carrying stamps; moving, sending, and Bring back clear; every same-task merge keeps the longer run', () => {
+    const carrySrc = fnSource('carryForwardUnfinished');
+    assert.match(carrySrc, /if \(cloned\.type === 'task'\) stampCarry\(cloned, sourceDateKey\);/);
+    assert.match(carrySrc, /if \(cloned\.type === 'task'\) stampCarry\(cloned, sourceDate\);/);
+    assert.doesNotMatch(carrySrc, /cloned\.carriedFrom =/);
+    assert.match(fnSource('moveItem'), /if \(item\.type === 'task'\) clearCarryStamps\(item\);/);
+    assert.match(fnSource('sendItemToOtherContext'), /if \(item\.type === 'task'\) clearCarryStamps\(item\);/);
+    assert.match(fnSource('bringBackShelvedTask'), /clearCarryStamps\(item\);/);
+    assert.equal((mainScript.match(/merged = mergeCarryStamps\(merged, (loser|other)\);/g) || []).length, 3);
+  });
+});
+
+describe('1.23.0 Recurring Follow-through', () => {
+  const weekdays = { id: 'r1', content: '<b>Update</b> the dashboard', rule: 'weekdays', createdAt: '2026-09-01T12:00:00.000Z' };
+  const fridays = { id: 'r2', content: 'Status email', rule: 'weekly', days: [5], createdAt: '2026-09-01T12:00:00.000Z' };
+  const oct = { startKey: '2026-10-01', endKey: '2026-10-31' };
+
+  it('counts due days the desk was used, matches copies by the day they were created, and sorts lowest first', () => {
+    // Oct 5–9 is Mon–Fri. The desk was used every weekday; the 8th's copy was deleted, the 9th's is still open.
+    const entries = [];
+    for (const d of ['05', '06', '07', '08', '09']) entries.push([`2026-10-${d}`, seedTask(`2026-10-${d}`, { completed: true })]);
+    for (const d of ['05', '06', '07']) entries.push([`2026-10-${d}`, seedTask(`2026-10-${d}`, { recurringTemplateId: 'r1', completed: true })]);
+    entries.push(['2026-10-12', seedTask('2026-10-09', { recurringTemplateId: 'r1', carriedFrom: '2026-10-09' })]);
+    entries.push(['2026-10-12', seedTask('2026-10-12')]);
+    entries.push(['2026-10-09', seedTask('2026-10-09', { recurringTemplateId: 'r2', shelved: true })]);
+    const sb = insightsSandbox(deskDays(entries), { templates: [weekdays, fridays] });
+    const rows = sb.computeRecurringFollowThrough(oct, '2026-10-12');
+    assert.deepEqual(rows.map((r) => [r.id, r.name, r.total, r.done, r.open, r.missed, r.rate, r.rarely]), [
+      ['r2', 'Status email', 1, 0, 0, 1, 0, false],
+      ['r1', 'Update the dashboard', 6, 3, 1, 2, 50, false],
+    ]);
+  });
+
+  it('days away, days before the template existed, and skipped holidays are not chances', () => {
+    const entries = [['2026-10-05', seedTask('2026-10-05', { recurringTemplateId: 'r1', completed: true })],
+      ['2026-10-06', seedTask('2026-10-06')], ['2026-10-07', seedTask('2026-10-07')]];
+    const late = { ...weekdays, createdAt: '2026-10-06T12:00:00.000Z', skipHolidays: true };
+    const sb = insightsSandbox(deskDays(entries), { templates: [late], holidays: ['2026-10-07'] });
+    // Before the 6th doesn't count, the 7th is a holiday, the 8th–9th the desk wasn't used: only the 6th, plus the 5th's copy itself
+    const [row] = sb.computeRecurringFollowThrough(oct, '2026-10-09');
+    assert.deepEqual([row.total, row.done, row.missed], [2, 1, 1]);
+  });
+
+  it('Rarely done needs 3+ chances under 50%; a template with no chances in the period has no row; future days never count', () => {
+    const entries = [];
+    for (const d of ['02', '09', '16']) entries.push([`2026-10-${d}`, seedTask(`2026-10-${d}`)]);
+    entries.push(['2026-10-02', seedTask('2026-10-02', { recurringTemplateId: 'r2', completed: true })]);
+    const sb = insightsSandbox(deskDays(entries), { templates: [fridays, { id: 'm', content: 'Monthly', rule: 'monthly', monthDays: [28] }] });
+    const [row, ...rest] = sb.computeRecurringFollowThrough(oct, '2026-10-20');
+    assert.deepEqual([row.id, row.total, row.done, row.rarely], ['r2', 3, 1, true]);
+    assert.equal(rest.length, 0, 'the 28th is after today, so the monthly template has no chance yet');
+    const week = sb.computeRecurringFollowThrough({ startKey: '2026-10-12', endKey: '2026-10-18' }, '2026-10-20');
+    assert.deepEqual(week.map((r) => [r.total, r.rarely]), [[1, false]], 'one missed Friday is not flagged');
+  });
+});
+
+describe('1.23.0 Carry Chains', () => {
+  it('lists runs of 3+ carries overlapping the period, oldest first, with open count and average', () => {
+    const days = deskDays([
+      ['2026-10-27', seedTask('2026-10-05', { id: 'long', carryCount: 8, carryStart: '2026-10-05', carriedFrom: '2026-10-26' })],
+      ['2026-10-21', seedTask('2026-10-12', { id: 'done', carryCount: 5, carryStart: '2026-10-12', carriedFrom: '2026-10-20', completed: true })],
+      ['2026-10-27', seedTask('2026-10-22', { id: 'short', carryCount: 2, carryStart: '2026-10-24', carriedFrom: '2026-10-26' })],
+      ['2026-09-20', seedTask('2026-09-01', { id: 'sept', carryCount: 4, carryStart: '2026-09-01', carriedFrom: '2026-09-19', shelved: true })],
+      ['2026-10-27', seedTask('2026-10-26', { id: 'legacy', carriedFrom: '2026-10-26' })],
+    ]);
+    const sb = insightsSandbox(days);
+    const oct = sb.computeCarryChains({ startKey: '2026-10-01', endKey: '2026-10-31' });
+    assert.deepEqual(oct.chains.map((c) => [c.item.id, c.count, c.start, c.status]), [
+      ['long', 8, '2026-10-05', 'open'], ['done', 5, '2026-10-12', 'done'],
+    ]);
+    assert.equal(oct.open, 1);
+    assert.equal(oct.average, 6.5);
+    const week = sb.computeCarryChains({ startKey: '2026-10-26', endKey: '2026-11-01' });
+    assert.deepEqual(week.chains.map((c) => c.item.id), ['long'], 'the done run ended on the 20th');
+    const sept = sb.computeCarryChains({ startKey: '2026-09-01', endKey: '2026-09-30' });
+    assert.deepEqual(sept.chains.map((c) => [c.item.id, c.status]), [['sept', 'shelved']]);
+    assert.deepEqual(sb.computeCarryChains({ startKey: '2026-08-01', endKey: '2026-08-31' }), { chains: [], open: 0, average: 0 });
+  });
+});
+
+describe('1.23.0 Tag Trend', () => {
+  const fill = (entries, dayKey, tags) => { for (const t of tags) entries.push([dayKey, seedTask(dayKey, t ? { tags: [t] } : {})]); };
+
+  it('compares shares with the previous month up to the same day, flags 5+ point moves, and names the biggest shift', () => {
+    const entries = [];
+    fill(entries, '2026-09-03', ['ids', 'ids', 'ids', 'ids', 'ids', 'ace', 'ace', 'ace', 'dco', 'dco']);
+    fill(entries, '2026-09-20', ['ids', 'ids', 'ids', 'ids', 'ids', 'ids', 'ids', 'ids', 'ids', 'ids']);
+    fill(entries, '2026-10-02', ['ace', 'ace', 'ace', 'ace', 'ace', 'ace', 'ids', 'ids', 'dco', null]);
+    const t = insightsSandbox(deskDays(entries)).computeTagTrend('month', '2026-10-10', '2026-10-10');
+    assert.equal(t.mode, 'compare');
+    assert.deepEqual(t.ranges.previous, { startKey: '2026-09-01', endKey: '2026-09-10' }, 'Sep 20 is past this point last month');
+    assert.deepEqual(t.rows.map((r) => [r.tag, r.now, r.was, r.delta]), [
+      ['ace', 60, 30, 30], ['ids', 20, 50, -30], ['dco', 10, 20, -10],
+    ]);
+    assert.deepEqual([t.untagged.now, t.untagged.was], [10, 0]);
+    assert.deepEqual([t.rise.tag, t.drop.tag], ['ace', 'ids']);
+  });
+
+  it('under 10 tasks on either side is too few; a previous period with none says so; no tasks now means no card', () => {
+    const entries = [];
+    fill(entries, '2026-10-06', ['ace', 'ace', 'ace']);
+    fill(entries, '2026-10-13', ['ace', 'dco', 'dco', 'dco', 'dco', 'dco', 'dco', 'dco', 'dco', 'dco', 'dco']);
+    const sb = insightsSandbox(deskDays(entries));
+    const week = sb.computeTagTrend('week', '2026-10-14', '2026-10-18');
+    assert.equal(week.mode, 'too-few');
+    assert.deepEqual(week.ranges.previous, { startKey: '2026-10-05', endKey: '2026-10-11' });
+    assert.equal(week.rise, null);
+    assert.deepEqual(week.rows.map((r) => r.tag), ['dco', 'ace'], 'only tags present now are listed');
+    assert.equal(sb.computeTagTrend('year', '2026-10-14', '2026-10-18').mode, 'no-previous');
+    assert.equal(sb.computeTagTrend('week', '2026-10-21', '2026-10-21'), null);
+  });
+
+  it('comparablePeriodRanges steps back a week, month, or year and trims to the same point only while in progress', () => {
+    const sb = insightsSandbox({});
+    assert.deepEqual(sb.comparablePeriodRanges('week', '2026-10-14', '2026-10-14'), {
+      current: { startKey: '2026-10-12', endKey: '2026-10-14' }, previous: { startKey: '2026-10-05', endKey: '2026-10-07' }, toDate: true,
+    });
+    assert.deepEqual(sb.comparablePeriodRanges('month', '2026-09-14', '2026-10-14').previous, { startKey: '2026-08-01', endKey: '2026-08-31' });
+    assert.deepEqual(sb.comparablePeriodRanges('year', '2026-03-01', '2026-03-01').previous, { startKey: '2025-01-01', endKey: '2025-03-01' });
+  });
+});
+
+describe('1.23.0 Insights cards wiring', () => {
+  it('Recurring goes left; Carry Chains and Tag Trend go right; one column orders them after Shelved', () => {
+    const src = fnSource('renderInsights');
+    assert.match(src, /\[renderShelvedCard\(range, todayKey\(\)\), rightCol\],\s*\[renderRecurringCard\(range, todayKey\(\)\), leftCol\],\s*\[renderCarryChainsCard\(range, state\.insightsPeriod\), rightCol\],\s*\[renderTagTrendCard\(state\.insightsPeriod, state\.insightsAnchor, todayKey\(\)\), rightCol\],/);
+    ['recurring-card', 'chains-card', 'trend-card'].forEach((cls, i) => assert.match(html, new RegExp(`\\.insights-panel \\.${cls} \\{ order: ${i + 7}; \\}`), cls));
+    assert.match(html, /\.insights-panel > :not\(\.insights-header\):not\(\.insights-cols\) \{ order: 10; \}/);
+  });
+
+  it('Shelve and Open Recurring tasks are handled by the panel click delegate', () => {
+    const src = fnSource('renderInsights');
+    assert.match(src, /el\.dataset\.shelveItem\) \{\s*moveTaskToColumn\(el\.dataset\.shelveItem, 'shelved'\);/);
+    assert.match(src, /el\.dataset\.openRecurring !== undefined\) \{\s*openRecurringModal\(\);/);
+    assert.match(src, /\[data-shelve-item\], \[data-open-recurring\]/);
+  });
+});
+
+describe('1.23.0 phone and add-box fixes', () => {
+  const css = () => html.slice(html.indexOf('<style>'), html.indexOf('</style>'));
+
+  it('the column add box is cleared before the redraw that would restore it as a draft', () => {
+    const src = fnSource('renderBoardColumn');
+    assert.match(src, /if \(val\) \{[\s\S]{0,160}input\.value = '';\s*addItem\(val,/);
+    assert.match(fnSource('captureCommentDraft'), /draft\.inline = \{ column: state\.addingInColumn, value: input\.value \}/,
+      'drafts still keep typed text across other redraws');
+  });
+
+  it('project note actions wrap and labels never break', () => {
+    assert.match(css(), /\.project-item-meta \{[^}]*flex-wrap: wrap;/);
+    assert.match(css(), /\.project-item-actions \{[^}]*flex-wrap: wrap;/);
+    assert.match(css(), /\.project-item-actions button \{[^}]*white-space: nowrap;/);
+    assert.match(css(), /\.project-item-meta > span \{ white-space: nowrap; \}/);
+  });
+
+  it('phones stack the desk tabs under the view tabs; the 768px row layout stays for tablets', () => {
+    const phone = css().match(/\/\* Phones: views on top[^*]*\*\/\s*@media \(max-width: 600px\) \{([\s\S]*?)\n      \}/);
+    assert.ok(phone, 'nested 600px block inside the 768px layout');
+    assert.match(phone[1], /\.sidebar-tabs \{ flex-direction: column; \}/);
+    assert.match(phone[1], /\.context-tabs \{[^}]*border-left: none !important;[^}]*border-top: 1px solid var\(--sidebar-border\) !important;/);
+  });
+});
+
 describe('Character encoding (mojibake guard)', () => {
   const SHIPPED_FILES = ['work-desk.html', 'index.html', 'sw.js', 'manifest.json', 'CHANGELOG.md', 'README.md'];
   // UTF-8 bytes misread as Windows-1252: — → "â€”", → → "â†’", é → "Ã©", emoji → "ðŸ…", nbsp → "Â "
@@ -1195,12 +1691,9 @@ describe('normalizeAutoCollapseAt', () => {
   });
 });
 
-describe('shouldAutoCollapseCompleted', () => {
-  it('respects enabled flag and threshold', () => {
-    assert.equal(shouldAutoCollapseCompleted(true, 5, 5), true);
-    assert.equal(shouldAutoCollapseCompleted(true, 4, 5), false);
-    assert.equal(shouldAutoCollapseCompleted(false, 20, 5), false);
-    assert.equal(shouldAutoCollapseCompleted(true, 8, 8), true);
+describe('auto-collapse of the Completed column', () => {
+  it('collapses only when on and the count reaches the normalized threshold', () => {
+    assert.match(mainScript, /const collapseAt = normalizeAutoCollapseAt\(state\.autoCollapseCompletedAt\);[\s\S]{0,80}const shouldAutoCollapse = state\.autoCollapseCompleted && completed\.length >= collapseAt;/);
   });
 });
 
@@ -1461,11 +1954,12 @@ describe('normalizeItem tags', () => {
 });
 
 describe('tags survive merges (sync/dedupe never drops a tag)', () => {
-  it('mergeItemComments unions tags from both copies', () => {
-    const winner = { id: 't1', content: 'Task', comments: [], tags: ['ace'] };
-    const loser = { id: 't1', content: 'Task', comments: [], tags: ['vendor'] };
-    const merged = mergeItemComments(winner, loser);
-    assert.deepEqual(merged.tags, ['ace', 'vendor']);
+  it('Import All (merge) unions tags from both copies', () => {
+    const day = (tags, extra = {}) => ({ days: { '2026-08-18': { date: '2026-08-18', items: [task({ id: 't1', tags, ...extra })] } }, deletedIds: {} });
+    const merged = deskSandbox().mergeImportInto(day(['ace']), day(['vendor'], { completed: true }));
+    const item = merged.days['2026-08-18'].items[0];
+    assert.equal(item.completed, true);
+    assert.deepEqual([...item.tags].sort(), ['ace', 'vendor']);
   });
 
   it('deduplicateDayItems unions tags when the same ID appears twice in one day', () => {
@@ -1518,11 +2012,14 @@ describe('tags survive merges (sync/dedupe never drops a tag)', () => {
     assert.deepEqual([...item.tags].sort(), ['ace', 'vendor']);
   });
 
-  it('pickMergedItem unions tags alongside comments', () => {
-    const a = { id: 't1', content: 'Task', completed: false, comments: [], tags: ['ace'] };
-    const b = { id: 't1', content: 'Task', completed: true, comments: [], tags: ['vendor'] };
-    const merged = pickMergedItem(a, b);
-    assert.deepEqual([...merged.tags].sort(), ['ace', 'vendor']);
+  it('a cross-day sync merge unions tags alongside comments', () => {
+    const merged = mergeDaysData(
+      { days: { '2026-08-17': { date: '2026-08-17', items: [task({ id: 't1', tags: ['ace'], comments: [{ id: 'c1', content: 'a', createdAt: 'x' }] })] } } },
+      { days: { '2026-08-18': { date: '2026-08-18', items: [task({ id: 't1', completed: true, tags: ['vendor'] })] } } },
+    );
+    const [item] = Object.values(merged.days).flatMap(d => d.items);
+    assert.deepEqual([...item.tags].sort(), ['ace', 'vendor']);
+    assert.equal(item.comments.length, 1);
   });
 });
 
@@ -1663,20 +2160,19 @@ describe('checkHoliday', () => {
   });
 });
 
-describe('isDueOnDate skips holidays', () => {
+describe('recurring due dates and holidays', () => {
   it('weekdays template is normally due on a weekday', () => {
     const t = { id: 't1', content: 'x', rule: 'weekdays', lastInjectedDate: null };
-    assert.equal(isDueOnDate(t, '2026-08-12'), true); // Wednesday
+    assert.equal(recurringDueOn(t, '2026-08-12'), true); // Wednesday
+    assert.equal(recurringDueOn(t, '2026-08-15'), false); // Saturday
   });
 
-  it('daily template is due on a non-holiday weekday', () => {
-    const t = { id: 't1', content: 'x', rule: 'daily', lastInjectedDate: null };
-    assert.equal(isDueOnDate(t, '2026-08-12'), true);
-  });
-
-  it('isDueOnDate does NOT check holidays (pure day-of-week logic only)', () => {
+  it('recurringDueOn is schedule only; isDueToday adds the holiday skip', () => {
     const t = { id: 't1', content: 'x', rule: 'daily', lastInjectedDate: null, skipHolidays: true };
-    assert.equal(isDueOnDate(t, '2026-01-01'), true);
+    assert.equal(recurringDueOn(t, '2026-01-01'), true);
+    assert.equal(deskSandbox({ today: '2026-01-01' }).isDueToday(t), false, 'New Year\'s Day is skipped');
+    assert.equal(deskSandbox({ today: '2026-01-01' }).isDueToday({ ...t, skipHolidays: false }), true);
+    assert.equal(deskSandbox({ today: '2026-01-02' }).isDueToday(t), true);
   });
 });
 
@@ -2257,13 +2753,29 @@ describe('Recurring templates (HTML invariants)', () => {
     assert.match(html, /function markRecurringTemplateDeleted\s*\(/);
   });
 
-  it('renderRecurringPanel builds template list with edit/delete actions', () => {
-    const fnBody = html.match(/function renderRecurringPanel\(\)\s*\{[\s\S]*?\n    \}/);
-    assert.ok(fnBody, 'renderRecurringPanel extractable');
-    assert.match(fnBody[0], /recurring-template-item/);
-    assert.match(fnBody[0], /recurring-rule-badge/);
-    assert.match(fnBody[0], /edit/);
-    assert.match(fnBody[0], /delete/);
+  it('1.22.0 layout: a quick-add bar on top, then one row per template with schedule, next due, and a ⋮ menu', () => {
+    const panel = html.match(/function renderRecurringPanel\(\)\s*\{[\s\S]*?\n    \}/)[0];
+    assert.match(panel, /quickRow\.append\(editorWrap, schedulePicker\.ruleSelect, addBtn\);/);
+    assert.match(panel, /form\.append\(quickRow, schedulePicker\.options, skip\.label\);/);
+    assert.match(panel, /toolbar\.remove\(\);/, 'no B / I / U toolbar');
+    assert.match(panel, /buildRecurringRow\(t, today,/);
+    assert.match(panel, /note\.textContent = '\* skips holidays';/);
+    const row = html.match(/function buildRecurringRow\([\s\S]*?\n    \}/)[0];
+    assert.match(row, /item\.append\(main, schedule, next, moreWrap\);/);
+    assert.match(row, /recurring-rule-badge/);
+    assert.match(row, /recurringNextDue\(t, today\)/);
+    for (const label of ["'Edit'", "'Add tag'", "'Delete'"]) assert.ok(row.includes(`addMenuItem(${label}`), label);
+    assert.match(row, /openRecurringTagEntry\(main, t\)/);
+    assert.doesNotMatch(html, /prompt\('Add tag/, 'tags use the tag picker, not a browser prompt');
+    assert.match(html, /\.recurring-template-item \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 10rem\) 6\.5rem 28px;/);
+  });
+
+  it('the schedule picker is a Repeats dropdown, not a row of buttons', () => {
+    const picker = fnSource('createRecurringSchedulePicker');
+    assert.match(picker, /ruleSelect\.className = 'recurring-rule-select';/);
+    assert.match(picker, /RECURRING_RULES\.forEach\(r => ruleSelect\.appendChild\(new Option\(r\.label, r\.value\)\)\);/);
+    assert.match(picker, /return \{ el, ruleSelect, options, read \};/);
+    assert.doesNotMatch(html, /recurring-rule-btns/);
   });
 
   it('add and edit forms share the rule picker (daily/weekdays/weekly/custom and the 1.21.0 rules)', () => {
@@ -2969,12 +3481,14 @@ describe('v1.15.0 Insights additions', () => {
       ${fnSource('daysBetweenKeys')}
       ${fnSource('isKeyInRange')}
       ${fnSource('summarizeRange')}
+      ${fnSource('comparablePeriodRanges')}
       ${fnSource('computePeriodComparison')}
       ${fnSource('computeTagBreakdown')}
       ${fnSource('findLingeringTasks')}
       ${fnSource('findShelvedTasks')}
       ${fnSource('findItem')}
       ${fnSource('clearItemDeleted')}
+      ${fnSource('clearCarryStamps')}
       ${fnSource('bringBackShelvedTask')}
       return { state, calls, summarizeRange, computePeriodComparison, computeTagBreakdown, findLingeringTasks, findShelvedTasks, bringBackShelvedTask, daysBetweenKeys };
     `)(days, extra);
@@ -4414,7 +4928,7 @@ describe('v1.17.2 Options polish', () => {
 
   it('Quieter weekends keeps its New tag inline with a one-line hint', () => {
     assert.match(html, /\.customize-select-row-sub label > span:first-child \{ display: block; \}/);
-    assert.match(html, /<span class="customize-toggle-sub">Gray Sat\/Sun on the calendar<\/span>/);
+    assert.match(html, /<span class="customize-toggle-sub">On the calendar and in Insights<\/span>/);
   });
 
   it('notes no longer carry the 📝 icon', () => {
@@ -4507,6 +5021,10 @@ describe('v1.18.0 complete edge and tag position', () => {
     assert.match(html, /html\[data-complete-style="label"\] \.item-card\.dragging \.complete-edge::before/);
     assert.match(html, /html\[data-complete-style="label"\] \.complete-edge\.is-done::before \{ content: 'done\\200A!'; transform: rotate\(180deg\);/);
     assert.match(html, /@media \(hover: none\), \(pointer: coarse\) \{\s*html\[data-complete-edge="on"\] :is\(\.task-card, \.project-task-card\) \.complete-edge \{ width: 40px; \}/);
+    // Touch with the desktop layout (tablet in landscape) gets an in-between edge, declared after the 40px rule so it wins
+    const tabletEdge = html.indexOf('@media (min-width: 769px) and (hover: none), (min-width: 769px) and (pointer: coarse) {\n      html[data-complete-edge="on"] :is(.task-card, .project-task-card) .complete-edge { width: 28px; }');
+    assert.ok(tabletEdge > html.indexOf('.complete-edge { width: 40px; }'), 'tablet edge rule follows the touch rule');
+    assert.match(html.slice(tabletEdge, tabletEdge + 600), /\.item-card\.task-card \.item\.task \{ padding-left: 40px; \}[\s\S]*\.project-task-card \{ padding-left: 40px; \}[\s\S]*\.card-action-bar \{ padding-left: 36px; \}/);
     assert.match(html, /grid-template-areas: "tags" "content"; grid-template-rows: 14px auto;/);
     assert.match(html, /\.item\.task \.tag-chip \{\s*box-sizing: border-box; height: 14px; padding-block: 0;/);
     assert.match(html, /height: 14px; flex-wrap: nowrap; overflow-x: clip; overflow-y: visible;/);
@@ -4545,7 +5063,7 @@ describe('v1.18.2 Options list descriptions, Back, and spacing', () => {
     'card-layout': 'Density, complete button, tag spot', typography: 'Text size and font',
     layout: 'Sidebar side, calendar legend, progress', effects: 'Card glow, gradient header',
     background: 'Board pattern and strength', tags: 'Tag colors',
-    general: 'Start desk, launch view, week start, weekends', tasks: 'Delete, carry-forward, collapse, confetti',
+    general: 'Start desk, launch view, week start, weekends, full screen', tasks: 'Delete, carry-forward, collapse, confetti',
     projects: 'Long project notes', insights: 'Streak rules', holidays: 'US and custom holidays',
   };
   it('every summary row has a description instead of a value', () => {
@@ -5737,12 +6255,12 @@ describe('Help modal structure', () => {
   const sections = [...help.matchAll(/<details class="help-section" id="(help-[a-z-]+)"(?: data-short="([^"]+)")?( open)?>\s*<summary>([^<]+)<\/summary>([\s\S]*?)<\/details>/g)]
     .map((m) => ({ id: m[1], short: m[2], open: !!m[3], title: m[4], body: m[5] }));
 
-  it('has a search box, an index, and folding sections with Quick start and Keyboard shortcuts open', () => {
+  it('has a search box, an index, and folding sections that all start open', () => {
     assert.match(help, /<input id="help-search" class="help-search" type="search"/);
     assert.match(help, /<nav id="help-index" class="help-index" aria-label="Help sections"><\/nav>/);
     assert.ok(sections.length >= 10, `${sections.length} sections`);
     assert.equal((help.match(/class="help-section"/g) || []).length, sections.length, 'every section parses');
-    assert.deepEqual(sections.filter((s) => s.open).map((s) => s.title), ['Quick start', 'Keyboard shortcuts']);
+    assert.deepEqual(sections.filter((s) => !s.open).map((s) => s.title), [], 'every section starts open');
     for (const s of sections) assert.match(s.body, /<li>/, `${s.title} has items`);
     for (const s of sections) assert.ok((s.short || s.title).replace('&amp;', '&').length <= 11, `index label for ${s.title} fits its grid cell`);
     assert.equal(sections.length % 4, 0, 'the 4-column index fills every row');
@@ -5788,6 +6306,36 @@ describe('stylesheet structure', () => {
       }
       assert.equal(depth, 0, 'unclosed {');
     }
+  });
+});
+
+describe('recurring next due date (run from work-desk.html)', () => {
+  const app = bootAppInVm();
+  const next = (t, from) => app.recurringNextDue({ lastInjectedDate: null, ...t }, from);
+
+  it('finds the next matching day, counting today until today\'s copy is on the desk', () => {
+    // 2026-10-22 is a Thursday
+    assert.equal(next({ rule: 'weekdays' }, '2026-10-22'), '2026-10-22');
+    assert.equal(next({ rule: 'weekdays', lastInjectedDate: '2026-10-22' }, '2026-10-22'), '2026-10-23');
+    assert.equal(next({ rule: 'weekdays', lastInjectedDate: '2026-10-23' }, '2026-10-23'), '2026-10-26', 'Friday done, so Monday');
+    assert.equal(next({ rule: 'weekly', days: [2] }, '2026-10-22'), '2026-10-27');
+    assert.equal(next({ rule: 'biweekly', startDate: '2026-10-06', days: [2] }, '2026-10-22'), '2026-11-03');
+    assert.equal(next({ rule: 'monthly', monthBy: 'weekday', weeks: [3], days: [4] }, '2026-10-23'), '2026-11-19');
+    assert.equal(next({ rule: 'quarterly', monthBy: 'date', monthDays: [1], startMonth: 1 }, '2026-10-22'), '2026-11-01');
+  });
+
+  it('skips holidays when the template does', () => {
+    // Thanksgiving 2026 is Thu Nov 26
+    assert.equal(next({ rule: 'weekly', days: [4] }, '2026-11-24'), '2026-11-26');
+    assert.equal(next({ rule: 'weekly', days: [4], skipHolidays: true }, '2026-11-24'), '2026-12-03');
+  });
+
+  it('labels it Today, Tomorrow, a short date, or a date with the year', () => {
+    assert.equal(app.formatNextDue('2026-10-22', '2026-10-22'), 'Today');
+    assert.equal(app.formatNextDue('2026-10-23', '2026-10-22'), 'Tomorrow');
+    assert.equal(app.formatNextDue('2026-10-27', '2026-10-22'), 'Tue, Oct 27');
+    assert.equal(app.formatNextDue('2027-02-01', '2026-10-22'), 'Feb 1, 2027');
+    assert.equal(app.formatNextDue(null), '');
   });
 });
 
