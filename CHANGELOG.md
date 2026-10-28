@@ -6,6 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.23.2] — 2026-10-28
+
+### Fixed
+
+- **Wide fonts and Large text (UI sweep).** A sweep of every font (9) × text size (3) × width (360, 820, 1366, 1920) across 26 views turned up:
+  - *Year activity heatmap* — month labels were clipped to one week's column ("Ma", "Au" even on a laptop; unreadable on a phone). Labels now run over the following empty weeks, and cards under 700px use 1px gaps and smaller cells so the weeks have width.
+  - *Comparison card* — stacking switched at a 600px screen width, so a tablet with a wide font pushed the change off the card. It now switches on the card's own width (under 560px), and the "last period" text may wrap in the one-line layout.
+  - *Tasks by Tag* — counts (e.g. "17 done · 2 open · 2 shelved · 2 carried") ran past the card on a phone; they now wrap.
+  - *Shelved, Lingering, Carry Chains, Recurring* — on phones, names get two lines before the ellipsis instead of one ("Update the ACE Dash…").
+  - *Sidebar* — "Projects" was cut off with JetBrains Mono at Large; the Work / Personal / Projects tabs now scale with the sidebar width.
+  - *Calendar* — the left-open badge covered two-digit dates at Large; it sits up in the corner now.
+  - *Help index* — labels were cut ("Quick st…", "Navigati…") on a phone with wide fonts; the grid drops from 4 to fewer columns when labels need the room.
+
+---
+
 ## [1.23.1] — 2026-10-28
 
 ### Improved
@@ -15,6 +30,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ### Fixed
 
+- **Insights spacing on phones.** Comparison rows (Week/Month/Year-over-Year) crammed label, value, last period, and change onto one line, so a long label like *Completion Rate* ran into the value, worse with wider fonts. Under 600px each row is now two lines: label and change, then this period and last. In Year view, Streak Tracking's 365 one-pixel gaps were wider than a phone card, squeezing the days to nothing and pushing month labels past the edge. Strip gaps moved from inline styles to CSS, the year strip drops its gaps when the card is 1100px or narrower (container query), and year labels use one column per month sized by its days.
 - **Most Productive Day picked a weekend.** It ranked weekdays by completion rate (completed ÷ tasks), so a single Saturday with one finished task scored 100% and beat weekdays at 97%. It now ranks by average completions on the days of that weekday that had tasks (empty days are skipped); a tie goes to the weekday with more completions overall. Logic moved to `mostProductiveWeekday(daily)`.
 - **Search box short on touch screens.** The touch tap-target rules set the search scope chip to `position: relative`, overriding its `absolute`, so the (usually invisible) chip took about 44px beside the input instead of floating inside it. The box now spans the sidebar on phones and tablets.
 
