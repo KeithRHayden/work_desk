@@ -9143,7 +9143,7 @@
         <details class="help-section" id="help-sync" data-short="Sync &amp; data" open>
           <summary>Sync, backup &amp; storage</summary>
           <ul>
-            <li><strong>Signed in</strong>, changes sync a few seconds after you edit, and devices merge rather than overwrite. Deleting removes an item everywhere, and Undo brings it back everywhere. Your settings sync too</li>
+            <li><strong>Signed in</strong>, changes sync a few seconds after you edit, and devices merge rather than overwrite. When the same task was changed on two devices, the most recent change wins. Deleting removes an item everywhere, and Undo brings it back everywhere. Your settings sync too</li>
             <li><strong>Continue offline</strong> keeps data in this browser only, so clearing site data erases it. Use <strong>Sign in to sync</strong> in the account menu when you're ready</li>
             <li><strong>Account menu</strong> — the button at the bottom of the sidebar shows sync status (☁️ / 🔄 / ✓ / !) and holds Options, Help, What's new, Export, Import, Repair duplicates, Sign in / Sign out, and the version</li>
             <li><strong>Export and Import</strong> — <em>Desk</em> covers the tab you're on; <em>All Desks</em> bundles Work, Personal, and Projects. Importing asks whether to <strong>Merge</strong> with your data or <strong>Replace</strong> it</li>
@@ -9358,6 +9358,7 @@
             'On a phone, Work, Personal, and Projects now sit under Desk and Insights, as on desktop, instead of squeezed onto one row',
           ] },
           { label: 'Fixed', items: [
+            'Sync: a change to a task on one device (Start, Move to New, an edit, reopening it) now shows on your other devices. When both had a copy, each device kept its own, so a task started on your desktop could still sit in New on your phone. Each task now records when it was last changed, and the newest change wins. Tasks you haven\'t touched since updating catch up the next time you change them',
             'Adding a task with a column\'s + Add task box now clears the box. The text stayed behind, so tapping Add again added the same task twice',
             'On a phone, a project note\'s actions (edit, add update, tag, to desk, archive, delete) wrap onto a second row instead of breaking labels in two or running off the card',
           ] },
@@ -13648,6 +13649,7 @@
       const item = JSON.parse(JSON.stringify(found.item));
       // Moving by hand is intentional rescheduling, not a carry-over
       if (item.type === 'task') clearCarryStamps(item);
+      item.updatedAt = new Date().toISOString();
       for (const date of Object.keys(state.data.days)) {
         const day = state.data.days[date];
         const remaining = day.items.filter(i => i.id !== itemId);
@@ -14492,6 +14494,7 @@
           normalized.carryStart = item.carryStart;
         }
       }
+      if (typeof item.updatedAt === 'string' && !Number.isNaN(Date.parse(item.updatedAt))) normalized.updatedAt = item.updatedAt;
       // Preserve comments for both tasks and notes
       if (Array.isArray(item.comments) && item.comments.length > 0) {
         normalized.comments = item.comments
@@ -16041,10 +16044,10 @@
       const itemStateRank = item => (item.completed ? 2 : item.shelved ? 1 : 0);
 
       const mergeItemPair = (a, b) => {
-        const scoreA = scoreItem(a);
-        const scoreB = scoreItem(b);
-        const winner = scoreB > scoreA ? b : a;
-        const loser = scoreB > scoreA ? a : b;
+        const edit = newerEdit(a, b);
+        const bWins = edit ? edit > 0 : scoreItem(b) > scoreItem(a);
+        const winner = bWins ? b : a;
+        const loser = bWins ? a : b;
         const baseComments = winner.comments || [];
         const commentIds = new Set(baseComments.map(c => c.id));
         const extras = (loser.comments || []).filter(c => c?.id && !commentIds.has(c.id));
@@ -16067,7 +16070,10 @@
         const scoreB = scoreItem(b.item);
         let winner = a;
         let loser = b;
-        if (rankB > rankA || (rankB === rankA && scoreB > scoreA)) {
+        const edit = newerEdit(a.item, b.item);
+        if (edit) {
+          if (edit > 0) { winner = b; loser = a; }
+        } else if (rankB > rankA || (rankB === rankA && scoreB > scoreA)) {
           winner = b;
           loser = a;
         } else if (rankB === rankA && scoreB === scoreA && b.date > a.date) {
@@ -16639,7 +16645,11 @@
 
     function saveData(options = {}) {
       const { flush = false } = options;
-      writeStorage(getStorageKey(), JSON.stringify(state.data));
+      const key = getStorageKey();
+      const prints = stampEditedItems(editPrintsOfStored(key, readStorage(key)), state.data);
+      const raw = JSON.stringify(state.data);
+      writeStorage(key, raw);
+      editPrintsOfStored.last = { key, raw, prints };
       // Update local timestamp immediately so a refresh before push won't overwrite local changes
       stampLocalChange();
       if (!sbSynced) return;
@@ -17041,6 +17051,51 @@
       if (count > 0) next.carryCount = count;
       if (start) next.carryStart = start;
       return next;
+    }
+
+    // updatedAt marks the last real edit, so sync can tell which device's copy is newer. Carrying
+    // forward is automatic and leaves it alone: a device that carries its stale copy must not outrank
+    // an edit made elsewhere. Moving to another day is covered by moveItem stamping it.
+    function itemEditPrint(item) {
+      const n = normalizeItem(item);
+      for (const k of ['updatedAt', 'carriedFrom', 'carryCount', 'carryStart']) delete n[k];
+      return canonicalJson(n);
+    }
+
+    function itemEditPrints(data) {
+      const prints = new Map();
+      for (const day of Object.values(data?.days || {})) {
+        for (const item of day?.items || []) if (item?.id) prints.set(item.id, itemEditPrint(item));
+      }
+      return prints;
+    }
+
+    // Returns the current fingerprints, which are the "before" for the next save
+    function stampEditedItems(before, data, now = new Date().toISOString()) {
+      const after = itemEditPrints(data);
+      if (!before) return after;
+      for (const day of Object.values(data.days || {})) {
+        for (const item of day.items || []) {
+          if (item?.id && before.get(item.id) !== after.get(item.id)) item.updatedAt = now;
+        }
+      }
+      return after;
+    }
+
+    // The last save's fingerprints live on the function, so saveData can run before this point in boot
+    function editPrintsOfStored(key, raw) {
+      const last = editPrintsOfStored.last;
+      if (last && last.key === key && last.raw === raw) return last.prints;
+      try { return raw ? itemEditPrints(JSON.parse(raw)) : new Map(); } catch (_) { return null; }
+    }
+
+    // 1 when b was edited later, -1 when a was, 0 when it can't tell. A copy edited since 1.23.0 beats
+    // one that never was; copies from before then fall back to the completed / shelved / comments rules.
+    function newerEdit(a, b) {
+      const ta = typeof a?.updatedAt === 'string' ? a.updatedAt : '';
+      const tb = typeof b?.updatedAt === 'string' ? b.updatedAt : '';
+      if (ta === tb) return 0;
+      return tb > ta ? 1 : -1;
     }
 
     function carryForwardUnfinished(sourceDate, options = {}) {
@@ -18352,10 +18407,10 @@
         (item.shelved ? 50 : 0);
 
       const mergeItemPair = (a, b) => {
-        const scoreA = scoreItem(a);
-        const scoreB = scoreItem(b);
-        const winner = scoreB > scoreA ? b : a;
-        const loser = scoreB > scoreA ? a : b;
+        const edit = newerEdit(a, b);
+        const bWins = edit ? edit > 0 : scoreItem(b) > scoreItem(a);
+        const winner = bWins ? b : a;
+        const loser = bWins ? a : b;
         const baseComments = winner.comments || [];
         const commentIds = new Set(baseComments.map(c => c.id));
         const extras = (loser.comments || []).filter(c => c?.id && !commentIds.has(c.id));
@@ -18378,7 +18433,10 @@
         const scoreB = scoreItem(b.item);
         let winner = a;
         let loser = b;
-        if (rankB > rankA || (rankB === rankA && scoreB > scoreA)) {
+        const edit = newerEdit(a.item, b.item);
+        if (edit) {
+          if (edit > 0) { winner = b; loser = a; }
+        } else if (rankB > rankA || (rankB === rankA && scoreB > scoreA)) {
           winner = b;
           loser = a;
         } else if (rankB === rankA && scoreB === scoreA && b.date > a.date) {
@@ -18478,6 +18536,8 @@
         state.data = { days: deduped.days, deletedIds, ...syncRecords(state.data) };
       } else {
         state.data = mergeImportData(state.pendingImport);
+        // Each copy keeps its own updatedAt; stamping the merge would let an old backup outrank newer edits
+        writeStorage(getStorageKey(), JSON.stringify(state.data));
       }
 
       saveData({ flush: true });
