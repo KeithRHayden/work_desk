@@ -44,8 +44,9 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Insights
 
 - Week / month / year views with a period selector and prev/next navigation
-- **Wide screens** — when Insights has 1500px or more, the summary cards sit in two independent columns (Summary, Carry-Over, Lingering, Recurring · Month-over-Month, Tags, Shelved, Carry Chains, Tag Trend), each at its own height; narrower screens keep one column
-- **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day
+- **Layout** — the 8 stat tiles sit at the top, then the cards in reading order: Summary, period comparison, Streak Tracking, breakdown chart, Carry-Over, Tags, Lingering, Shelved, Recurring, Carry Chains, Tag Trend. Day-by-day detail (and the Year heatmap) stay full width at the bottom
+- **Wide screens** — when Insights has 1500px or more, the cards split into two columns, each card at its own height and placed in whichever column is shorter so the columns end close together; it rebalances when the window or sidebar changes. Narrower screens keep one column
+- **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day (the weekday with the highest average completions across the days of it that had tasks)
 - **Click a day to open it** — Day-by-day rows, breakdown bars, and heatmap squares jump to that day on the Desk; in Year view a month bar opens that month
 - **This week / month / year** button returns to the current period after stepping away
 - **Week-over-week, month-over-month, year-over-year** comparisons; an in-progress month or year is compared with the same days at the start of the previous one
