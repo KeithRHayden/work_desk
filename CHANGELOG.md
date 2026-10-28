@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.23.1] — 2026-10-28
+
+### Improved
+
+- **Insights stat tiles on top.** The 8 tiles (Completed, Shelved, Still open, Carried over, Newly created, Notes, Comments, Active days) now follow the header on every screen size, instead of sitting below Streak Tracking near the bottom.
+- **Insights two columns, balanced.** On wide screens (Insights area 1500px or more), Streak Tracking and the breakdown chart are now column cards rather than full-width rows. Cards go in reading order (Summary, comparison, Streak Tracking, breakdown, Carry-Over, Tags, Lingering, Shelved, Recurring, Carry Chains, Tag Trend), each into whichever column is shorter at that point, so the columns finish close together whatever a period's cards contain. The fixed left/right assignment and the CSS `order` rules are gone; one column uses the same reading order. Rebalances on resize. Day-by-day detail and the Year heatmap stay full width below.
+
+### Fixed
+
+- **Most Productive Day picked a weekend.** It ranked weekdays by completion rate (completed ÷ tasks), so a single Saturday with one finished task scored 100% and beat weekdays at 97%. It now ranks by average completions on the days of that weekday that had tasks (empty days are skipped); a tie goes to the weekday with more completions overall. Logic moved to `mostProductiveWeekday(daily)`.
+- **Search box short on touch screens.** The touch tap-target rules set the search scope chip to `position: relative`, overriding its `absolute`, so the (usually invisible) chip took about 44px beside the input instead of floating inside it. The box now spans the sidebar on phones and tablets.
+
+---
+
 ## [1.23.0] — 2026-10-27
 
 ### Added
