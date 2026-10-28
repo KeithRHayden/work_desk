@@ -32,7 +32,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 
 - **Work / Personal / Projects** — separate contexts
 - **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens). The calendar's selected day is a solid fill in the theme color; yellow number badges count tasks left open (rose on amber-accent themes, matching Insights *carried over*); a legend underneath explains *Has items · Left open · Holiday*; and a *Today* chip appears when you've browsed to another month
-- **Quieter weekends** — Options → Behavior → General grays Sat/Sun on the sidebar calendar: *Off* (default), *Work only*, or *Both desks*
+- **Quieter weekends** — Options → Behavior → General grays Sat/Sun on the sidebar calendar and leaves empty weekend days out of the Insights Month chart: *Off* (default), *Work only*, or *Both desks*
 - **Open desk** — Options → Behavior → General picks the desk the app starts on: *Last used* (default), *Work*, or *Personal*
 - **Calendar legend / Today's Progress switches** — Options → Appearance → Layout can hide the key under the sidebar calendar and the Today's Progress card (both on by default)
 - **Tags** — tag a task or note by typing `#word` inline or clicking the `tag` action (which offers your two most-used tags as one-click picks, narrowing as you type); chips render top-right on the card, always uppercase and case-insensitive (`#ACE` == `#ace`)
@@ -44,6 +44,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Insights
 
 - Week / month / year views with a period selector and prev/next navigation
+- **Wide screens** — when Insights has 1500px or more, the summary cards sit in two independent columns (Summary, Carry-Over, Lingering, Recurring · Month-over-Month, Tags, Shelved, Carry Chains, Tag Trend), each at its own height; narrower screens keep one column
 - **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day
 - **Click a day to open it** — Day-by-day rows, breakdown bars, and heatmap squares jump to that day on the Desk; in Year view a month bar opens that month
 - **This week / month / year** button returns to the current period after stepping away
@@ -51,6 +52,9 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Tasks by Tag** — done / open / shelved / carried per tag for the period
 - **Lingering Tasks** — the five oldest open tasks right now, with days open and a jump link
 - **Shelved Review** — shelved tasks in the period with *Bring back* (to today's Active column) and *Open*, plus an all-time shelved count
+- **Recurring Follow-through** — per recurring task, Done / Still open / Missed on the days it came up, lowest rate first; *Rarely done* flags under 50% after 3+ chances
+- **Carry Chains** — tasks carried forward 3 or more times, oldest first, with *Shelve* and *Open*
+- **Tag Trend** — each tag's share of tasks vs the previous period, with ▲ / ▼ for moves of 5 points or more
 - **Carry-over analysis** — counted on the day each task was left unfinished; Month/Year views add a by-week / by-month trend chart (Year stops at the current month) and show the specific dates behind each weekday bar inline (hover a row for the full list)
 - **Streak tracking** — current/longest streaks based on days with desk activity, with a heatmap matched to the selected period, labeled by weekday, date, or month
 - **Weekends don't break streaks** — Options → Behavior toggle (on by default); Fri → Mon stays consecutive; active weekend days still count, idle weekends do not reset the streak
@@ -84,7 +88,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Mobile and PWA
 
 - Responsive layout for phone, tablet, and desktop
-- **Phone menu** — at 768px and narrower, the header keeps tabs, search, and Help; a menu button opens a bottom sheet with account and sign-in, Export / Import, Repair duplicates, Options, and What's new (close with ×, a tap outside, Esc, or a swipe down). A sync dot beside it shows sync status at a glance
+- **Phone menu** — at 768px and narrower, the header keeps tabs, search, and Help (on phones, 600px and narrower, Work / Personal / Projects sit under Desk / Insights as on desktop; tablets keep them on one row); a menu button opens a bottom sheet with account and sign-in, Export / Import, Repair duplicates, Options, and What's new (close with ×, a tap outside, Esc, or a swipe down). A sync dot beside it shows sync status at a glance
 - **Account menu** — the bottom of the sidebar is a single button with your name and sync status; it opens Options, Help & shortcuts, What's new, Export, Import, Repair duplicates, Sign in / out, and the version. With the sidebar at the top or bottom it sits at the right end of the bar
 - **What's New** — after an update, a highlighted "What's new" link with a pulsing dot appears under the sidebar subtitle (and a dot on the account button); it opens the changelog and disappears once you close it. *What's new* or the version number in the account menu opens the changelog any time
 - **Sticky bottom add bar** on mobile so capture stays reachable while scrolling
@@ -129,7 +133,12 @@ The details behind the features above: when things happen automatically, and wha
 - **Lingering Tasks ignores the period** — it always shows what's open right now; tasks on future days and tasks created today are left out
 - **Shelved Review dates** — tasks are grouped by the day they sit on, because the app doesn't record when a task was shelved
 - **Bring back** — moves the task (same ID, not a copy) to today's Active column and clears its carry stamp, so it isn't counted as a carry-over
+- **Month chart trimming** — the Daily breakdown skips empty days after today, and, when Quieter weekends covers the desk, empty Saturdays and Sundays (no tasks, notes, or comments). A note under the legend counts the hidden weekend days and links to the setting. Totals, the pie chart, the heatmap, and the Day-by-day table still include every day
 - **Comparisons in progress** — Month and Year compare against the same number of days at the start of the previous period until the period ends; Week compares full weeks
+- **Recurring chances** — a due day counts when the desk was used that day (something was created on it or sits on it), from the template's creation date on, skipping holidays when the template skips them. Copies are matched by the day they were created, since carrying moves them. Missed = chances − done − still open, so it covers deleted, shelved, and never-done copies. Rows with no chances in the period are hidden
+- **Carry stamps** — carrying moves a task, so each carry now adds to `carryCount` and the first carry sets `carryStart` (alongside the existing `carriedFrom`, the most recent source day). Tasks carried before 1.23.0 read as one carry. Moving by hand, sending to the other desk, and *Bring back* clear all three. Sync keeps them, and when two copies of a task merge, the higher count and earlier start win
+- **Carry Chains period** — a chain shows when its run (`carryStart` to `carriedFrom`) overlaps the period; *Still open* always means open today
+- **Tag Trend rules** — shares are of all tasks on days in each period (a task with two tags counts under both, so shares can add past 100%). Week compares with last week, Month with last month, Year with last year, to the same point while the period is in progress. Under 10 tasks on either side shows shares without arrows; no tasks at all in the previous period says so
 
 ### Deleting
 
@@ -153,7 +162,7 @@ The details behind the features above: when things happen automatically, and wha
 - Single-file app: `index.html` / `work-desk.html` (vanilla JS, no build required to run)
 - `localStorage` for local state; Supabase for optional cloud
 - CSS variables for theming
-- Optional Node test tooling (`lib/`, `tests/`, Playwright `e2e/`)
+- Optional Node test tooling (`tests/`, Playwright `e2e/`)
 
 ## Getting started
 
@@ -209,8 +218,7 @@ work-desk/
 ├── manifest.json           # PWA manifest
 ├── sw.js                   # Service worker
 ├── icon-192.png / icon-512.png
-├── lib/desk-logic.mjs      # Pure sync/recurring helpers (unit-tested)
-├── tests/desk-logic.test.mjs
+├── tests/desk-logic.test.mjs  # Unit tests; loads the real functions from work-desk.html
 ├── scripts/audit-init-order.mjs  # Guards against TDZ boot crashes in state init
 ├── e2e/smoke.spec.ts       # Playwright smoke tests
 ├── e2e/layout.spec.ts      # Playwright layout/CSS regressions (scroll pin, mobile chrome)
