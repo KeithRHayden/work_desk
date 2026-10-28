@@ -23,6 +23,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ### Fixed
 
+- **Task changes didn't reach other devices on a tie.** When two devices had the same task and neither copy was completed, shelved, or had more comments, the sync merge kept each device's own copy. A task moved to Active on the desktop stayed in New on the phone (and the phone uploaded New back), and the same went for text edits and reopening a completed task. Tasks and notes now carry `updatedAt`, stamped by `saveData` when an item's content actually changes (carry-forward fields are ignored, and a hand move stamps it). Sync and Import All (merge) prefer the later stamp and still union comments and tags. Unstamped copies keep the old rules, so existing tasks catch up the next time they're changed.
 - **Column add box kept its text after Add.** Adding a task from a column's *+ Add task* box left the text in the box, so tapping Add again added the same task twice. The box now clears after each add and stays open for the next one; Add on an empty box closes it. The 1.20.0 draft-keeping (so a sync redraw doesn't wipe what you're typing) was restoring the just-added text.
 - **Project note actions on phones.** *edit · add update · tag · to desk · archive · delete* now wrap onto a second row, and the date gets its own line when space is tight, instead of labels breaking in two and *delete* running off the card.
 
