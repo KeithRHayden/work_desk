@@ -4931,21 +4931,11 @@
 
     .insights-panel { display: flex; flex-direction: column; gap: 28px; max-width: 1240px; margin: 0 auto; width: 100%; }
     #insights-view { container: insights / inline-size; }
-    /* One column: the wrappers drop out and `order` restores the classic card sequence */
+    /* One column: the wrappers drop out and the cards stack in reading order (balanceInsightColumns) */
     .insights-cols, .insights-col { display: contents; }
-    .insights-panel .productivity-metrics-card { order: 1; }
-    .insights-panel .comparison-card { order: 2; }
-    .insights-panel .carryover-card { order: 3; }
-    .insights-panel .tags-card { order: 4; }
-    .insights-panel .lingering-card { order: 5; }
-    .insights-panel .shelved-card { order: 6; }
-    .insights-panel .recurring-card { order: 7; }
-    .insights-panel .chains-card { order: 8; }
-    .insights-panel .trend-card { order: 9; }
-    .insights-panel > :not(.insights-header):not(.insights-cols) { order: 10; }
     @container insights (min-width: 1500px) {
       .insights-panel { max-width: 2000px; }
-      .insights-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: start; order: 1; }
+      .insights-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: start; }
       .insights-col { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
     }
 
@@ -8016,9 +8006,10 @@
       }
 
       /* Finger-sized hit areas. Icon-sized controls get an invisible halo so the
-         layout doesn't change; text links get taller padding. */
+         layout doesn't change; text links get taller padding. The search scope chip is left
+         out of the position rule: it's already absolute, floating inside the search box. */
       .tag-chip-remove, .card-overflow-btn, .logo-help-btn, .version-btn,
-      .search-scope-chip, .week-strip-nav, .help-modal-close, .search-overlay-close { position: relative; }
+      .week-strip-nav, .help-modal-close, .search-overlay-close { position: relative; }
       .tag-chip-remove::after, .card-overflow-btn::after, .logo-help-btn::after, .version-btn::after,
       .search-scope-chip::after, .week-strip-nav::after, .help-modal-close::after, .search-overlay-close::after {
         content: ''; position: absolute; inset: -10px;
@@ -9117,7 +9108,8 @@
           <summary>Insights</summary>
           <ul>
             <li>Pick <strong>Week</strong>, <strong>Month</strong>, or <strong>Year</strong>; the arrows step back, and <em>This week</em> (or month or year) returns</li>
-            <li><strong>Summary</strong> — completion rate, average completions, carry-over rate, most productive day, and a comparison with the period before</li>
+            <li>The <strong>stat tiles</strong> (completed, shelved, still open, and more) sit at the top. On a large monitor the cards below split into two balanced columns; Day-by-day detail stays full width</li>
+            <li><strong>Summary</strong> — completion rate, average completions, carry-over rate, most productive day (the weekday with the most completions per day you had tasks), and a comparison with the period before</li>
             <li><strong>Tasks by Tag</strong>, <strong>Lingering Tasks</strong> (oldest open), and <strong>Shelved Review</strong>, where <em>Bring back</em> moves a task to today's Active column</li>
             <li><strong>Recurring Follow-through</strong> shows how often each recurring task got done on the days it came up (days you didn't open the desk don't count); under 50% after 3 or more chances gets a <em>Rarely done</em> flag</li>
             <li><strong>Carry Chains</strong> lists tasks carried forward 3 or more times, with <em>Shelve</em> to park one that keeps slipping. Carries are counted from 1.23.0 on</li>
@@ -9342,12 +9334,26 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.23.0';
+    const APP_VERSION = '1.23.1';
     const CHANGELOG = [
+      {
+        version: '1.23.1',
+        date: 'Oct 28, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'Insights: the 8 stat tiles (Completed, Shelved, Still open, and so on) now sit at the top, right under the period picker, on every screen',
+            'Insights on a large monitor: Streak Tracking and the Daily breakdown are now cards in the two columns instead of full-width rows, and each card goes into whichever column is shorter, so the columns end close together instead of one leaving a long gap. Day-by-day detail stays full width at the bottom',
+          ] },
+          { label: 'Fixed', items: [
+            'Insights: Most Productive Day is now the weekday with the most completions per day. It used to pick the highest completion rate, so a Saturday where you finished your one task could beat a full working week',
+            'On a phone or tablet, the search box now stretches the full width of the sidebar. The Work / All chip took up space beside it instead of floating inside',
+          ] },
+        ],
+      },
       {
         version: '1.23.0',
         date: 'Oct 27, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Insights: Recurring Follow-through card. Each recurring task gets a bar of Done, Still open, and Missed for the days it came up, lowest rate first. Days you didn\'t open the desk don\'t count against it. Under 50% after 3 or more chances gets a Rarely done flag, and Open Recurring tasks jumps to the list',
@@ -22302,25 +22308,7 @@
         ? Math.round((totals.carriedOver / totals.tasks) * 100)
         : 0;
       
-      // Find best day of week
-      const dayStats = {};
-      for (const day of daily) {
-        const dayName = dateFromKey(day.dayKey).toLocaleDateString('en-US', { weekday: 'long' });
-        if (!dayStats[dayName]) dayStats[dayName] = { completed: 0, total: 0 };
-        dayStats[dayName].completed += day.completed;
-        dayStats[dayName].total += day.tasks;
-      }
-      let bestDay = 'N/A';
-      let bestRate = 0;
-      for (const [day, stats] of Object.entries(dayStats)) {
-        if (stats.total > 0) {
-          const rate = stats.completed / stats.total;
-          if (rate > bestRate) {
-            bestRate = rate;
-            bestDay = day;
-          }
-        }
-      }
+      const bestDay = mostProductiveWeekday(daily);
 
       metricsCard.innerHTML = `
         <h3 class="metrics-card-title">Productivity Summary</h3>
@@ -22343,7 +22331,30 @@
           </div>
         </div>
       `;
-      // Two columns only when Insights is wide (see .insights-cols); otherwise one column in the classic order
+      const statGrid = document.createElement('div');
+      statGrid.className = 'stat-grid';
+      const statCards = [
+        { value: totals.completed, label: 'Completed' },
+        { value: totals.shelved, label: 'Shelved' },
+        { value: totals.unfinished, label: 'Still open' },
+        { value: totals.carriedOver, label: 'Carried over' },
+        { value: totals.createdToday, label: 'Newly created' },
+        { value: totals.notes, label: 'Notes' },
+        { value: totals.comments, label: 'Comments' },
+        { value: totals.activeDays, label: 'Active days' },
+      ];
+      for (const card of statCards) {
+        const el = document.createElement('div');
+        el.className = 'stat-card';
+        el.innerHTML =
+          `<div class="stat-card-value">${escapeHtml(String(card.value))}</div>` +
+          `<div class="stat-card-label">${escapeHtml(card.label)}</div>`;
+        statGrid.appendChild(el);
+      }
+      panel.appendChild(statGrid);
+
+      // Two columns only when Insights is wide (see .insights-cols); otherwise one column.
+      // Each card gets a reading-order slot and is placed once the panel is on screen (balanceInsightColumns).
       const cols = document.createElement('div');
       cols.className = 'insights-cols';
       const leftCol = document.createElement('div');
@@ -22352,7 +22363,12 @@
       rightCol.className = 'insights-col';
       cols.append(leftCol, rightCol);
       panel.appendChild(cols);
-      leftCol.appendChild(metricsCard);
+      const COLUMN_SLOTS = { metrics: 0, comparison: 1, streak: 2, chart: 3, carryover: 4, more: 5 };
+      const addColumnCard = (card, slot) => {
+        card.dataset.colOrder = String(slot);
+        leftCol.appendChild(card);
+      };
+      addColumnCard(metricsCard, COLUMN_SLOTS.metrics);
 
       // Period-over-period comparison
       if (totals.activeDays > 0) {
@@ -22400,7 +22416,7 @@
             </div>
           </div>
         `;
-        rightCol.appendChild(compCard);
+        addColumnCard(compCard, COLUMN_SLOTS.comparison);
       }
 
       // Carry-Over Analysis
@@ -22461,19 +22477,19 @@
             ${dayBars}
           </div>
         `;
-        leftCol.appendChild(carryCard);
+        addColumnCard(carryCard, COLUMN_SLOTS.carryover);
       }
 
-      for (const [card, col] of [
-        [renderTagBreakdownCard(range), rightCol],
-        [renderLingeringCard(todayKey()), leftCol],
-        [renderShelvedCard(range, todayKey()), rightCol],
-        [renderRecurringCard(range, todayKey()), leftCol],
-        [renderCarryChainsCard(range, state.insightsPeriod), rightCol],
-        [renderTagTrendCard(state.insightsPeriod, state.insightsAnchor, todayKey()), rightCol],
-      ]) {
-        if (card) col.appendChild(card);
-      }
+      [
+        renderTagBreakdownCard(range),
+        renderLingeringCard(todayKey()),
+        renderShelvedCard(range, todayKey()),
+        renderRecurringCard(range, todayKey()),
+        renderCarryChainsCard(range, state.insightsPeriod),
+        renderTagTrendCard(state.insightsPeriod, state.insightsAnchor, todayKey()),
+      ].forEach((card, i) => {
+        if (card) addColumnCard(card, COLUMN_SLOTS.more + i);
+      });
 
       // Streak Tracking
       const streaks = computeStreaks();
@@ -22550,33 +22566,11 @@
         hint.textContent = 'Each block is a day — darker means more tasks';
 
         streakCard.append(heatmap, labels, hint);
-        panel.appendChild(streakCard);
+        addColumnCard(streakCard, COLUMN_SLOTS.streak);
       }
-
-      const statGrid = document.createElement('div');
-      statGrid.className = 'stat-grid';
-      const statCards = [
-        { value: totals.completed, label: 'Completed' },
-        { value: totals.shelved, label: 'Shelved' },
-        { value: totals.unfinished, label: 'Still open' },
-        { value: totals.carriedOver, label: 'Carried over' },
-        { value: totals.createdToday, label: 'Newly created' },
-        { value: totals.notes, label: 'Notes' },
-        { value: totals.comments, label: 'Comments' },
-        { value: totals.activeDays, label: 'Active days' },
-      ];
-      for (const card of statCards) {
-        const el = document.createElement('div');
-        el.className = 'stat-card';
-        el.innerHTML =
-          `<div class="stat-card-value">${escapeHtml(String(card.value))}</div>` +
-          `<div class="stat-card-label">${escapeHtml(card.label)}</div>`;
-        statGrid.appendChild(el);
-      }
-      panel.appendChild(statGrid);
 
       const chartSection = document.createElement('section');
-      chartSection.className = 'insight-section';
+      chartSection.className = 'insight-section chart-card';
       const chartTitle = document.createElement('h3');
       chartTitle.className = 'insight-section-title';
       chartTitle.textContent = state.insightsPeriod === 'year'
@@ -22652,7 +22646,7 @@
         chartSection.appendChild(renderPieChart(segments));
       }
       
-      panel.appendChild(chartSection);
+      addColumnCard(chartSection, COLUMN_SLOTS.chart);
 
       // Activity heatmap — year view only
       if (state.insightsPeriod === 'year') {
@@ -22673,6 +22667,60 @@
 
 
       els.insightsView.appendChild(panel);
+      balanceInsightColumns();
+    }
+
+    // Average completions on the days of each weekday that had tasks, so one tidy Saturday can't outrank a full week.
+    // Ties go to the weekday with more completions overall.
+    function mostProductiveWeekday(daily) {
+      const byWeekday = {};
+      for (const day of daily) {
+        if (!day.tasks) continue;
+        const name = dateFromKey(day.dayKey).toLocaleDateString('en-US', { weekday: 'long' });
+        const s = byWeekday[name] || (byWeekday[name] = { completed: 0, days: 0 });
+        s.completed += day.completed;
+        s.days += 1;
+      }
+      let best = 'N/A';
+      let bestAvg = 0;
+      let bestTotal = 0;
+      for (const [name, s] of Object.entries(byWeekday)) {
+        const avg = s.completed / s.days;
+        if (avg > bestAvg || (avg === bestAvg && avg > 0 && s.completed > bestTotal)) {
+          best = name;
+          bestAvg = avg;
+          bestTotal = s.completed;
+        }
+      }
+      return best;
+    }
+
+    // Wide Insights: each summary card goes into whichever column is shorter, in reading order, so neither
+    // column ends in a long gap whatever the period's cards hold. In one column the wrappers drop out and
+    // CSS order sets the sequence. State lives on the function so a render early in boot can't hit a TDZ.
+    function balanceInsightColumns() {
+      const view = els.insightsView;
+      const cols = view.querySelector('.insights-cols');
+      if (!cols) return;
+      const [left, right] = cols.children;
+      const cards = [...left.children, ...right.children].sort((a, b) => a.dataset.colOrder - b.dataset.colOrder);
+      if (getComputedStyle(cols).display !== 'grid') {
+        left.append(...cards);
+      } else {
+        left.replaceChildren();
+        right.replaceChildren();
+        for (const card of cards) (right.offsetHeight < left.offsetHeight ? right : left).appendChild(card);
+      }
+      if (!balanceInsightColumns.observer && typeof ResizeObserver === 'function') {
+        let lastWidth = view.clientWidth;
+        balanceInsightColumns.observer = new ResizeObserver(() => {
+          if (view.clientWidth === lastWidth) return;
+          lastWidth = view.clientWidth;
+          requestAnimationFrame(balanceInsightColumns);
+        });
+        balanceInsightColumns.observer.observe(view);
+        document.fonts?.ready.then(() => balanceInsightColumns());
+      }
     }
 
     function setActiveTab(tab) {
