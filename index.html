@@ -3302,10 +3302,11 @@
       border-radius: 50%;
       background: var(--sidebar-muted);
     }
+    /* Up in the corner, clear of a two-digit date at the Large text size */
     .cal-day-badge {
       position: absolute;
-      top: 1px;
-      right: 1px;
+      top: -4px;
+      right: -3px;
       min-width: 13px;
       height: 13px;
       padding: 0 3px;
@@ -4173,11 +4174,16 @@
       font-size: 0.88rem;
     }
     .help-search:focus { outline: none; border-color: var(--accent); }
-    .help-index { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-    @media (max-width: 480px) { .help-index { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    /* Up to 4 per row; fewer when a wide font or large text needs the room */
+    .help-index {
+      display: grid;
+      font-size: 0.74rem;
+      grid-template-columns: repeat(auto-fill, minmax(max(8.6em, calc((100% - 12px) / 4)), 1fr));
+      gap: 4px;
+    }
     .help-index button {
       font: inherit;
-      font-size: 0.74rem;
+      font-size: 1em;
       padding: 4px 6px;
       border-radius: 6px;
       border: 1px solid var(--border);
@@ -4789,9 +4795,13 @@
       border-top: 1px solid var(--sidebar-border);
     }
 
+    /* Shrinks with the sidebar so Projects isn't cut off with a wide font at the Large size */
+    .context-tabs { container: context-tabs / inline-size; }
     .context-tabs .app-tab {
-      padding: 6px 10px;
-      font-size: 0.76rem;
+      padding: 6px 6px;
+      font-size: clamp(0.62rem, 6cqi, 0.76rem);
+      min-width: 0;
+      white-space: nowrap;
     }
 
     .app-tab {
@@ -5129,6 +5139,7 @@
     .heatmap-wrap {
       padding-bottom: 4px;
       width: 100%;
+      container: heatmap / inline-size;
     }
     .heatmap-months,
     .heatmap-row {
@@ -5152,13 +5163,22 @@
       text-align: right;
       padding-right: 4px;
     }
+    /* A label sits in its month's first week and runs over the empty weeks after it */
     .heatmap-month-label {
       flex: 1;
       min-width: 0;
       font-size: 0.68rem;
       color: var(--text-muted);
       white-space: nowrap;
-      overflow: hidden;
+      overflow: visible;
+    }
+    /* 52 three-pixel gaps would leave the weeks almost no width on a narrow card */
+    @container heatmap (max-width: 700px) {
+      .heatmap-months, .heatmap-row { gap: 1px; }
+      .heatmap-row { margin-bottom: 1px; }
+      .heatmap-cell { height: 10px; border-radius: 1px; }
+      .heatmap-month-label { font-size: 0.6rem; }
+      .heatmap-day-spacer, .heatmap-day-label { width: 22px; min-width: 22px; }
     }
     .heatmap-cell {
       flex: 1;
@@ -5269,9 +5289,10 @@
       gap: 12px;
     }
 
+    .comparison-card { container: comparison / inline-size; }
     .comparison-row {
       display: grid;
-      grid-template-columns: 140px 60px 1fr auto;
+      grid-template-columns: 140px minmax(60px, auto) minmax(0, 1fr) auto;
       align-items: center;
       gap: 12px;
       padding: 8px 0;
@@ -5298,11 +5319,19 @@
     .comp-previous {
       font-size: 0.78rem;
       color: var(--text-muted);
-      white-space: nowrap;
     }
 
-    @media (max-width: 600px) {
-      .comparison-row { grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; }
+    /* Narrow card: label and change on top, this period and last underneath, so nothing has to share one line */
+    @container comparison (max-width: 560px) {
+      .comparison-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "label label change" "current previous previous";
+        gap: 2px 10px;
+      }
+      .comp-label { grid-area: label; }
+      .comp-current { grid-area: current; text-align: left; }
+      .comp-previous { grid-area: previous; align-self: center; }
+      .comparison-row > :last-child { grid-area: change; justify-self: end; }
     }
 
     .change-good {
@@ -5512,6 +5541,15 @@
       line-height: 1.2;
     }
     .streak-heatmap-labels span { white-space: nowrap; min-width: 0; overflow: visible; }
+    .streak-card { container: streak / inline-size; }
+    .streak-heatmap.period-week, .streak-heatmap.period-week + .streak-heatmap-labels { gap: 6px; }
+    .streak-heatmap.period-month, .streak-heatmap.period-month + .streak-heatmap-labels { gap: 3px; }
+    .streak-heatmap.period-year { gap: 1px; }
+    .streak-heatmap.period-year + .streak-heatmap-labels span { overflow: hidden; text-overflow: clip; }
+    /* 365 one-pixel gaps would outgrow a narrow card and squeeze the days to nothing */
+    @container streak (max-width: 1100px) {
+      .streak-heatmap.period-year { gap: 0; }
+    }
     .streak-heatmap.period-week + .streak-heatmap-labels span { text-align: center; }
     .streak-hint { margin: 8px 0 0; font-size: 0.7rem; color: var(--text-muted); }
 
@@ -5661,9 +5699,18 @@
     @media (max-width: 600px) {
       .tag-breakdown { grid-template-columns: 90px minmax(0, 1fr); }
       .recurring-breakdown { grid-template-columns: 130px minmax(0, 1fr); }
-      .tag-breakdown-counts { grid-column: 1 / -1; margin-top: -4px; }
+      .tag-breakdown-counts { grid-column: 1 / -1; margin-top: -4px; white-space: normal; }
       .insight-task-row { flex-direction: column; align-items: stretch; }
       .insight-task-actions { justify-content: flex-end; }
+      /* Two lines before the ellipsis, so a phone shows more than a few words */
+      .insight-task-text, .recurring-name {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        overflow: hidden;
+      }
     }
 
     /* ── Chart Type Selector ─────────────────────────────────── */
@@ -9334,18 +9381,28 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.23.1';
+    const APP_VERSION = '1.23.2';
     const CHANGELOG = [
+      {
+        version: '1.23.2',
+        date: 'Oct 28, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Wide fonts and Large text: the Year activity heatmap shows every month name in full (and real day blocks on a phone); Month-over-Month stacks whenever its card is narrow, so the change never falls off on a tablet; Tasks by Tag counts wrap on a phone; Shelved, Lingering, Carry Chains, and Recurring names get two lines on a phone; Projects no longer gets cut off in the sidebar; the calendar\'s left-open badge no longer covers the date; and the Help topics drop to fewer per row instead of cutting words short',
+          ] },
+        ],
+      },
       {
         version: '1.23.1',
         date: 'Oct 28, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Improved', items: [
             'Insights: the 8 stat tiles (Completed, Shelved, Still open, and so on) now sit at the top, right under the period picker, on every screen',
             'Insights on a large monitor: Streak Tracking and the Daily breakdown are now cards in the two columns instead of full-width rows, and each card goes into whichever column is shorter, so the columns end close together instead of one leaving a long gap. Day-by-day detail stays full width at the bottom',
           ] },
           { label: 'Fixed', items: [
+            'Insights on a phone: Year-over-Year (and Week/Month-over-Month) rows no longer overlap. The label and change sit on one line, with this period and last underneath. In Year view, the Streak Tracking strip shows its days again and the month labels stay inside the card',
             'Insights: Most Productive Day is now the weekday with the most completions per day. It used to pick the highest completion rate, so a Saturday where you finished your one task could beat a full working week',
             'On a phone or tablet, the search box now stretches the full width of the sidebar. The Work / All chip took up space beside it instead of floating inside',
           ] },
@@ -22514,16 +22571,7 @@
         // Activity strip matched to the selected period
         const heatmap = document.createElement('div');
         heatmap.className = 'streak-heatmap';
-        if (state.insightsPeriod === 'week') {
-          heatmap.classList.add('period-week');
-          heatmap.style.gap = '6px';
-        } else if (state.insightsPeriod === 'month') {
-          heatmap.classList.add('period-month');
-          heatmap.style.gap = '3px';
-        } else {
-          heatmap.classList.add('period-year');
-          heatmap.style.gap = '1px';
-        }
+        heatmap.classList.add(`period-${state.insightsPeriod}`);
         heatmap.style.gridTemplateColumns = `repeat(${daily.length}, minmax(0, 1fr))`;
 
         const maxCount = Math.max(...daily.map(d => d.tasks), 1);
@@ -22546,20 +22594,33 @@
 
         const labels = document.createElement('div');
         labels.className = 'streak-heatmap-labels';
-        labels.style.gridTemplateColumns = heatmap.style.gridTemplateColumns;
-        labels.style.gap = heatmap.style.gap;
-        daily.forEach(day => {
-          const dObj = dateFromKey(day.dayKey);
-          const span = document.createElement('span');
-          if (state.insightsPeriod === 'week') {
-            span.textContent = dObj.toLocaleDateString('en-US', { weekday: 'short' });
-          } else if (state.insightsPeriod === 'month') {
-            if (dObj.getDate() === 1 || dObj.getDate() % 7 === 1) span.textContent = String(dObj.getDate());
-          } else if (dObj.getDate() === 1) {
-            span.textContent = dObj.toLocaleDateString('en-US', { month: 'short' });
+        if (state.insightsPeriod === 'year') {
+          // One column per month, as wide as its days, so a label can't run past the card on a phone
+          const months = [];
+          for (const day of daily) {
+            const month = day.dayKey.slice(0, 7);
+            if (months[months.length - 1]?.month === month) months[months.length - 1].days++;
+            else months.push({ month, days: 1 });
           }
-          labels.appendChild(span);
-        });
+          labels.style.gridTemplateColumns = months.map((m) => `minmax(0, ${m.days}fr)`).join(' ');
+          for (const { month } of months) {
+            const span = document.createElement('span');
+            span.textContent = dateFromKey(`${month}-01`).toLocaleDateString('en-US', { month: 'short' });
+            labels.appendChild(span);
+          }
+        } else {
+          labels.style.gridTemplateColumns = heatmap.style.gridTemplateColumns;
+          daily.forEach(day => {
+            const dObj = dateFromKey(day.dayKey);
+            const span = document.createElement('span');
+            if (state.insightsPeriod === 'week') {
+              span.textContent = dObj.toLocaleDateString('en-US', { weekday: 'short' });
+            } else if (dObj.getDate() === 1 || dObj.getDate() % 7 === 1) {
+              span.textContent = String(dObj.getDate());
+            }
+            labels.appendChild(span);
+          });
+        }
 
         const hint = document.createElement('p');
         hint.className = 'streak-hint';
