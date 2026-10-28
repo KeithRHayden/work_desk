@@ -6,6 +6,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.23.0] — 2026-10-27
+
+### Added
+
+- **Recurring Follow-through card in Insights.** Each recurring task gets a Done / Still open / Missed bar for the days it came up in the period, lowest rate first, with "17 of 19 done · 89%". A due day only counts if you used the desk that day, so days away aren't misses, and templates skipping holidays skip them here too. Under 50% after 3 or more chances gets a *Rarely done* flag. *Open Recurring tasks* opens the list. Rows with no chances in the period (say, a monthly task in a week it isn't due) are hidden.
+- **Carry Chains card in Insights.** Tasks carried forward 3 or more times whose run overlaps the period, oldest first, with totals (how many, still open, average carries), "Carried 8 times · rolling since Oct 5 · still open", one dot per carry, and *Shelve* / *Open*. With none, the card says "Nothing slipped 3 or more times this week."
+- **Tag Trend card in Insights.** Each tag's share of your tasks this period next to the previous one (last week, month, or year; to the same point while the period is still going), with ▲ / ▼ for moves of 5 points or more and a takeaway such as "Biggest shift: IDS dropped 13 points while ACE rose 15." Under 10 tasks on either side shows shares without arrows; a previous period with no tasks says so.
+- **Carry counts on tasks.** Carrying forward now records how many times a task has been carried (`carryCount`) and when its run started (`carryStart`). Tasks carried before 1.23.0 count as one carry. Moving a task by hand, sending it to the other desk, or *Bring back* starts it fresh. Sync and merges keep the longer run.
+
+### Improved
+
+- On wide screens, Recurring Follow-through joins the left column, and Carry Chains and Tag Trend join the right. In one column they follow Shelved Review.
+- **Phone tabs stack like desktop.** At 600px and narrower, Work / Personal / Projects sit under Desk / Insights instead of sharing one cramped row. Tablets keep the single row.
+- **Tests run the real app code.** Unit tests now load sync, merge, carry-forward, move, recurring, and holiday functions straight from `work-desk.html` instead of the separate copy in `lib/desk-logic.mjs`, which was drifting from the app and has been removed. `e2e/layout.spec.ts` now uses the shared fixtures, like the other specs.
+
+### Fixed
+
+- **Column add box kept its text after Add.** Adding a task from a column's *+ Add task* box left the text in the box, so tapping Add again added the same task twice. The box now clears after each add and stays open for the next one; Add on an empty box closes it. The 1.20.0 draft-keeping (so a sync redraw doesn't wipe what you're typing) was restoring the just-added text.
+- **Project note actions on phones.** *edit · add update · tag · to desk · archive · delete* now wrap onto a second row, and the date gets its own line when space is tight, instead of labels breaking in two and *delete* running off the card.
+
+---
+
+## [1.22.1] — 2026-10-27
+
+### Improved
+- **Daily breakdown stops at today** — in Insights → Month, days later in the current month no longer show as rows of zeros in the Bar, Line, and Stacked charts. A future day that already has something on it still shows
+- **Empty weekends left out with Quieter weekends** — when Quieter weekends (Options → Behavior → General) covers the desk you're viewing (*Work only* on Work, or *Both desks*), the Month chart drops Saturdays and Sundays with nothing on them; weekends with any task, note, or comment stay. A note under the legend (e.g. *8 empty weekend days hidden · Quieter weekends is on for Work · Change*) appears only when days are actually hidden, and **Change** opens Options at the setting. Changing the setting updates Insights right away, and its hint in Options now reads *On the calendar and in Insights*. Week and Year views, the pie chart, and the Day-by-day table are unchanged
+- **Two columns on wide screens** — when the Insights area is at least 1500px wide (a 1920px monitor with the sidebar open, or wider), the cards above the stat tiles split into two independent columns: Summary, Carry-Over Analysis, and Lingering Tasks on the left; Month-over-Month, Tasks by Tag, and Shelved Review on the right. Each card keeps its own height, so nothing is stretched to match its neighbor. Streak Tracking, the stat tiles, the breakdown chart, and the Day-by-day table stay full width, and the panel's cap rises from 1240px to 2000px. Narrower screens (laptops, every tablet, phones) keep the single column in the same order as before. It responds to the space Insights actually has, so collapsing the sidebar or resizing the window switches it live
+
 ## [1.22.0] — 2026-10-22
 
 ### Added
