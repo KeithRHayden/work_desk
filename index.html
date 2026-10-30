@@ -2474,10 +2474,20 @@
       overflow: hidden;
     }
 
-    /* Sidebar position: right */
-    [data-sidebar-position="right"] .app { flex-direction: row-reverse; }
-    [data-sidebar-position="right"] .sidebar-collapse-btn { left: auto; right: 256px; transform: translateX(50%); }
-    [data-sidebar-position="right"] .app.sidebar-collapsed .sidebar-collapse-btn { left: auto; right: 12px; transform: translateX(0); }
+    /* Sidebar position: right (tablet and up; phones keep their top bar, even when the setting syncs from a computer) */
+    @media (min-width: 769px) {
+      [data-sidebar-position="right"] .app { flex-direction: row-reverse; }
+      [data-sidebar-position="right"] .sidebar-collapse-btn { left: auto; right: 256px; transform: translateX(50%); }
+      [data-sidebar-position="right"] .app.sidebar-collapsed .sidebar-collapse-btn { left: auto; right: 12px; transform: translateX(0); }
+    }
+    @media (max-width: 768px) { .phone-hide { display: none !important; } }
+    @media (min-width: 769px) { .phone-only { display: none !important; } }
+    .sidebar-position-note { margin: 4px 0 8px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; font-size: 0.78rem; line-height: 1.45; color: var(--text-muted); }
+    @media (max-width: 768px) {
+      .density-popout select, .custom-holiday-input { min-height: 36px; }
+      .options-back-btn, .custom-holiday-add-btn { min-height: 36px; padding-inline: 10px; }
+      .current-theme-btn { min-height: 32px; }
+    }
 
     /* Background pattern controls; .main draws the tile from --desk-pattern */
     .bg-pattern-controls { margin: 2px 0 6px; }
@@ -4929,6 +4939,7 @@
       margin: 3px auto 0;
     }
     .week-day.selected.has-data .week-day-num::after { background: var(--accent); }
+    .week-strip.quiet-weekends .week-day.weekend:not(.selected):not(.today) { background: transparent; opacity: 0.55; }
 
     .week-day-dow {
       font-size: 0.62rem;
@@ -8609,7 +8620,7 @@
                     <div class="options-summary">
                       <button type="button" class="options-row" data-options-open="card-layout"><span class="options-row-icon" aria-hidden="true">≡</span><span class="options-row-text"><span class="options-row-name">Card layout<span class="options-new-tag" data-new-in="1.18.0">New</span></span><span class="options-row-desc">Density, complete button, tag spot</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="typography"><span class="options-row-icon" aria-hidden="true">Aa</span><span class="options-row-text"><span class="options-row-name">Typography</span><span class="options-row-desc">Text size and font</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="layout"><span class="options-row-icon" aria-hidden="true">▤</span><span class="options-row-text"><span class="options-row-name">Layout<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-desc">Sidebar side, calendar legend, progress</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="layout"><span class="options-row-icon" aria-hidden="true">▤</span><span class="options-row-text"><span class="options-row-name">Layout<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-desc"><span class="phone-hide">Sidebar side, calendar legend, progress</span><span class="phone-only">Tablets and computers</span></span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="effects"><span class="options-row-icon" aria-hidden="true">✦</span><span class="options-row-text"><span class="options-row-name">Effects</span><span class="options-row-desc">Card glow, gradient header</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="background"><span class="options-row-icon" aria-hidden="true">▦</span><span class="options-row-text"><span class="options-row-name">Background</span><span class="options-row-desc">Board pattern and strength</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="tags"><span class="options-row-icon" aria-hidden="true">#</span><span class="options-row-text"><span class="options-row-name">Tags</span><span class="options-row-desc">Tag colors</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
@@ -8696,7 +8707,8 @@
 
                     <section class="options-section" data-options-section="layout" aria-label="Layout" hidden>
                     <div class="options-section-head"><button type="button" class="options-back-btn" data-options-back>‹ Back</button><h3 class="options-section-title">Layout</h3></div>
-                    <div class="customize-select-row">
+                    <p class="sidebar-position-note phone-only">Layout settings apply on tablets and computers. Phones always use the top bar, and the calendar legend and Today's Progress card only appear in the sidebar there.</p>
+                    <div class="customize-select-row phone-hide">
                       <label for="sidebar-position-select">Sidebar position</label>
                       <select id="sidebar-position-select" aria-label="Sidebar position">
                         <option value="left">Left</option>
@@ -8705,14 +8717,14 @@
                         <option value="bottom">Bottom</option>
                       </select>
                     </div>
-                    <label class="customize-toggle" title="The key under the sidebar calendar">
+                    <label class="customize-toggle phone-hide" title="The key under the sidebar calendar">
                       <input id="show-cal-legend-toggle" type="checkbox" checked />
                       <span class="customize-toggle-text">
                         <span>Calendar legend<span class="options-new-tag" data-new-in="1.17.2">New</span></span>
                         <span class="customize-toggle-sub">Key under the sidebar calendar</span>
                       </span>
                     </label>
-                    <label class="customize-toggle" title="The progress card in the sidebar">
+                    <label class="customize-toggle phone-hide" title="The progress card in the sidebar">
                       <input id="show-today-progress-toggle" type="checkbox" checked />
                       <span class="customize-toggle-text">
                         <span>Today's Progress<span class="options-new-tag" data-new-in="1.17.2">New</span></span>
@@ -9173,7 +9185,7 @@
           <ul>
             <li>Open with ⚙ near the date or <strong>Options</strong> in the account menu. Each tab opens on a short list; click a row to open it, and <strong>‹ Back</strong> or <strong>Esc</strong> to return</li>
             <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) with previews and a Light/Med/Dark filter, plus up to 5 <strong>Custom</strong> themes from 5 colors</li>
-            <li><strong>Appearance</strong> — card layout, text size and font, sidebar position (left, right, top, or bottom), effects, a patterned background, and tag colors</li>
+            <li><strong>Appearance</strong> — card layout, text size and font, layout (sidebar position left, right, top, or bottom, plus the calendar legend and Today's Progress; tablets and computers only, since phones always use the top bar), effects, a patterned background, and tag colors</li>
             <li><strong>Behavior</strong> — startup, week start, quieter weekends, full screen, comments, auto-collapse and auto carry, confetti, delete confirmation, strikethrough, long notes, and holidays (US federal plus your own dates)</li>
             <li><strong>Reset to defaults</strong> at the bottom of a tab resets just that tab; your theme, pinned tag colors, and custom holidays stay. A <em>New</em> tag marks settings from the latest release</li>
           </ul>
@@ -9381,12 +9393,24 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.23.2';
+    const APP_VERSION = '1.23.3';
     const CHANGELOG = [
+      {
+        version: '1.23.3',
+        date: 'Oct 30, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'With the sidebar set to Right (on this device or synced from another), a phone squeezed the whole desk into a sliver beside the menu. Phones now always keep their top bar, whatever the setting',
+            'On a phone, Options → Appearance → Layout no longer shows settings that do nothing there (Sidebar position, Calendar legend, Today\'s Progress). A note says Layout applies on tablets and computers, so changing it on a phone can\'t quietly rearrange your computer through sync',
+            'Quieter weekends now also dims Saturday and Sunday on the week strip (phones, and the top or bottom bar), not only on the sidebar calendar',
+            'Easier tapping in Options on a phone: dropdowns, ‹ Back, and the custom holiday fields and Add button are taller',
+          ] },
+        ],
+      },
       {
         version: '1.23.2',
         date: 'Oct 28, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'Wide fonts and Large text: the Year activity heatmap shows every month name in full (and real day blocks on a phone); Month-over-Month stacks whenever its card is narrow, so the change never falls off on a tablet; Tasks by Tag counts wrap on a phone; Shelved, Lingering, Carry Chains, and Recurring names get two lines on a phone; Projects no longer gets cut off in the sidebar; the calendar\'s left-open badge no longer covers the date; and the Help topics drop to fewer per row instead of cutting words short',
@@ -12721,7 +12745,7 @@
           OPTIONS_TAG_POSITION_LABELS[p.tagPosition],
         ].filter(Boolean).join(' · ');
         case 'typography': return `${capitalize(p.fontSize || 'default')} · ${OPTIONS_FONT_LABELS[p.fontFamily] || OPTIONS_FONT_LABELS.system}`;
-        case 'layout': return [`Sidebar ${p.sidebarPosition || 'left'}`, p.showCalLegend === false && 'No legend', p.showTodayProgress === false && 'No progress'].filter(Boolean).join(' · ');
+        case 'layout': return p.phone ? 'Applies on tablets and computers' : [`Sidebar ${p.sidebarPosition || 'left'}`, p.showCalLegend === false && 'No legend', p.showTodayProgress === false && 'No progress'].filter(Boolean).join(' · ');
         case 'effects': return [p.cardGlow && 'Glow', p.gradientHeader && 'Gradient'].filter(Boolean).join(' · ') || 'Off';
         case 'background': return p.bgOn ? `${p.bgPatternName} · ${p.bgStrength}%` : 'Off';
         case 'tags': return (OPTIONS_TAG_MODE_LABELS[p.tagMode] || OPTIONS_TAG_MODE_LABELS.theme) + (p.pinnedTags ? ` · ${p.pinnedTags} pinned` : '');
@@ -12776,6 +12800,7 @@
         fontSize: val('font-size-select', 'default'),
         fontFamily: val('font-family-select', 'system'),
         sidebarPosition: val('sidebar-position-select', 'left'),
+        phone: window.matchMedia('(max-width: 768px)').matches,
         showCalLegend: on('show-cal-legend-toggle'),
         showTodayProgress: on('show-today-progress-toggle'),
         cardGlow: on('card-glow-toggle'),
@@ -13404,6 +13429,7 @@
       const host = els.weekStrip;
       if (!host) return;
       const today = todayKey();
+      host.classList.toggle('quiet-weekends', quietWeekendsActive(state.quietWeekends, state.listContext));
 
       if (host.children.length === 0) {
         // ── First render: build the full 26-week scrollable strip ─────────
@@ -13423,6 +13449,7 @@
           if (key === state.selectedDate) btn.classList.add('selected');
           if (key === today) btn.classList.add('today');
           if (day && day.items.length > 0) btn.classList.add('has-data');
+          if (cur.getDay() % 6 === 0) btn.classList.add('weekend');
 
           const dow = document.createElement('div');
           dow.className = 'week-day-dow';
@@ -18829,6 +18856,7 @@
       header.appendChild(nextBtn);
       host.appendChild(header);
       host.classList.toggle('quiet-weekends', quietWeekendsActive(state.quietWeekends, state.listContext));
+      els.weekStrip?.classList.toggle('quiet-weekends', quietWeekendsActive(state.quietWeekends, state.listContext));
 
       const isMondayStart = state.weekStart === 'monday';
       const weekdaysList = isMondayStart
