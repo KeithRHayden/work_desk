@@ -3652,7 +3652,7 @@ test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
     await expect(page.locator('#changelog-modal')).toBeVisible();
     await expect(page.locator('#changelog-body')).toContainText('Rosé Pine Dawn');
     await expect(page.locator('#changelog-body')).toContainText('Options → Behavior → General');
-    await expect(page.locator('#changelog-body')).toContainText('Alt+↑ / Alt+↓ moves the selected project');
+    await expect(page.locator('#changelog-body')).toContainText('tucked into a ⋮ menu');
     await expectClean(page, '#changelog-body');
     await page.locator('#changelog-modal-dismiss').click();
 
@@ -7779,7 +7779,7 @@ test.describe('Daily breakdown trimming 1.22.1', { tag: ['@insights', '@options'
 });
 
 test.describe('Insights two columns on wide screens 1.22.1', { tag: ['@insights', '@phone'] }, () => {
-  const CARDS = ['productivity-metrics-card', 'comparison-card', 'carryover-card', 'tags-card', 'lingering-card', 'shelved-card'];
+  const CARDS = ['productivity-metrics-card', 'comparison-card', 'streak-card', 'chart-card', 'carryover-card', 'tags-card', 'lingering-card', 'shelved-card'];
   async function openInsights(page: Page, viewport: { width: number; height: number }, touch = false) {
     await page.setViewportSize(viewport);
     await page.clock.setFixedTime(new Date('2026-10-27T10:00:00'));
@@ -7818,24 +7818,55 @@ test.describe('Insights two columns on wide screens 1.22.1', { tag: ['@insights'
   }), CARDS);
   const noSideScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 
-  test('1920px: Summary, Carry-Over, Lingering on the left; Month-over-Month, Tags, Shelved on the right, each at its own height', async ({ page }) => {
+  // Both columns: every card at one of two x positions, stacked without gaps, and the columns end close together
+  async function expectBalanced(page: Page) {
+    const cols = await page.evaluate(() => [...document.querySelectorAll('.insights-col')].map((col) => {
+      const cards = [...col.children].map((c) => c.getBoundingClientRect());
+      return { h: col.getBoundingClientRect().height, tallest: Math.max(...cards.map((r) => r.height)), gaps: cards.slice(1).map((r, i) => r.top - cards[i].bottom), xs: [...new Set(cards.map((r) => Math.round(r.left)))] };
+    }));
+    expect(cols).toHaveLength(2);
+    for (const col of cols) {
+      expect(col.xs).toHaveLength(1);
+      for (const gap of col.gaps) expect(gap).toBeLessThan(40);
+    }
+    expect(cols[1].xs[0]).toBeGreaterThan(cols[0].xs[0]);
+    expect(Math.abs(cols[0].h - cols[1].h)).toBeLessThanOrEqual(Math.max(cols[0].tallest, cols[1].tallest));
+  }
+
+  test('1920px: tiles across the top, Streak and the breakdown as half-width cards, balanced columns, Day-by-day full width', async ({ page }) => {
     await openInsights(page, { width: 1920, height: 1080 });
-    const [summary, comparison, carry, tags, lingering, shelved] = await boxes(page);
+    const [summary, comparison, streak, chart] = await boxes(page);
+    const tiles = (await page.locator('.insights-panel .stat-grid').boundingBox())!;
+    expect(tiles.y + tiles.height).toBeLessThan(summary.y);
     expect(summary.y).toBe(comparison.y);
     expect(comparison.x).toBeGreaterThan(summary.x + summary.w);
-    for (const left of [carry, lingering]) expect(left.x).toBe(summary.x);
-    for (const right of [tags, shelved]) expect(right.x).toBe(comparison.x);
-    expect(carry.y).toBeGreaterThan(summary.bottom);
-    expect(lingering.y).toBeGreaterThan(carry.bottom);
-    expect(tags.y).toBeGreaterThan(comparison.bottom);
-    expect(shelved.y).toBeGreaterThan(tags.bottom);
-    // Natural heights: the left column's second card starts right under Summary, not level with Tags
-    expect(carry.y - summary.bottom).toBeLessThan(40);
-    expect(carry.y).not.toBe(tags.y);
     expect(summary.w).toBeGreaterThan(700);
-    const streak = (await page.locator('.insights-panel .streak-card').boundingBox())!;
-    expect(streak.width).toBeGreaterThan(summary.w * 2);
+    for (const card of [streak, chart]) expect(card.w).toBe(summary.w);
+    await expectBalanced(page);
+    const table = (await page.locator('.insights-panel > .insight-section', { hasText: 'Day-by-day detail' }).boundingBox())!;
+    const colsBox = (await page.locator('.insights-cols').boundingBox())!;
+    expect(table.y).toBeGreaterThan(colsBox.y + colsBox.height);
+    expect(table.width).toBeGreaterThan(summary.w * 2);
     expect(await noSideScroll(page)).toBe(true);
+  });
+
+  test('1920px: switching chart type and period re-renders into balanced columns with the breakdown still a card', async ({ page }) => {
+    await openInsights(page, { width: 1920, height: 1080 });
+    for (const type of ['Line', 'Stacked', 'Pie', 'Bar']) {
+      await page.locator('.chart-card .chart-type-btn', { hasText: type }).click();
+      await expect(page.locator('.chart-card .chart-type-btn.active')).toHaveText(type);
+      await expect(page.locator('.insights-col > .chart-card')).toHaveCount(1);
+      await expectBalanced(page);
+    }
+    for (const [period, title] of [['Week', 'Weekly breakdown'], ['Year', 'Monthly breakdown'], ['Month', 'Daily breakdown']]) {
+      await page.locator('.period-tab', { hasText: period }).click();
+      await expect(page.locator('.insights-col > .chart-card .insight-section-title')).toHaveText(title);
+      await expect(page.locator('.insights-col > .streak-card')).toHaveCount(1);
+      const tiles = (await page.locator('.insights-panel .stat-grid').boundingBox())!;
+      const summary = (await page.locator('.insights-panel .productivity-metrics-card').boundingBox())!;
+      expect(tiles.y + tiles.height).toBeLessThan(summary.y);
+      await expectBalanced(page);
+    }
   });
 
   test('one column below the breakpoint, in the classic order, and resizing switches live', async ({ page }) => {
@@ -7857,11 +7888,550 @@ test.describe('Insights two columns on wide screens 1.22.1', { tag: ['@insights'
       expect(new Set(b.map((x) => x.x)).size).toBe(1);
       const panel = (await page.locator('.insights-panel').boundingBox())!;
       for (const card of b) expect(card.w).toBe(Math.round(panel.width));
+      const tiles = (await page.locator('.insights-panel .stat-grid').boundingBox())!;
+      expect(tiles.y + tiles.height).toBeLessThan(b[0].y);
       expect(b.map((x) => x.c)).toEqual(CARDS);
       expect(b.map((x) => x.c)).toEqual([...b].sort((p, q) => p.y - q.y).map((x) => x.c));
       expect(await noSideScroll(page)).toBe(true);
     });
   }
+});
+
+test.describe('Phone Insights spacing 1.23.1', { tag: ['@insights', '@phone'] }, () => {
+  test.use({ viewport: { width: 360, height: 800 }, hasTouch: true, isMobile: true });
+
+  async function openYear(page: Page) {
+    await page.clock.setFixedTime(new Date('2026-10-27T10:00:00'));
+    await page.addInitScript(() => {
+      const days: Record<string, object> = {};
+      let n = 0;
+      for (let m = 1; m <= 10; m++) for (const d of m === 10 ? [5, 12, 19, 26] : [5, 12, 19]) {
+        const key = `2026-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        n++;
+        days[key] = { date: key, items: [{ id: `y${n}`, type: 'task', content: `Task ${n}`, completed: true, boardColumn: 'completed', comments: [], createdAt: `${key}T09:00:00`, ...(n % 4 === 0 ? { carriedFrom: '2026-01-01' } : {}) }] };
+      }
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-font-family', 'jetbrains');
+      localStorage.setItem('work-desk-insights-period', 'month');
+      localStorage.setItem('work-desk-insights-anchor', '2026-10-27');
+    });
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    await page.locator('#tab-insights').evaluate((el: HTMLElement) => el.click());
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await expect(page.locator('.comparison-title')).toHaveText('Year-over-Year');
+  }
+  const outside = (page: Page, card: string) => page.locator(card).evaluate((c) => {
+    const box = c.getBoundingClientRect();
+    return [...c.querySelectorAll('*')].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && (r.left < box.left - 0.5 || r.right > box.right + 0.5);
+    }).map((el) => el.textContent!.trim().slice(0, 20));
+  });
+
+  test('Year-over-Year: label and change on one line, the numbers below, nothing overlapping or past the card', async ({ page }) => {
+    await openYear(page);
+    expect(await outside(page, '.comparison-card')).toEqual([]);
+    const rows = await page.locator('.comparison-row').evaluateAll((els) => els.map((row) => {
+      const r = (sel: string) => row.querySelector(sel)!.getBoundingClientRect();
+      const change = row.lastElementChild!.getBoundingClientRect();
+      return { label: r('.comp-label'), current: r('.comp-current'), previous: r('.comp-previous'), change };
+    }));
+    expect(rows).toHaveLength(3);
+    for (const { label, current, previous, change } of rows) {
+      expect(current.top).toBeGreaterThanOrEqual(label.bottom - 1);
+      expect(change.left).toBeGreaterThanOrEqual(label.right);
+      expect(previous.left).toBeGreaterThanOrEqual(current.right);
+    }
+  });
+
+  test('Streak Tracking in Year view: the days have width and every month label stays inside the card', async ({ page }) => {
+    await openYear(page);
+    expect(await outside(page, '.streak-card')).toEqual([]);
+    const cellWidth = await page.locator('.streak-heatmap .heatmap-cell').first().evaluate((el) => el.getBoundingClientRect().width);
+    expect(cellWidth).toBeGreaterThan(0.5);
+    const labels = page.locator('.streak-heatmap-labels span');
+    await expect(labels).toHaveCount(12);
+    await expect(labels.last()).toHaveText('Dec');
+    const strip = (await page.locator('.streak-heatmap').boundingBox())!;
+    const dec = (await labels.last().boundingBox())!;
+    expect(dec.x + dec.width).toBeLessThanOrEqual(strip.x + strip.width + 0.5);
+    await page.locator('.period-tab', { hasText: 'Month' }).click();
+    expect(await outside(page, '.streak-card')).toEqual([]);
+    await page.locator('.period-tab', { hasText: 'Week' }).click();
+    expect(await outside(page, '.streak-card')).toEqual([]);
+  });
+});
+
+test.describe('Phone Options and week strip 1.23.3', { tag: ['@options', '@phone', '@sidebar', '@calendar'] }, () => {
+  const PHONE = { width: 390, height: 844 };
+  const SMALL_PHONE = { width: 360, height: 740 };
+  const TABLET = { width: 820, height: 1180 };
+  const LAPTOP = { width: 1024, height: 900 };
+  const DESKTOP = { width: 1440, height: 900 };
+  const NOTE = "Layout settings apply on tablets and computers. Phones always use the top bar, and the calendar legend and Today's Progress card only appear in the sidebar there.";
+  const SECTIONS: Record<string, string[]> = {
+    appearance: ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags'],
+    behavior: ['general', 'tasks', 'projects', 'insights', 'holidays'],
+  };
+
+  async function open(page: Page, viewport: { width: number; height: number }, prefs: Record<string, string> = {}) {
+    await page.clock.setFixedTime(new Date('2026-10-28T10:00:00'));
+    await page.setViewportSize(viewport);
+    await page.addInitScript((extra) => {
+      if (localStorage.getItem('phone-opts-seeded')) return;
+      localStorage.setItem('phone-opts-seeded', '1');
+      localStorage.setItem('work-desk-list-context', 'work');
+      const task = (id: string, content: string) => ({ id, type: 'task', content, completed: false, shelved: false, boardColumn: 'new', comments: [], tags: ['ace'], createdAt: '2026-10-28T09:00:00Z' });
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: { '2026-10-28': { date: '2026-10-28', items: [task('a', 'Review PR for IDS batching'), task('b', 'Call vendor about the renewal')] } }, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-custom-holidays', JSON.stringify([{ date: '2026-12-24', label: 'Christmas Eve' }]));
+      for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, v);
+    }, prefs);
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    await expect(page.locator('#add-form')).toBeVisible();
+  }
+  const popout = (page: Page) => page.locator('#density-popout');
+  const row = (page: Page, id: string) => page.locator(`.options-row[data-options-open="${id}"]`);
+  const section = (page: Page, id: string) => page.locator(`[data-options-section="${id}"]`);
+  async function closeOptions(page: Page) {
+    for (let i = 0; i < 3 && await popout(page).isVisible(); i++) await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+  }
+  async function openOptions(page: Page, tab: 'appearance' | 'behavior') {
+    if (await popout(page).isVisible()) {
+      // already open
+    } else if (await page.locator('#mobile-menu-btn').isVisible()) {
+      await page.locator('#mobile-menu-btn').click();
+      await page.locator('#mobile-menu-options').click();
+    } else {
+      await page.locator('#density-toggle').click();
+    }
+    await expect(popout(page)).toBeVisible();
+    await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
+  }
+  async function openSection(page: Page, tab: 'appearance' | 'behavior', id: string) {
+    await openOptions(page, tab);
+    await row(page, id).click();
+    await expect(section(page, id)).toBeVisible();
+  }
+  const noSideScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+  const height = (page: Page, sel: string) => page.locator(sel).evaluate((e) => e.getBoundingClientRect().height);
+  const weekDay = (page: Page, key: string) => page.locator(`#week-strip .week-day[data-date-key="${key}"]`);
+  const opacity = (l: Locator) => l.evaluate((e) => Number(getComputedStyle(e).opacity));
+
+  // ── Phones ───────────────────────────────────────────────────────────────
+  test('phone with Right synced from a computer: the top bar and the desk keep their normal layout', async ({ page }) => {
+    await open(page, PHONE, { 'work-desk-sidebar-position': 'right' });
+    const sidebar = (await page.locator('.sidebar').boundingBox())!;
+    const main = (await page.locator('.main').boundingBox())!;
+    expect(main.width).toBe(390);
+    expect(main.x).toBe(0);
+    expect(main.y).toBeGreaterThanOrEqual(sidebar.y + sidebar.height - 1);
+    expect(await noSideScroll(page)).toBe(true);
+  });
+
+  for (const pos of ['top', 'bottom']) {
+    test(`phone with ${pos} synced: same top bar, add bar still at the bottom, no sideways scroll`, async ({ page }) => {
+      await open(page, PHONE, { 'work-desk-sidebar-position': pos });
+      const main = (await page.locator('.main').boundingBox())!;
+      expect(main.x).toBe(0);
+      expect(main.width).toBe(390);
+      await expect(page.locator('#mobile-menu-btn')).toBeVisible();
+      const add = (await page.locator('#add-form').boundingBox())!;
+      expect(add.y + add.height).toBeGreaterThan(PHONE.height - 120);
+      expect(await noSideScroll(page)).toBe(true);
+    });
+  }
+
+  test('phone: Layout shows only the note; the row and tooltip say tablets and computers; Back returns to the list', async ({ page }) => {
+    await open(page, PHONE);
+    await openOptions(page, 'appearance');
+    await expect.poll(() => row(page, 'layout').locator('.options-row-desc').innerText()).toBe('Tablets and computers');
+    await expect(row(page, 'layout')).toHaveAttribute('title', 'Current: Applies on tablets and computers');
+    await row(page, 'layout').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(section(page, 'layout').locator('.sidebar-position-note')).toBeVisible();
+    await expect(section(page, 'layout').locator('.sidebar-position-note')).toHaveText(NOTE);
+    for (const sel of ['#sidebar-position-select', '#show-cal-legend-toggle', '#show-today-progress-toggle']) await expect(page.locator(sel)).toBeHidden();
+    expect(await section(page, 'layout').locator('.customize-toggle:visible, .customize-select-row:visible').count()).toBe(0);
+    await section(page, 'layout').locator('[data-options-back]').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(row(page, 'layout')).toBeVisible();
+    await expect(row(page, 'effects')).toBeVisible();
+  });
+
+  test('phone: hiding the legend and progress on a computer leaves the phone desk unchanged', async ({ page }) => {
+    await open(page, PHONE, { 'work-desk-show-cal-legend': 'false', 'work-desk-show-today-progress': 'false' });
+    await expect(page.locator('#week-strip')).toBeVisible();
+    await expect(page.locator('#progress-bar')).toBeVisible();
+    await openSection(page, 'appearance', 'layout');
+    await expect(section(page, 'layout').locator('.sidebar-position-note')).toBeVisible();
+    await expect(page.locator('#show-cal-legend-toggle')).toBeHidden();
+  });
+
+  test('phone: Appearance Reset still works with the Layout settings hidden', async ({ page }) => {
+    await open(page, PHONE, { 'work-desk-show-cal-legend': 'false', 'work-desk-sidebar-position': 'right' });
+    await openOptions(page, 'appearance');
+    page.once('dialog', (d) => d.accept());
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect.poll(() => page.evaluate(() => [localStorage.getItem('work-desk-show-cal-legend'), localStorage.getItem('work-desk-sidebar-position')])).toEqual(['true', 'left']);
+    await expect(popout(page)).toBeVisible();
+  });
+
+  for (const vp of [PHONE, SMALL_PHONE]) {
+    test(`phone ${vp.width}px: every Options page fits the screen and its dropdowns, Back, and holiday fields are at least 36px tall`, async ({ page }) => {
+      await open(page, vp);
+      for (const tab of ['appearance', 'behavior'] as const) {
+        await openOptions(page, tab);
+        for (const id of SECTIONS[tab]) {
+          await row(page, id).click();
+          const s = section(page, id);
+          await expect(s).toBeVisible();
+          await s.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((x) => x.finished)));
+          const r = await s.evaluate((el) => {
+            const pop = document.getElementById('density-popout')!.getBoundingClientRect();
+            const out: string[] = [], short: string[] = [];
+            for (const e of el.querySelectorAll<HTMLElement>('*')) {
+              const b = e.getBoundingClientRect();
+              if (!b.width || !b.height) continue;
+              if (b.right > pop.right + 1 || b.left < pop.left - 1) out.push(e.id || e.className);
+              if (e.matches('select, .options-back-btn, .custom-holiday-input, .custom-holiday-add-btn') && b.height < 35.5) short.push(`${e.id || e.className} ${b.height}`);
+            }
+            return { out, short, popRight: pop.right, popLeft: pop.left };
+          });
+          expect(r.out, id).toEqual([]);
+          expect(r.short, id).toEqual([]);
+          expect(r.popLeft, id).toBeGreaterThanOrEqual(0);
+          expect(r.popRight, id).toBeLessThanOrEqual(vp.width);
+          await s.locator('[data-options-back]').click();
+          await expect(row(page, id)).toBeVisible();
+        }
+        await closeOptions(page);
+      }
+      expect(await noSideScroll(page)).toBe(true);
+    });
+  }
+
+  test('phone: the taller dropdowns still change their settings, and the popout stays open', async ({ page }) => {
+    await open(page, PHONE);
+    await openSection(page, 'appearance', 'typography');
+    await page.locator('#font-size-select').selectOption('large');
+    await expect(page.locator('html')).toHaveAttribute('data-font-size', 'large');
+    await expect(popout(page)).toBeVisible();
+    await section(page, 'typography').locator('[data-options-back]').click();
+    await row(page, 'card-layout').click();
+    await page.locator('#tag-position-select').selectOption('slim');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('work-desk-tag-position'))).toBe('slim');
+    await expect(popout(page)).toBeVisible();
+    await section(page, 'card-layout').locator('[data-options-back]').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await row(page, 'holidays').click();
+    await page.locator('#custom-holiday-label').fill('Team day');
+    await page.locator('#custom-holiday-date').fill('2026-11-20');
+    await page.locator('#custom-holiday-add-btn').click();
+    await expect(page.locator('#custom-holidays-list')).toContainText('Team day');
+    await expect(popout(page)).toBeVisible();
+    expect(await noSideScroll(page)).toBe(true);
+  });
+
+  test('phone: Quieter weekends dims Saturday and Sunday on the week strip, follows the desk, and updates live', async ({ page }) => {
+    await open(page, PHONE, { 'work-desk-quiet-weekends': 'work' });
+    const sat = weekDay(page, '2026-10-31'), sun = weekDay(page, '2026-11-01'), thu = weekDay(page, '2026-10-29');
+    await expect(sat).toHaveClass(/weekend/);
+    await expect(thu).not.toHaveClass(/weekend/);
+    await expect(page.locator('#week-strip')).toHaveClass(/quiet-weekends/);
+    expect(await opacity(sat)).toBeCloseTo(0.55, 2);
+    expect(await opacity(sun)).toBeCloseTo(0.55, 2);
+    expect(await opacity(thu)).toBe(1);
+
+    await page.locator('#tab-personal').click();
+    await expect(page.locator('#week-strip')).not.toHaveClass(/quiet-weekends/);
+    expect(await opacity(sat)).toBe(1);
+    await page.locator('#tab-work').click();
+    await expect(page.locator('#week-strip')).toHaveClass(/quiet-weekends/);
+
+    await openSection(page, 'behavior', 'general');
+    await expect(section(page, 'general').locator('label[for="quiet-weekends-select"] .customize-toggle-sub')).toHaveText('On the calendar and in Insights');
+    await page.locator('#quiet-weekends-select').selectOption('off');
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#week-strip')).not.toHaveClass(/quiet-weekends/);
+    await page.locator('#quiet-weekends-select').selectOption('both');
+    await expect(page.locator('#week-strip')).toHaveClass(/quiet-weekends/);
+    await closeOptions(page);
+    await page.locator('#tab-personal').click();
+    await expect(page.locator('#week-strip')).toHaveClass(/quiet-weekends/);
+  });
+
+  test('phone: a selected weekend day is not dimmed, and today never is', async ({ page }) => {
+    await open(page, PHONE, { 'work-desk-quiet-weekends': 'both' });
+    const sat = weekDay(page, '2026-10-31');
+    await sat.click();
+    await expect(sat).toHaveClass(/selected/);
+    expect(await opacity(sat)).toBe(1);
+    expect(await opacity(weekDay(page, '2026-11-01'))).toBeCloseTo(0.55, 2);
+    expect(await opacity(weekDay(page, '2026-10-28'))).toBe(1);
+  });
+
+  // ── The 768 / 769 boundary ───────────────────────────────────────────────
+  test('768px gets the note; 769px gets the settings; resizing with Layout open switches between them', async ({ page }) => {
+    await open(page, { width: 769, height: 900 });
+    await openSection(page, 'appearance', 'layout');
+    await expect(page.locator('#sidebar-position-select')).toBeVisible();
+    await expect(page.locator('#show-cal-legend-toggle')).toBeVisible();
+    await expect(section(page, 'layout').locator('.sidebar-position-note')).toBeHidden();
+    await page.setViewportSize({ width: 768, height: 900 });
+    await expect(section(page, 'layout').locator('.sidebar-position-note')).toBeVisible();
+    await expect(page.locator('#sidebar-position-select')).toBeHidden();
+    await expect(page.locator('#show-today-progress-toggle')).toBeHidden();
+    await page.setViewportSize({ width: 769, height: 900 });
+    await expect(page.locator('#sidebar-position-select')).toBeVisible();
+    await expect(section(page, 'layout').locator('.sidebar-position-note')).toBeHidden();
+  });
+
+  // ── Tablets and computers ────────────────────────────────────────────────
+  for (const [name, vp] of [['tablet 820', TABLET], ['laptop 1024', LAPTOP], ['desktop 1440', DESKTOP]] as const) {
+    test(`${name}: Layout keeps all three settings, no note, and the controls keep their desktop size`, async ({ page }) => {
+      await open(page, vp);
+      await openOptions(page, 'appearance');
+      await expect.poll(() => row(page, 'layout').locator('.options-row-desc').innerText()).toBe('Sidebar side, calendar legend, progress');
+      await expect(row(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left');
+      await row(page, 'layout').click();
+      await expect(section(page, 'layout').locator('.sidebar-position-note')).toBeHidden();
+      for (const sel of ['#sidebar-position-select', '#show-cal-legend-toggle', '#show-today-progress-toggle']) await expect(page.locator(sel)).toBeVisible();
+      expect(await height(page, '#sidebar-position-select')).toBeLessThan(34);
+      expect(await height(page, '[data-options-section="layout"] .options-back-btn')).toBeLessThan(34);
+      await section(page, 'layout').locator('[data-options-back]').click();
+      await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+      await row(page, 'holidays').click();
+      expect(await height(page, '#custom-holiday-label')).toBeLessThan(34);
+      expect(await height(page, '#custom-holiday-add-btn')).toBeLessThan(34);
+      expect(await noSideScroll(page)).toBe(true);
+    });
+  }
+
+  test('desktop: the legend and Today\'s Progress switches still hide and restore the sidebar pieces', async ({ page }) => {
+    await open(page, DESKTOP);
+    await expect(page.locator('.sidebar-calendar .cal-legend')).toBeVisible();
+    await expect(page.locator('#sidebar-today-glance')).toBeVisible();
+    await openSection(page, 'appearance', 'layout');
+    await page.locator('#show-cal-legend-toggle').click();
+    await page.locator('#show-today-progress-toggle').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('.sidebar-calendar .cal-legend')).toBeHidden();
+    await expect(page.locator('#sidebar-today-glance')).toBeHidden();
+    await closeOptions(page);
+    await expect(row(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left · No legend · No progress');
+    await openSection(page, 'appearance', 'layout');
+    await page.locator('#show-cal-legend-toggle').click();
+    await page.locator('#show-today-progress-toggle').click();
+    await expect(page.locator('.sidebar-calendar .cal-legend')).toBeVisible();
+    await expect(page.locator('#sidebar-today-glance')).toBeVisible();
+  });
+
+  for (const [name, vp] of [['tablet 820', TABLET], ['desktop 1440', DESKTOP]] as const) {
+    test(`${name}: every sidebar position lays out without sideways scroll, and the desk stays usable`, async ({ page }) => {
+      await open(page, vp);
+      await openSection(page, 'appearance', 'layout');
+      for (const pos of ['right', 'top', 'bottom', 'left']) {
+        await page.locator('#sidebar-position-select').selectOption(pos);
+        await expect(page.locator('html')).toHaveAttribute('data-sidebar-position', pos);
+        await expect(popout(page)).toBeVisible();
+        const geo = await page.evaluate(() => {
+          const s = document.querySelector('.sidebar')!.getBoundingClientRect(), m = document.querySelector('.main')!.getBoundingClientRect();
+          return { sx: s.left, sy: s.top, sw: s.width, sh: s.height, mx: m.left, my: m.top, mw: m.width, mh: m.height };
+        });
+        expect(geo.mw, pos).toBeGreaterThan(vp.width * 0.55);
+        if (pos === 'right') expect(geo.sx, pos).toBeGreaterThan(geo.mx);
+        if (pos === 'left') expect(geo.sx, pos).toBeLessThan(geo.mx);
+        if (pos === 'top') expect(geo.sy + geo.sh, pos).toBeLessThanOrEqual(geo.my + 1);
+        if (pos === 'bottom') expect(geo.sy, pos).toBeGreaterThanOrEqual(geo.my + geo.mh - 1);
+        expect(await noSideScroll(page), pos).toBe(true);
+      }
+      await closeOptions(page);
+      await expect(page.locator('.item-card').first()).toBeVisible();
+    });
+  }
+
+  test('top bar on a computer: the week strip dims weekends with Quieter weekends, and the sidebar calendar setting is unchanged on the left', async ({ page }) => {
+    await open(page, LAPTOP, { 'work-desk-quiet-weekends': 'both', 'work-desk-sidebar-position': 'top' });
+    await expect(page.locator('#week-strip')).toBeVisible();
+    await expect(page.locator('#week-strip')).toHaveClass(/quiet-weekends/);
+    expect(await opacity(weekDay(page, '2026-10-31'))).toBeCloseTo(0.55, 2);
+    expect(await opacity(weekDay(page, '2026-10-29'))).toBe(1);
+    await openSection(page, 'appearance', 'layout');
+    await page.locator('#sidebar-position-select').selectOption('left');
+    await closeOptions(page);
+    await expect(page.locator('.sidebar-calendar')).toHaveClass(/quiet-weekends/);
+  });
+});
+
+test.describe('Wide fonts and Large text 1.23.2', { tag: ['@insights', '@sidebar', '@docs', '@phone'] }, () => {
+  async function open(page: Page, viewport: { width: number; height: number }, font: string, size: string) {
+    await page.setViewportSize(viewport);
+    await page.clock.setFixedTime(new Date('2026-10-28T10:00:00'));
+    await page.addInitScript(([f, s]) => {
+      if (localStorage.getItem('fonts-seeded')) return;
+      localStorage.setItem('fonts-seeded', '1');
+      const days: Record<string, object> = {};
+      let n = 0;
+      const t = (key: string, extra: Record<string, unknown> = {}) => ({ id: `f${++n}`, type: 'task', content: `Task ${n}`, completed: true, boardColumn: 'completed', comments: [], tags: [], createdAt: `${key}T09:00:00`, ...extra });
+      for (let m = 9; m <= 10; m++) for (let d = 1; d <= 27; d++) {
+        const key = `2026-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const g = new Date(`${key}T12:00:00`).getDay();
+        if (g === 0 || g === 6) continue;
+        days[key] = { date: key, items: [
+          t(key, { tags: ['ace'], completed: m === 10 }), t(key, { tags: ['workdesk'] }),
+          t(key, { content: 'Update the ACE Dashboard', recurringTemplateId: 'r1' }),
+          ...(m === 10 && d % 5 === 0 ? [t(key, { completed: false, shelved: true, boardColumn: 'shelved', content: 'Groom the 4 user stories and 1 feature for the Partial LPO VIN items' })] : []),
+          ...(m === 10 && d % 7 === 0 ? [t(key, { completed: false, boardColumn: 'active', carriedFrom: '2026-10-01' })] : []),
+        ] };
+      }
+      days['2026-10-12'].items.push(t('2026-10-12', { completed: false, boardColumn: 'active', content: 'Left open' }));
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-recurring-work', JSON.stringify({ deletedIds: {}, templates: [{ id: 'r1', content: 'Update the ACE Dashboard', rule: 'weekdays', createdAt: '2026-09-01T12:00:00.000Z', lastInjectedDate: '2026-10-27' }] }));
+      localStorage.setItem('work-desk-insights-anchor', '2026-10-28');
+      localStorage.setItem('work-desk-font-family', f);
+      localStorage.setItem('work-desk-font-size', s);
+    }, [font, size]);
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    await page.evaluate(() => document.fonts.ready);
+  }
+  const openInsights = async (page: Page, period: 'Week' | 'Month' | 'Year') => {
+    await page.locator('#tab-insights').evaluate((el: HTMLElement) => el.click());
+    await page.locator('.period-tab', { hasText: period }).click();
+    await expect(page.locator('.insights-panel .productivity-metrics-card')).toBeVisible();
+  };
+  // Anything inside `sel` whose box pokes past the card's left or right edge
+  const spills = (page: Page, sel: string) => page.locator(sel).first().evaluate((card) => {
+    const box = card.getBoundingClientRect();
+    return [...card.querySelectorAll('*')].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && (r.left < box.left - 0.5 || r.right > box.right + 0.5);
+    }).map((el) => el.textContent!.trim().slice(0, 24));
+  });
+
+  test('Year heatmap on a phone: every month label is whole and none run into the next', async ({ page }) => {
+    await open(page, { width: 360, height: 780 }, 'jetbrains', 'large');
+    await openInsights(page, 'Year');
+    const labels = await page.locator('.heatmap-month-label').evaluateAll((els) => els.filter((e) => e.textContent).map((e) => {
+      const range = document.createRange();
+      range.selectNodeContents(e);
+      const r = range.getBoundingClientRect();
+      return { text: e.textContent, left: r.left, right: r.right };
+    }));
+    expect(labels.map((l) => l.text)).toEqual(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+    for (let i = 1; i < labels.length; i++) expect(labels[i].left).toBeGreaterThanOrEqual(labels[i - 1].right);
+    const wrap = (await page.locator('.heatmap-wrap').boundingBox())!;
+    expect(labels[labels.length - 1].right).toBeLessThanOrEqual(wrap.x + wrap.width + 0.5);
+    const cell = (await page.locator('.heatmap-row .heatmap-cell').nth(20).boundingBox())!;
+    expect(cell.width).toBeGreaterThan(2);
+  });
+
+  test('Month-over-Month on a tablet with JetBrains Mono, Large: the change stays inside the card', async ({ page }) => {
+    await open(page, { width: 820, height: 1180 }, 'jetbrains', 'large');
+    await openInsights(page, 'Month');
+    expect(await spills(page, '.comparison-card')).toEqual([]);
+    const row = page.locator('.comparison-row').first();
+    const label = (await row.locator('.comp-label').boundingBox())!;
+    const current = (await row.locator('.comp-current').boundingBox())!;
+    expect(current.y).toBeGreaterThanOrEqual(label.y + label.height - 1);
+  });
+
+  test('phone, JetBrains Mono, Large: tag counts wrap inside Tasks by Tag; recurring and shelved names get two lines', async ({ page }) => {
+    await open(page, { width: 360, height: 780 }, 'jetbrains', 'large');
+    await openInsights(page, 'Month');
+    for (const card of ['.tags-card', '.recurring-card', '.shelved-card']) expect(await spills(page, card), card).toEqual([]);
+    for (const sel of ['.recurring-name', '.shelved-card .insight-task-text']) {
+      const lines = await page.locator(sel).first().evaluate((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)));
+      expect(lines, sel).toBe(2);
+    }
+  });
+
+  test('sidebar at 1920 with JetBrains Mono, Large: Work, Personal and Projects all fit', async ({ page }) => {
+    await open(page, { width: 1920, height: 1080 }, 'jetbrains', 'large');
+    expect(await spills(page, '.sidebar-tabs')).toEqual([]);
+    for (const id of ['#tab-work', '#tab-personal', '#tab-projects']) {
+      const fits = await page.locator(id).evaluate((el) => el.scrollWidth <= el.clientWidth);
+      expect(fits, id).toBe(true);
+    }
+    await page.locator('#tab-projects').click();
+    await expect(page.locator('#tab-projects')).toHaveClass(/active/);
+  });
+
+  test('calendar at Large text: the left-open badge does not cover the date', async ({ page }) => {
+    await open(page, { width: 1366, height: 900 }, 'nunito', 'large');
+    const day = page.locator('#sidebar-calendar .cal-day', { has: page.locator('.cal-day-badge') }).first();
+    await expect(day).toBeVisible();
+    const [badge, date] = await day.evaluate((el) => {
+      const b = el.querySelector('.cal-day-badge')!.getBoundingClientRect();
+      const node = [...el.childNodes].find((c) => c.nodeType === Node.TEXT_NODE && c.textContent!.trim())!;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const r = range.getBoundingClientRect();
+      return [{ l: b.left, r: b.right, t: b.top, b: b.bottom }, { l: r.left, r: r.right, t: r.top, b: r.bottom }];
+    });
+    const overlapW = Math.min(badge.r, date.r) - Math.max(badge.l, date.l);
+    const overlapH = Math.min(badge.b, date.b) - Math.max(badge.t, date.t);
+    expect(overlapW <= 1 || overlapH <= 2).toBe(true);
+  });
+
+  test('Help index: whole labels on a phone with JetBrains Mono, Large; four across on desktop', async ({ page }) => {
+    await open(page, { width: 360, height: 780 }, 'jetbrains', 'large');
+    await page.evaluate(() => (window as unknown as { openHelpModal: () => void }).openHelpModal());
+    const buttons = page.locator('#help-index button:not(.hidden)');
+    await expect(buttons.first()).toBeVisible();
+    expect(await buttons.evaluateAll((els) => els.filter((b) => b.scrollWidth > b.clientWidth).map((b) => b.textContent))).toEqual([]);
+    await buttons.filter({ hasText: 'Navigation' }).click();
+    await expect(page.locator('#help-modal')).toBeVisible();
+
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await page.evaluate(() => localStorage.setItem('work-desk-font-size', 'default'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.evaluate(() => (window as unknown as { openHelpModal: () => void }).openHelpModal());
+    const tops = await page.locator('#help-index button:not(.hidden)').evaluateAll((els) => els.slice(0, 5).map((b) => Math.round(b.getBoundingClientRect().top)));
+    expect(new Set(tops.slice(0, 4)).size).toBe(1);
+    expect(tops[4]).toBeGreaterThan(tops[0]);
+  });
+});
+
+test.describe('Most productive day 1.23.1', { tag: ['@insights'] }, () => {
+  test('one fully finished Saturday does not outrank a busy weekday in Month or Year view', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-27T10:00:00'));
+    await page.addInitScript(() => {
+      const days: Record<string, object> = {};
+      let n = 0;
+      const add = (key: string, tasks: number, done: number) => {
+        const items = [];
+        for (let i = 0; i < tasks; i++) {
+          n++;
+          items.push({ id: `p${n}`, type: 'task', content: `Task ${n}`, completed: i < done, boardColumn: i < done ? 'completed' : 'active', comments: [], createdAt: `${key}T09:00:00` });
+        }
+        days[key] = { date: key, items };
+      };
+      for (const d of [5, 7, 8, 9, 12, 14, 15, 16]) add(`2026-10-${String(d).padStart(2, '0')}`, 6, 5);
+      for (const d of [6, 13]) add(`2026-10-${String(d).padStart(2, '0')}`, 9, 8);
+      add('2026-10-10', 1, 1);
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days, deletedIds: {} }));
+      localStorage.setItem('work-desk-insights-period', 'month');
+      localStorage.setItem('work-desk-insights-anchor', '2026-10-27');
+    });
+    await page.goto('/work-desk.html');
+    await dismissAuthModal(page);
+    await page.locator('#tab-insights').click();
+    const best = page.locator('.productivity-metrics-card .metric-item', { hasText: 'Most Productive Day' }).locator('.metric-value');
+    await expect(best).toHaveText('Tuesday');
+    await page.locator('.period-tab', { hasText: 'Year' }).click();
+    await expect(page.locator('.insights-subtitle')).toHaveText('2026');
+    await expect(best).toHaveText('Tuesday');
+  });
 });
 
 test.describe('Insights Recurring, Carry Chains, Tag Trend 1.23.0', { tag: ['@insights', '@recurring'] }, () => {
@@ -8099,15 +8669,13 @@ test.describe('Insights Recurring, Carry Chains, Tag Trend 1.23.0', { tag: ['@in
     await expect(page.locator('.trend-card .tag-breakdown-row')).toHaveCount(9);
   });
 
-  test('wide: Recurring on the left, Carry Chains and Tag Trend on the right; phone: one column after the older cards', async ({ page }) => {
+  test('wide: Recurring, Carry Chains and Tag Trend sit in the two columns; phone: one column after the older cards', async ({ page }) => {
     await openInsights(page, {}, { width: 1920, height: 1080 });
     const x = (cls: string) => page.locator(`.insights-panel .${cls}`).evaluate((e) => Math.round(e.getBoundingClientRect().left));
     const left = await x('productivity-metrics-card');
     const right = await x('comparison-card');
     expect(right).toBeGreaterThan(left);
-    expect(await x('recurring-card')).toBe(left);
-    expect(await x('chains-card')).toBe(right);
-    expect(await x('trend-card')).toBe(right);
+    for (const card of ['recurring-card', 'chains-card', 'trend-card']) expect([left, right]).toContain(await x(card));
 
     await page.setViewportSize({ width: 390, height: 844 });
     const order = ['lingering-card', 'recurring-card', 'chains-card', 'trend-card'];
@@ -8691,6 +9259,32 @@ test.describe('Phone layout fixes 1.23.0', { tag: ['@phone', '@projects', '@side
     await expect(page.locator('#tab-projects')).toHaveClass(/active/);
     await page.locator('#tab-work').click();
     await expect(page.locator('#tab-work')).toHaveClass(/active/);
+  });
+
+  test.describe('on a touch screen 1.23.1', () => {
+    test.use({ hasTouch: true, isMobile: true });
+
+    test('the search box spans the sidebar, and the scope chip floats inside it and still toggles', async ({ page }) => {
+      await openDesk(page);
+      const tabs = (await page.locator('.sidebar-tabs').boundingBox())!;
+      const input = page.locator('#search-input');
+      const box = (await input.boundingBox())!;
+      expect(Math.abs(box.x - tabs.x)).toBeLessThan(1);
+      expect(Math.abs(box.x + box.width - (tabs.x + tabs.width))).toBeLessThan(1);
+
+      await input.tap();
+      await input.fill('invite');
+      const chip = page.locator('#search-scope-chip');
+      await expect(chip).toHaveCSS('opacity', '1');
+      const chipBox = (await chip.boundingBox())!;
+      expect(chipBox.x).toBeGreaterThan(box.x);
+      expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(box.x + box.width);
+      expect(Math.abs(chipBox.y + chipBox.height / 2 - (box.y + box.height / 2))).toBeLessThan(2);
+      await chip.tap();
+      await expect(chip).toHaveClass(/active/);
+      await expect(page.locator('#search-wrap')).toHaveClass(/scope-both/);
+      expect(Math.abs((await input.boundingBox())!.width - box.width)).toBeLessThan(1);
+    });
   });
 
   test('on a tablet the tabs stay on one row', async ({ page }) => {
