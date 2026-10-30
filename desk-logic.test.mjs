@@ -1364,17 +1364,171 @@ describe('1.22.1 Insights two columns on wide screens', () => {
   it('cards go into a left and right column; the columns only switch on when the Insights area is 1500px or wider', () => {
     const src = fnSource('renderInsights');
     assert.match(src, /cols\.className = 'insights-cols';/);
-    for (const card of ['metricsCard', 'carryCard']) assert.match(src, new RegExp(`leftCol\\.appendChild\\(${card}\\)`));
-    assert.match(src, /rightCol\.appendChild\(compCard\)/);
-    assert.match(src, /\[renderTagBreakdownCard\(range\), rightCol\],\s*\[renderLingeringCard\(todayKey\(\)\), leftCol\],\s*\[renderShelvedCard\(range, todayKey\(\)\), rightCol\],/);
     assert.match(html, /#insights-view \{ container: insights \/ inline-size; \}/);
     assert.match(html, /\.insights-cols, \.insights-col \{ display: contents; \}/);
     assert.match(html, /@container insights \(min-width: 1500px\) \{\s*\.insights-panel \{ max-width: 2000px; \}\s*\.insights-cols \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
   });
+});
 
-  it('in one column, CSS order puts the cards back in the classic sequence', () => {
-    const order = ['productivity-metrics-card', 'comparison-card', 'carryover-card', 'tags-card', 'lingering-card', 'shelved-card'];
-    order.forEach((cls, i) => assert.match(html, new RegExp(`\\.insights-panel \\.${cls} \\{ order: ${i + 1}; \\}`), cls));
+describe('1.23.1 Phone Insights spacing', () => {
+  it('Year-over-Year rows stack on a narrow card: label and change, then this period and last', () => {
+    const block = html.slice(html.indexOf('/* Narrow card: label and change on top'));
+    assert.match(block, /grid-template-areas: "label label change" "current previous previous";/);
+    assert.match(block, /\.comp-previous \{ grid-area: previous; align-self: center; \}/);
+    assert.match(block, /\.comparison-row > :last-child \{ grid-area: change; justify-self: end; \}/);
+  });
+
+  it('Streak gaps live in CSS, and the year strip drops its 1px gaps on a narrow card', () => {
+    const src = fnSource('renderInsights');
+    assert.doesNotMatch(src, /heatmap\.style\.gap|labels\.style\.gap/);
+    assert.match(src, /heatmap\.classList\.add\(`period-\$\{state\.insightsPeriod\}`\);/);
+    assert.match(html, /\.streak-card \{ container: streak \/ inline-size; \}/);
+    assert.match(html, /@container streak \(max-width: 1100px\) \{\s*\.streak-heatmap\.period-year \{ gap: 0; \}/);
+  });
+
+  it('year labels get one column per month, as wide as its days', () => {
+    const src = fnSource('renderInsights');
+    assert.match(src, /labels\.style\.gridTemplateColumns = months\.map\(\(m\) => `minmax\(0, \$\{m\.days\}fr\)`\)\.join\(' '\);/);
+  });
+});
+
+describe('1.23.3 Phone Options: layout, week strip weekends, tap targets', () => {
+  const layout = html.slice(html.indexOf('data-options-section="layout"'), html.indexOf('data-options-section="effects"'));
+
+  it('the Right layout only applies from 769px up, like Top and Bottom', () => {
+    assert.match(html, /@media \(min-width: 769px\) \{\s*\[data-sidebar-position="right"\] \.app \{ flex-direction: row-reverse; \}/);
+    assert.doesNotMatch(html, /\n {4}\[data-sidebar-position="right"\] \.app \{/);
+  });
+
+  it('phones see one note in Layout; all three settings are tablet and computer only', () => {
+    assert.match(html, /@media \(max-width: 768px\) \{ \.phone-hide \{ display: none !important; \} \}/);
+    assert.match(html, /@media \(min-width: 769px\) \{ \.phone-only \{ display: none !important; \} \}/);
+    assert.match(layout, /<p class="sidebar-position-note phone-only">Layout settings apply on tablets and computers\. Phones always use the top bar, and the calendar legend and Today's Progress card only appear in the sidebar there\.<\/p>\s*<div class="customize-select-row phone-hide">\s*<label for="sidebar-position-select">/);
+    assert.match(layout, /<label class="customize-toggle phone-hide" title="The key under the sidebar calendar">\s*<input id="show-cal-legend-toggle"/);
+    assert.match(layout, /<label class="customize-toggle phone-hide" title="The progress card in the sidebar">\s*<input id="show-today-progress-toggle"/);
+    assert.equal((layout.match(/phone-hide/g) || []).length, 3);
+    assert.ok(html.includes('<span class="options-row-desc"><span class="phone-hide">Sidebar side, calendar legend, progress</span><span class="phone-only">Tablets and computers</span></span>'));
+  });
+
+  it('the Layout tooltip says it applies on tablets and computers on a phone', () => {
+    const summary = new Function(`const capitalize = (s) => s; ${fnSource('optionsSummaryText')} return optionsSummaryText;`)();
+    assert.equal(summary('layout', { sidebarPosition: 'right', showCalLegend: true, showTodayProgress: true }), 'Sidebar right');
+    assert.equal(summary('layout', { sidebarPosition: 'top', showCalLegend: false, showTodayProgress: false }), 'Sidebar top · No legend · No progress');
+    assert.equal(summary('layout', { sidebarPosition: 'right', showCalLegend: false, showTodayProgress: false, phone: true }), 'Applies on tablets and computers');
+    assert.match(fnSource('readOptionsSummaryPrefs'), /phone: window\.matchMedia\('\(max-width: 768px\)'\)\.matches,/);
+  });
+
+  it('the week strip marks weekends and dims them when Quieter weekends covers the desk', () => {
+    const strip = fnSource('renderWeekStrip');
+    assert.match(strip, /if \(cur\.getDay\(\) % 6 === 0\) btn\.classList\.add\('weekend'\);/);
+    assert.match(strip, /host\.classList\.toggle\('quiet-weekends', quietWeekendsActive\(state\.quietWeekends, state\.listContext\)\);/);
+    assert.match(fnSource('renderCalendar'), /els\.weekStrip\?\.classList\.toggle\('quiet-weekends', quietWeekendsActive\(state\.quietWeekends, state\.listContext\)\);/);
+    assert.match(html, /\.week-strip\.quiet-weekends \.week-day\.weekend:not\(\.selected\):not\(\.today\) \{ background: transparent; opacity: 0\.55; \}/);
+  });
+
+  it('Options controls are at least 36px tall on phones only', () => {
+    const block = html.match(/@media \(max-width: 768px\) \{\s*\.density-popout select, \.custom-holiday-input \{ min-height: 36px; \}\s*\.options-back-btn, \.custom-holiday-add-btn \{ min-height: 36px; padding-inline: 10px; \}\s*\.current-theme-btn \{ min-height: 32px; \}\s*\}/);
+    assert.ok(block);
+  });
+});
+
+describe('1.23.2 Wide fonts and Large text', () => {
+  it('year heatmap: month labels run over the following weeks, and narrow cards use 1px gaps', () => {
+    assert.match(html, /\.heatmap-month-label \{[^}]*white-space: nowrap;\s*overflow: visible;/);
+    assert.match(html, /\.heatmap-wrap \{[^}]*container: heatmap \/ inline-size;/);
+    assert.match(html, /@container heatmap \(max-width: 700px\) \{\s*\.heatmap-months, \.heatmap-row \{ gap: 1px; \}/);
+  });
+
+  it('comparison rows stack by card width, not screen width, and last period can wrap', () => {
+    assert.match(html, /\.comparison-card \{ container: comparison \/ inline-size; \}/);
+    assert.match(html, /grid-template-columns: 140px minmax\(60px, auto\) minmax\(0, 1fr\) auto;/);
+    assert.match(html, /@container comparison \(max-width: 560px\) \{\s*\.comparison-row \{/);
+    assert.doesNotMatch(html, /\.comp-previous \{\s*font-size: 0\.78rem;\s*color: var\(--text-muted\);\s*white-space: nowrap;/);
+  });
+
+  it('phones: tag counts wrap; shelved, lingering, chain and recurring names get two lines before the ellipsis', () => {
+    const phone = html.slice(html.indexOf('.tag-breakdown { grid-template-columns: 90px minmax(0, 1fr); }'));
+    assert.match(phone, /\.tag-breakdown-counts \{ grid-column: 1 \/ -1; margin-top: -4px; white-space: normal; \}/);
+    assert.match(phone, /\.insight-task-text, \.recurring-name \{\s*white-space: normal;\s*display: -webkit-box;\s*-webkit-box-orient: vertical;\s*-webkit-line-clamp: 2;/);
+  });
+
+  it('sidebar desk tabs shrink with the sidebar; the calendar badge sits up in the corner', () => {
+    assert.match(html, /\.context-tabs \{ container: context-tabs \/ inline-size; \}\s*\.context-tabs \.app-tab \{\s*padding: 6px 6px;\s*font-size: clamp\(0\.62rem, 6cqi, 0\.76rem\);/);
+    assert.match(html, /\.cal-day-badge \{\s*position: absolute;\s*top: -4px;\s*right: -3px;/);
+  });
+
+  it('Help index: up to 4 per row, fewer when the labels need the room', () => {
+    assert.match(html, /\.help-index \{\s*display: grid;\s*font-size: 0\.74rem;\s*grid-template-columns: repeat\(auto-fill, minmax\(max\(8\.6em, calc\(\(100% - 12px\) \/ 4\)\), 1fr\)\);/);
+    assert.doesNotMatch(html, /@media \(max-width: 480px\) \{ \.help-index/);
+  });
+});
+
+describe('1.23.1 Most productive day: average completions per day, not completion rate', () => {
+  const { mostProductiveWeekday } = appFns(['mostProductiveWeekday']);
+  const day = (dayKey, tasks, completed) => ({ dayKey, tasks, completed });
+  // Oct 2026: 5 Mon, 6 Tue, 7 Wed, 8 Thu, 9 Fri, 10 Sat
+  const week = [day('2026-10-05', 8, 7), day('2026-10-06', 10, 10), day('2026-10-07', 9, 8), day('2026-10-08', 9, 9), day('2026-10-09', 6, 6)];
+
+  it('one fully finished Saturday no longer beats a busy weekday', () => {
+    assert.equal(mostProductiveWeekday([...week, day('2026-10-10', 1, 1)]), 'Tuesday');
+  });
+
+  it('averages over the days of that weekday that had tasks; empty days do not count', () => {
+    const days = [day('2026-10-05', 10, 10), day('2026-10-12', 0, 0), day('2026-10-06', 12, 6), day('2026-10-13', 12, 6)];
+    assert.equal(mostProductiveWeekday(days), 'Monday');
+  });
+
+  it('a tie on average goes to the weekday with more completions overall', () => {
+    const days = [day('2026-10-05', 5, 4), day('2026-10-06', 5, 4), day('2026-10-13', 5, 4)];
+    assert.equal(mostProductiveWeekday(days), 'Tuesday');
+  });
+
+  it('N/A when nothing was completed or there were no tasks', () => {
+    assert.equal(mostProductiveWeekday([]), 'N/A');
+    assert.equal(mostProductiveWeekday([day('2026-10-05', 3, 0)]), 'N/A');
+  });
+
+  it('renderInsights uses it for the Most Productive Day tile', () => {
+    assert.match(fnSource('renderInsights'), /const bestDay = mostProductiveWeekday\(daily\);/);
+  });
+});
+
+describe('1.23.1 Insights layout: tiles on top, Streak and breakdown as column cards', () => {
+  const src = () => fnSource('renderInsights');
+
+  it('the stat tiles follow the header, before the columns', () => {
+    const s = src();
+    const tiles = s.indexOf('panel.appendChild(statGrid)');
+    assert.ok(tiles > s.indexOf('panel.appendChild(header)'));
+    assert.ok(tiles < s.indexOf('panel.appendChild(cols)'));
+  });
+
+  it('every summary card gets a reading-order slot: Summary, comparison, Streak, breakdown, Carry-Over, then the rest', () => {
+    const s = src();
+    assert.match(s, /const COLUMN_SLOTS = \{ metrics: 0, comparison: 1, streak: 2, chart: 3, carryover: 4, more: 5 \};/);
+    for (const [card, slot] of [['metricsCard', 'metrics'], ['compCard', 'comparison'], ['streakCard', 'streak'], ['chartSection', 'chart'], ['carryCard', 'carryover']]) {
+      assert.match(s, new RegExp(`addColumnCard\\(${card}, COLUMN_SLOTS\\.${slot}\\)`), card);
+    }
+    assert.match(s, /renderTagBreakdownCard\(range\),\s*renderLingeringCard\(todayKey\(\)\),\s*renderShelvedCard\(range, todayKey\(\)\),\s*renderRecurringCard\(range, todayKey\(\)\),\s*renderCarryChainsCard\(range, state\.insightsPeriod\),\s*renderTagTrendCard\(state\.insightsPeriod, state\.insightsAnchor, todayKey\(\)\),\s*\]\.forEach\(\(card, i\) => \{\s*if \(card\) addColumnCard\(card, COLUMN_SLOTS\.more \+ i\);/);
+  });
+
+  it('Day-by-day detail and the year heatmap stay full width after the columns', () => {
+    const s = src();
+    assert.match(s, /panel\.appendChild\(renderHeatmap\(range\.startKey, range\.endKey, daily\)\)/);
+    assert.match(s, /panel\.appendChild\(tableSection\)/);
+    assert.doesNotMatch(s, /panel\.appendChild\((streakCard|chartSection)\)/);
+  });
+
+  it('balancing sorts by slot and puts each card in the shorter column; one column keeps reading order', () => {
+    const b = fnSource('balanceInsightColumns');
+    assert.match(b, /\.sort\(\(a, b\) => a\.dataset\.colOrder - b\.dataset\.colOrder\)/);
+    assert.match(b, /if \(getComputedStyle\(cols\)\.display !== 'grid'\) \{\s*left\.append\(\.\.\.cards\);/);
+    assert.match(b, /\(right\.offsetHeight < left\.offsetHeight \? right : left\)\.appendChild\(card\)/);
+  });
+
+  it('no CSS order rules are left to fight the reading order', () => {
+    assert.doesNotMatch(html, /\.insights-panel \.[a-z-]+-card \{ order: \d+; \}/);
+    assert.doesNotMatch(html, /\.insights-panel > :not\(\.insights-header\)/);
   });
 });
 
@@ -1575,18 +1729,101 @@ describe('1.23.0 Tag Trend', () => {
 });
 
 describe('1.23.0 Insights cards wiring', () => {
-  it('Recurring goes left; Carry Chains and Tag Trend go right; one column orders them after Shelved', () => {
-    const src = fnSource('renderInsights');
-    assert.match(src, /\[renderShelvedCard\(range, todayKey\(\)\), rightCol\],\s*\[renderRecurringCard\(range, todayKey\(\)\), leftCol\],\s*\[renderCarryChainsCard\(range, state\.insightsPeriod\), rightCol\],\s*\[renderTagTrendCard\(state\.insightsPeriod, state\.insightsAnchor, todayKey\(\)\), rightCol\],/);
-    ['recurring-card', 'chains-card', 'trend-card'].forEach((cls, i) => assert.match(html, new RegExp(`\\.insights-panel \\.${cls} \\{ order: ${i + 7}; \\}`), cls));
-    assert.match(html, /\.insights-panel > :not\(\.insights-header\):not\(\.insights-cols\) \{ order: 10; \}/);
-  });
-
   it('Shelve and Open Recurring tasks are handled by the panel click delegate', () => {
     const src = fnSource('renderInsights');
     assert.match(src, /el\.dataset\.shelveItem\) \{\s*moveTaskToColumn\(el\.dataset\.shelveItem, 'shelved'\);/);
     assert.match(src, /el\.dataset\.openRecurring !== undefined\) \{\s*openRecurringModal\(\);/);
     assert.match(src, /\[data-shelve-item\], \[data-open-recurring\]/);
+  });
+});
+
+describe('1.23.0 edit stamps: the newer copy wins a sync', () => {
+  const { stampEditedItems, itemEditPrints, newerEdit } = appFns(['stampEditedItems', 'itemEditPrints', 'newerEdit'], { stripHtmlTags: stripTags });
+  const T0 = '2026-10-28T13:00:00.000Z';
+  const T1 = '2026-10-28T13:10:00.000Z';
+  const NOW = '2026-10-28T14:00:00.000Z';
+  const desk = (...items) => ({ days: { '2026-10-28': { date: '2026-10-28', items } }, deletedIds: {} });
+  const only = (data) => Object.values(data.days).flatMap(d => d.items);
+
+  it('saving stamps only the tasks that really changed', () => {
+    const before = desk(task({ id: 'a', updatedAt: T0 }), task({ id: 'b', boardColumn: 'new', updatedAt: T0 }));
+    const after = structuredClone(before);
+    after.days['2026-10-28'].items[1].boardColumn = 'active';
+    after.days['2026-10-28'].items.push(task({ id: 'c' }));
+    stampEditedItems(itemEditPrints(before), after, NOW);
+    assert.deepEqual(only(after).map(i => i.updatedAt), [T0, NOW, NOW]);
+  });
+
+  it('carrying forward, key order, and filled-in defaults are not edits', () => {
+    const before = desk({ id: 'a', type: 'task', content: 'X', createdAt: T0, comments: [] });
+    const after = desk({ boardColumn: 'active', shelved: false, completed: false, createdAt: T0, content: 'X', type: 'task', id: 'a',
+      carriedFrom: '2026-10-27', carryCount: 2, carryStart: '2026-10-26' });
+    stampEditedItems(itemEditPrints(before), after, NOW);
+    assert.equal(only(after)[0].updatedAt, undefined);
+  });
+
+  it('with nothing to compare against (unreadable storage) nothing is stamped', () => {
+    const data = desk(task({ id: 'a' }));
+    stampEditedItems(null, data, NOW);
+    assert.equal(only(data)[0].updatedAt, undefined);
+  });
+
+  it('newerEdit: later wins, stamped beats unstamped, equal or both missing is a tie', () => {
+    assert.equal(newerEdit({ updatedAt: T0 }, { updatedAt: T1 }), 1);
+    assert.equal(newerEdit({ updatedAt: T1 }, { updatedAt: T0 }), -1);
+    assert.equal(newerEdit({}, { updatedAt: T0 }), 1);
+    assert.equal(newerEdit({ updatedAt: T0 }, { updatedAt: T0 }), 0);
+    assert.equal(newerEdit({}, {}), 0);
+  });
+
+  it('sync: the cloud copy moved to Active beats this device\'s older New copy (the reported bug)', () => {
+    const local = desk(task({ id: 'a', boardColumn: 'new', updatedAt: T0 }));
+    const remote = desk(task({ id: 'a', boardColumn: 'active', updatedAt: T1 }));
+    assert.equal(only(mergeDaysData(local, remote))[0].boardColumn, 'active');
+    assert.equal(only(mergeDaysData(remote, local))[0].boardColumn, 'active', 'same answer on either device');
+  });
+
+  it('sync: a newer reopen beats an older completed copy, and comments and tags from both survive', () => {
+    const local = desk(task({ id: 'a', completed: true, updatedAt: T0, tags: ['ace'], comments: [{ id: 'c1', content: 'x', createdAt: T0 }] }));
+    const remote = desk(task({ id: 'a', completed: false, updatedAt: T1, tags: ['ids'] }));
+    const [item] = only(mergeDaysData(local, remote));
+    assert.equal(item.completed, false);
+    assert.equal(item.updatedAt, T1);
+    assert.deepEqual([...item.tags].sort(), ['ace', 'ids']);
+    assert.equal(item.comments.length, 1);
+  });
+
+  it('sync: copies from before 1.23.0 keep the old rules (completed beats open; a tie keeps this device\'s copy)', () => {
+    assert.equal(only(mergeDaysData(desk(task({ id: 'a' })), desk(task({ id: 'a', completed: true }))))[0].completed, true);
+    assert.equal(only(mergeDaysData(desk(task({ id: 'a', boardColumn: 'new' })), desk(task({ id: 'a' }))))[0].boardColumn, 'new');
+  });
+
+  it('sync: a newer copy on another day takes that day', () => {
+    const local = desk(task({ id: 'a', updatedAt: T0 }));
+    const remote = { days: { '2026-10-20': { date: '2026-10-20', items: [task({ id: 'a', content: 'Moved back', updatedAt: T1 })] } }, deletedIds: {} };
+    const merged = mergeDaysData(local, remote);
+    assert.deepEqual(Object.keys(merged.days), ['2026-10-20']);
+  });
+
+  it('Import All (merge) uses the same rule', () => {
+    const merged = deskSandbox().mergeImportInto(desk(task({ id: 'a', boardColumn: 'new', updatedAt: T0 })), desk(task({ id: 'a', boardColumn: 'active', updatedAt: T1 })));
+    assert.equal(only(merged)[0].boardColumn, 'active');
+  });
+
+  it('moving a task to another day stamps it; normalizeItem keeps the stamp and drops junk', () => {
+    const sandbox = deskSandbox({ days: { '2026-08-12': { date: '2026-08-12', items: [task({ id: 'x', updatedAt: T0 })] } } });
+    sandbox.moveItem('x', '2026-08-14');
+    assert.ok(sandbox.state.data.days['2026-08-14'].items[0].updatedAt > T0);
+    assert.equal(normalizeItem(task({ id: 'a', updatedAt: T1 })).updatedAt, T1);
+    assert.equal('updatedAt' in normalizeItem(task({ id: 'a', updatedAt: 'soon' })), false);
+  });
+
+  it('saveData stamps against the stored copy before writing; a desk merge import writes first so nothing is stamped', () => {
+    const save = fnSource('saveData');
+    assert.match(save, /stampEditedItems\(editPrintsOfStored\(key, readStorage\(key\)\), state\.data\);\s*const raw = JSON\.stringify\(state\.data\);\s*writeStorage\(key, raw\);/);
+    assert.match(mainScript, /state\.data = mergeImportData\(state\.pendingImport\);\s*\/\/[^\n]*\n\s*writeStorage\(getStorageKey\(\), JSON\.stringify\(state\.data\)\);/);
+    assert.equal((mainScript.match(/const edit = newerEdit\(a, b\);/g) || []).length, 2, 'sync and import item merges');
+    assert.equal((mainScript.match(/const edit = newerEdit\(a\.item, b\.item\);/g) || []).length, 2, 'sync and import placements');
   });
 });
 
@@ -1598,6 +1835,13 @@ describe('1.23.0 phone and add-box fixes', () => {
     assert.match(src, /if \(val\) \{[\s\S]{0,160}input\.value = '';\s*addItem\(val,/);
     assert.match(fnSource('captureCommentDraft'), /draft\.inline = \{ column: state\.addingInColumn, value: input\.value \}/,
       'drafts still keep typed text across other redraws');
+  });
+
+  it('1.23.1: touch screens leave the search scope chip absolute, so the search box keeps its full width', () => {
+    assert.match(css(), /\.search-scope-chip \{\s*position: absolute;/);
+    const touchPosition = css().match(/\.tag-chip-remove, \.card-overflow-btn[^{]*\{ position: relative; \}/);
+    assert.ok(touchPosition, 'touch hit-area position rule');
+    assert.doesNotMatch(touchPosition[0], /search-scope-chip/);
   });
 
   it('project note actions wrap and labels never break', () => {
@@ -5061,7 +5305,7 @@ describe('v1.18.2 Options list descriptions, Back, and spacing', () => {
   const popout = html.slice(html.indexOf('id="density-popout"'), html.indexOf('<!-- Behavior Tab Pane -->') + 20000);
   const DESC = {
     'card-layout': 'Density, complete button, tag spot', typography: 'Text size and font',
-    layout: 'Sidebar side, calendar legend, progress', effects: 'Card glow, gradient header',
+    layout: '<span class="phone-hide">Sidebar side, calendar legend, progress</span><span class="phone-only">Tablets and computers</span>', effects: 'Card glow, gradient header',
     background: 'Board pattern and strength', tags: 'Tag colors',
     general: 'Start desk, launch view, week start, weekends, full screen', tasks: 'Delete, carry-forward, collapse, confetti',
     projects: 'Long project notes', insights: 'Streak rules', holidays: 'US and custom holidays',
