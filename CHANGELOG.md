@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.23.3] — 2026-10-30
+
+### Fixed
+
+- **Sidebar on the right broke phones.** The `row-reverse` rules for Sidebar position *Right* weren't limited to wider screens like Top and Bottom are, so on a phone the sidebar (the top bar there) took the full width and the desk was squeezed into a 28px column partly off screen. The setting syncs with preferences, so choosing Right on a computer did this to every phone. The Right rules now apply from 769px up.
+- **Layout settings hidden on phones.** Sidebar position, Calendar legend, and Today's Progress only change the sidebar, which phones don't show. Under 769px, Options → Appearance → Layout now shows one note instead ("Layout settings apply on tablets and computers. Phones always use the top bar, and the calendar legend and Today's Progress card only appear in the sidebar there."), so changing them on a phone can't quietly rearrange a computer through sync. The Layout row reads *Tablets and computers* on phones. Tablets and computers keep all three settings.
+- **Quieter weekends on the week strip.** The setting only dimmed the sidebar calendar, so it did nothing on phones. Saturday and Sunday on the week strip (phones, and the top or bottom bar) now dim too, except the selected day and today.- **Tap targets in Options on phones.** Dropdowns, ‹ Back, and the custom holiday label, date, and Add went from about 25px to 36px tall (the current-theme link to 32px). Tablets and computers are unchanged.
+
+---
+
 ## [1.23.2] — 2026-10-28
 
 ### Fixed
