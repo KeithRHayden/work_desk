@@ -242,7 +242,7 @@ work-desk/
 | Bold / Italic / Underline | `Ctrl/Cmd + B` / `I` / `U` |
 | Reorder a project, note, or project task | `Alt + ↑` / `Alt + ↓` |
 | Move around a menu (card ⋮, recurring ⋮, account, project More) | `↑` / `↓` (`Home` / `End` for first / last) |
-| Cancel / close a menu, or leave the add box | `Escape` |
+| Cancel / close a menu, or leave the add box (never closes the installed app on Android) | `Escape` |
 
 ## Data storage
 
