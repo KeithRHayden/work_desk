@@ -19,6 +19,17 @@ async function dismissAuthModal(page: Page) {
   await expect(modal).toBeHidden();
 }
 
+/** Answers the in-app confirm / name dialog and returns its message. */
+async function answerAppDialog(page: Page, { accept = true, value }: { accept?: boolean; value?: string } = {}) {
+  const dialog = page.locator('#app-dialog');
+  await expect(dialog).toBeVisible();
+  const message = await dialog.locator('#app-dialog-message').innerText();
+  if (value !== undefined) await dialog.locator('#app-dialog-input').fill(value);
+  await dialog.locator(accept ? '#app-dialog-ok' : '#app-dialog-cancel').click();
+  await expect(dialog).toBeHidden();
+  return message;
+}
+
 /** Options settings sit behind summary rows; open the section holding `selector` (Options must already be open). */
 async function openOptionsSectionFor(page: Page, selector: string) {
   const info = await page.locator(selector).first().evaluate(el => {
@@ -701,7 +712,6 @@ test.describe('Delete and undo sync records', { tag: ['@sync'] }, () => {
   const stored = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-data-work') || '{}'));
 
   test('delete saves a purge record; undo swaps it for a restore record', async ({ page }) => {
-    page.on('dialog', d => d.accept());
     await openDesk(page);
     await addTask(page, 'Purge me');
     const card = page.locator('.item-card', { hasText: 'Purge me' });
@@ -1622,8 +1632,8 @@ test.describe('Projects', { tag: ['@projects'] }, () => {
   async function openNewProject(page: Page, name: string) {
     await openDesk(page);
     await page.locator('#tab-projects').click();
-    page.once('dialog', dialog => dialog.accept(name));
     await page.locator('#new-project-btn').click();
+    await answerAppDialog(page, { value: name });
     await expect(page.locator('#project-title')).toHaveText(name);
     // Projects default to Notes tab; switch to Tasks for task-focused tests
     await page.locator('.project-tab-btn[data-project-tab="tasks"]').click();
@@ -1695,8 +1705,8 @@ test.describe('Projects', { tag: ['@projects'] }, () => {
     await page.locator('#project-tasks-list button', { hasText: 'Save' }).click();
     await expect(page.locator('.project-task-text')).toHaveText('Task to be deleted');
 
-    page.once('dialog', dialog => dialog.accept());
     await page.locator('#project-tasks-list button', { hasText: 'delete' }).click();
+    expect(await answerAppDialog(page)).toBe('Delete this task?');
     await expect(page.locator('#project-tasks-list .project-items-empty')).toBeVisible();
 
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-projects') || '{}'));
@@ -2957,8 +2967,6 @@ test.describe('Recurring Tasks layout 1.22.0', { tag: ['@recurring'] }, () => {
         { id: 'x1', type: 'task', content: 'Old', completed: false, shelved: false, boardColumn: 'new', comments: [], tags: ['dco'], createdAt: '2026-10-20T09:00:00' },
       ] } }, deletedIds: {} }));
     });
-    let dialogs = 0;
-    page.on('dialog', (d) => { dialogs++; d.dismiss(); });
     await openWith(page, [tpl('a', 'Taggable row')]);
     const r = () => row(page, 'Taggable row');
 
@@ -2991,7 +2999,7 @@ test.describe('Recurring Tasks layout 1.22.0', { tag: ['@recurring'] }, () => {
     await r().locator('.tag-chip', { hasText: /GSAR/ }).locator('.tag-chip-remove').click();
     await expect(r().locator('.recurring-template-tags .tag-chip')).toHaveText([/DCO/]);
     expect((await stored(page))[0].tags).toEqual(['dco']);
-    expect(dialogs).toBe(0);
+    await expect(page.locator('#app-dialog')).toBeHidden();
   });
 
   test('Delete from the menu removes the row', async ({ page }) => {
@@ -3362,8 +3370,8 @@ test.describe('Streak weekend handling', { tag: ['@insights'] }, () => {
 // ── Desk vs Projects separation ────────────────────────────────────────
 test.describe('Desk vs Projects separation', { tag: ['@projects'] }, () => {
   async function createProject(page: Page, name: string) {
-    page.once('dialog', dialog => dialog.accept(name));
     await page.locator('#new-project-btn').click();
+    await answerAppDialog(page, { value: name });
     await expect(page.locator('#project-title')).toHaveText(name);
   }
 
@@ -3412,8 +3420,8 @@ test.describe('Project lifecycle', { tag: ['@projects'] }, () => {
   async function openProjects(page: Page, name: string) {
     await openDesk(page);
     await page.locator('#tab-projects').click();
-    page.once('dialog', dialog => dialog.accept(name));
     await page.locator('#new-project-btn').click();
+    await answerAppDialog(page, { value: name });
     await expect(page.locator('#project-title')).toHaveText(name);
   }
 
@@ -3426,8 +3434,9 @@ test.describe('Project lifecycle', { tag: ['@projects'] }, () => {
 
   test('rename updates the title and the sidebar list', async ({ page }) => {
     await openProjects(page, 'Before Rename');
-    page.once('dialog', dialog => dialog.accept('After Rename'));
     await page.locator('#project-rename-btn').click();
+    await expect(page.locator('#app-dialog-input')).toHaveValue('Before Rename');
+    await answerAppDialog(page, { value: 'After Rename' });
     await expect(page.locator('#project-title')).toHaveText('After Rename');
     await expect(page.locator('.project-list-item', { hasText: 'After Rename' })).toBeVisible();
     await expect(page.locator('.project-list-item', { hasText: 'Before Rename' })).toHaveCount(0);
@@ -3435,15 +3444,15 @@ test.describe('Project lifecycle', { tag: ['@projects'] }, () => {
 
   test('dismissing the delete confirm keeps the project', async ({ page }) => {
     await openProjects(page, 'Keep Me');
-    page.once('dialog', dialog => dialog.dismiss());
     await page.locator('#project-delete-btn').click();
+    expect(await answerAppDialog(page, { accept: false })).toBe('Delete project "Keep Me" and all its contents?');
     await expect(page.locator('#project-title')).toHaveText('Keep Me');
   });
 
   test('confirming delete removes the project and returns to the empty state', async ({ page }) => {
     await openProjects(page, 'Delete Me');
-    page.once('dialog', dialog => dialog.accept());
     await page.locator('#project-delete-btn').click();
+    await answerAppDialog(page);
     await expect(page.locator('.project-list-item', { hasText: 'Delete Me' })).toHaveCount(0);
     await expect(page.locator('#project-empty')).toBeVisible();
   });
@@ -3650,7 +3659,8 @@ test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
     await expectClean(page, '#account-menu');
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
-    await expect(page.locator('#changelog-body')).toContainText('Rosé Pine Dawn');
+    await expect(page.locator('#changelog-body')).toContainText('Options → Appearance → Layout');
+    await expect(page.locator('#changelog-body')).toContainText('‹ Back');
     await expect(page.locator('#changelog-body')).toContainText('Options → Behavior → General');
     await expect(page.locator('#changelog-body')).toContainText('tucked into a ⋮ menu');
     await expectClean(page, '#changelog-body');
@@ -4389,12 +4399,13 @@ test.describe('Options menu 1.15.1 polish', { tag: ['@options'] }, () => {
     const changed = await controlSnapshot(page);
     expect(changed).not.toEqual(fresh);
 
-    page.once('dialog', d => d.dismiss());
     await page.locator('[data-options-reset="behavior"]').click();
+    await answerAppDialog(page, { accept: false });
+    await expect(popout(page)).toBeVisible();
     expect(await controlSnapshot(page)).toEqual(changed);
 
-    page.once('dialog', d => { expect(d.message()).toContain('Custom holidays are kept'); d.accept(); });
     await page.locator('[data-options-reset="behavior"]').click();
+    expect(await answerAppDialog(page)).toContain('Custom holidays are kept');
     await expect(page.locator('#toast')).toContainText('Behavior reset to defaults');
     await expect(popout(page)).toBeVisible();
     expect(await controlSnapshot(page)).toEqual(fresh);
@@ -4405,8 +4416,8 @@ test.describe('Options menu 1.15.1 polish', { tag: ['@options'] }, () => {
     }));
     expect(stored).toEqual({ confirm: 'false', week: 'sunday', holidays: 3 });
 
-    page.once('dialog', d => d.accept());
     await page.locator('[data-options-reset="behavior"]').click();
+    await answerAppDialog(page);
     await expect(page.locator('#toast')).toContainText('Behavior is already on the defaults');
   });
 
@@ -4429,8 +4440,8 @@ test.describe('Options menu 1.15.1 polish', { tag: ['@options'] }, () => {
     await backToList(page);
     expect((await controlSnapshot(page)).density).toBe('compact');
 
-    page.once('dialog', d => { expect(d.message()).toContain('Pinned tag colors are kept'); d.accept(); });
     await page.locator('[data-options-reset="appearance"]').click();
+    expect(await answerAppDialog(page)).toContain('Pinned tag colors are kept');
     await expect(page.locator('#toast')).toContainText('Appearance reset to defaults');
     await expect(popout(page)).toBeVisible();
     expect(await controlSnapshot(page)).toEqual(fresh);
@@ -4822,8 +4833,8 @@ test.describe('Patterned background 1.16.1', { tag: ['@options'] }, () => {
     await openAppearance(page, { 'work-desk-bg-pattern-on': 'true', 'work-desk-bg-pattern': 'greek-key', 'work-desk-bg-pattern-strength': '30' });
     expect(await mainTile(page)).toContain("<g opacity='0.3'>");
     await page.locator('[data-options-section="background"] [data-options-back]').click();
-    page.once('dialog', d => d.accept());
     await page.locator('[data-options-reset="appearance"]').click();
+    await answerAppDialog(page);
     await expect(page.locator('#toast')).toContainText('Appearance reset to defaults');
     await expect(page.locator('#bg-pattern-toggle')).not.toBeChecked();
     expect(await mainTile(page)).toBe('none');
@@ -5135,8 +5146,8 @@ test.describe('Sidebar top and bottom 1.16.0', { tag: ['@sidebar'] }, () => {
     await page.locator('#density-toggle').click();
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
     await expect(page.locator('#sidebar-position-select')).toHaveValue('bottom');
-    page.once('dialog', d => d.accept());
     await page.locator('[data-options-reset="appearance"]').click();
+    await answerAppDialog(page);
     await expect(page.locator('#density-popout')).toBeVisible();
     await expect(page.locator('#sidebar-position-select')).toHaveValue('left');
     await expect(page.locator('html')).not.toHaveAttribute('data-sidebar-bar', /.*/);
@@ -5456,8 +5467,8 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
     await expect(page.locator('.sidebar-calendar .cal-legend')).toBeHidden();
     await page.locator('#density-toggle').click();
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
-    page.once('dialog', d => d.accept());
     await page.locator('[data-options-reset="appearance"]').click();
+    await answerAppDialog(page);
     await expect(page.locator('.sidebar-calendar .cal-legend')).toBeVisible();
     await expect(page.locator('#show-cal-legend-toggle')).toBeChecked();
     await expect(value(page, 'layout')).toHaveAttribute('title', 'Current: Sidebar left');
@@ -5512,8 +5523,8 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
 
     await page.locator('#density-toggle').click();
     await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
-    page.once('dialog', d => d.accept());
     await page.locator('[data-options-reset="behavior"]').click();
+    await answerAppDialog(page);
     await expect(page.locator('#launch-desk-select')).toHaveValue('last');
     await page.keyboard.press('Escape');
     await page.locator('#tab-personal').click();
@@ -5902,7 +5913,7 @@ test.describe('Complete edge 1.18.0', { tag: ['@board'] }, () => {
     await expect(edge).toHaveAttribute('aria-label', 'Mark complete');
     expect(await beforeContent(edge)).toBe('"done"');
     await edge.hover();
-    expect(await beforeContent(edge)).toBe('"done\u200A?"');
+    expect(await beforeContent(edge)).toBe('"done?"');
     await edge.click();
     const done = page.locator('.board-column.done .item-card', { hasText: 'Plain task' });
     await expect(done.locator('.item.completed')).toBeVisible();
@@ -5910,9 +5921,9 @@ test.describe('Complete edge 1.18.0', { tag: ['@board'] }, () => {
     await expect(doneEdge).toHaveClass(/is-done/);
     await expect(doneEdge).toHaveAttribute('aria-label', 'Mark incomplete');
     await page.mouse.move(5, 5);
-    expect(await beforeContent(doneEdge)).toBe('"done\u200A!"');
+    expect(await beforeContent(doneEdge)).toBe('"done!"');
     await doneEdge.hover();
-    expect(await beforeContent(doneEdge)).toBe('"undo\u200A?"');
+    expect(await beforeContent(doneEdge)).toBe('"undo?"');
     await doneEdge.click();
     await expect(page.locator('.board-column.new .item-card', { hasText: 'Plain task' })).toBeVisible();
     await expect(page.locator('.item.completed', { hasText: 'Plain task' })).toHaveCount(0);
@@ -6102,8 +6113,8 @@ test.describe('Card layout options 1.18.0', { tag: ['@options'] }, () => {
     await expect(taskCard(page, 'Tagged task').locator('.card-action-end .tag-chip')).toHaveCount(2);
     await page.locator('#density-toggle').click();
     await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
-    page.once('dialog', d => d.accept());
     await page.locator('[data-options-reset="appearance"]').click();
+    await answerAppDialog(page);
     await expect(page.locator('#complete-style-select')).toHaveValue('label');
     await expect(page.locator('#tag-position-select')).toHaveValue('row');
     await expect(html(page)).toHaveAttribute('data-complete-style', 'label');
@@ -6290,7 +6301,7 @@ test.describe('Complete edge on project tasks 1.18.4', { tag: ['@projects', '@bo
     await expect(edge).toHaveAttribute('aria-label', 'Mark complete');
     expect(await beforeContent(edge)).toBe('"done"');
     await edge.hover();
-    expect(await beforeContent(edge)).toBe('"done\u200A?"');
+    expect(await beforeContent(edge)).toBe('"done?"');
     await edge.click();
 
     await expect(page.locator('#project-detail')).toBeVisible();
@@ -6415,24 +6426,24 @@ test.describe('Project header and backup import 1.18.4', { tag: ['@projects'] },
     const gear = (await page.locator('#project-customize-btn').boundingBox())!;
     for (const btn of [rename, del]) expect((await btn.boundingBox())!.height).toBeCloseTo(gear.height, 0);
 
-    page.once('dialog', d => d.accept('Renamed Project'));
     await rename.click();
+    await answerAppDialog(page, { value: 'Renamed Project' });
     await expect(page.locator('#project-title')).toHaveText('Renamed Project');
 
     await del.hover();
     await expect(del).toHaveCSS('color', 'rgb(239, 68, 68)');
-    page.once('dialog', d => d.accept());
     await del.click();
+    await answerAppDialog(page);
     await expect(page.locator('.project-list-item', { hasText: 'Renamed Project' })).toHaveCount(0);
   });
 
   for (const mode of ['replace', 'merge'] as const) {
     test(`importing a projects backup (${mode}) keeps archived notes and tasks in Archived`, async ({ page }) => {
       await openSeededProject(page);
-      page.on('dialog', d => d.accept());
       await page.locator('#import-file').setInputFiles({ name: 'work-desk-backup-projects.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
       await expect(page.locator('#import-modal')).toBeVisible();
       await page.locator(`#import-${mode}`).click();
+      if (mode === 'replace') expect(await answerAppDialog(page)).toBe('This will permanently replace all your current tasks and notes. Continue?');
       await expect(page.locator('#import-modal')).toBeHidden();
 
       await page.locator('.project-list-item', { hasText: 'Imported Project' }).click();
@@ -6558,11 +6569,12 @@ test.describe('Project fixes 1.18.4', { tag: ['@projects'] }, () => {
   test('a deleted project is not brought back by a Replace import of an older backup', async ({ page }) => {
     await seedProjectSpace(page);
     await openSeededProjectTab(page, 'Gamma Project', 'notes');
-    page.on('dialog', d => d.accept());
     await page.locator('#project-delete-btn').click();
+    await answerAppDialog(page);
     await expect(page.locator('.project-list-item', { hasText: 'Gamma Project' })).toHaveCount(0);
     await openSeededProjectTab(page, 'Alpha Project', 'notes');
     await cardButton(projectCard(page, 'Alpha note'), 'delete').click();
+    expect(await answerAppDialog(page)).toBe('Delete this note?');
     await expect(projectCard(page, 'Alpha note')).toHaveCount(0);
 
     const before = await storedProjects(page);
@@ -6574,6 +6586,7 @@ test.describe('Project fixes 1.18.4', { tag: ['@projects'] }, () => {
     ] });
     await page.locator('#import-file').setInputFiles({ name: 'work-desk-backup-projects.json', mimeType: 'application/json', buffer: Buffer.from(old) });
     await page.locator('#import-replace').click();
+    await answerAppDialog(page);
     await expect(page.locator('#import-modal')).toBeHidden();
     await expect(page.locator('.project-list-item', { hasText: 'Gamma Project' })).toHaveCount(0);
     await page.locator('.project-list-item', { hasText: 'Alpha Project' }).click();
@@ -6592,8 +6605,8 @@ test.describe('Project comment actions, touch 1.18.4', { tag: ['@projects', '@ph
     await openSeededProjectTab(page, 'Alpha Project', 'notes');
     const actions = projectCard(page, 'Alpha note').locator('.project-comment-actions');
     await expect(actions).toHaveCSS('opacity', '1');
-    page.once('dialog', d => d.accept());
     await actions.getByRole('button', { name: 'delete', exact: true }).tap();
+    expect(await answerAppDialog(page)).toBe('Delete this comment?');
     await expect(projectCard(page, 'Alpha note').locator('.project-comment-row')).toHaveCount(0);
   });
 });
@@ -6718,8 +6731,8 @@ test.describe('Send between desk and projects 1.19.0', { tag: ['@projects', '@bo
     await seedProjectSpace(page);
     await openSendToProject(page, 'Desk note to send');
     await expect(page.locator('#send-modal-text')).toContainText('Move this note to a project');
-    page.once('dialog', d => d.accept('Fresh Project'));
     await sendOption(page, '+ New project…').click();
+    await answerAppDialog(page, { value: 'Fresh Project' });
     await expect(page.locator('#send-modal')).toBeHidden();
     await expect(deskCard(page, 'Desk note to send')).toHaveCount(0);
     await openSeededProjectTab(page, 'Fresh Project', 'notes');
@@ -7477,9 +7490,6 @@ test.describe('Card ⋮ menu actions', { tag: ['@board'] }, () => {
   });
 
   test('deleting a task from a recurring template warns and it does not come back after reload', async ({ page }) => {
-    const messages: string[] = [];
-    let accept = false;
-    page.on('dialog', (d) => { messages.push(d.message()); accept ? d.accept() : d.dismiss(); });
     await seedToday(page, [{ id: 'r1', content: 'Daily standup notes', recurringTemplateId: 't1', comments: [{ id: 'c1', content: 'x', createdAt: '2026-10-01T09:00:00Z' }] }], {
       'work-desk-confirm-delete': 'true',
       'work-desk-recurring-work': { deletedIds: {}, templates: [
@@ -7487,11 +7497,13 @@ test.describe('Card ⋮ menu actions', { tag: ['@board'] }, () => {
       ] },
     });
     await (await openCardMenu(page, 'Daily standup notes')).locator('button', { hasText: 'Delete' }).click();
-    expect(messages[0]).toBe('Delete this task? It has 1 comment. It came from a recurring template.');
+    await expect(page.locator('#app-dialog-ok')).toHaveText('Delete');
+    await expect(page.locator('#app-dialog-ok')).toHaveClass(/danger/);
+    expect(await answerAppDialog(page, { accept: false })).toBe('Delete this task? It has 1 comment. It came from a recurring template.');
     await expect(page.locator('.item-card', { hasText: 'Daily standup notes' })).toHaveCount(1);
 
-    accept = true;
     await (await openCardMenu(page, 'Daily standup notes')).locator('button', { hasText: 'Delete' }).click();
+    await answerAppDialog(page);
     await expect(page.locator('.item-card', { hasText: 'Daily standup notes' })).toHaveCount(0);
     await page.reload();
     await dismissAuthModal(page);
@@ -7513,8 +7525,6 @@ test.describe('Backup export and import', { tag: ['@sync'] }, () => {
   }
 
   test('Export All downloads every desk, and Import All → Replace restores it', async ({ page }) => {
-    const messages: string[] = [];
-    page.on('dialog', (d) => { messages.push(d.message()); d.accept(); });
     await seedToday(page, [{ id: 'w1', content: 'Work backup task' }], {
       'work-desk-data-personal': { deletedIds: {}, days: { __TODAY__: { date: '__TODAY__', items: [
         { id: 'h1', type: 'task', content: 'Home backup task', completed: false, boardColumn: 'new', createdAt: '2026-10-01T09:00:00Z', comments: [] },
@@ -7540,7 +7550,7 @@ test.describe('Backup export and import', { tag: ['@sync'] }, () => {
     await expect(page.locator('#import-modal-text')).toHaveText(
       'Import All backup: Work (1 items, 1 days), Personal (1 items, 1 days), 1 project. Merge adds new items alongside yours. Replace overwrites all desks.');
     await page.locator('#import-replace').click();
-    expect(messages.at(-1)).toContain('replace ALL your Work, Personal, and Projects data');
+    expect(await answerAppDialog(page)).toContain('replace ALL your Work, Personal, and Projects data');
     await expect(page.locator('#import-modal')).toBeHidden();
     await expect(page.locator('#toast')).toContainText('Replaced all desks from backup');
     await expect(page.locator('.item-card', { hasText: 'Work backup task' })).toBeVisible();
@@ -7587,9 +7597,6 @@ test.describe('Backup export and import', { tag: ['@sync'] }, () => {
   });
 
   test('Import Desk → Merge adds to the current desk; a different desk\'s file asks first', async ({ page }) => {
-    const messages: string[] = [];
-    let accept = false;
-    page.on('dialog', (d) => { messages.push(d.message()); accept ? d.accept() : d.dismiss(); });
     await seedToday(page, [{ id: 'w1', content: 'Existing task' }]);
     const today = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('work-desk-data-work')!).days)[0]);
     const deskFile = (context: string) => ({ version: 1, app: 'work-desk', context, deletedIds: {}, days: { [today]: { date: today, items: [
@@ -7598,10 +7605,9 @@ test.describe('Backup export and import', { tag: ['@sync'] }, () => {
     ] } } });
 
     await pickImport(page, 'desk', { name: 'personal.json', body: deskFile('personal') });
-    await expect.poll(() => messages.at(-1)).toContain('This backup is from your Personal desk, but you\'re on the Work tab');
+    expect(await answerAppDialog(page, { accept: false })).toContain('This backup is from your Personal desk, but you\'re on the Work tab');
     await expect(page.locator('#import-modal')).toBeHidden();
 
-    accept = true;
     await pickImport(page, 'desk', { name: 'work.json', body: deskFile('work') });
     await expect(page.locator('#import-modal-text')).toContainText('1 items');
     await page.locator('#import-merge').click();
@@ -7964,6 +7970,239 @@ test.describe('Phone Insights spacing 1.23.1', { tag: ['@insights', '@phone'] },
   });
 });
 
+test.describe('In-app dialogs, full screen, and the Done edge 1.23.4', { tag: ['@app', '@board', '@options', '@projects'] }, () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  const dialog = (page: Page) => page.locator('#app-dialog');
+  const ok = (page: Page) => page.locator('#app-dialog-ok');
+  const cancel = (page: Page) => page.locator('#app-dialog-cancel');
+  const input = (page: Page) => page.locator('#app-dialog-input');
+  const cards = (page: Page, text: string) => page.locator('.item-card', { hasText: text });
+  const isFull = (page: Page) => page.evaluate(() => !!document.fullscreenElement);
+  const projectNames = (page: Page) => page.locator('.project-list-item').allInnerTexts().then((t) => t.map((x) => x.trim().split('\n')[0]));
+  const openDelete = async (page: Page, text: string) => (await openCardMenu(page, text)).locator('button', { hasText: 'Delete' }).click();
+
+  test('delete confirm: OK focused and red; Cancel, Escape, and a backdrop tap each keep the task; Enter deletes', async ({ page }) => {
+    await seedToday(page, [{ id: 'a', content: 'Keep or delete me' }], { 'work-desk-confirm-delete': 'true' });
+    await openDelete(page, 'Keep or delete me');
+    await expect(dialog(page)).toBeVisible();
+    await expect(page.locator('#app-dialog-message')).toHaveText('Delete this task?');
+    await expect(input(page)).toBeHidden();
+    await expect(ok(page)).toBeFocused();
+    await expect(ok(page)).toHaveText('Delete');
+    await expect(ok(page)).toHaveClass(/danger/);
+    await cancel(page).click();
+    await expect(dialog(page)).toBeHidden();
+    await expect(cards(page, 'Keep or delete me')).toHaveCount(1);
+
+    await openDelete(page, 'Keep or delete me');
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeHidden();
+    await expect(cards(page, 'Keep or delete me')).toHaveCount(1);
+
+    await openDelete(page, 'Keep or delete me');
+    await dialog(page).click({ position: { x: 8, y: 8 } });
+    await expect(dialog(page)).toBeHidden();
+    await expect(cards(page, 'Keep or delete me')).toHaveCount(1);
+
+    await openDelete(page, 'Keep or delete me');
+    await page.keyboard.press('Enter');
+    await expect(dialog(page)).toBeHidden();
+    await expect(cards(page, 'Keep or delete me')).toHaveCount(0);
+    await page.locator('.toast-undo-btn').click();
+    await expect(cards(page, 'Keep or delete me')).toHaveCount(1);
+  });
+
+  test('with Confirm before delete off, Delete asks nothing', async ({ page }) => {
+    await seedToday(page, [{ id: 'a', content: 'Quick delete' }]);
+    await openDelete(page, 'Quick delete');
+    await expect(cards(page, 'Quick delete')).toHaveCount(0);
+    await expect(dialog(page)).toBeHidden();
+  });
+
+  test('while the dialog is open, desk shortcuts and Tab stay inside it', async ({ page }) => {
+    await seedToday(page, [{ id: 'a', content: 'Shortcut guard' }], { 'work-desk-confirm-delete': 'true' });
+    const title = await page.locator('#date-title').innerText();
+    await openDelete(page, 'Shortcut guard');
+    await page.keyboard.press(']');
+    await page.keyboard.press('n');
+    await expect(page.locator('#date-title')).toHaveText(title);
+    await expect(ok(page)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(cancel(page)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(ok(page)).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(cancel(page)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(dialog(page)).toBeHidden();
+    await expect(cards(page, 'Shortcut guard')).toHaveCount(1);
+  });
+
+  test('Reset in Options: the dialog sits above Options; Cancel and Escape leave Options open on the same page, and focus returns to Reset', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    const reset = page.locator('[data-options-reset="behavior"]');
+    await reset.click();
+    await expect(dialog(page)).toBeVisible();
+    const box = (await ok(page).boundingBox())!;
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.id, { x: box.x + box.width / 2, y: box.y + box.height / 2 })).toBe('app-dialog-ok');
+    await expect(ok(page)).toHaveText('Reset');
+    await cancel(page).click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#options-pane-behavior')).toBeVisible();
+    await expect(reset).toBeFocused();
+    await reset.click();
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeHidden();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#options-pane-behavior .options-summary')).toBeVisible();
+    await reset.click();
+    await ok(page).click();
+    await expect(page.locator('#toast')).toContainText('Behavior is already on the defaults');
+    await expect(page.locator('#density-popout')).toBeVisible();
+  });
+
+  test('new project name box: focused and empty; Escape and an empty name create nothing; Enter creates', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('#new-project-btn').click();
+    await expect(dialog(page)).toBeVisible();
+    await expect(page.locator('#app-dialog-message')).toHaveText('Project name:');
+    await expect(input(page)).toBeVisible();
+    await expect(input(page)).toBeFocused();
+    await expect(input(page)).toHaveValue('');
+    await expect(ok(page)).toHaveText('Create');
+    await page.keyboard.press('Tab');
+    await expect(cancel(page)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(ok(page)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(input(page)).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeHidden();
+    expect(await projectNames(page)).toEqual([]);
+
+    await page.locator('#new-project-btn').click();
+    await ok(page).click();
+    expect(await projectNames(page)).toEqual([]);
+
+    await page.locator('#new-project-btn').click();
+    await input(page).fill('Tablet project');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#project-title')).toHaveText('Tablet project');
+    expect(await projectNames(page)).toEqual(['Tablet project']);
+  });
+
+  test('rename shows the current name selected; Cancel keeps it; typing replaces it', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#tab-projects').click();
+    await page.locator('#new-project-btn').click();
+    await answerAppDialog(page, { value: 'Old name' });
+    await page.locator('#project-rename-btn').click();
+    await expect(input(page)).toHaveValue('Old name');
+    expect(await input(page).evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([0, 8]);
+    await cancel(page).click();
+    await expect(page.locator('#project-title')).toHaveText('Old name');
+    await page.locator('#project-rename-btn').click();
+    await page.keyboard.type('New name');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#project-title')).toHaveText('New name');
+  });
+
+  test('phone: the dialog fits the screen above the Options sheet, with big buttons', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openDesk(page);
+    await page.locator('#mobile-menu-btn').click();
+    await page.locator('#mobile-menu-options').click();
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await page.locator('[data-options-reset="appearance"]').click();
+    await expect(dialog(page)).toBeVisible();
+    const box = (await dialog(page).locator('.modal-box').boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    for (const b of [ok(page), cancel(page)]) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+    await ok(page).click();
+    await expect(page.locator('#toast')).toContainText('Appearance');
+    await expect(page.locator('#density-popout')).toBeVisible();
+  });
+
+  test('full screen: deleting with a confirm stays full screen', async ({ page }) => {
+    await seedToday(page, [{ id: 'a', content: 'Full screen delete' }], { 'work-desk-confirm-delete': 'true', 'work-desk-fullscreen': 'on' });
+    await page.locator('#date-title').click();
+    await expect.poll(() => isFull(page)).toBe(true);
+    await openDelete(page, 'Full screen delete');
+    await answerAppDialog(page);
+    await expect(cards(page, 'Full screen delete')).toHaveCount(0);
+    expect(await isFull(page)).toBe(true);
+  });
+
+  test('full screen: typing and Ctrl+Enter never re-enter it; the next tap does', async ({ page }) => {
+    await seedToday(page, [], { 'work-desk-fullscreen': 'on' });
+    await page.locator('#date-title').click();
+    await expect.poll(() => isFull(page)).toBe(true);
+    await page.evaluate(() => document.exitFullscreen());
+    await expect.poll(() => isFull(page)).toBe(false);
+    const requests = await page.evaluate(() => {
+      (window as unknown as { __fsRequests: number }).__fsRequests = 0;
+      const orig = Element.prototype.requestFullscreen;
+      Element.prototype.requestFullscreen = function (this: Element, ...a: [FullscreenOptions?]) { (window as unknown as { __fsRequests: number }).__fsRequests++; return orig.apply(this, a); };
+      return 0;
+    });
+    expect(requests).toBe(0);
+    const editor = page.locator('#add-editor-host .rich-editor');
+    await editor.focus();
+    await page.keyboard.type('Typed on a tablet keyboard');
+    await page.keyboard.press('Control+Enter');
+    await expect(cards(page, 'Typed on a tablet keyboard')).toHaveCount(1);
+    expect(await page.evaluate(() => (window as unknown as { __fsRequests: number }).__fsRequests)).toBe(0);
+    expect(await isFull(page)).toBe(false);
+    await page.locator('#date-title').click();
+    await expect.poll(() => isFull(page)).toBe(true);
+  });
+
+  test('Done edge: a touch tap that drifts up to 12px completes the task; a mouse press that moves 8px does not', async ({ page }) => {
+    await open118(page);
+    const press = (id: string, pointerType: string, dx: number) => page.locator(`#item-${id} .complete-edge`).evaluate((el, { pointerType, dx }) => {
+      const r = el.getBoundingClientRect();
+      const x = r.left + r.width / 2, y = r.top + r.height / 2;
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType, clientX: x, clientY: y }));
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, clientX: x + dx, clientY: y }));
+    }, { pointerType, dx });
+    await press('k2', 'mouse', 8);
+    await expect(page.locator('.board-column.done .item-card', { hasText: 'Tagged task' })).toHaveCount(0);
+    await press('k1', 'touch', 11);
+    await expect(page.locator('.board-column.done .item-card', { hasText: 'Plain task' })).toHaveCount(1);
+    await press('k2', 'mouse', 2);
+    await expect(page.locator('.board-column.done .item-card', { hasText: 'Tagged task' })).toHaveCount(1);
+  });
+
+  test('DONE! has no gap before the "!" (and DONE? / UNDO? match)', async ({ page }) => {
+    await open118(page);
+    const done = page.locator('#item-k3 .complete-edge');
+    expect(await beforeContent(done)).toBe('"done!"');
+    const box = (await done.boundingBox())!;
+    const text = await done.evaluate((el) => {
+      const probe = document.createElement('span');
+      const cs = getComputedStyle(el, '::before');
+      probe.style.cssText = `position:absolute;visibility:hidden;font:${cs.font};letter-spacing:${cs.letterSpacing};text-transform:${cs.textTransform}`;
+      probe.textContent = 'done!';
+      document.body.appendChild(probe);
+      const w = probe.getBoundingClientRect().width;
+      probe.textContent = 'done\u200A!';
+      const gapped = probe.getBoundingClientRect().width;
+      probe.remove();
+      return { w, gapped };
+    });
+    expect(text.gapped).toBeGreaterThan(text.w);
+    expect(box.height).toBeGreaterThan(0);
+    await page.locator('#item-k1 .complete-edge').hover();
+    expect(await beforeContent(page.locator('#item-k1 .complete-edge'))).toBe('"done?"');
+    await done.hover();
+    expect(await beforeContent(done)).toBe('"undo?"');
+  });
+});
+
 test.describe('Phone Options and week strip 1.23.3', { tag: ['@options', '@phone', '@sidebar', '@calendar'] }, () => {
   const PHONE = { width: 390, height: 844 };
   const SMALL_PHONE = { width: 360, height: 740 };
@@ -8075,8 +8314,8 @@ test.describe('Phone Options and week strip 1.23.3', { tag: ['@options', '@phone
   test('phone: Appearance Reset still works with the Layout settings hidden', async ({ page }) => {
     await open(page, PHONE, { 'work-desk-show-cal-legend': 'false', 'work-desk-sidebar-position': 'right' });
     await openOptions(page, 'appearance');
-    page.once('dialog', (d) => d.accept());
     await page.locator('[data-options-reset="appearance"]').click();
+    await answerAppDialog(page);
     await expect.poll(() => page.evaluate(() => [localStorage.getItem('work-desk-show-cal-legend'), localStorage.getItem('work-desk-sidebar-position')])).toEqual(['true', 'left']);
     await expect(popout(page)).toBeVisible();
   });
@@ -9133,11 +9372,11 @@ test.describe('Full screen option 1.22.0', { tag: ['@options'] }, () => {
   test('Reset Behavior turns it off', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('work-desk-fullscreen', 'on'));
     await openDesk(page);
-    page.on('dialog', (d) => d.accept());
     await page.locator('#density-toggle').click();
     await openOptionsSectionFor(page, '#fullscreen-toggle');
     await page.locator('#options-pane-behavior .options-section:not([hidden]) [data-options-back]').click();
     await page.locator('[data-options-reset="behavior"]').click();
+    await answerAppDialog(page);
     await expect.poll(() => stored(page)).toBe('off');
     await openOptionsSectionFor(page, '#fullscreen-toggle');
     await expect(page.locator('#fullscreen-toggle')).not.toBeChecked();
