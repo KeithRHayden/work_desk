@@ -1392,6 +1392,44 @@ describe('1.23.1 Phone Insights spacing', () => {
   });
 });
 
+describe('1.23.4 Tablet: in-app dialogs, full screen, Done edge', () => {
+  it('the app never calls the browser confirm, prompt, or alert', () => {
+    assert.doesNotMatch(mainScript, /[^\w.](confirm|prompt|alert)\((?!\))/);
+    assert.doesNotMatch(mainScript, /window\.(confirm|prompt|alert)\(/);
+  });
+
+  it('all 11 questions go through appConfirm / appPrompt, with red buttons for deletes and Replace', () => {
+    assert.equal((mainScript.match(/await appConfirm\(/g) || []).length, 8);
+    assert.equal((mainScript.match(/await appPrompt\(/g) || []).length, 3);
+    assert.equal((mainScript.match(/okLabel: 'Delete', danger: true/g) || []).length, 5);
+    assert.match(mainScript, /appConfirm\(msg, \{ okLabel: 'Replace', danger: true \}\)/);
+    assert.match(mainScript, /appPrompt\('Rename project:', project\.name, \{ okLabel: 'Rename' \}\)/);
+    assert.match(mainScript, /async function deleteItem\(id\) \{/);
+  });
+
+  it('the dialog markup sits above everything and has a hidden name box', () => {
+    assert.match(html, /<div id="app-dialog" class="modal hidden app-dialog" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-message">/);
+    assert.match(html, /<input id="app-dialog-input" class="app-dialog-input" type="text" autocomplete="off" aria-labelledby="app-dialog-message" hidden \/>/);
+    assert.match(html, /<button id="app-dialog-cancel" class="modal-btn ghost" type="button">Cancel<\/button>\s*<button id="app-dialog-ok" class="modal-btn primary" type="button">OK<\/button>/);
+    assert.match(html, /\.app-dialog \{ z-index: 5000; \}/);
+  });
+
+  it('openAppDialog resolves the input value, true, or null and cancels an earlier dialog', () => {
+    const src = fnSource('openAppDialog');
+    assert.match(src, /appDialogResolve\?\.\(null\);/);
+    assert.match(src, /okBtn\.className = `modal-btn \$\{danger \? 'danger' : 'primary'\}`;/);
+    assert.match(src, /if \(returnFocus\?\.isConnected && returnFocus !== document\.body\) returnFocus\.focus/);
+    assert.match(fnSource('appConfirm'), /return \(await openAppDialog\(\{ message, \.\.\.options \}\)\) !== null;/);
+    assert.match(mainScript, /const accept = \(\) => appDialogResolve\?\.\(inputEl\.hidden \? true : inputEl\.value\);/);
+  });
+
+  it('full screen comes back on a tap only, never a key press', () => {
+    const src = fnSource('initFullscreen');
+    assert.match(src, /document\.addEventListener\('click', onGesture, true\);/);
+    assert.doesNotMatch(src, /addEventListener\('keydown'/);
+  });
+});
+
 describe('1.23.3 Phone Options: layout, week strip weekends, tap targets', () => {
   const layout = html.slice(html.indexOf('data-options-section="layout"'), html.indexOf('data-options-section="effects"'));
 
@@ -5253,7 +5291,8 @@ describe('v1.18.0 complete edge and tag position', () => {
     assert.match(src, /edge\.className = `complete-edge\$\{item\.completed \? ' is-done' : ''\}`/);
     assert.match(src, /const label = item\.completed \? 'Mark incomplete' : 'Mark complete';/);
     assert.match(src, /edge\.setAttribute\('aria-label', label\)/);
-    assert.match(src, /e\.detail > 0 && Math\.hypot\(e\.clientX - start\.x, e\.clientY - start\.y\) > 4/);
+    assert.match(src, /slop: e\.pointerType === 'mouse' \? 4 : 12/);
+    assert.match(src, /e\.detail > 0 && Math\.hypot\(e\.clientX - start\.x, e\.clientY - start\.y\) > start\.slop/);
     assert.match(src, /onToggle = \(\) => toggleItem\(item\.id\)/);
     assert.match(src, /if \(!moved\) onToggle\(\)/);
   });
@@ -5261,9 +5300,10 @@ describe('v1.18.0 complete edge and tag position', () => {
   it('CSS: classic hides the edge, the label states, wider edge on touch, slim chips sized to the row', () => {
     assert.match(html, /\.complete-edge \{ display: none; \}/);
     assert.match(html, /html\[data-complete-edge="on"\] \.item\.task > \.checkbox \{ display: none; \}/);
-    for (const s of ["content: 'done';", "content: 'done\\200A?';", "content: 'done\\200A!';", "content: 'undo\\200A?';", "content: 'doing';"]) assert.ok(html.includes(s), s);
+    for (const s of ["content: 'done';", "content: 'done?';", "content: 'done!';", "content: 'undo?';", "content: 'doing';"]) assert.ok(html.includes(s), s);
+    assert.ok(!html.includes('\\200A'), 'no hair space in the label');
     assert.match(html, /html\[data-complete-style="label"\] \.item-card\.dragging \.complete-edge::before/);
-    assert.match(html, /html\[data-complete-style="label"\] \.complete-edge\.is-done::before \{ content: 'done\\200A!'; transform: rotate\(180deg\);/);
+    assert.match(html, /html\[data-complete-style="label"\] \.complete-edge\.is-done::before \{ content: 'done!'; transform: rotate\(180deg\);/);
     assert.match(html, /@media \(hover: none\), \(pointer: coarse\) \{\s*html\[data-complete-edge="on"\] :is\(\.task-card, \.project-task-card\) \.complete-edge \{ width: 40px; \}/);
     // Touch with the desktop layout (tablet in landscape) gets an in-between edge, declared after the 40px rule so it wins
     const tabletEdge = html.indexOf('@media (min-width: 769px) and (hover: none), (min-width: 769px) and (pointer: coarse) {\n      html[data-complete-edge="on"] :is(.task-card, .project-task-card) .complete-edge { width: 28px; }');
