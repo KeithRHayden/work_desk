@@ -4407,6 +4407,18 @@
     .modal-btn.ghost { color: var(--text-muted); }
     .modal-btn.ghost:hover { background: var(--bg); }
 
+    .app-dialog { z-index: 5000; }
+    .app-dialog .modal-box { max-width: 360px; }
+    .app-dialog-message { color: var(--text); font-size: 0.95rem; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+    .app-dialog-input {
+      display: block; width: 100%; margin: -6px 0 16px; padding: 10px 12px; min-height: 40px;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--input-bg); color: var(--text); font: inherit;
+    }
+    .app-dialog-input[hidden] { display: none; }
+    .app-dialog-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .app-dialog .modal-actions { flex-direction: row; justify-content: flex-end; }
+    .app-dialog .modal-btn { min-width: 96px; min-height: 40px; }
+
     /* ── Auth modal ──────────────────────────────────────────────── */
     .auth-modal {
       position: fixed; inset: 0;
@@ -7567,9 +7579,9 @@
       content: 'done'; width: auto; height: auto; border: 0; background: none; writing-mode: vertical-rl; transform: rotate(180deg);
       font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: color-mix(in srgb, var(--text) 45%, transparent);
     }
-    html[data-complete-style="label"] :is(.complete-edge:hover, .complete-edge:focus-visible)::before { content: 'done\200A?'; color: var(--accent); background: none; }
-    html[data-complete-style="label"] .complete-edge.is-done::before { content: 'done\200A!'; transform: rotate(180deg); font-size: 9px; color: var(--surface); }
-    html[data-complete-style="label"] :is(.complete-edge.is-done:hover, .complete-edge.is-done:focus-visible)::before { content: 'undo\200A?'; color: var(--surface); }
+    html[data-complete-style="label"] :is(.complete-edge:hover, .complete-edge:focus-visible)::before { content: 'done?'; color: var(--accent); background: none; }
+    html[data-complete-style="label"] .complete-edge.is-done::before { content: 'done!'; transform: rotate(180deg); font-size: 9px; color: var(--surface); }
+    html[data-complete-style="label"] :is(.complete-edge.is-done:hover, .complete-edge.is-done:focus-visible)::before { content: 'undo?'; color: var(--surface); }
     html[data-complete-style="label"] .item-card.dragging .complete-edge::before { content: 'doing'; color: var(--accent); }
     /* Compact rows are too short for the vertical label, so it shows a bar */
     html[data-complete-style="label"] #desk-view[data-density="compact"] .complete-edge:not(.is-done)::before {
@@ -9210,7 +9222,7 @@
             <li><strong>Install</strong> — use your browser's install option, or on iPhone <strong>Share → Add to Home Screen</strong>. Installed, it opens in its own window and works offline</li>
             <li><strong>Phone menu</strong> — the top bar keeps your tabs (Desk and Insights, with Work, Personal, and Projects underneath), search, and Help; the <strong>menu button</strong> holds your account, backup, Options, and What's new. The dot beside it shows sync status</li>
             <li>The add bar stays at the bottom, the week strip picks the day, and a task's left edge is wider for tapping (a bit narrower on a tablet in landscape)</li>
-            <li><strong>Full screen</strong> — Options → Behavior → General hides the status bar and app tray on that device only; swipe from an edge to see them</li>
+            <li><strong>Full screen</strong> — Options → Behavior → General hides the status bar and app tray on that device only; swipe from an edge to see them. If the tablet drops out of full screen, your next tap brings it back (typing doesn't)</li>
           </ul>
         </details>
 
@@ -9273,6 +9285,17 @@
         <button id="import-merge" class="modal-btn primary">Merge with existing data</button>
         <button id="import-replace" class="modal-btn danger">Replace all data</button>
         <button id="import-cancel" class="modal-btn ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-dialog" class="modal hidden app-dialog" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-message">
+    <div class="modal-box">
+      <p id="app-dialog-message" class="modal-text app-dialog-message"></p>
+      <input id="app-dialog-input" class="app-dialog-input" type="text" autocomplete="off" aria-labelledby="app-dialog-message" hidden />
+      <div class="modal-actions">
+        <button id="app-dialog-cancel" class="modal-btn ghost" type="button">Cancel</button>
+        <button id="app-dialog-ok" class="modal-btn primary" type="button">OK</button>
       </div>
     </div>
   </div>
@@ -9393,12 +9416,24 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.23.3';
+    const APP_VERSION = '1.23.4';
     const CHANGELOG = [
+      {
+        version: '1.23.4',
+        date: 'Nov 4, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Full screen on an Android tablet no longer drops out when you delete with Confirm before delete on, reset Options, import a backup, or name a project. Those questions now open in the app\'s own dialog instead of the browser\'s, which Chrome on Android leaves full screen for',
+            'Typing on a tablet keyboard no longer blanks the screen for a second or two. If full screen had dropped, the next key press (like Ctrl+Enter to add) switched back into it; now only a tap does',
+            'Tapping the Done edge on a tablet allows for normal finger drift (12px instead of 4px) before it counts as a drag',
+            'DONE! on finished tasks no longer has a gap before the "!" (DONE? and UNDO? too)',
+          ] },
+        ],
+      },
       {
         version: '1.23.3',
         date: 'Oct 30, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'With the sidebar set to Right (on this device or synced from another), a phone squeezed the whole desk into a sliver beside the menu. Phones now always keep their top bar, whatever the setting',
@@ -12782,10 +12817,10 @@
         if (toggle.checked) enterFullscreen();
         else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       });
-      // Browsers only allow full screen right after a tap or key press, so the first one after launch enters it
+      // Browsers only allow full screen right after a tap, so the first one after launch (or after Android drops it) enters it.
+      // Never on a key press: re-entering mid-typing blanks an Android screen for a second or two.
       const onGesture = () => { if (toggle.checked) enterFullscreen(); };
       document.addEventListener('click', onGesture, true);
-      document.addEventListener('keydown', onGesture, true);
     }
 
     const OPTIONS_TASK_TOGGLES = ['confirm-delete-toggle', 'auto-carry-toggle-popout', 'auto-collapse-completed-toggle', 'keep-comments-open-toggle', 'confetti-toggle', 'strike-completed-toggle'];
@@ -13091,11 +13126,11 @@
       }
 
       popout.querySelectorAll('[data-options-reset]').forEach(resetBtn => {
-        resetBtn.addEventListener('click', () => {
+        resetBtn.addEventListener('click', async () => {
           const tab = resetBtn.dataset.optionsReset;
           const label = tab === 'appearance' ? 'Appearance' : 'Behavior';
           const kept = tab === 'appearance' ? 'Pinned tag colors are kept.' : 'Custom holidays are kept.';
-          if (!confirm(`Reset ${label} settings to their defaults? ${kept}`)) return;
+          if (!(await appConfirm(`Reset ${label} settings to their defaults? ${kept}`, { okLabel: 'Reset' }))) return;
           const changed = resetOptionsTab(tab);
           renderOptionsSummaries();
           showToast(changed ? `${label} reset to defaults` : `${label} is already on the defaults`);
@@ -15658,8 +15693,8 @@
       }));
       options.push({
         label: '+ New project…',
-        onPick: () => {
-          const name = prompt('Project name:');
+        onPick: async () => {
+          const name = await appPrompt('Project name:', '', { okLabel: 'Create' });
           if (!name || !name.trim()) return;
           sendDeskItemToProject(itemId, createProject(name.trim()).id);
         },
@@ -18646,7 +18681,7 @@
 
     function handleImportFile(file) {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         try {
           const parsed = JSON.parse(reader.result);
 
@@ -18667,10 +18702,11 @@
           if (fileContext && fileContext !== state.listContext) {
             const fileLabel = getContextLabel(fileContext);
             const currentLabel = getContextLabel();
-            if (!confirm(
+            if (!(await appConfirm(
               `This backup is from your ${fileLabel} desk, but you're on the ${currentLabel} tab.\n\n` +
-              `Import into ${currentLabel} anyway?`
-            )) {
+              `Import into ${currentLabel} anyway?`,
+              { okLabel: 'Import' },
+            ))) {
               els.importFile.value = '';
               return;
             }
@@ -19539,7 +19575,7 @@
       }
     }
 
-    function deleteItem(id) {
+    async function deleteItem(id) {
       const found = findItem(id);
       if (!found) return;
 
@@ -19552,7 +19588,7 @@
         if (item.recurringTemplateId) extra += ' It came from a recurring template.';
       }
       if (state.confirmDelete) {
-        if (!confirm(`Delete this ${label}?${extra}`)) return;
+        if (!(await appConfirm(`Delete this ${label}?${extra}`, { okLabel: 'Delete', danger: true }))) return;
       }
 
       clearPendingUndo();
@@ -20084,12 +20120,13 @@
       const label = item.completed ? 'Mark incomplete' : 'Mark complete';
       edge.title = label;
       edge.setAttribute('aria-label', label);
-      // A press that travels is an attempted drag, not a click
+      // A press that travels is an attempted drag, not a click. A fingertip drifts several pixels during a tap,
+      // so touch and pen get the same allowance a touch drag needs before it starts.
       let start = null;
-      edge.addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY }; });
+      edge.addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY, slop: e.pointerType === 'mouse' ? 4 : 12 }; });
       edge.addEventListener('click', (e) => {
         e.stopPropagation();
-        const moved = start && e.detail > 0 && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4;
+        const moved = start && e.detail > 0 && Math.hypot(e.clientX - start.x, e.clientY - start.y) > start.slop;
         start = null;
         if (!moved) onToggle();
       });
@@ -23398,8 +23435,8 @@
           deleteBtn.style.fontSize = '0.7rem';
           deleteBtn.style.padding = '2px 6px';
           deleteBtn.style.color = 'var(--danger)';
-          deleteBtn.addEventListener('click', () => {
-            if (confirm('Delete this comment?')) {
+          deleteBtn.addEventListener('click', async () => {
+            if (await appConfirm('Delete this comment?', { okLabel: 'Delete', danger: true })) {
               deleteProjectItemComment(projectId, item.id, comment.id);
             }
           });
@@ -23563,8 +23600,8 @@
         deleteBtn.type = 'button';
         deleteBtn.textContent = 'delete';
         deleteBtn.style.color = 'var(--danger)';
-        deleteBtn.addEventListener('click', () => {
-          if (confirm('Delete this note?')) {
+        deleteBtn.addEventListener('click', async () => {
+          if (await appConfirm('Delete this note?', { okLabel: 'Delete', danger: true })) {
             deleteProjectItem(projectId, note.id);
             renderProjectDetail();
           }
@@ -23710,8 +23747,8 @@
         deleteBtn.type = 'button';
         deleteBtn.textContent = 'delete';
         deleteBtn.style.color = 'var(--danger)';
-        deleteBtn.addEventListener('click', () => {
-          if (confirm('Delete this task?')) {
+        deleteBtn.addEventListener('click', async () => {
+          if (await appConfirm('Delete this task?', { okLabel: 'Delete', danger: true })) {
             deleteProjectItem(projectId, task.id);
             renderProjectDetail();
           }
@@ -24241,11 +24278,11 @@
     });
 
     els.importMerge.addEventListener('click', () => applyImport('merge'));
-    els.importReplace.addEventListener('click', () => {
+    els.importReplace.addEventListener('click', async () => {
       const msg = state.pendingImportAll
         ? 'This will permanently replace ALL your Work, Personal, and Projects data. Continue?'
         : 'This will permanently replace all your current tasks and notes. Continue?';
-      if (confirm(msg)) {
+      if (await appConfirm(msg, { okLabel: 'Replace', danger: true })) {
         applyImport('replace');
       }
     });
@@ -24494,6 +24531,69 @@
 
     document.getElementById('send-modal-cancel').addEventListener('click', closeSendModal);
 
+    // ── In-app confirm / prompt ──────────────────────────────────────────────
+    // The browser's confirm() and prompt() make Chrome on Android leave full screen
+    let appDialogResolve = null;
+
+    function openAppDialog({ message, okLabel = 'OK', danger = false, input = null }) {
+      const dialog = document.getElementById('app-dialog');
+      const inputEl = document.getElementById('app-dialog-input');
+      const okBtn = document.getElementById('app-dialog-ok');
+      appDialogResolve?.(null);
+      return new Promise((resolve) => {
+        const returnFocus = document.activeElement;
+        document.getElementById('app-dialog-message').textContent = message;
+        okBtn.textContent = okLabel;
+        okBtn.className = `modal-btn ${danger ? 'danger' : 'primary'}`;
+        inputEl.hidden = input === null;
+        inputEl.value = input ?? '';
+        dialog.classList.remove('hidden');
+        appDialogResolve = (value) => {
+          appDialogResolve = null;
+          dialog.classList.add('hidden');
+          if (returnFocus?.isConnected && returnFocus !== document.body) returnFocus.focus({ preventScroll: true });
+          resolve(value);
+        };
+        if (input === null) okBtn.focus();
+        else { inputEl.focus(); inputEl.select(); }
+      });
+    }
+
+    async function appConfirm(message, options = {}) {
+      return (await openAppDialog({ message, ...options })) !== null;
+    }
+
+    function appPrompt(message, defaultValue = '', options = {}) {
+      return openAppDialog({ message, input: defaultValue, ...options });
+    }
+
+    (function initAppDialog() {
+      const dialog = document.getElementById('app-dialog');
+      const inputEl = document.getElementById('app-dialog-input');
+      const okBtn = document.getElementById('app-dialog-ok');
+      const cancelBtn = document.getElementById('app-dialog-cancel');
+      const accept = () => appDialogResolve?.(inputEl.hidden ? true : inputEl.value);
+      const cancel = () => appDialogResolve?.(null);
+      okBtn.addEventListener('click', accept);
+      cancelBtn.addEventListener('click', cancel);
+      // Clicks and keys stay inside, so menus and Options behind it don't treat them as outside clicks or Escape
+      dialog.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (e.target === dialog) cancel();
+      });
+      dialog.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+        else if (e.key === 'Enter' && e.target !== cancelBtn) { e.preventDefault(); accept(); }
+        else if (e.key === 'Tab') {
+          const stops = [inputEl, cancelBtn, okBtn].filter((el) => !el.hidden);
+          const i = stops.indexOf(document.activeElement);
+          e.preventDefault();
+          stops[(i + (e.shiftKey ? -1 : 1) + stops.length) % stops.length].focus();
+        }
+      });
+    })();
+
     // Close overflow menus when clicking outside
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.card-overflow-btn')) closeCardMenus();
@@ -24705,8 +24805,8 @@
     els.tabPersonal.addEventListener('click', () => setListContext('personal'));
     els.tabProjects.addEventListener('click', () => setListContext('projects'));
 
-    els.newProjectBtn.addEventListener('click', () => {
-      const name = prompt('Project name:');
+    els.newProjectBtn.addEventListener('click', async () => {
+      const name = await appPrompt('Project name:', '', { okLabel: 'Create' });
       if (name && name.trim()) {
         const project = createProject(name.trim());
         selectProject(project.id);
@@ -24740,20 +24840,20 @@
       if (!els.projectMoreMenu.classList.contains('hidden') && !e.target.closest?.('.project-more-wrap')) closeProjectMoreMenu();
     });
 
-    els.projectRenameBtn.addEventListener('click', () => {
+    els.projectRenameBtn.addEventListener('click', async () => {
       const project = getProject(state.selectedProjectId);
       if (!project) return;
-      const newName = prompt('Rename project:', project.name);
+      const newName = await appPrompt('Rename project:', project.name, { okLabel: 'Rename' });
       if (newName && newName.trim() && newName.trim() !== project.name) {
         renameProject(project.id, newName.trim());
         renderProjectDetail();
       }
     });
 
-    els.projectDeleteBtn.addEventListener('click', () => {
+    els.projectDeleteBtn.addEventListener('click', async () => {
       const project = getProject(state.selectedProjectId);
       if (!project) return;
-      if (confirm(`Delete project "${project.name}" and all its contents?`)) {
+      if (await appConfirm(`Delete project "${project.name}" and all its contents?`, { okLabel: 'Delete', danger: true })) {
         deleteProject(project.id);
       }
     });
