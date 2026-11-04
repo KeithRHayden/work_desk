@@ -14,6 +14,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 - **Black screen while typing.** With full screen on, every key press re-requested full screen. After something had dropped it, the next key (often Ctrl+Enter to add) switched back, which blanks an Android screen for a second or two. Only taps re-enter full screen now.
 - **Done edge on touch screens.** A tap was ignored if the finger moved more than 4px between touching and lifting. Touch and pen now get 12px, the same distance a touch drag needs before it starts; a mouse keeps 4px.
 - **"DONE  !" gap.** The Done label added a hair space before "!" on top of the label's letter spacing, so the gap before "!" was about four times the gap between letters (worse at the larger tablet size). DONE!, DONE?, and UNDO? now space evenly.
+- **Esc closed the app on an Android tablet.** Android turns an Escape key the page doesn't mark as handled into Back, and Back on the installed app's only screen closes it. Most of the app's Escape handlers closed the edit, menu, or modal without `preventDefault()`, so the key also fell through as Back. A capture-phase listener (`initEscapeGuard`) now marks every Escape as handled; with nothing open, Esc does nothing. The search box's Escape now clears it explicitly (same as its ×), since the browser's built-in search-field clear is part of what that stops.
 
 ---
 
