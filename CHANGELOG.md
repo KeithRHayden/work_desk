@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.23.4] — 2026-11-04
+
+### Fixed
+
+- **Full screen dropping on Android.** Chrome on Android leaves full screen whenever a page shows the browser's own `confirm()` or `prompt()`. The app used them for delete confirmations (desk tasks and notes with *Confirm before delete* on, project tasks, notes, comments, and projects), Reset Appearance/Behavior, the import warnings, and new or renamed project names. All 11 now open in an in-app dialog (`#app-dialog`, `appConfirm` / `appPrompt`) that matches the theme: Enter confirms, Escape or a tap on the backdrop cancels, Tab stays inside it, focus returns to the button you came from, and clicks or keys inside it never reach Options or menus behind it. Deletes and Replace use a red button.
+- **Black screen while typing.** With full screen on, every key press re-requested full screen. After something had dropped it, the next key (often Ctrl+Enter to add) switched back, which blanks an Android screen for a second or two. Only taps re-enter full screen now.
+- **Done edge on touch screens.** A tap was ignored if the finger moved more than 4px between touching and lifting. Touch and pen now get 12px, the same distance a touch drag needs before it starts; a mouse keeps 4px.
+- **"DONE  !" gap.** The Done label added a hair space before "!" on top of the label's letter spacing, so the gap before "!" was about four times the gap between letters (worse at the larger tablet size). DONE!, DONE?, and UNDO? now space evenly.
+
+---
+
 ## [1.23.3] — 2026-10-30
 
 ### Fixed
