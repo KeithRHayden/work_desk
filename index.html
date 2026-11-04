@@ -9222,7 +9222,7 @@
             <li><strong>Install</strong> — use your browser's install option, or on iPhone <strong>Share → Add to Home Screen</strong>. Installed, it opens in its own window and works offline</li>
             <li><strong>Phone menu</strong> — the top bar keeps your tabs (Desk and Insights, with Work, Personal, and Projects underneath), search, and Help; the <strong>menu button</strong> holds your account, backup, Options, and What's new. The dot beside it shows sync status</li>
             <li>The add bar stays at the bottom, the week strip picks the day, and a task's left edge is wider for tapping (a bit narrower on a tablet in landscape)</li>
-            <li><strong>Full screen</strong> — Options → Behavior → General hides the status bar and app tray on that device only; swipe from an edge to see them. If the tablet drops out of full screen, your next tap brings it back (typing doesn't)</li>
+            <li><strong>Full screen</strong> — Options → Behavior → General hides the status bar and app tray on that device only; swipe from an edge to see them. If the tablet drops out of full screen, your next tap brings it back (typing doesn't). Esc on a tablet keyboard closes what's open, never the app</li>
           </ul>
         </details>
 
@@ -9428,6 +9428,7 @@
             'Typing on a tablet keyboard no longer blanks the screen for a second or two. If full screen had dropped, the next key press (like Ctrl+Enter to add) switched back into it; now only a tap does',
             'Tapping the Done edge on a tablet allows for normal finger drift (12px instead of 4px) before it counts as a drag',
             'DONE! on finished tasks no longer has a gap before the "!" (DONE? and UNDO? too)',
+            'Esc on a tablet keyboard closes the edit, menu, or box you\'re in instead of closing the whole app. Android treated it as the Back button; with nothing open, Esc now does nothing',
           ] },
         ],
       },
@@ -12806,6 +12807,12 @@
       document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
     }
 
+    // Android turns an Escape the page leaves unhandled into Back, which closes the installed app.
+    // Capture phase, so it runs before (and regardless of) whichever handler closes the open thing.
+    function initEscapeGuard() {
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.preventDefault(); }, true);
+    }
+
     // Kept on this device only (not synced), so a tablet can be full screen while a phone isn't
     function initFullscreen() {
       const toggle = document.getElementById('fullscreen-toggle');
@@ -13074,6 +13081,7 @@
 
       initBgPattern();
       initFullscreen();
+      initEscapeGuard();
 
       // Tag colors
       applyTagColorMode(state.tagColorMode, { fromSync: true });
@@ -24771,20 +24779,18 @@
     els.searchInput.addEventListener('focus', () => {
       if (state.searchQuery.trim()) renderSearchResults();
     });
-    els.searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeSearchOverlay();
-        els.searchInput.blur();
-      }
-    });
-    els.searchOverlayClose.addEventListener('click', () => {
+    function clearSearch() {
       state.searchQuery = '';
       els.searchInput.value = '';
       els.searchWrap.classList.remove('has-query');
       els.searchResults.innerHTML = '';
       closeSearchOverlay();
       els.searchInput.blur();
+    }
+    els.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') clearSearch();
     });
+    els.searchOverlayClose.addEventListener('click', clearSearch);
     document.addEventListener('click', (e) => {
       if (!els.searchWrap.contains(e.target) && !els.searchOverlay.contains(e.target)) {
         closeSearchOverlay();
