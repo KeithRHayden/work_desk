@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.24.0] — 2026-11-05
+
+### Added
+
+- **Seasonal themes.** A **Season** tab in Options → Themes (between Dark and Custom) holds 12 new themes, one row per season with a light, medium, and dark version: Winter (Frost, Winter Dusk, Evergreen Night), Spring (Blossom, Spring Rain, Orchard Night), Summer (Sunlit, Sea Glass, Midsummer Night), and Autumn (Harvest, Red Maple, Bonfire). Each is a full CSS block with its own Done, Carried, and Shelved colors. Every one meets WCAG AA in the preview checks: body and muted text at least 4.5:1 on cards and columns, sidebar text 4.5:1, and the accent, Done, and Carried colors at least 3:1. The medium and dark ones use dark text on their bright accent buttons. Theme entries carry a `season` field and stay out of the Light / Med / Dark lists; the *Current* line reads *Seasonal* and *Show* jumps to the tab. Names avoid the existing Citrus, Sakura, and Ember themes.
+- **Seasonal background patterns.** Snow crystals (six-armed crystals with side branches), Cherry petals (a five-petal blossom and loose notched petals), Water ripples, and Maple leaves (a toothed sugar-maple outline with veins), drawn as geometry rather than icons. Like the other patterns they use the theme's text color and the strength slider, and work with any theme.
+
+### Improved
+
+- **Status bar and title bar follow the theme.** `<meta name="theme-color">` was fixed at `#1a1025`, so Android's status bar, Work Desk's recent-apps card, and an installed desktop app's title bar stayed dark purple on every theme. `syncThemeColorMeta()` now sets it to the theme's `--sidebar` on launch and on every theme change, custom themes included. The launch splash color still comes from the manifest, which Chrome fixes at install.
+- **Pattern grid four across.** With 16 patterns, the Background grid is 4 columns (↑ and ↓ move by a row of 4) so the rows come out even.
+
+---
+
 ## [1.23.4] — 2026-11-04
 
 ### Fixed
