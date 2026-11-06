@@ -91,6 +91,11 @@
         cyberpunk: '⚡',
         outrun: '🏎️',
         'vaporwave-dark': '💿',
+        // Seasonal
+        'frost': '❄️', 'winter-dusk': '🌨️', 'evergreen-night': '🌲',
+        'blossom': '🌸', 'spring-rain': '🌧️', 'orchard-night': '🌷',
+        'sunlit': '☀️', 'sea-glass': '🌊', 'midsummer-night': '✨',
+        'harvest': '🌾', 'red-maple': '🍁', 'bonfire': '🔥',
       };
       function setFavicon(themeId) {
         const emoji = FAVICONS[themeId] ?? FAVICONS[''];
@@ -2376,6 +2381,220 @@
     [data-theme^="unit-two"] .desk-sticky { background-image: linear-gradient(90deg, #d7263d 0 65%, #f07c28 65% 85%, #2a2a2a 85% 100%); }
     [data-theme^="unit-eight"] .desk-sticky { background-image: linear-gradient(90deg, #e8559a 0 65%, #3fbf8a 65% 85%, #f2e6ec 85% 100%); }
 
+    /* ── Seasonal themes (1.24.0): each season in light, medium, and dark ── */
+    /* Frost — icy white-blue, navy sidebar, steel-blue accent */
+    [data-theme="frost"] {
+      --bg: #eef3f8; --surface: #ffffff; --panel-bg: #e4ecf4; --input-bg: #ffffff;
+      --sidebar: #1e2a3a; --sidebar-text: #b8c6d8; --sidebar-active: #eef3fa; --sidebar-muted: #7d8fa8;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #3f74ad;
+      --accent-hover: #366495; --accent-light: #e8eef5; --text: #1b2533; --text-muted: #5a6a7e;
+      --border: #d3dde8; --done: #3f7f6b; --note-bg: #f4f7fb; --note-border: #d3dde8;
+      --danger: #c62828; --danger-surface: #fdecea; --danger-surface-hover: #f8d8d7; --danger-border: #eebfbf;
+      --shelved-border: #b0b8c9; --shelved-label: #6f7490; --move-hover-bg: #f2f5f9; --delete-hover-bg: #fdecea;
+      --shelf-hover-bg: #eeeef2; --shadow: 0 1px 4px rgba(0,0,0,.07); --modal-overlay: rgba(0,0,0,.45); --modal-shadow: 0 8px 32px rgba(0,0,0,.15);
+      --tooltip-bg: #1e2a3a; --tooltip-text: #eef3fa; --carried: #c2547a; --carried-ink: #ce7695;
+      --sidebar-tab-active-bg: color-mix(in srgb, #3f74ad 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #3f74ad 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #3f74ad 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Winter Dusk — blue-gray dusk, pale ice accent */
+    [data-theme="winter-dusk"] {
+      --bg: #505a68; --surface: #5c6675; --panel-bg: #495361; --input-bg: #646e7c;
+      --sidebar: #1f2633; --sidebar-text: #b4c0d2; --sidebar-active: #eef2f8; --sidebar-muted: #7d8aa0;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #a5c8f0;
+      --accent-hover: #b3d1f2; --accent-light: #6b7a8e; --text: #f2f5f9; --text-muted: #dde3ec;
+      --border: #48515d; --done: #b2e0cf; --note-bg: #576170; --note-border: #48515d;
+      --danger: #f87171; --danger-surface: #756874; --danger-surface-hover: #826974; --danger-border: #9a6a73;
+      --shelved-border: #787f8d; --shelved-label: #d0d4e6; --move-hover-bg: #616d7e; --delete-hover-bg: #756874;
+      --shelf-hover-bg: #6a7383; --shadow: 0 1px 4px rgba(0,0,0,.35); --modal-overlay: rgba(0,0,0,.6); --modal-shadow: 0 8px 32px rgba(0,0,0,.45);
+      --tooltip-bg: #1f2633; --tooltip-text: #eef2f8; --carried: #ffb3c6; --carried-ink: #ffb3c6;
+      --sidebar-tab-active-bg: color-mix(in srgb, #a5c8f0 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #a5c8f0 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #a5c8f0 60%, transparent);
+      color-scheme: dark;
+    }
+
+    /* Evergreen Night — dark spruce, mint accent */
+    [data-theme="evergreen-night"] {
+      --bg: #142026; --surface: #1c2c33; --panel-bg: #18262c; --input-bg: #27373d;
+      --sidebar: #0d171b; --sidebar-text: #9fb5b0; --sidebar-active: #e4eeeb; --sidebar-muted: #5e7570;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #7fb8a4;
+      --accent-hover: #93c3b3; --accent-light: #30484a; --text: #e4eeeb; --text-muted: #93a8a3;
+      --border: #2a3d44; --done: #8fcfa8; --note-bg: #213238; --note-border: #2a3d44;
+      --danger: #f87171; --danger-surface: #3f373d; --danger-surface-hover: #523d42; --danger-border: #74484c;
+      --shelved-border: #51616d; --shelved-label: #9aa3b8; --move-hover-bg: #23363b; --delete-hover-bg: #3f373d;
+      --shelf-hover-bg: #2b3a43; --shadow: 0 1px 4px rgba(0,0,0,.35); --modal-overlay: rgba(0,0,0,.6); --modal-shadow: 0 8px 32px rgba(0,0,0,.45);
+      --tooltip-bg: #0d171b; --tooltip-text: #e4eeeb; --carried: #f28b9b; --carried-ink: #f28b9b;
+      --sidebar-tab-active-bg: color-mix(in srgb, #7fb8a4 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #7fb8a4 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #7fb8a4 60%, transparent);
+      color-scheme: dark;
+    }
+
+    /* Blossom — soft spring white, leaf-green sidebar, cherry-blossom accent */
+    [data-theme="blossom"] {
+      --bg: #f6f5ef; --surface: #ffffff; --panel-bg: #eeeee4; --input-bg: #ffffff;
+      --sidebar: #34463a; --sidebar-text: #c2d2c4; --sidebar-active: #f1f6f1; --sidebar-muted: #8aa08e;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #b84f78;
+      --accent-hover: #9e4467; --accent-light: #f6eaef; --text: #24302a; --text-muted: #5a675f;
+      --border: #dcdfd2; --done: #3f804f; --note-bg: #f9f9f3; --note-border: #dcdfd2;
+      --danger: #c62828; --danger-surface: #fdecea; --danger-surface-hover: #f8d8d7; --danger-border: #eebfbf;
+      --shelved-border: #b6b9b8; --shelved-label: #6f7288; --move-hover-bg: #faf3f6; --delete-hover-bg: #fdecea;
+      --shelf-hover-bg: #eeeef1; --shadow: 0 1px 4px rgba(0,0,0,.07); --modal-overlay: rgba(0,0,0,.45); --modal-shadow: 0 8px 32px rgba(0,0,0,.15);
+      --tooltip-bg: #34463a; --tooltip-text: #f1f6f1; --carried: #b4486f; --carried-ink: #daa4b7;
+      --sidebar-tab-active-bg: color-mix(in srgb, #b84f78 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #b84f78 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #b84f78 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Spring Rain — rain-washed slate green, fresh-leaf accent */
+    [data-theme="spring-rain"] {
+      --bg: #4d5c55; --surface: #5b6963; --panel-bg: #47554e; --input-bg: #63716b;
+      --sidebar: #1d2925; --sidebar-text: #b3c7bd; --sidebar-active: #eef5f1; --sidebar-muted: #7a9187;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #a8e0b8;
+      --accent-hover: #b6e5c3; --accent-light: #6a8174; --text: #f3f8f5; --text-muted: #dbe6e0;
+      --border: #44524c; --done: #c2eab0; --note-bg: #55645e; --note-border: #44524c;
+      --danger: #f87171; --danger-surface: #746a65; --danger-surface-hover: #816b66; --danger-border: #9a6c69;
+      --shelved-border: #768081; --shelved-label: #d2d4e2; --move-hover-bg: #607169; --delete-hover-bg: #746a65;
+      --shelf-hover-bg: #697672; --shadow: 0 1px 4px rgba(0,0,0,.35); --modal-overlay: rgba(0,0,0,.6); --modal-shadow: 0 8px 32px rgba(0,0,0,.45);
+      --tooltip-bg: #1d2925; --tooltip-text: #eef5f1; --carried: #ffb6cc; --carried-ink: #ffb6cc;
+      --sidebar-tab-active-bg: color-mix(in srgb, #a8e0b8 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #a8e0b8 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #a8e0b8 60%, transparent);
+      color-scheme: dark;
+    }
+
+    /* Orchard Night — night orchard plum, blossom-pink accent */
+    [data-theme="orchard-night"] {
+      --bg: #1b1a21; --surface: #25232d; --panel-bg: #201f27; --input-bg: #302e38;
+      --sidebar: #111016; --sidebar-text: #b8afc4; --sidebar-active: #efe9f2; --sidebar-muted: #6f6880;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #f0a6c0;
+      --accent-hover: #f2b4ca; --accent-light: #4e3d4a; --text: #efe9f2; --text-muted: #a69fb2;
+      --border: #34313e; --done: #9ad3a2; --note-bg: #2a2833; --note-border: #34313e;
+      --danger: #f87171; --danger-surface: #472f38; --danger-surface-hover: #59363e; --danger-border: #794248;
+      --shelved-border: #5c596c; --shelved-label: #a7a3c2; --move-hover-bg: #332c37; --delete-hover-bg: #472f38;
+      --shelf-hover-bg: #35323f; --shadow: 0 1px 4px rgba(0,0,0,.35); --modal-overlay: rgba(0,0,0,.6); --modal-shadow: 0 8px 32px rgba(0,0,0,.45);
+      --tooltip-bg: #111016; --tooltip-text: #efe9f2; --carried: #f08a8a; --carried-ink: #f08a8a;
+      --sidebar-tab-active-bg: color-mix(in srgb, #f0a6c0 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #f0a6c0 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #f0a6c0 60%, transparent);
+      color-scheme: dark;
+    }
+
+    /* Sunlit — warm cream, ocean-blue sidebar, sun-orange accent */
+    [data-theme="sunlit"] {
+      --bg: #fbf6ea; --surface: #ffffff; --panel-bg: #f3ecdb; --input-bg: #ffffff;
+      --sidebar: #1f3b4d; --sidebar-text: #b5cad6; --sidebar-active: #f1f7fa; --sidebar-muted: #7d98a8;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #b5580b;
+      --accent-hover: #9c4c09; --accent-light: #f6ebe2; --text: #2a2620; --text-muted: #665d4f;
+      --border: #e6dcc6; --done: #23786a; --note-bg: #fdf9f0; --note-border: #e6dcc6;
+      --danger: #c62828; --danger-surface: #fdecea; --danger-surface-hover: #f8d8d7; --danger-border: #eebfbf;
+      --shelved-border: #bcb6b0; --shelved-label: #6f7088; --move-hover-bg: #faf3ee; --delete-hover-bg: #fdecea;
+      --shelf-hover-bg: #eeeef1; --shadow: 0 1px 4px rgba(0,0,0,.07); --modal-overlay: rgba(0,0,0,.45); --modal-shadow: 0 8px 32px rgba(0,0,0,.15);
+      --tooltip-bg: #1f3b4d; --tooltip-text: #f1f7fa; --carried: #c4466a; --carried-ink: #dc90a6;
+      --sidebar-tab-active-bg: color-mix(in srgb, #b5580b 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #b5580b 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #b5580b 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Sea Glass — muted sea-glass teal, sun-gold accent */
+    [data-theme="sea-glass"] {
+      --bg: #46605d; --surface: #526c69; --panel-bg: #405955; --input-bg: #5b7371;
+      --sidebar: #1d2e2d; --sidebar-text: #b2cbc7; --sidebar-active: #eef7f6; --sidebar-muted: #7a9894;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #ffd27a;
+      --accent-hover: #ffd98f; --accent-light: #75806c; --text: #f4faf9; --text-muted: #dcebe8;
+      --border: #3d5553; --done: #c2f2d8; --note-bg: #4d6764; --note-border: #3d5553;
+      --danger: #f87171; --danger-surface: #6d6d6a; --danger-surface-hover: #7b6d6b; --danger-border: #946e6c;
+      --shelved-border: #728386; --shelved-label: #d4d7e6; --move-hover-bg: #5e736a; --delete-hover-bg: #6d6d6a;
+      --shelf-hover-bg: #627978; --shadow: 0 1px 4px rgba(0,0,0,.35); --modal-overlay: rgba(0,0,0,.6); --modal-shadow: 0 8px 32px rgba(0,0,0,.45);
+      --tooltip-bg: #1d2e2d; --tooltip-text: #eef7f6; --carried: #ffb8c6; --carried-ink: #ffb8c6;
+      --sidebar-tab-active-bg: color-mix(in srgb, #ffd27a 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #ffd27a 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #ffd27a 60%, transparent);
+      color-scheme: dark;
+    }
+
+    /* Midsummer Night — deep summer-night blue, firefly-gold accent */
+    [data-theme="midsummer-night"] {
+      --bg: #0f1b2b; --surface: #172639; --panel-bg: #132133; --input-bg: #233143;
+      --sidebar: #09121e; --sidebar-text: #9fb2c8; --sidebar-active: #e8eef6; --sidebar-muted: #5f7590;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #f6c453;
+      --accent-hover: #f7cd6f; --accent-light: #44463e; --text: #e8eef6; --text-muted: #95a6bb;
+      --border: #24364c; --done: #7fd0b0; --note-bg: #1b2c41; --note-border: #24364c;
+      --danger: #f87171; --danger-surface: #3b3242; --danger-surface-hover: #4e3847; --danger-border: #71444f;
+      --shelved-border: #505e77; --shelved-label: #a3a8c6; --move-hover-bg: #27313b; --delete-hover-bg: #3b3242;
+      --shelf-hover-bg: #28364a; --shadow: 0 1px 4px rgba(0,0,0,.35); --modal-overlay: rgba(0,0,0,.6); --modal-shadow: 0 8px 32px rgba(0,0,0,.45);
+      --tooltip-bg: #09121e; --tooltip-text: #e8eef6; --carried: #f58ca0; --carried-ink: #f58ca0;
+      --sidebar-tab-active-bg: color-mix(in srgb, #f6c453 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #f6c453 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #f6c453 60%, transparent);
+      color-scheme: dark;
+    }
+
+    /* Harvest — pale gold, maple-red sidebar, burnt-orange accent */
+    [data-theme="harvest"] {
+      --bg: #fbf1d6; --surface: #fffbef; --panel-bg: #f6e5b4; --input-bg: #fffbef;
+      --sidebar: #7c2a0e; --sidebar-text: #fcdcbc; --sidebar-active: #fff4e6; --sidebar-muted: #e3a77f;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #c2410c;
+      --accent-hover: #a7380a; --accent-light: #f8e5d4; --text: #2b1d0e; --text-muted: #6b4c1f;
+      --border: #ecd6a0; --done: #4a7a26; --note-bg: #fff6dc; --note-border: #ecd6a0;
+      --danger: #c62828; --danger-surface: #fdecea; --danger-surface-hover: #f8d8d7; --danger-border: #eebcb3;
+      --shelved-border: #c0b095; --shelved-label: #6f6a80; --move-hover-bg: #fbeedf; --delete-hover-bg: #fdecea;
+      --shelf-hover-bg: #eeeae2; --shadow: 0 1px 4px rgba(0,0,0,.07); --modal-overlay: rgba(0,0,0,.45); --modal-shadow: 0 8px 32px rgba(0,0,0,.15);
+      --tooltip-bg: #7c2a0e; --tooltip-text: #fff4e6; --carried: #b42318; --carried-ink: #e1a7a3;
+      --sidebar-tab-active-bg: color-mix(in srgb, #c2410c 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #c2410c 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #c2410c 60%, transparent);
+      color-scheme: light;
+    }
+
+    /* Red Maple — red-orange maple, golden accent */
+    [data-theme="red-maple"] {
+      --bg: #8a3a1f; --surface: #9a4527; --panel-bg: #7e331a; --input-bg: #9f4e32;
+      --sidebar: #2e1009; --sidebar-text: #f6cdb4; --sidebar-active: #fff5ee; --sidebar-muted: #b9785c;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #ffcc4d;
+      --accent-hover: #ffd469; --accent-light: #ae602f; --text: #fffaf5; --text-muted: #fde6d3;
+      --border: #74301a; --done: #dcf0a2; --note-bg: #93412a; --note-border: #74301a;
+      --danger: #f87171; --danger-surface: #a94c33; --danger-surface-hover: #b15039; --danger-border: #c05745;
+      --shelved-border: #a06b61; --shelved-label: #f3d9e6; --move-hover-bg: #a14e2a; --delete-hover-bg: #a94c33;
+      --shelf-hover-bg: #a5573e; --shadow: 0 1px 4px rgba(0,0,0,.35); --modal-overlay: rgba(0,0,0,.6); --modal-shadow: 0 8px 32px rgba(0,0,0,.45);
+      --tooltip-bg: #2e1009; --tooltip-text: #fff5ee; --carried: #ffd5c2; --carried-ink: #ffd5c2;
+      --sidebar-tab-active-bg: color-mix(in srgb, #ffcc4d 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #ffcc4d 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #ffcc4d 60%, transparent);
+      color-scheme: dark;
+    }
+
+    /* Bonfire — charcoal, ember-red sidebar, amber accent */
+    [data-theme="bonfire"] {
+      --bg: #17171a; --surface: #222126; --panel-bg: #1c1c20; --input-bg: #2d2c31;
+      --sidebar: #2b1008; --sidebar-text: #f0c9a8; --sidebar-active: #fff1e2; --sidebar-muted: #a06e52;
+      --sidebar-border: rgba(255,255,255,.1); --sidebar-hover: rgba(255,255,255,.07); --sidebar-btn-border: rgba(255,255,255,.14); --accent: #f5a524;
+      --accent-hover: #f7b347; --accent-light: #4c3b26; --text: #f4efe6; --text-muted: #a9a39a;
+      --border: #34323a; --done: #b5d86a; --note-bg: #27262c; --note-border: #34323a;
+      --danger: #f87171; --danger-surface: #442e32; --danger-surface-hover: #563538; --danger-border: #784144;
+      --shelved-border: #5d5b67; --shelved-label: #aaa6ba; --move-hover-bg: #312a26; --delete-hover-bg: #442e32;
+      --shelf-hover-bg: #323138; --shadow: 0 1px 4px rgba(0,0,0,.35); --modal-overlay: rgba(0,0,0,.6); --modal-shadow: 0 8px 32px rgba(0,0,0,.45);
+      --tooltip-bg: #2b1008; --tooltip-text: #fff1e2; --carried: #ff7a5c; --carried-ink: #ff7a5c;
+      --sidebar-tab-active-bg: color-mix(in srgb, #f5a524 28%, transparent);
+      --sidebar-cal-selected-bg: color-mix(in srgb, #f5a524 22%, transparent);
+      --sidebar-cal-today-ring: color-mix(in srgb, #f5a524 60%, transparent);
+      color-scheme: dark;
+    }
+    /* Seasonal medium and dark accents are bright, so their filled buttons use dark text */
+    [data-theme="winter-dusk"] .add-btn, [data-theme="winter-dusk"] .modal-btn.primary { color: #18202c; }
+    [data-theme="evergreen-night"] .add-btn, [data-theme="evergreen-night"] .modal-btn.primary { color: #0d171b; }
+    [data-theme="spring-rain"] .add-btn, [data-theme="spring-rain"] .modal-btn.primary { color: #16221d; }
+    [data-theme="orchard-night"] .add-btn, [data-theme="orchard-night"] .modal-btn.primary { color: #1b1a21; }
+    [data-theme="sea-glass"] .add-btn, [data-theme="sea-glass"] .modal-btn.primary { color: #1d2e2d; }
+    [data-theme="midsummer-night"] .add-btn, [data-theme="midsummer-night"] .modal-btn.primary { color: #0f1b2b; }
+    [data-theme="red-maple"] .add-btn, [data-theme="red-maple"] .modal-btn.primary { color: #2e1009; }
+    [data-theme="bonfire"] .add-btn, [data-theme="bonfire"] .modal-btn.primary { color: #17171a; }
+
     /* Bright-accent themes need dark text on accent-filled buttons */
     [data-theme="dot-matrix"] .add-btn, [data-theme="dot-matrix"] .modal-btn.primary { color: #0f380f; }
     [data-theme="unit-zero-mid"] .add-btn, [data-theme="unit-zero-mid"] .modal-btn.primary,
@@ -2492,7 +2711,7 @@
     /* Background pattern controls; .main draws the tile from --desk-pattern */
     .bg-pattern-controls { margin: 2px 0 6px; }
     .bg-pattern-controls[hidden] { display: none; }
-    .bg-pattern-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 4px 0 6px; }
+    .bg-pattern-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 4px 0 6px; }
     .bg-pattern-picked { margin: 0 2px 8px; font-size: 0.78rem; color: var(--text-muted); }
     .bg-pattern-picked strong { color: var(--accent); font-weight: 600; }
     .bg-pattern-tile {
@@ -2724,6 +2943,11 @@
       display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
       align-items: start;
     }
+    .theme-picker-grid.seasonal { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 4px; }
+    .theme-season-label {
+      margin: 6px 2px 4px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
+    }
+    .theme-season-label:first-child { margin-top: 0; }
     .theme-swatch {
       min-width: 0;
       display: flex; flex-direction: column; align-items: center;
@@ -8619,6 +8843,7 @@
                         <button type="button" class="theme-filter-btn active" data-theme-filter="light">Light</button>
                         <button type="button" class="theme-filter-btn" data-theme-filter="medium">Med</button>
                         <button type="button" class="theme-filter-btn" data-theme-filter="dark">Dark</button>
+                        <button type="button" class="theme-filter-btn" data-theme-filter="seasonal">Season</button>
                         <button type="button" class="theme-filter-btn" data-theme-filter="custom">Custom</button>
                       </div>
                     </div>
@@ -8634,7 +8859,7 @@
                       <button type="button" class="options-row" data-options-open="typography"><span class="options-row-icon" aria-hidden="true">Aa</span><span class="options-row-text"><span class="options-row-name">Typography</span><span class="options-row-desc">Text size and font</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="layout"><span class="options-row-icon" aria-hidden="true">▤</span><span class="options-row-text"><span class="options-row-name">Layout<span class="options-new-tag" data-new-in="1.17.2">New</span></span><span class="options-row-desc"><span class="phone-hide">Sidebar side, calendar legend, progress</span><span class="phone-only">Tablets and computers</span></span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="effects"><span class="options-row-icon" aria-hidden="true">✦</span><span class="options-row-text"><span class="options-row-name">Effects</span><span class="options-row-desc">Card glow, gradient header</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="background"><span class="options-row-icon" aria-hidden="true">▦</span><span class="options-row-text"><span class="options-row-name">Background</span><span class="options-row-desc">Board pattern and strength</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="background"><span class="options-row-icon" aria-hidden="true">▦</span><span class="options-row-text"><span class="options-row-name">Background<span class="options-new-tag" data-new-in="1.24.0">New</span></span><span class="options-row-desc">Board pattern and strength</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="tags"><span class="options-row-icon" aria-hidden="true">#</span><span class="options-row-text"><span class="options-row-name">Tags</span><span class="options-row-desc">Tag colors</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                     </div>
 
@@ -9196,8 +9421,8 @@
           <summary>Options</summary>
           <ul>
             <li>Open with ⚙ near the date or <strong>Options</strong> in the account menu. Each tab opens on a short list; click a row to open it, and <strong>‹ Back</strong> or <strong>Esc</strong> to return</li>
-            <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) with previews and a Light/Med/Dark filter, plus up to 5 <strong>Custom</strong> themes from 5 colors</li>
-            <li><strong>Appearance</strong> — card layout, text size and font, layout (sidebar position left, right, top, or bottom, plus the calendar legend and Today's Progress; tablets and computers only, since phones always use the top bar), effects, a patterned background, and tag colors</li>
+            <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) with previews and a Light/Med/Dark filter, 12 <strong>Season</strong> themes (each season in light, medium, and dark), plus up to 5 <strong>Custom</strong> themes from 5 colors</li>
+            <li><strong>Appearance</strong> — card layout, text size and font, layout (sidebar position left, right, top, or bottom, plus the calendar legend and Today's Progress; tablets and computers only, since phones always use the top bar), effects, a patterned background (including snow crystals, cherry petals, water ripples, and maple leaves), and tag colors</li>
             <li><strong>Behavior</strong> — startup, week start, quieter weekends, full screen, comments, auto-collapse and auto carry, confetti, delete confirmation, strikethrough, long notes, and holidays (US federal plus your own dates)</li>
             <li><strong>Reset to defaults</strong> at the bottom of a tab resets just that tab; your theme, pinned tag colors, and custom holidays stay. A <em>New</em> tag marks settings from the latest release</li>
           </ul>
@@ -9416,12 +9641,26 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.23.4';
+    const APP_VERSION = '1.24.0';
     const CHANGELOG = [
+      {
+        version: '1.24.0',
+        date: 'Nov 5, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Seasonal themes: a new Season tab in Options → Themes with 12 themes, each season in light, medium, and dark. Winter: Frost, Winter Dusk, Evergreen Night. Spring: Blossom, Spring Rain, Orchard Night. Summer: Sunlit, Sea Glass, Midsummer Night. Autumn: Harvest, Red Maple, Bonfire',
+            'Four seasonal background patterns to go with them (Options → Appearance → Background): Snow crystals, Cherry petals, Water ripples, and Maple leaves. They work with any theme',
+          ] },
+          { label: 'Improved', items: [
+            'The phone\'s status bar, the app\'s card in Android\'s recent apps, and an installed desktop app\'s title bar now match your theme\'s sidebar color instead of always being dark purple',
+            'Background patterns sit four across, so all 16 line up evenly',
+          ] },
+        ],
+      },
       {
         version: '1.23.4',
         date: 'Nov 4, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'Full screen on an Android tablet no longer drops out when you delete with Confirm before delete on, reset Options, import a backup, or name a project. Those questions now open in the app\'s own dialog instead of the browser\'s, which Chrome on Android leaves full screen for',
@@ -10838,6 +11077,19 @@
       { id: 'unit-one',        name: 'Unit One',  sidebar: '#08050f', bg: '#100a1c', surface: '#1a1229', accent: '#8be04e', dark: true  },
       { id: 'unit-two',        name: 'Unit Two',  sidebar: '#0d0405', bg: '#160708', surface: '#241012', accent: '#ff4d4d', dark: true  },
       { id: 'unit-eight',      name: 'Unit Eight',sidebar: '#0e050b', bg: '#160a12', surface: '#24101e', accent: '#ff79b0', dark: true  },
+      // Seasonal — shown under the Season tab, one row per season (light, medium, dark)
+      { id: 'frost', name: 'Frost', sidebar: '#1e2a3a', bg: '#eef3f8', surface: '#ffffff', accent: '#3f74ad', dark: false, season: 'winter' },
+      { id: 'winter-dusk', name: 'Winter Dusk', sidebar: '#1f2633', bg: '#505a68', surface: '#5c6675', accent: '#a5c8f0', dark: false, medium: true, season: 'winter' },
+      { id: 'evergreen-night', name: 'Evergreen Night', sidebar: '#0d171b', bg: '#142026', surface: '#1c2c33', accent: '#7fb8a4', dark: true, season: 'winter' },
+      { id: 'blossom', name: 'Blossom', sidebar: '#34463a', bg: '#f6f5ef', surface: '#ffffff', accent: '#b84f78', dark: false, season: 'spring' },
+      { id: 'spring-rain', name: 'Spring Rain', sidebar: '#1d2925', bg: '#4d5c55', surface: '#5b6963', accent: '#a8e0b8', dark: false, medium: true, season: 'spring' },
+      { id: 'orchard-night', name: 'Orchard Night', sidebar: '#111016', bg: '#1b1a21', surface: '#25232d', accent: '#f0a6c0', dark: true, season: 'spring' },
+      { id: 'sunlit', name: 'Sunlit', sidebar: '#1f3b4d', bg: '#fbf6ea', surface: '#ffffff', accent: '#b5580b', dark: false, season: 'summer' },
+      { id: 'sea-glass', name: 'Sea Glass', sidebar: '#1d2e2d', bg: '#46605d', surface: '#526c69', accent: '#ffd27a', dark: false, medium: true, season: 'summer' },
+      { id: 'midsummer-night', name: 'Midsummer Night', sidebar: '#09121e', bg: '#0f1b2b', surface: '#172639', accent: '#f6c453', dark: true, season: 'summer' },
+      { id: 'harvest', name: 'Harvest', sidebar: '#7c2a0e', bg: '#fbf1d6', surface: '#fffbef', accent: '#c2410c', dark: false, season: 'autumn' },
+      { id: 'red-maple', name: 'Red Maple', sidebar: '#2e1009', bg: '#8a3a1f', surface: '#9a4527', accent: '#ffcc4d', dark: false, medium: true, season: 'autumn' },
+      { id: 'bonfire', name: 'Bonfire', sidebar: '#2b1008', bg: '#17171a', surface: '#222126', accent: '#f5a524', dark: true, season: 'autumn' },
     ];
 
     function getCurrentThemeId() {
@@ -11358,6 +11610,7 @@
             delete document.documentElement.dataset.theme;
           }
           if (window.__setThemeFavicon) window.__setThemeFavicon(id);
+          syncThemeColorMeta();
           renderThemeSwatches();
           setTimeout(() => {
             document.body.classList.remove('theme-transitioning');
@@ -11369,10 +11622,19 @@
       if (!fromSync) schedulePrefsPush();
     }
 
+    // Android paints the status bar and the recent-apps card with this, and an installed desktop app its title bar
+    function syncThemeColorMeta() {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (!meta || typeof getComputedStyle !== 'function') return;
+      const sidebar = getComputedStyle(document.documentElement).getPropertyValue('--sidebar').trim();
+      if (sidebar) meta.setAttribute('content', sidebar);
+    }
+
     function initTheme() {
       const stored = localStorage.getItem(THEME_KEY);
       const valid = THEMES.some(t => t.id === stored) || (isCustomThemeId(stored) && loadCustomThemes().some(t => t.id === stored));
       if (stored !== null && valid) applyTheme(stored, { fromSync: true });
+      syncThemeColorMeta();
       renderThemeSwatches();
     }
 
@@ -11382,7 +11644,14 @@
     let currentThemeFilter = 'light';
     let customEditorState = null; // null = browse, { id, name, dark, bg, surface, sidebar, accent, text } = editing
 
-    const THEME_GROUP_LABELS = { light: 'Light', medium: 'Medium', dark: 'Dark', custom: 'Custom' };
+    const THEME_GROUP_LABELS = { light: 'Light', medium: 'Medium', dark: 'Dark', seasonal: 'Seasonal', custom: 'Custom' };
+    const SEASONS = [
+      { id: 'winter', name: 'Winter', icon: '❄️' },
+      { id: 'spring', name: 'Spring', icon: '🌸' },
+      { id: 'summer', name: 'Summer', icon: '☀️' },
+      { id: 'autumn', name: 'Autumn', icon: '🍁' },
+    ];
+    const themeGroup = (t) => t.season ? 'seasonal' : t.medium ? 'medium' : t.dark ? 'dark' : 'light';
 
     function describeCurrentTheme() {
       const stored = localStorage.getItem(THEME_KEY) || '';
@@ -11391,7 +11660,7 @@
         if (ct) return { name: ct.name || 'Custom', group: 'custom' };
       }
       const t = THEMES.find(x => x.id === stored) || THEMES[0];
-      return { name: t.name, group: t.medium ? 'medium' : t.dark ? 'dark' : 'light' };
+      return { name: t.name, group: themeGroup(t) };
     }
 
     function renderCurrentThemeName() {
@@ -11423,11 +11692,7 @@
           currentThemeFilter = 'custom';
         } else {
           const currentThemeObj = THEMES.find(t => t.id === current);
-          if (currentThemeObj && currentThemeObj.medium) {
-            currentThemeFilter = 'medium';
-          } else if (currentThemeObj && currentThemeObj.dark) {
-            currentThemeFilter = 'dark';
-          }
+          if (currentThemeObj && themeGroup(currentThemeObj) !== 'light') currentThemeFilter = themeGroup(currentThemeObj);
         }
       } else {
         currentThemeFilter = filter;
@@ -11448,13 +11713,13 @@
       }
       if (isCustom) return;
 
-      const light  = THEMES.filter(t => !t.dark && !t.medium);
-      const medium = THEMES.filter(t =>  t.medium);
-      const dark   = THEMES.filter(t =>  t.dark);
+      const light  = THEMES.filter(t => themeGroup(t) === 'light');
+      const medium = THEMES.filter(t => themeGroup(t) === 'medium');
+      const dark   = THEMES.filter(t => themeGroup(t) === 'dark');
 
-      function renderGrid(list) {
+      function renderGrid(list, extraClass = '') {
         const grid = document.createElement('div');
-        grid.className = 'theme-picker-grid';
+        grid.className = 'theme-picker-grid' + extraClass;
         list.forEach(t => {
           const sw = document.createElement('button');
           sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
@@ -11486,6 +11751,13 @@
         elThemeGrid.appendChild(renderGrid(medium));
       } else if (currentThemeFilter === 'dark') {
         elThemeGrid.appendChild(renderGrid(dark));
+      } else if (currentThemeFilter === 'seasonal') {
+        SEASONS.forEach(s => {
+          const label = document.createElement('div');
+          label.className = 'theme-season-label';
+          label.innerHTML = `<span aria-hidden="true">${s.icon}</span> ${s.name}`;
+          elThemeGrid.append(label, renderGrid(THEMES.filter(t => t.season === s.id), ' seasonal'));
+        });
       }
       requestAnimationFrame(fitThemeNames);
       document.fonts?.ready.then(fitThemeNames);
@@ -12631,13 +12903,17 @@
       { id: 'chevron', name: 'Chevron', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='12'><path d='M0 10L12 2L24 10' fill='none' stroke='INK' stroke-width='.9'/></svg>" },
       { id: 'greek-key', name: 'Greek key', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='M0 21H21V3H3V15H15V9H9' fill='none' stroke='INK' stroke-width='1.2'/></svg>" },
       { id: 'dot-grid', name: 'Dot grid', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><circle cx='6' cy='6' r='.8' fill='INK'/></svg>" },
+      { id: 'snow-crystals', name: 'Snow crystals', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='84' height='84'><g fill='none' stroke='INK' stroke-width='.75' stroke-linecap='round' stroke-linejoin='round'><path d='M24 24L37 24M28.42 24L30.37 20.62M28.42 24L30.37 27.38M31.54 24L33.23 21.07M31.54 24L33.23 26.93M34.4 24L35.38 22.31M34.4 24L35.38 25.69M24 24L30.5 35.26M26.21 27.83L30.11 27.83M26.21 27.83L24.26 31.21M27.77 30.53L31.15 30.53M27.77 30.53L26.08 33.46M29.2 33.01L31.15 33.01M29.2 33.01L28.23 34.7M24 24L17.5 35.26M21.79 27.83L23.74 31.21M21.79 27.83L17.89 27.83M20.23 30.53L21.92 33.46M20.23 30.53L16.85 30.53M18.8 33.01L19.78 34.7M18.8 33.01L16.85 33.01M24 24L11 24M19.58 24L17.63 27.38M19.58 24L17.63 20.62M16.46 24L14.77 26.93M16.46 24L14.77 21.07M13.6 24L12.63 25.69M13.6 24L12.62 22.31M24 24L17.5 12.74M21.79 20.17L17.89 20.17M21.79 20.17L23.74 16.79M20.23 17.47L16.85 17.47M20.23 17.47L21.92 14.54M18.8 14.99L16.85 14.99M18.8 14.99L19.77 13.3M24 24L30.5 12.74M26.21 20.17L24.26 16.79M26.21 20.17L30.11 20.17M27.77 17.47L26.08 14.54M27.77 17.47L31.15 17.47M29.2 14.99L28.23 13.3M29.2 14.99L31.15 14.99M25.46 24.84L24 25.69L22.54 24.84L22.54 23.16L24 22.31L25.46 23.15L25.46 24.84'/><path d='M62 60L69.83 61.66M64.66 60.57L66.27 58.78M64.66 60.57L65.4 62.85M66.54 60.96L67.93 59.42M66.54 60.96L67.18 62.94M68.26 61.33L69.06 60.44M68.26 61.33L68.63 62.47M62 60L64.47 67.61M62.84 62.59L65.19 63.09M62.84 62.59L61.23 64.37M63.43 64.41L65.47 64.85M63.43 64.41L62.04 65.96M63.98 66.09L65.15 66.34M63.98 66.09L63.17 66.98M62 60L56.65 65.95M60.18 62.02L60.92 64.3M60.18 62.02L57.83 61.52M58.9 63.45L59.54 65.43M58.9 63.45L56.86 63.02M57.72 64.76L58.09 65.9M57.72 64.76L56.54 64.51M62 60L54.17 58.34M59.34 59.43L57.73 61.22M59.34 59.43L58.6 57.15M57.46 59.04L56.07 60.58M57.46 59.04L56.82 57.06M55.74 58.67L54.94 59.56M55.74 58.67L55.37 57.53M62 60L59.53 52.39M61.16 57.41L58.81 56.91M61.16 57.41L62.77 55.63M60.57 55.59L58.53 55.15M60.57 55.59L61.96 54.04M60.02 53.91L58.85 53.66M60.02 53.91L60.83 53.02M62 60L67.35 54.05M63.82 57.98L63.08 55.7M63.82 57.98L66.17 58.48M65.1 56.55L64.46 54.57M65.1 56.55L67.14 56.98M66.28 55.24L65.91 54.1M66.28 55.24L67.46 55.49M62.77 60.7L61.78 61.02L61.01 60.32L61.23 59.3L62.22 58.98L62.99 59.68L62.77 60.7' stroke-width='.65'/><path d='M66 18L69.76 19.37M67.28 18.47L68.2 17.69M67.28 18.47L67.49 19.65M68.18 18.79L68.98 18.12M68.18 18.79L68.36 19.82M69.01 19.09L69.47 18.71M69.01 19.09L69.11 19.69M66 18L66.69 21.94M66.24 19.34L67.36 19.75M66.24 19.34L65.32 20.11M66.4 20.28L67.38 20.64M66.4 20.28L65.61 20.95M66.56 21.15L67.12 21.36M66.56 21.15L66.1 21.54M66 18L62.94 20.57M64.96 18.87L65.17 20.06M64.96 18.87L63.83 18.46M64.22 19.49L64.4 20.52M64.22 19.49L63.25 19.14M63.55 20.06L63.65 20.65M63.55 20.06L62.98 19.85M66 18L62.24 16.63M64.72 17.53L63.8 18.31M64.72 17.53L64.51 16.35M63.82 17.21L63.02 17.88M63.82 17.21L63.64 16.18M62.99 16.91L62.53 17.29M62.99 16.91L62.89 16.31M66 18L65.31 14.06M65.76 16.66L64.64 16.25M65.76 16.66L66.68 15.89M65.6 15.72L64.62 15.36M65.6 15.72L66.39 15.05M65.44 14.85L64.88 14.64M65.44 14.85L65.9 14.46M66 18L69.06 15.43M67.04 17.13L66.83 15.94M67.04 17.13L68.17 17.54M67.78 16.51L67.6 15.48M67.78 16.51L68.75 16.86M68.45 15.94L68.35 15.35M68.45 15.94L69.02 16.15M66.33 18.4L65.82 18.49L65.49 18.09L65.67 17.6L66.18 17.51L66.51 17.91L66.33 18.4' stroke-width='.55'/><path d='M18 66L21.17 66.45M19.08 66.15L19.67 65.39M19.08 66.15L19.44 67.04M19.84 66.26L20.35 65.6M19.84 66.26L20.15 67.03M20.54 66.36L20.83 65.98M20.54 66.36L20.71 66.8M18 66L19.2 68.97M18.41 67.01L19.36 67.14M18.41 67.01L17.82 67.77M18.7 67.72L19.52 67.84M18.7 67.72L18.18 68.38M18.96 68.37L19.43 68.44M18.96 68.37L18.66 68.75M18 66L16.03 68.52M17.33 66.86L17.69 67.75M17.33 66.86L16.38 66.72M16.86 67.46L17.17 68.23M16.86 67.46L16.03 67.35M16.42 68.02L16.6 68.46M16.42 68.02L15.95 67.95M18 66L14.83 65.55M16.92 65.85L16.33 66.61M16.92 65.85L16.56 64.96M16.16 65.74L15.65 66.4M16.16 65.74L15.85 64.97M15.46 65.64L15.17 66.02M15.46 65.64L15.29 65.2M18 66L16.8 63.03M17.59 64.99L16.64 64.86M17.59 64.99L18.18 64.23M17.3 64.28L16.48 64.16M17.3 64.28L17.82 63.62M17.04 63.63L16.57 63.56M17.04 63.63L17.34 63.25M18 66L19.97 63.48M18.67 65.14L18.31 64.25M18.67 65.14L19.62 65.28M19.14 64.54L18.83 63.77M19.14 64.54L19.97 64.65M19.58 63.98L19.4 63.54M19.58 63.98L20.05 64.05M18.33 66.26L17.94 66.41L17.61 66.16L17.67 65.74L18.06 65.59L18.39 65.84L18.33 66.26' stroke-width='.5'/></g></svg>" },
+      { id: 'cherry-petals', name: 'Cherry petals', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><g fill='none' stroke='INK' stroke-width='.75' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(30 32) rotate(10) scale(1.05)'><g transform='rotate(0)'><path d='M0 0C-3.8-2.4-4.9-7.8-2-10.6C-1.2-11.3-.5-10.6 0-9.6C.5-10.6 1.2-11.3 2-10.6C4.9-7.8 3.8-2.4 0 0Z' transform='translate(0 -1.6)' fill='INK' fill-opacity='.45'/></g><g transform='rotate(72)'><path d='M0 0C-3.8-2.4-4.9-7.8-2-10.6C-1.2-11.3-.5-10.6 0-9.6C.5-10.6 1.2-11.3 2-10.6C4.9-7.8 3.8-2.4 0 0Z' transform='translate(0 -1.6)' fill='INK' fill-opacity='.45'/></g><g transform='rotate(144)'><path d='M0 0C-3.8-2.4-4.9-7.8-2-10.6C-1.2-11.3-.5-10.6 0-9.6C.5-10.6 1.2-11.3 2-10.6C4.9-7.8 3.8-2.4 0 0Z' transform='translate(0 -1.6)' fill='INK' fill-opacity='.45'/></g><g transform='rotate(216)'><path d='M0 0C-3.8-2.4-4.9-7.8-2-10.6C-1.2-11.3-.5-10.6 0-9.6C.5-10.6 1.2-11.3 2-10.6C4.9-7.8 3.8-2.4 0 0Z' transform='translate(0 -1.6)' fill='INK' fill-opacity='.45'/></g><g transform='rotate(288)'><path d='M0 0C-3.8-2.4-4.9-7.8-2-10.6C-1.2-11.3-.5-10.6 0-9.6C.5-10.6 1.2-11.3 2-10.6C4.9-7.8 3.8-2.4 0 0Z' transform='translate(0 -1.6)' fill='INK' fill-opacity='.45'/></g><path d='M0 0L0 -3.6' stroke-width='.45'/><circle cx='0' cy='-3.9' r='.55' fill='INK'/><path d='M0 0L2.81 -2.24' stroke-width='.45'/><circle cx='3.05' cy='-2.43' r='.55' fill='INK'/><path d='M0 0L3.51 0.8' stroke-width='.45'/><circle cx='3.8' cy='0.87' r='.55' fill='INK'/><path d='M0 0L1.56 3.24' stroke-width='.45'/><circle cx='1.69' cy='3.51' r='.55' fill='INK'/><path d='M0 0L-1.56 3.24' stroke-width='.45'/><circle cx='-1.69' cy='3.51' r='.55' fill='INK'/><path d='M0 0L-3.51 0.8' stroke-width='.45'/><circle cx='-3.8' cy='0.87' r='.55' fill='INK'/><path d='M0 0L-2.81 -2.24' stroke-width='.45'/><circle cx='-3.05' cy='-2.43' r='.55' fill='INK'/></g><g transform='translate(72 68) rotate(-55) scale(1.45)'><path d='M0 0C-3.8-2.4-4.9-7.8-2-10.6C-1.2-11.3-.5-10.6 0-9.6C.5-10.6 1.2-11.3 2-10.6C4.9-7.8 3.8-2.4 0 0Z' fill='INK' fill-opacity='.55'/><path d='M0-1.2V-8.4' stroke-width='.5' opacity='.7'/></g><g transform='translate(78 22) rotate(120) scale(1.15)'><path d='M0 0C-3.8-2.4-4.9-7.8-2-10.6C-1.2-11.3-.5-10.6 0-9.6C.5-10.6 1.2-11.3 2-10.6C4.9-7.8 3.8-2.4 0 0Z' fill='INK' fill-opacity='.55'/><path d='M0-1.2V-8.4' stroke-width='.5' opacity='.7'/></g><g transform='translate(24 82) rotate(-150) scale(1.05)'><path d='M0 0C-3.8-2.4-4.9-7.8-2-10.6C-1.2-11.3-.5-10.6 0-9.6C.5-10.6 1.2-11.3 2-10.6C4.9-7.8 3.8-2.4 0 0Z' fill='INK' fill-opacity='.55'/><path d='M0-1.2V-8.4' stroke-width='.5' opacity='.7'/></g></g></svg>" },
+      { id: 'ripples', name: 'Water ripples', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='48'><g fill='none' stroke='INK' stroke-width='.75' stroke-linecap='round' stroke-linejoin='round'><path d='M0 12C20 8.5 40 8.5 60 12S100 15.5 120 12'/><path d='M0 30C14 27.5 30 27 46 29.5S78 33 94 31S112 29 120 30' stroke-width='.6' opacity='.8'/><path d='M10 40.5C22 39 34 39 46 40.5' stroke-width='.5' opacity='.6'/><path d='M70 21C80 20 90 20 100 21' stroke-width='.5' opacity='.6'/></g></svg>" },
+      { id: 'maple-leaves', name: 'Maple leaves', svg: "<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><g fill='none' stroke='INK' stroke-width='.75' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(4 2) rotate(-14 19 19) scale(0.95)'><path d='M20 26L23 27.5L25.5 27L27 29.5L29 28.5L32.5 30L31.5 27.2L33 26L30 24.5L26.5 21.5L30 20.5L31 17.5L33.5 17.8L34.5 14.5L38 12.5L34.5 11.5L35 8.5L31.5 10L30 8L27.5 11.5L24 14L24.5 9.5L27 8.5L24.5 6.5L23.5 3.5L21.5 4.5L20 0.5L18.5 4.5L16.5 3.5L15.5 6.5L13 8.5L15.5 9.5L16 14L12.5 11.5L10 8L8.5 10L5 8.5L5.5 11.5L2 12.5L5.5 14.5L6.5 17.8L9 17.5L10 20.5L13.5 21.5L10 24.5L7 26L8.5 27.2L7.5 30L11 28.5L13 29.5L14.5 27L17 27.5L20 26Z'/><path d='M20 26L20 4M20 26L35 13M20 26L5 13M20 26L31 29M20 26L9 29M20 17L24.6 12.2M20 17L15.4 12.2M20 11L22.8 7.4M20 11L17.2 7.4M27.4 19.6L30.6 21M12.6 19.6L9.4 21M20 26Q20.6 32 19.4 38.5' opacity='0.7'/></g><g transform='translate(56 50) rotate(38 14 14) scale(0.7)'><path d='M20 26L23 27.5L25.5 27L27 29.5L29 28.5L32.5 30L31.5 27.2L33 26L30 24.5L26.5 21.5L30 20.5L31 17.5L33.5 17.8L34.5 14.5L38 12.5L34.5 11.5L35 8.5L31.5 10L30 8L27.5 11.5L24 14L24.5 9.5L27 8.5L24.5 6.5L23.5 3.5L21.5 4.5L20 0.5L18.5 4.5L16.5 3.5L15.5 6.5L13 8.5L15.5 9.5L16 14L12.5 11.5L10 8L8.5 10L5 8.5L5.5 11.5L2 12.5L5.5 14.5L6.5 17.8L9 17.5L10 20.5L13.5 21.5L10 24.5L7 26L8.5 27.2L7.5 30L11 28.5L13 29.5L14.5 27L17 27.5L20 26Z'/><path d='M20 26L20 4M20 26L35 13M20 26L5 13M20 26L31 29M20 26L9 29M20 17L24.6 12.2M20 17L15.4 12.2M20 11L22.8 7.4M20 11L17.2 7.4M27.4 19.6L30.6 21M12.6 19.6L9.4 21M20 26Q20.6 32 19.4 38.5' opacity='0.6'/></g></g></svg>" },
     ];
     const BG_PATTERN_DEFAULT = 'graph';
     const BG_PATTERN_STRENGTH_DEFAULT = 10;
     const BG_PATTERN_STRENGTH_MIN = 2;
     const BG_PATTERN_STRENGTH_MAX = 45;
     const BG_PATTERN_SWATCH_OPACITY = 0.35;
-    const BG_PATTERN_COLUMNS = 3;
+    const BG_PATTERN_COLUMNS = 4;
     let bgPatternObserver = null;
 
     function normalizeBgPattern(id) {
