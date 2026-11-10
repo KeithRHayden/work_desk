@@ -36,14 +36,21 @@ async function openOptionsSectionFor(page: Page, selector: string) {
     const s = el.closest('.options-section');
     return s ? { id: s.getAttribute('data-options-section')!, pane: s.closest('.options-pane')!.id, open: !s.hasAttribute('hidden') } : null;
   });
-  if (!info || info.open) return;
+  if (!info) return;
   const pane = page.locator(`#${info.pane}`);
   if (!(await pane.isVisible())) await page.locator(`.options-nav-btn[data-options-tab="${info.pane.replace('options-pane-', '')}"]`).click();
+  if (info.open) return;
   const back = pane.locator('.options-section:not([hidden]) [data-options-back]');
-  if (await back.count()) await back.click();
+  if (await back.count() && await back.first().isVisible()) await back.click();
   await pane.locator(`[data-options-open="${info.id}"]`).click();
   await expect(page.locator(selector).first()).toBeAttached();
   await expect(pane.locator(`[data-options-section="${info.id}"]`)).toBeVisible();
+}
+
+// Two-column Options (>=1024px) has no back button; the list stays beside the open section.
+async function backToOptionsList(page: Page) {
+  const back = page.locator('.options-pane:not(.hidden) .options-section:not([hidden]) [data-options-back]');
+  if (await back.count() && await back.first().isVisible()) await back.first().click();
 }
 
 async function openAccountMenu(page: Page) {
@@ -624,8 +631,6 @@ test.describe('UI audit fixes (1.12.1)', { tag: ['@board'] }, () => {
         els.filter(e => (e as HTMLElement).offsetParent && e.scrollWidth > e.clientWidth + 1).map(e => e.textContent));
       expect(clipped, filter).toEqual([]);
     }
-    await page.locator('[data-theme-filter="light"]').click();
-    await expect(page.locator('.theme-swatch-name', { hasText: 'Mediterranean' })).toHaveClass(/long/);
   });
 
   test('progress bar: Done is the accent and all three segments differ', async ({ page }) => {
@@ -824,6 +829,28 @@ test.describe('Work Desk smoke', { tag: ['@board', '@smoke'] }, () => {
     const json = JSON.parse(raw);
     expect(json).toHaveProperty('days');
     expect(json).toHaveProperty('deletedIds');
+  });
+
+  test('the move calendar steps between months with ‹ and › and moves to a day next month', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-10T10:00:00'));
+    await openDesk(page);
+    await addTask(page, 'Move me next month');
+    await page.locator('.item-card', { hasText: 'Move me next month' }).first().locator('button.card-action', { hasText: /^move$/i }).click();
+    const title = page.locator('#move-calendar .cal-title');
+    await expect(title).toHaveText('November 2026');
+    await page.locator('#move-calendar .cal-nav-btn[aria-label="Next month"]').click();
+    await expect(page.locator('#move-modal:not(.hidden)')).toBeVisible();
+    await expect(title).toHaveText('December 2026');
+    await page.locator('#move-calendar .cal-nav-btn[aria-label="Previous month"]').click();
+    await page.locator('#move-calendar .cal-nav-btn[aria-label="Previous month"]').click();
+    await expect(title).toHaveText('October 2026');
+    await page.locator('#move-calendar .cal-nav-btn[aria-label="Next month"]').click();
+    await page.locator('#move-calendar .cal-nav-btn[aria-label="Next month"]').click();
+    await page.locator('#move-calendar .cal-day:not(.other-month)', { hasText: /^3$/ }).click();
+    await page.locator('#move-confirm').click();
+    await expect(page.locator('.item-card', { hasText: 'Move me next month' })).toHaveCount(0);
+    const data = JSON.parse((await page.evaluate((key) => localStorage.getItem(key), WORK_KEY))!);
+    expect(data.days['2026-12-03'].items.map((i: { content: string }) => i.content).join(' ')).toContain('Move me next month');
   });
 
   test('move task to another day strips dual-day copies', async ({ page }) => {
@@ -1836,7 +1863,9 @@ test.describe('Settings popout tabs', { tag: ['@options'] }, () => {
 
   test('themes pane contains theme filter buttons and grid', async ({ page }) => {
     await openSettings(page);
-    await expect(page.locator('#options-pane-themes .theme-filter-btn')).toHaveCount(4);
+    await expect(page.locator('#options-pane-themes .theme-filter-btn')).toHaveText(['Light', 'Dim', 'Dark', 'Season', 'Custom']);
+    await expect(page.locator('#options-pane-themes .theme-filter-btn').first()).toHaveAttribute('role', 'tab');
+    await expect(page.locator('#options-pane-themes #theme-search')).toBeVisible();
     await expect(page.locator('#options-pane-themes #customize-theme-grid')).toBeVisible();
   });
 
@@ -1964,6 +1993,81 @@ test.describe('Theme filter buttons', { tag: ['@options', '@themes'] }, () => {
     await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="dot-matrix"]')).toHaveClass(/active/);
   });
 
+  const SEASONAL: Array<[string, string, string, 'light' | 'dark']> = [
+    ['frost', 'Frost', '#1e2a3a', 'light'], ['winter-dusk', 'Winter Dusk', '#1f2633', 'dark'], ['evergreen-night', 'Evergreen Night', '#0d171b', 'dark'],
+    ['blossom', 'Blossom', '#34463a', 'light'], ['spring-rain', 'Spring Rain', '#1d2925', 'dark'], ['orchard-night', 'Orchard Night', '#111016', 'dark'],
+    ['sunlit', 'Sunlit', '#1f3b4d', 'light'], ['sea-glass', 'Sea Glass', '#1d2e2d', 'dark'], ['midsummer-night', 'Midsummer Night', '#09121e', 'dark'],
+    ['harvest', 'Harvest', '#7c2a0e', 'light'], ['red-maple', 'Red Maple', '#2e1009', 'dark'], ['bonfire', 'Bonfire', '#2b1008', 'dark'],
+  ];
+  const themeColor = (page: Page) => page.locator('meta[name="theme-color"]').getAttribute('content');
+
+  test('Season tab shows the four seasons, three themes each, and the other tabs keep 36', async ({ page }) => {
+    await openThemesTab(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="seasonal"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="seasonal"]')).toHaveClass(/active/);
+    await expect(page.locator('.theme-filter-btn.active')).toHaveCount(1);
+    await expect(page.locator('#customize-theme-grid .theme-family-label')).toHaveText(['Winter', 'Spring', 'Summer', 'Autumn'].map((s) => new RegExp(s)));
+    const grids = page.locator('#customize-theme-grid .theme-picker-grid');
+    await expect(grids).toHaveCount(4);
+    for (let i = 0; i < 4; i++) {
+      await expect(grids.nth(i).locator('.theme-swatch')).toHaveCount(3);
+      await expect(grids.nth(i)).toHaveAttribute('role', 'radiogroup');
+    }
+    expect(await page.locator('#customize-theme-grid .theme-swatch').evaluateAll((els) => els.map((el) => el.getAttribute('data-theme-id'))))
+      .toEqual(SEASONAL.map(([id]) => id));
+    for (const tier of ['light', 'medium', 'dark']) {
+      await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+      await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(36);
+      await expect(page.locator('#customize-theme-grid .theme-family-label', { hasText: 'Winter' })).toHaveCount(0);
+      for (const [id] of SEASONAL) await expect(page.locator(`#customize-theme-grid [data-theme-id="${id}"]`)).toHaveCount(0);
+    }
+  });
+
+  test('each seasonal swatch applies, persists, and recolors the status bar to its sidebar', async ({ page }) => {
+    await openDesk(page);
+    await expect.poll(() => themeColor(page)).toBe('#1e2433');
+    for (const [id, name, sidebar, scheme] of SEASONAL) {
+      await page.locator('#density-toggle').click();
+      await expect(page.locator('#options-pane-themes')).toBeVisible();
+      await page.locator('.theme-filter-btn[data-theme-filter="seasonal"]').click();
+      const swatch = page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="${id}"]`);
+      await expect(swatch).toContainText(name);
+      await swatch.click();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', id);
+      await expect(page.locator('#density-popout')).toBeHidden();
+      expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe(id);
+      await expect.poll(() => themeColor(page)).toBe(sidebar);
+      await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe(scheme);
+    }
+    await page.reload();
+    await dismissAuthModal(page);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'bonfire');
+    await expect.poll(() => themeColor(page)).toBe('#2b1008');
+    await expect.poll(() => page.locator('.add-btn').first().evaluate((el) => getComputedStyle(el).color)).toBe('rgb(23, 23, 26)');
+  });
+
+  test('reopening Options lands on Season with the theme marked; the pinned row still offers it from another tab', async ({ page }) => {
+    await page.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem('work-desk-theme', 'harvest'); sessionStorage.setItem('seeded', '1'); } });
+    await openThemesTab(page);
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="seasonal"]')).toHaveClass(/active/);
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="seasonal"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="harvest"]')).toHaveClass(/active/);
+    await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="harvest"]')).toHaveAttribute('aria-checked', 'true');
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('#theme-pins .theme-pin[data-theme-id="harvest"]')).toHaveAttribute('aria-current', 'true');
+  });
+
+  test('a custom theme also sets the status bar color', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('work-desk-custom-themes', JSON.stringify([{ id: 'custom-1', name: 'Mine', bg: '#f0f0f0', surface: '#ffffff', sidebar: '#123456', accent: '#3366cc', text: '#111111' }]));
+      localStorage.setItem('work-desk-theme', 'custom-1');
+    });
+    await openDesk(page);
+    await expect.poll(() => themeColor(page)).toBe('#123456');
+  });
+
   test('Retro theme shows the SNES controller stripe and survives reload', async ({ page }) => {
     await openThemesTab(page);
     await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="retro"]').click();
@@ -2070,8 +2174,6 @@ test.describe('Theme filter buttons', { tag: ['@options', '@themes'] }, () => {
         return { sideways: host.scrollWidth > host.clientWidth, cut };
       }), { message: tier }).toEqual({ sideways: false, cut: [] });
     }
-    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
-    await expect(grid.locator('.theme-swatch[data-theme-id="mediterranean"] .theme-swatch-name')).toHaveAttribute('style', /font-size/);
   });
 
   test('switching between all four filters keeps popout open', async ({ page }) => {
@@ -2154,25 +2256,52 @@ test.describe('Custom theme builder', { tag: ['@themes'] }, () => {
     await expect(modeButtons.nth(0)).toHaveClass(/active/);
   });
 
-  test('custom editor has a live preview panel', async ({ page }) => {
+  test('the editor previews on the desk itself, and Cancel puts the theme back', async ({ page }) => {
     await openCustomPanel(page);
+    await expect(page.locator('.custom-add-tile')).toHaveText('+ New theme');
     await page.locator('.custom-add-tile').click();
-    await expect(page.locator('.custom-preview-app')).toBeVisible();
+    await expect(page.locator('.custom-editor-title')).toHaveText('New custom theme');
+    await expect(page.locator('.custom-preview-app')).toHaveCount(0);
+    await expect(page.locator('#theme-pins .theme-pin')).toHaveCount(0);
+    const bg = page.locator('.custom-editor input[aria-label="Background hex"]');
+    await bg.fill('#203040');
+    await bg.press('Enter');
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--bg').trim())).toBe('#203040');
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.locator('.custom-btn-secondary', { hasText: 'Cancel' }).click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('.custom-editor')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--bg').trim())).toBe('');
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-custom-themes') || '[]')).toBe('[]');
   });
 
-  test('saving a custom theme creates a swatch in the browse view', async ({ page }) => {
+  test('Esc in the editor cancels it first, then closes Options', async ({ page }) => {
     await openCustomPanel(page);
     await page.locator('.custom-add-tile').click();
     await expect(page.locator('.custom-editor')).toBeVisible();
-
-    const nameInput = page.locator('.custom-editor-name');
-    await nameInput.fill('Test Theme');
-
-    const saveBtn = page.locator('.custom-btn-primary');
-    await saveBtn.click();
-
-    await expect(page.locator('.custom-swatch-wrap')).toBeVisible();
+    await page.locator('.custom-editor-name').press('Escape');
+    await expect(page.locator('.custom-editor')).toHaveCount(0);
     await expect(page.locator('#density-popout')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#density-popout')).toBeHidden();
+  });
+
+  test('saving a custom theme creates a tile in the browse view and applies it', async ({ page }) => {
+    await openCustomPanel(page);
+    await page.locator('.custom-add-tile').click();
+    await expect(page.locator('.custom-editor')).toBeVisible();
+    await expect(page.locator('.custom-editor-name')).toHaveValue('My Default');
+    await page.locator('.custom-editor-name').fill('   ');
+    await page.locator('.custom-btn-primary').click();
+    await expect(page.locator('.custom-editor-name')).toBeFocused();
+    await page.locator('.custom-editor-name').fill('Test Theme');
+    await expect(page.locator('.custom-btn-primary')).toHaveText('Create');
+    await page.locator('.custom-btn-primary').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('.custom-swatch-wrap')).toHaveCount(1);
+    await expect(page.locator('.custom-swatch-wrap .theme-swatch')).toContainText('Test Theme');
+    await expect(page.locator('.custom-count')).toHaveText('1 / 5');
+    await page.waitForFunction(() => (localStorage.getItem('work-desk-theme') || '').startsWith('custom-'));
   });
 
   test('full round-trip: create → apply → edit → delete', async ({ page }) => {
@@ -2180,58 +2309,69 @@ test.describe('Custom theme builder', { tag: ['@themes'] }, () => {
 
     // Create
     await page.locator('.custom-add-tile').click();
-    const nameInput = page.locator('.custom-editor-name');
-    await nameInput.fill('Round Trip Theme');
+    await page.locator('.custom-editor-name').fill('Round Trip Theme');
     await page.locator('.custom-btn-primary').click();
-    await expect(page.locator('.custom-swatch-wrap')).toBeVisible();
+    await expect(page.locator('.custom-swatch-wrap')).toHaveCount(1);
+    const id = await page.evaluate(() => localStorage.getItem('work-desk-theme'));
+    expect(id).toMatch(/^custom-/);
 
-    // Apply — click the theme swatch inside the wrap
+    // Apply from another theme: a mouse click picks it and closes Options
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="monokai"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
+    await page.locator('#density-toggle').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="custom"]').click();
     await page.locator('.custom-swatch-wrap .theme-swatch').first().click();
-    await page.waitForFunction(() => (localStorage.getItem('work-desk-theme') || '').startsWith('custom-'));
-    const appliedTheme = await page.evaluate(() => localStorage.getItem('work-desk-theme'));
-    expect(appliedTheme).toMatch(/^custom-/);
+    await expect(page.locator('#density-popout')).toBeHidden();
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe(id);
 
-    // Edit — hover to reveal delete, then right-click swatch to edit
-    await page.locator('.custom-swatch-wrap .theme-swatch').first().click({ button: 'right' });
-
-    // If we got into the editor, confirm it's visible
-    const editorVisible = await page.locator('.custom-editor').isVisible().catch(() => false);
-    if (editorVisible) {
-      const editorName = page.locator('.custom-editor-name');
-      await editorName.fill('Renamed Theme');
-      await page.locator('.custom-btn-primary').click();
-    }
-
-    // Delete — hover the wrap to reveal the × button
+    // Edit: reopening lands on Custom; the Edit link opens the editor (DOM replacement keeps Options open)
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="custom"]')).toHaveClass(/active/);
+    await page.locator('.custom-theme-edit').first().click();
     await expect(page.locator('#density-popout')).toBeVisible();
-    await page.locator('.custom-swatch-wrap').first().hover();
-    const deleteBtn = page.locator('.custom-swatch-delete').first();
-    await deleteBtn.click();
+    await expect(page.locator('.custom-editor-title')).toHaveText('Edit theme');
+    await expect(page.locator('.custom-editor-name')).toHaveValue('Round Trip Theme');
+    await page.locator('.custom-editor-name').fill('Renamed Theme');
+    await expect(page.locator('.custom-btn-primary')).toHaveText('Save');
+    await page.locator('.custom-btn-primary').click();
+    await expect(page.locator('.custom-swatch-wrap .theme-swatch')).toContainText('Renamed Theme');
+    await expect(page.locator('.custom-swatch-wrap')).toHaveCount(1);
+
+    // Delete from the editor: Cancel in the dialog keeps it
+    await page.locator('.custom-theme-edit').first().click();
+    await page.locator('.custom-btn-danger').click();
+    await answerAppDialog(page, { accept: false });
+    await expect(page.locator('.custom-editor')).toBeVisible();
+
+    // Delete link on the tile: confirm removes it, Options stays open
+    await page.locator('.custom-btn-secondary', { hasText: 'Cancel' }).click();
+    await expect(page.locator('.custom-theme-delete')).toHaveText('Delete');
+    await page.locator('.custom-theme-delete').first().click();
+    await answerAppDialog(page);
     await expect(page.locator('.custom-swatch-wrap')).toHaveCount(0);
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await expect(page.locator('.custom-count')).toHaveText('0 / 5');
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-theme') || '')).toBe('');
   });
 
   test('custom theme persists across page reload', async ({ page }) => {
     await openCustomPanel(page);
     await page.locator('.custom-add-tile').click();
-    const nameInput = page.locator('.custom-editor-name');
-    await nameInput.fill('Persistent Theme');
+    await page.locator('.custom-editor-name').fill('Persistent Theme');
     await page.locator('.custom-btn-primary').click();
-    await expect(page.locator('.custom-swatch-wrap')).toBeVisible();
-
-    // Apply the custom theme
-    await page.locator('.custom-swatch-wrap .theme-swatch').first().click();
+    await expect(page.locator('.custom-swatch-wrap')).toHaveCount(1);
     await page.waitForFunction(() => (localStorage.getItem('work-desk-theme') || '').startsWith('custom-'));
     const themeId = await page.evaluate(() => localStorage.getItem('work-desk-theme'));
-    expect(themeId).toMatch(/^custom-/);
 
-    // Reload and verify persistence
     await page.reload();
     await dismissAuthModal(page);
-    const themeAfterReload = await page.evaluate(() => localStorage.getItem('work-desk-theme'));
-    expect(themeAfterReload).toBe(themeId);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-theme'))).toBe(themeId);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('.custom-swatch-wrap .theme-swatch.active')).toContainText('Persistent Theme');
   });
 
-  test('max 5 custom themes enforced — add tile disappears at limit', async ({ page }) => {
+  test('max 5 custom themes enforced — add tile disappears at limit and a note explains', async ({ page }) => {
     await openCustomPanel(page);
 
     for (let i = 1; i <= 5; i++) {
@@ -2241,10 +2381,10 @@ test.describe('Custom theme builder', { tag: ['@themes'] }, () => {
       await expect(page.locator('#density-popout')).toBeVisible();
     }
 
-    const addTile = page.locator('.custom-add-tile');
-    await expect(addTile).toHaveCount(0);
-    const swatches = page.locator('.custom-swatch-wrap');
-    expect(await swatches.count()).toBe(5);
+    await expect(page.locator('.custom-add-tile')).toHaveCount(0);
+    await expect(page.locator('.custom-swatch-wrap')).toHaveCount(5);
+    await expect(page.locator('.custom-count')).toHaveText('5 / 5');
+    await expect(page.locator('#custom-theme-panel .theme-picker-note')).toContainText('Delete one to make room');
   });
 });
 
@@ -3659,10 +3799,10 @@ test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
     await expectClean(page, '#account-menu');
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
-    await expect(page.locator('#changelog-body')).toContainText('Options → Appearance → Layout');
-    await expect(page.locator('#changelog-body')).toContainText('‹ Back');
-    await expect(page.locator('#changelog-body')).toContainText('Options → Behavior → General');
-    await expect(page.locator('#changelog-body')).toContainText('tucked into a ⋮ menu');
+    // The newest entries render word for word, non-ASCII characters (→ ‹ ⋮ — ’) included, whatever the release
+    const newest = await page.evaluate(() => CHANGELOG.slice(0, 3).flatMap((v: { sections: { items: string[] }[] }) => v.sections.flatMap((s) => s.items)));
+    expect(newest.join('')).toMatch(/[^\x00-\x7f]/);
+    for (const item of newest) await expect(page.locator('#changelog-body')).toContainText(item);
     await expectClean(page, '#changelog-body');
     await page.locator('#changelog-modal-dismiss').click();
 
@@ -3751,7 +3891,7 @@ test.describe('Help and What\'s New modals', { tag: ['@docs'] }, () => {
     await expect(page.locator('#help-index button:not(.hidden)')).toHaveText(['Recurring']);
 
     await search.fill('  OPTIONS  ');
-    await expect(modal.locator('#help-options li:not([hidden])')).toHaveCount(5);
+    await expect(modal.locator('#help-options li:not([hidden])')).toHaveCount(7);
     await expect(modal.locator('#help-options')).toHaveAttribute('open', '');
 
     await search.fill('zzqx');
@@ -4226,7 +4366,7 @@ test.describe('Options menu 1.15.1 polish', { tag: ['@options'] }, () => {
     await page.locator(`.options-nav-btn[data-options-tab="${tab}"]`).click();
     if (section) await page.locator(`#options-pane-${tab} [data-options-open="${section}"]`).click();
   }
-  const backToList = (page: Page) => page.locator('.options-pane:not(.hidden) .options-section:not([hidden]) [data-options-back]').click();
+  const backToList = (page: Page) => backToOptionsList(page);
 
   const popout = (page: Page) => page.locator('#density-popout');
   const holidayRows = (page: Page) => page.locator('#custom-holidays-list .custom-holiday-item');
@@ -4241,32 +4381,37 @@ test.describe('Options menu 1.15.1 polish', { tag: ['@options'] }, () => {
     return out;
   });
 
-  test('Themes: the current theme is named, and Show jumps back to its group', async ({ page }) => {
+  test('Themes: the pinned row leads with the current theme, on its own tier, from any tab', async ({ page }) => {
     await openOptions(page, 'themes', { theme: 'monokai' });
-    const current = page.locator('#current-theme-btn');
-    await expect(current).toHaveText('Current: Monokai · Dark');
-    await expect(current.locator('.current-theme-jump')).toHaveCount(0);
-
-    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
-    await expect(current).toHaveText('Current: Monokai · DarkShow');
-    await current.locator('.current-theme-jump').click();
-    await expect(popout(page)).toBeVisible();
     await expect(page.locator('.theme-filter-btn[data-theme-filter="dark"]')).toHaveClass(/active/);
     await expect(page.locator('.theme-swatch.active')).toHaveAttribute('data-theme-id', 'monokai');
-    await expect(current.locator('.current-theme-jump')).toHaveCount(0);
+    const pin = page.locator('#theme-pins .theme-pin[data-theme-id="monokai"]');
+    await expect(page.locator('#theme-pins .theme-pins-label')).toHaveText('Current · starred · recent');
+    await expect(pin).toHaveAttribute('aria-current', 'true');
+    await expect(pin).toHaveAttribute('title', 'Monokai (current)');
 
-    await current.click();
+    await page.locator('.theme-filter-btn[data-theme-filter="light"]').click();
     await expect(popout(page)).toBeVisible();
-    await expect(page.locator('.theme-filter-btn[data-theme-filter="dark"]')).toHaveClass(/active/);
+    await expect(pin).toBeVisible();
+    await pin.click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
   });
 
-  test('Themes: a new install names Default · Light, and picking a theme updates the line', async ({ page }) => {
+  test('Themes: a new install pins Default, and a picked Dim theme takes over the pinned row', async ({ page }) => {
     await openOptions(page, 'themes');
-    await expect(page.locator('#current-theme-btn')).toHaveText('Current: Default · Light');
+    await expect(page.locator('#theme-pins .theme-pin:not(.theme-pin-more)')).toHaveCount(1);
+    await expect(page.locator('#theme-pins .theme-pin.active')).toHaveText('Default');
     await page.locator('.theme-filter-btn[data-theme-filter="medium"]').click();
-    await page.locator('.theme-swatch').first().click();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveText('Dim');
+    const first = page.locator('#customize-theme-grid .theme-swatch').first();
+    const id = (await first.getAttribute('data-theme-id'))!;
+    await first.click();
+    await expect(popout(page)).toBeHidden();
     await page.locator('#density-toggle').click();
-    await expect(page.locator('#current-theme-btn')).toHaveText(/^Current: .+ · Medium$/);
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="medium"]')).toHaveClass(/active/);
+    await expect(page.locator('#theme-pins .theme-pin').first()).toHaveAttribute('data-theme-id', id);
+    await expect(page.locator('#theme-pins .theme-pin').first()).toHaveAttribute('aria-current', 'true');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-theme-recent') || '[]'))).toEqual([id]);
   });
 
   test('Appearance: tag list shows 8 tags, Show all / Show fewer keep the menu open', async ({ page }) => {
@@ -4729,14 +4874,18 @@ test.describe('Patterned background 1.16.1', { tag: ['@options'] }, () => {
     expect(await mainTile(page)).toBe('none');
   });
 
-  test('turning it on shows 12 patterns and the slider, applies Graph paper at 10%, and keeps Options open', async ({ page }) => {
+  test('turning it on shows 16 patterns four across and the slider, applies Graph paper at 10%, and keeps Options open', async ({ page }) => {
     await openAppearance(page);
     await page.locator('label:has(#bg-pattern-toggle)').click();
     await expect(popout(page)).toBeVisible();
     await expect(page.locator('#bg-pattern-controls')).toBeVisible();
-    await expect(tiles(page)).toHaveCount(12);
+    await expect(tiles(page)).toHaveCount(16);
     expect(await tiles(page).evaluateAll(els => els.map(el => el.getAttribute('aria-label')))).toEqual(['Graph paper', 'Plus grid', 'Isometric',
-      'Diagonal', 'Pinstripe', 'Crosshatch', 'Hexagon', 'Herringbone', 'Basketweave', 'Chevron', 'Greek key', 'Dot grid']);
+      'Diagonal', 'Pinstripe', 'Crosshatch', 'Hexagon', 'Herringbone', 'Basketweave', 'Chevron', 'Greek key', 'Dot grid',
+      'Snow crystals', 'Cherry petals', 'Water ripples', 'Maple leaves']);
+    const tops = await tiles(page).evaluateAll(els => els.map(el => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(4);
+    for (let r = 0; r < 4; r++) expect(new Set(tops.slice(r * 4, r * 4 + 4)).size).toBe(1);
     await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'graph');
     await expect(page.locator('#bg-pattern-name')).toHaveText('Graph paper');
     await expect(page.locator('#bg-pattern-strength-val')).toHaveText('10%');
@@ -4749,7 +4898,7 @@ test.describe('Patterned background 1.16.1', { tag: ['@options'] }, () => {
   test('clicking every pattern applies it, marks it checked, and never closes Options', async ({ page }) => {
     await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
     const seen = new Set<string>();
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 16; i++) {
       const tile = tiles(page).nth(i);
       const id = (await tile.getAttribute('data-bg-pattern'))!;
       await tile.click();
@@ -4761,7 +4910,22 @@ test.describe('Patterned background 1.16.1', { tag: ['@options'] }, () => {
       expect(await page.evaluate(() => localStorage.getItem('work-desk-bg-pattern'))).toBe(id);
       seen.add(await mainTile(page));
     }
-    expect(seen.size).toBe(12);
+    expect(seen.size).toBe(16);
+  });
+
+  test('the seasonal patterns survive a reload and draw in the theme ink', async ({ page }) => {
+    await openAppearance(page, { 'work-desk-bg-pattern-on': 'true' });
+    const ink = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--text').trim());
+    for (const [id, name] of [['snow-crystals', 'Snow crystals'], ['cherry-petals', 'Cherry petals'], ['ripples', 'Water ripples'], ['maple-leaves', 'Maple leaves']]) {
+      await page.locator(`.bg-pattern-tile[data-bg-pattern="${id}"]`).click();
+      await expect(popout(page)).toBeVisible();
+      await expect(page.locator('#bg-pattern-name')).toHaveText(name);
+      expect(await mainTile(page)).toContain(ink);
+    }
+    await page.reload();
+    await dismissAuthModal(page);
+    expect(await page.evaluate(() => localStorage.getItem('work-desk-bg-pattern'))).toBe('maple-leaves');
+    expect(await mainTile(page)).toContain('data:image/svg+xml');
   });
 
   test('Strength slider changes the pattern opacity live and the label follows', async ({ page }) => {
@@ -4821,18 +4985,22 @@ test.describe('Patterned background 1.16.1', { tag: ['@options'] }, () => {
     await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'plus');
     await expect(page.locator('.bg-pattern-tile[data-bg-pattern="plus"]')).toBeFocused();
     await page.keyboard.press('ArrowDown');
-    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'pinstripe');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'crosshatch');
     await page.keyboard.press('ArrowLeft');
-    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'diagonal');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'pinstripe');
     await page.keyboard.press('ArrowUp');
     await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'graph');
+    await page.locator('.bg-pattern-tile[data-bg-pattern="dot-grid"]').click();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('.bg-pattern-tile.active')).toHaveAttribute('data-bg-pattern', 'maple-leaves');
+    await expect(page.locator('.bg-pattern-tile[data-bg-pattern="maple-leaves"]')).toBeFocused();
     await expect(popout(page)).toBeVisible();
   });
 
   test('Reset Appearance turns the pattern off and restores Graph paper at 10%', async ({ page }) => {
     await openAppearance(page, { 'work-desk-bg-pattern-on': 'true', 'work-desk-bg-pattern': 'greek-key', 'work-desk-bg-pattern-strength': '30' });
     expect(await mainTile(page)).toContain("<g opacity='0.3'>");
-    await page.locator('[data-options-section="background"] [data-options-back]').click();
+    await backToOptionsList(page);
     await page.locator('[data-options-reset="appearance"]').click();
     await answerAppDialog(page);
     await expect(page.locator('#toast')).toContainText('Appearance reset to defaults');
@@ -5178,7 +5346,8 @@ async function open117(page: Page, stored: Record<string, string> = {}) {
 }
 
 test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
-  test.use({ viewport: { width: 1440, height: 900 } });
+  // Single-column list flow (below the 1024px two-column split)
+  test.use({ viewport: { width: 900, height: 900 } });
   const popout = (page: Page) => page.locator('#density-popout');
   const ROWS = {
     appearance: ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags'],
@@ -5348,7 +5517,20 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
     await expect(page.locator('#options-pane-behavior [data-options-open="general"] .options-new-tag')).toBeHidden();
     await page.locator('#options-pane-behavior [data-options-open="general"]').click();
     await expect(page.locator('label:has(#fullscreen-toggle) .options-new-tag')).toBeHidden();
-    await expect(page.locator('#density-popout .options-new-tag:not([hidden])')).toHaveCount(0);
+    await expect(page.locator(`#density-popout .options-new-tag:not([hidden]):not([data-new-in^="${minor}."])`)).toHaveCount(0);
+  });
+
+  test('1.24.0: Background carries a New tag until its section is opened', async ({ page }) => {
+    await open117(page);
+    const minor = await page.evaluate(() => APP_VERSION.split('.').slice(0, 2).join('.'));
+    test.skip(minor !== '1.24', 'only new in 1.24.x');
+    await openTab(page, 'appearance');
+    const tag = page.locator('#options-pane-appearance [data-options-open="background"] .options-new-tag');
+    await expect(tag).toBeVisible();
+    await page.locator('#options-pane-appearance [data-options-open="background"]').click();
+    await expect(page.locator('[data-options-section="background"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(tag).toBeHidden();
   });
   test('phone: sections and back work in the Options sheet', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -5371,7 +5553,8 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
 });
 
 test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
-  test.use({ viewport: { width: 1440, height: 900 } });
+  // Single-column list flow (below the 1024px two-column split)
+  test.use({ viewport: { width: 900, height: 900 } });
   const popout = (page: Page) => page.locator('#density-popout');
   const value = (page: Page, id: string) => page.locator(`.options-row[data-options-open="${id}"]`);
 
@@ -5446,6 +5629,7 @@ test.describe('Options polish 1.17.2', { tag: ['@options'] }, () => {
   });
 
   test('calendar legend switch hides and restores the legend (round trip + reset)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await open117(page);
     const legend = page.locator('.sidebar-calendar .cal-legend');
     await expect(legend).toBeVisible();
@@ -5846,9 +6030,9 @@ test.describe('Calendar 1.17.0', { tag: ['@calendar'] }, () => {
     await page.locator('#quiet-weekends-select').selectOption('work');
     await expect(page.locator('#density-popout')).toBeVisible();
     await expect.poll(quiet).toBe(true);
+    // Two-column Options: the list is already beside the section, so Esc closes
     await page.keyboard.press('Escape');
-    await expect(page.locator('.options-row[data-options-open="general"]')).toBeVisible();
-    await page.keyboard.press('Escape');
+    await expect(page.locator('#density-popout')).toBeHidden();
 
     await page.locator('#tab-personal').click();
     await expect.poll(quiet).toBe(false);
@@ -6016,7 +6200,8 @@ test.describe('Complete edge and tag position on phones 1.18.0', { tag: ['@phone
 });
 
 test.describe('Card layout options 1.18.0', { tag: ['@options'] }, () => {
-  test.use({ viewport: { width: 1440, height: 900 } });
+  // Single-column list flow (below the 1024px two-column split)
+  test.use({ viewport: { width: 900, height: 900 } });
   const popout = (page: Page) => page.locator('#density-popout');
   const html = (page: Page) => page.locator('html');
   async function openCardLayout(page: Page) {
@@ -6125,7 +6310,8 @@ test.describe('Card layout options 1.18.0', { tag: ['@options'] }, () => {
 });
 
 test.describe('Options list 1.18.2', { tag: ['@options'] }, () => {
-  test.use({ viewport: { width: 1440, height: 900 } });
+  // Single-column list flow (below the 1024px two-column split)
+  test.use({ viewport: { width: 900, height: 900 } });
   const popout = (page: Page) => page.locator('#density-popout');
   const SECTIONS = {
     appearance: ['card-layout', 'typography', 'layout', 'effects', 'background', 'tags'],
@@ -8177,6 +8363,53 @@ test.describe('In-app dialogs, full screen, and the Done edge 1.23.4', { tag: ['
     await expect(page.locator('.board-column.done .item-card', { hasText: 'Tagged task' })).toHaveCount(1);
   });
 
+  test('Esc is always marked handled (Android would treat it as Back and close the app), and still closes each thing', async ({ page }) => {
+    await open118(page);
+    await page.evaluate(() => {
+      const w = window as unknown as { __esc: boolean[] };
+      w.__esc = [];
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') w.__esc.push(e.defaultPrevented); }, true);
+    });
+    const handled = () => page.evaluate(() => (window as unknown as { __esc: boolean[] }).__esc);
+
+    await page.locator('#date-title').click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.sprint-board')).toBeVisible();
+
+    const card = taskCard(page, 'Plain task');
+    await card.getByRole('button', { name: 'edit', exact: true }).click();
+    await expect(card.locator('.edit-input')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(taskCard(page, 'Plain task').locator('.edit-input')).toHaveCount(0);
+
+    const menu = await openCardMenu(page, 'Plain task');
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+
+    await page.locator('#add-editor-host .rich-editor').click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#add-editor-host .rich-editor')).not.toBeFocused();
+
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#density-popout')).toBeHidden();
+
+    const search = page.locator('#search-input');
+    await search.fill('Plain');
+    await expect(page.locator('#search-overlay')).toBeVisible();
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+    await expect(page.locator('#search-overlay')).toBeHidden();
+    await expect(search).not.toBeFocused();
+    await search.focus();
+    await expect(page.locator('#search-overlay')).toBeHidden();
+
+    const seen = await handled();
+    expect(seen).toHaveLength(6);
+    expect(seen.every(Boolean)).toBe(true);
+  });
+
   test('DONE! has no gap before the "!" (and DONE? / UNDO? match)', async ({ page }) => {
     await open118(page);
     const done = page.locator('#item-k3 .complete-edge');
@@ -8442,7 +8675,7 @@ test.describe('Phone Options and week strip 1.23.3', { tag: ['@options', '@phone
       for (const sel of ['#sidebar-position-select', '#show-cal-legend-toggle', '#show-today-progress-toggle']) await expect(page.locator(sel)).toBeVisible();
       expect(await height(page, '#sidebar-position-select')).toBeLessThan(34);
       expect(await height(page, '[data-options-section="layout"] .options-back-btn')).toBeLessThan(34);
-      await section(page, 'layout').locator('[data-options-back]').click();
+      await backToOptionsList(page);
       await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
       await row(page, 'holidays').click();
       expect(await height(page, '#custom-holiday-label')).toBeLessThan(34);
@@ -9374,7 +9607,7 @@ test.describe('Full screen option 1.22.0', { tag: ['@options'] }, () => {
     await openDesk(page);
     await page.locator('#density-toggle').click();
     await openOptionsSectionFor(page, '#fullscreen-toggle');
-    await page.locator('#options-pane-behavior .options-section:not([hidden]) [data-options-back]').click();
+    await backToOptionsList(page);
     await page.locator('[data-options-reset="behavior"]').click();
     await answerAppDialog(page);
     await expect.poll(() => stored(page)).toBe('off');
@@ -9533,5 +9766,481 @@ test.describe('Phone layout fixes 1.23.0', { tag: ['@phone', '@projects', '@side
     const work = (await page.locator('#tab-work').boundingBox())!;
     expect(Math.abs(work.y - desk.y)).toBeLessThan(2);
     expect(work.x).toBeGreaterThan(desk.x + desk.width);
+  });
+});
+
+test.describe('Tag chip labels are not clipped 1.24.1', { tag: ['@tags', '@board'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const LONG = 'averyveryverylongtagthatcannotpossiblyfitinonecolumn';
+  const seed = () => JSON.stringify({ deletedIds: {}, days: { '2026-10-13': { date: '2026-10-13', items: [
+    { id: 'g1', type: 'task', content: 'Look over the email for the DataStage migration meeting', completed: true, shelved: false, boardColumn: 'new', comments: [], tags: ['gsar'], createdAt: '2026-10-13T09:00:00' },
+    { id: 'g2', type: 'task', content: 'Sprint demo prep', completed: false, shelved: false, boardColumn: 'active', comments: [], tags: ['ace', LONG], createdAt: '2026-10-13T09:00:00' },
+  ] } } });
+
+  for (const pos of ['row', 'actions', 'slim']) {
+    test(`${pos}: the clip has room above and below the letters at a fractional offset, and the chip keeps its size`, async ({ page }) => {
+      await open118(page, { 'work-desk-data-work': seed(), 'work-desk-tag-position': pos, 'work-desk-font-family': 'jetbrains', 'work-desk-theme': 'sea-glass' });
+      await page.locator('.sprint-board').evaluate((el) => { (el as HTMLElement).style.marginTop = '0.55px'; });
+      const labels = page.locator('.board-column .tag-chip .tag-chip-label');
+      await expect(labels).toHaveCount(3);
+      for (let i = 0; i < 3; i++) {
+        const m = await labels.nth(i).evaluate((el) => {
+          const chip = el.parentElement!;
+          const cs = getComputedStyle(el);
+          const before = chip.getBoundingClientRect();
+          const labelBefore = el.getBoundingClientRect();
+          el.style.padding = '0'; el.style.margin = '0';
+          const after = chip.getBoundingClientRect();
+          const textTop = el.getBoundingClientRect().top;
+          el.style.padding = ''; el.style.margin = '';
+          return { pad: parseFloat(cs.paddingTop), padBottom: parseFloat(cs.paddingBottom), overflow: cs.overflow,
+            room: textTop - labelBefore.top, h: [before.height, after.height], y: [before.top, after.top] };
+        });
+        expect(m.overflow).toBe('hidden');
+        expect(m.pad).toBeGreaterThanOrEqual(2);
+        expect(m.padBottom).toBeGreaterThanOrEqual(2);
+        expect(m.room).toBeGreaterThanOrEqual(2);
+        expect(Math.abs(m.h[0] - m.h[1])).toBeLessThan(0.01);
+        expect(Math.abs(m.y[0] - m.y[1])).toBeLessThan(0.01);
+      }
+    });
+  }
+
+  test('a tag too long for the card still ends in an ellipsis', async ({ page }) => {
+    await open118(page, { 'work-desk-data-work': seed(), 'work-desk-tag-position': 'actions' });
+    const label = page.locator('.tag-chip[data-tag="' + LONG + '"] .tag-chip-label');
+    await expect(label).toBeVisible();
+    const fit = await label.evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth, to: getComputedStyle(el).textOverflow }));
+    expect(fit.to).toBe('ellipsis');
+    expect(fit.sw).toBeGreaterThan(fit.cw);
+  });
+});
+
+test.describe('Seasonal themes on a phone 1.24.0', { tag: ['@phone', '@themes'] }, () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('the Season tab fits the sheet, three across, and a tap recolors the status bar', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#mobile-menu-btn').tap();
+    await page.locator('#mobile-menu-options').tap();
+    await expect(page.locator('#options-pane-themes')).toBeVisible();
+    await page.locator('.theme-filter-btn[data-theme-filter="seasonal"]').tap();
+    await expect(page.locator('.theme-filter-btn[data-theme-filter="seasonal"]')).toHaveClass(/active/);
+    const pane = (await page.locator('#options-pane-themes').boundingBox())!;
+    const swatches = page.locator('#customize-theme-grid .theme-swatch');
+    await expect(swatches).toHaveCount(12);
+    for (let i = 0; i < 12; i++) {
+      const box = (await swatches.nth(i).boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(pane.x - 1);
+      expect(box.x + box.width).toBeLessThanOrEqual(pane.x + pane.width + 1);
+    }
+    const firstRow = await swatches.evaluateAll((els) => els.slice(0, 3).map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(firstRow).size).toBe(1);
+    const red = page.locator('#customize-theme-grid .theme-swatch[data-theme-id="red-maple"]');
+    await red.scrollIntoViewIfNeeded();
+    await red.tap();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'red-maple');
+    await expect.poll(() => page.locator('meta[name="theme-color"]').getAttribute('content')).toBe('#2e1009');
+  });
+});
+
+// ── 1.25.0 theme picker and Options layout ─────────────────────────────
+test.describe('Theme picker 1.25.0', { tag: ['@themes', '@options'] }, () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  const popout = (page: Page) => page.locator('#density-popout');
+  const tile = (page: Page, id: string) => page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="${id}"]`);
+  const stored = (page: Page, key: string) => page.evaluate((k) => localStorage.getItem(k), key);
+
+  async function openThemes(page: Page, seed: Record<string, string> = {}) {
+    await page.addInitScript((s) => {
+      if (localStorage.getItem('tp-seeded')) return;
+      localStorage.setItem('tp-seeded', '1');
+      for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v);
+    }, seed);
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#options-pane-themes')).toBeVisible();
+  }
+
+  test('search hides the tiers, groups results by tier and family, ignores accents, and Esc clears it before closing', async ({ page }) => {
+    await openThemes(page);
+    const search = page.locator('#theme-search');
+    await search.click();
+    await search.fill('rosé');
+    await expect(page.locator('#theme-head')).toHaveClass(/searching/);
+    await expect(page.locator('.theme-filter-group')).toBeHidden();
+    await expect(page.locator('#theme-pins .theme-pin')).toHaveCount(0);
+    for (const id of ['rose-pine-dawn', 'rose-pine', 'rose-pine-moon']) await expect(tile(page, id)).toBeVisible();
+    await expect(page.locator('#customize-theme-grid .theme-family-label').first()).toHaveText(/^(Light|Dim|Dark|Season) · /);
+
+    await search.fill('warm');
+    await expect(page.locator('#customize-theme-grid .theme-family-label').first()).toContainText('Warm');
+    await search.fill('zzzz');
+    await expect(page.locator('#customize-theme-grid .theme-picker-note')).toHaveText('No themes match “zzzz”.');
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(0);
+
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('.theme-filter-group')).toBeVisible();
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(36);
+    await search.press('Escape');
+    await expect(popout(page)).toBeHidden();
+  });
+
+  test('search finds custom themes and a tier word, and reopening Options starts with an empty search', async ({ page }) => {
+    await openThemes(page, { 'work-desk-custom-themes': JSON.stringify([{ id: 'custom-1', name: 'Harbor', bg: '#f0f0f0', surface: '#ffffff', sidebar: '#123456', accent: '#3366cc', text: '#111111' }]) });
+    await page.locator('#theme-search').fill('harb');
+    await expect(page.locator('#customize-theme-grid .theme-swatch[data-theme-id="custom-1"]')).toBeVisible();
+    await expect(page.locator('#customize-theme-grid .theme-family-label')).toHaveText('Custom · Your themes');
+    await page.locator('#theme-search').fill('dim');
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(36);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+    await page.locator('#theme-search').evaluate((el: HTMLInputElement) => { el.value = 'stale'; });
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#theme-search')).toHaveValue('');
+  });
+
+  test('family headings group each tier, and every tile is a labelled radio', async ({ page }) => {
+    await openThemes(page);
+    await expect(page.locator('#customize-theme-grid .theme-family-label').first()).toHaveText('Cool');
+    const grid = page.locator('#customize-theme-grid .theme-picker-grid').first();
+    await expect(grid).toHaveAttribute('role', 'radiogroup');
+    await expect(grid).toHaveAttribute('aria-label', 'Cool');
+    const current = tile(page, '');
+    await expect(current).toHaveAttribute('role', 'radio');
+    await expect(current).toHaveAttribute('aria-checked', 'true');
+    await expect(current).toHaveAttribute('tabindex', '0');
+    await expect(page.locator('#customize-theme-grid .theme-swatch[tabindex="0"]')).toHaveCount(1);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await expect(page.locator('#customize-theme-grid .theme-swatch[tabindex="0"]')).toHaveCount(1);
+  });
+
+  test('the star pins a theme (round trip), survives reload, and keeps Options open', async ({ page }) => {
+    await openThemes(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    const wrap = page.locator('#customize-theme-grid .theme-tile-wrap', { has: page.locator('.theme-swatch[data-theme-id="nord"]') });
+    const star = wrap.locator('.theme-star');
+    await wrap.hover();
+    await expect(star).toHaveAttribute('aria-pressed', 'false');
+    await expect(star).toHaveAttribute('aria-label', /Star Nord/);
+    await star.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#customize-theme-grid .theme-star[data-star-id="nord"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#theme-pins .theme-pin[data-theme-id="nord"]')).toBeVisible();
+    expect(await stored(page, 'work-desk-theme'), 'starring previews but never picks').toBeNull();
+    expect(JSON.parse((await stored(page, 'work-desk-theme-stars'))!)).toEqual(['nord']);
+
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#theme-pins .theme-pin[data-theme-id="nord"]')).toBeVisible();
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-star[data-star-id="nord"]').click();
+    await expect(page.locator('#theme-pins .theme-pin[data-theme-id="nord"]')).toHaveCount(0);
+    expect(JSON.parse((await stored(page, 'work-desk-theme-stars'))!)).toEqual([]);
+  });
+
+  test('picks fill the recent list (last 3), and a pinned chip applies its theme', async ({ page }) => {
+    await openThemes(page);
+    for (const [tier, id] of [['dark', 'nord'], ['dark', 'dracula'], ['light', 'retro'], ['dark', 'monokai']] as const) {
+      if (!(await popout(page).isVisible())) await page.locator('#density-toggle').click();
+      await page.locator(`.theme-filter-btn[data-theme-filter="${tier}"]`).click();
+      await tile(page, id).click();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', id);
+    }
+    expect(JSON.parse((await stored(page, 'work-desk-theme-recent'))!)).toEqual(['monokai', 'retro', 'dracula']);
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#theme-pins .theme-pin:not(.theme-pin-more)')).toHaveText(['Monokai', 'Retro', 'Dracula']);
+    await page.locator('#theme-pins .theme-pin[data-theme-id="retro"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'retro');
+    await expect(popout(page)).toBeHidden();
+  });
+
+  test('a long pinned row stays on one line behind "+N more", which opens the Pinned view', async ({ page }) => {
+    const stars = ['nord', 'dracula', 'monokai', 'one-dark', 'kanagawa', 'rose-pine', 'phosphor', 'everforest-dark', 'catppuccin-frappe', 'gruvbox-mid'];
+    await openThemes(page, { 'work-desk-theme-stars': JSON.stringify(stars) });
+    const more = page.locator('#theme-pins .theme-pin-more');
+    await expect(more).toBeVisible();
+    await expect(more).toHaveText(/^\+\d+ more$/);
+    const tops = await page.locator('#theme-pins .theme-pin:visible').evaluateAll((els) => [...new Set(els.map((e) => (e as HTMLElement).offsetTop))]);
+    expect(tops).toHaveLength(1);
+    await more.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#customize-theme-grid .theme-family-label')).toHaveText('Current, starred and recent');
+    await expect(page.locator('#customize-theme-grid .theme-swatch')).toHaveCount(11);
+    await expect(page.locator('#theme-pins .theme-pin')).toHaveCount(0);
+    await expect(page.locator('.theme-filter-btn.active')).toHaveCount(0);
+    await expect(page.locator('#customize-theme-grid .theme-picker-note')).toContainText('Star a theme');
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await expect(page.locator('#theme-pins .theme-pin-more')).toBeVisible();
+  });
+
+  test('hovering a tile previews it on the desk; leaving, Esc or closing puts the saved theme back', async ({ page }) => {
+    await openThemes(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await tile(page, 'monokai').hover();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'monokai');
+    expect(await stored(page, 'work-desk-theme')).toBeNull();
+    await page.locator('#theme-search').hover();
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'monokai');
+
+    await tile(page, 'dracula').hover();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dracula');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'dracula');
+    await expect(popout(page)).toBeVisible();
+
+    await tile(page, 'nord').hover();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'nord');
+    await page.mouse.click(20, 880);
+    await expect(popout(page)).toBeHidden();
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'nord');
+  });
+
+  test('Options opening under a resting cursor does not start a preview, so one Esc closes it', async ({ page }) => {
+    await openThemes(page);
+    const saved = await page.locator('html').getAttribute('data-theme');
+    await tile(page, 'paper').hover();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'paper');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+    await page.locator('#density-toggle').focus();
+    await page.keyboard.press('Enter');
+    await expect(popout(page)).toBeVisible();
+    await expect(tile(page, 'paper')).toBeVisible();
+    await page.waitForTimeout(200);
+    expect(await page.locator('html').getAttribute('data-theme')).toBe(saved);
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+  });
+
+  test('keyboard: ↓ from search reaches the tiles, arrows move, S stars, Enter picks', async ({ page }) => {
+    await openThemes(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#theme-search').focus();
+    await page.keyboard.press('ArrowDown');
+    const first = page.locator('#customize-theme-grid .theme-swatch').first();
+    await expect(first).toBeFocused();
+    const firstId = (await first.getAttribute('data-theme-id'))!;
+    await expect(page.locator('html')).toHaveAttribute('data-theme', firstId);
+    await page.keyboard.press('ArrowRight');
+    const second = page.locator('#customize-theme-grid .theme-swatch').nth(1);
+    await expect(second).toBeFocused();
+    await expect(second).toHaveAttribute('tabindex', '0');
+    await page.keyboard.press('End');
+    await expect(page.locator('#customize-theme-grid .theme-swatch').last()).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(first).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    const below = page.locator('#customize-theme-grid .theme-swatch:focus');
+    const id = (await below.getAttribute('data-theme-id'))!;
+    expect(id).not.toBe(firstId);
+    await page.keyboard.press('s');
+    await expect(page.locator(`#customize-theme-grid .theme-star[data-star-id="${id}"]`)).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator(`#customize-theme-grid .theme-swatch[data-theme-id="${id}"]`)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', id);
+    expect(await stored(page, 'work-desk-theme')).toBe(id);
+  });
+
+  test('+ New theme starts from the current theme and the Custom tab names the count', async ({ page }) => {
+    await openThemes(page, { 'work-desk-theme': 'nord' });
+    await page.locator('.theme-filter-btn[data-theme-filter="custom"]').click();
+    await expect(page.locator('.custom-count')).toHaveText('0 / 5');
+    await expect(page.locator('#custom-theme-panel .theme-picker-note')).toContainText('New themes start from Nord');
+    await page.locator('.custom-add-tile').click();
+    await expect(page.locator('.custom-editor-name')).toHaveValue('My Nord');
+    await expect(page.locator('.custom-editor input[aria-label="Background hex"]')).toHaveValue(/^#[0-9a-f]{6}$/i);
+    await expect(page.locator('.custom-mode-btn.active')).toHaveText('Dark');
+    await page.locator('.custom-mode-btn', { hasText: 'Light' }).click();
+    await expect(page.locator('.custom-mode-btn.active')).toHaveText('Light');
+    await expect(popout(page)).toBeVisible();
+    await page.locator('.custom-btn-primary').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('.custom-swatch-wrap .theme-swatch.active')).toContainText('My Nord');
+    await page.locator('.custom-add-tile').click();
+    await expect(page.locator('.custom-editor-name')).toHaveValue('My Nord copy');
+  });
+
+  test('Options sits clear of a right-hand sidebar and below a top bar', async ({ page }) => {
+    await openThemes(page, { 'work-desk-sidebar-position': 'right' });
+    let box = (await popout(page).boundingBox())!;
+    const sidebar = (await page.locator('.sidebar').boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(sidebar.x);
+    expect(box.width).toBe(560);
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => localStorage.setItem('work-desk-sidebar-position', 'top'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.locator('#density-toggle').click();
+    box = (await popout(page).boundingBox())!;
+    const bar = (await page.locator('.sidebar').boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(bar.y + bar.height);
+    expect(box.y + box.height).toBeLessThanOrEqual(900);
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => localStorage.setItem('work-desk-sidebar-position', 'bottom'));
+    await page.reload();
+    await dismissAuthModal(page);
+    await page.locator('#density-toggle').click();
+    box = (await popout(page).boundingBox())!;
+    const bottomBar = (await page.locator('.sidebar').boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(bottomBar.y);
+  });
+});
+
+test.describe('Options two-column layout 1.25.0', { tag: ['@options'] }, () => {
+  const popout = (page: Page) => page.locator('#density-popout');
+  const row = (page: Page, id: string) => page.locator(`.options-row[data-options-open="${id}"]`);
+  const section = (page: Page, id: string) => page.locator(`[data-options-section="${id}"]`);
+
+  for (const [name, vp, width, list] of [['desktop 1440', { width: 1440, height: 900 }, 560, 200], ['wide tablet 1180', { width: 1180, height: 820 }, 480, 172]] as const) {
+    test(`${name}: the list and the open section sit side by side; rows switch sections in place`, async ({ page }) => {
+      await page.setViewportSize(vp);
+      await openDesk(page);
+      await page.locator('#density-toggle').click();
+      expect((await popout(page).boundingBox())!.width).toBe(width);
+      await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+      const pane = page.locator('#options-pane-appearance');
+      await expect(pane).toHaveClass(/options-split/);
+      await expect(row(page, 'card-layout')).toHaveAttribute('aria-current', 'true');
+      await expect(section(page, 'card-layout')).toBeVisible();
+      await expect(section(page, 'card-layout').locator('[data-options-back]')).toBeHidden();
+      expect(Math.round((await row(page, 'card-layout').boundingBox())!.width)).toBeLessThanOrEqual(list);
+      const listBox = (await row(page, 'card-layout').boundingBox())!;
+      const secBox = (await section(page, 'card-layout').boundingBox())!;
+      expect(secBox.x).toBeGreaterThan(listBox.x + listBox.width - 1);
+
+      await row(page, 'typography').click();
+      await expect(popout(page)).toBeVisible();
+      await expect(section(page, 'typography')).toBeVisible();
+      await expect(section(page, 'card-layout')).toBeHidden();
+      await expect(row(page, 'typography')).toHaveAttribute('aria-current', 'true');
+      await expect(row(page, 'card-layout')).not.toHaveAttribute('aria-current', 'true');
+      await expect(row(page, 'card-layout')).toBeVisible();
+
+      await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+      await expect(row(page, 'general')).toHaveAttribute('aria-current', 'true');
+      await row(page, 'holidays').click();
+      await expect(section(page, 'holidays')).toBeVisible();
+      await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+      await expect(section(page, 'typography')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(popout(page)).toBeHidden();
+    });
+  }
+
+  test('below 1024px the list opens one section at a time with ‹ Back', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 900 });
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    expect((await popout(page).boundingBox())!.width).toBe(420);
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').click();
+    await expect(page.locator('#options-pane-appearance')).not.toHaveClass(/options-split/);
+    await expect(page.locator('#options-pane-appearance .options-section:not([hidden])')).toHaveCount(0);
+    await row(page, 'typography').click();
+    await expect(row(page, 'card-layout')).toBeHidden();
+    await section(page, 'typography').locator('[data-options-back]').click();
+    await expect(row(page, 'card-layout')).toBeVisible();
+  });
+
+  test('resizing across 1024px switches between the two layouts while open', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 860 });
+    await openDesk(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await expect(page.locator('#options-pane-behavior')).toHaveClass(/options-split/);
+    await page.setViewportSize({ width: 900, height: 860 });
+    await expect(page.locator('#options-pane-behavior')).not.toHaveClass(/options-split/);
+    await page.setViewportSize({ width: 1280, height: 860 });
+    await expect(page.locator('#options-pane-behavior')).toHaveClass(/options-split/);
+    await expect(page.locator('#options-pane-behavior .options-section:not([hidden])')).toHaveCount(1);
+  });
+});
+
+test.describe('Phone Options sheet 1.25.0', { tag: ['@options', '@phone', '@themes'] }, () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const popout = (page: Page) => page.locator('#density-popout');
+
+  async function openSheet(page: Page) {
+    await openDesk(page);
+    await page.locator('#mobile-menu-btn').click();
+    await page.locator('#mobile-menu-options').click();
+    await expect(popout(page)).toBeVisible();
+  }
+
+  test('tabs sit at the bottom; Themes fills 75%, Appearance and Behavior share one height', async ({ page }) => {
+    await openSheet(page);
+    const nav = (await page.locator('.options-nav').boundingBox())!;
+    const pane = (await page.locator('#options-pane-themes').boundingBox())!;
+    expect(nav.y).toBeGreaterThan(pane.y);
+    expect(Math.abs((await popout(page).boundingBox())!.height - 844 * 0.75)).toBeLessThan(2);
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').tap();
+    const a = (await popout(page).boundingBox())!.height;
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').tap();
+    const b = (await popout(page).boundingBox())!.height;
+    expect(Math.abs(a - b)).toBeLessThan(2);
+    expect(a).toBeLessThanOrEqual(844 * 0.75 + 1);
+    expect((await page.locator('.options-nav').boundingBox())!.y).toBeGreaterThan((await page.locator('#options-pane-behavior .options-row').last().boundingBox())!.y);
+  });
+
+  test('a tap picks the theme and keeps the sheet open to try another', async ({ page }) => {
+    await openSheet(page);
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').tap();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="nord"]').tap();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'nord');
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#theme-pins .theme-pin.active')).toHaveText('Nord');
+    await expect(page.locator('#customize-theme-grid .theme-star[data-star-id="nord"]')).toHaveCSS('opacity', '0.45');
+  });
+
+  test('Android Back steps back one level (section, then editor), then closes the sheet', async ({ page }) => {
+    await openSheet(page);
+    await page.locator('.options-nav-btn[data-options-tab="appearance"]').tap();
+    await page.locator('.options-row[data-options-open="typography"]').tap();
+    await expect(page.locator('[data-options-section="typography"]')).toBeVisible();
+    await page.goBack();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('[data-options-section="typography"]')).toBeHidden();
+    await expect(page.locator('.options-row[data-options-open="typography"]')).toBeVisible();
+
+    await page.locator('.options-nav-btn[data-options-tab="themes"]').tap();
+    await page.locator('.theme-filter-btn[data-theme-filter="custom"]').tap();
+    await page.locator('.custom-add-tile').tap();
+    await expect(page.locator('.custom-editor')).toBeVisible();
+    await page.goBack();
+    await expect(page.locator('.custom-editor')).toHaveCount(0);
+    await expect(popout(page)).toBeVisible();
+
+    await page.goBack();
+    await expect(popout(page)).toBeHidden();
+    await expect(page).toHaveURL(/work-desk/);
+    await expect(page.locator('#add-form')).toBeVisible();
+  });
+
+  test('closing the sheet with ✕ or Esc leaves no extra history entry behind', async ({ page }) => {
+    await openSheet(page);
+    const before = await page.evaluate(() => history.length);
+    await page.keyboard.press('Escape');
+    await expect(popout(page)).toBeHidden();
+    await expect.poll(() => page.evaluate(() => history.state?.workDeskOptions ?? false)).toBe(false);
+    expect(await page.evaluate(() => history.length)).toBeLessThanOrEqual(before);
+  });
+
+  test('the add box grows to about 4 lines, then scrolls, and the dock follows the keyboard inset', async ({ page }) => {
+    await openDesk(page);
+    const editor = page.locator('#desk-view .add-form .rich-editor.add-input');
+    await editor.tap();
+    await page.keyboard.type('one\ntwo\nthree\nfour\nfive\nsix\nseven');
+    const box = await editor.evaluate((el) => ({ h: el.clientHeight, sh: el.scrollHeight, oy: getComputedStyle(el).overflowY, lh: parseFloat(getComputedStyle(el).lineHeight) }));
+    expect(box.oy).toBe('auto');
+    expect(box.sh).toBeGreaterThan(box.h);
+    expect(box.h).toBeLessThan(box.lh * 5 + 20);
+    await page.evaluate(() => document.documentElement.style.setProperty('--keyboard-inset', '300px'));
+    const dock = page.locator('#desk-view .add-form');
+    await expect.poll(async () => Math.round(844 - ((await dock.boundingBox())!.y + (await dock.boundingBox())!.height))).toBeGreaterThanOrEqual(299);
   });
 });
