@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
   <title>Work Desk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2705,7 +2705,8 @@
     @media (max-width: 768px) {
       .density-popout select, .custom-holiday-input { min-height: 36px; }
       .options-back-btn, .custom-holiday-add-btn { min-height: 36px; padding-inline: 10px; }
-      .current-theme-btn { min-height: 32px; }
+      .theme-pin { min-height: 30px; }
+      .custom-theme-link { min-height: 30px; }
     }
 
     /* Background pattern controls; .main draws the tile from --desk-pattern */
@@ -2927,137 +2928,85 @@
     .sidebar-daily.hidden { display: none; }
 
     /* ── Theme picker panel ────────────────────────────────────────────────── */
-    .theme-picker-label {
-      font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.09em; color: var(--text-muted); margin-bottom: 10px;
+    #options-pane-themes:not(.hidden) { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 0; }
+    .theme-head {
+      flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
+      padding: 0 12px 10px; border-bottom: 1px solid var(--border);
     }
-    .theme-section { display: flex; flex-direction: column; gap: 8px; }
-    .theme-section-label {
-      font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-muted);
+    .theme-search {
+      width: 100%; box-sizing: border-box; padding: 7px 10px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--input-bg); color: var(--text);
+      font: inherit; font-size: 0.8rem; outline: none;
     }
-    .theme-section-divider {
-      border: none; border-top: 1px solid var(--border); margin: 8px 0;
+    .theme-search:focus { border-color: var(--accent); }
+    .theme-search::placeholder { color: var(--text-muted); }
+    .theme-head.searching .theme-filter-group { display: none; }
+    .theme-head .theme-filter-btn { flex: 1; }
+    .theme-pins-wrap:empty { display: none; }
+    .theme-pins-label, .theme-family-label {
+      display: flex; align-items: center; gap: 6px; margin: 2px 2px 6px;
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
     }
-    .theme-picker-grid {
-      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
-      align-items: start;
+    .theme-family-label { margin-top: 12px; }
+    .theme-family-label .custom-count { margin-left: auto; font-size: 0.66rem; font-weight: 600; letter-spacing: 0; }
+    .theme-pins { display: flex; flex-wrap: wrap; gap: 6px; }
+    .theme-pin {
+      display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; max-width: 100%;
+      padding: 3px 10px 3px 5px; border-radius: 999px; border: 1px solid rgba(127, 127, 127, 0.35);
+      background: var(--t-bg); color: var(--t-ink); font: inherit; font-size: 0.74rem; line-height: 1.4;
+      white-space: nowrap; cursor: pointer;
     }
-    .theme-picker-grid.seasonal { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 4px; }
-    .theme-season-label {
-      margin: 6px 2px 4px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
-    }
-    .theme-season-label:first-child { margin-top: 0; }
+    .theme-pin i { width: 12px; height: 12px; flex-shrink: 0; border-radius: 50%; background: var(--t-accent); }
+    .theme-pin.active { border: 1.5px solid var(--accent); }
+    .theme-pin[hidden] { display: none; }
+    .theme-pin-more { padding: 3px 10px; background: var(--panel-bg); color: var(--text); }
+    .theme-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 14px; }
+    .theme-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+    .theme-tile-wrap { position: relative; min-width: 0; }
     .theme-swatch {
-      min-width: 0;
-      display: flex; flex-direction: column; align-items: center;
-      gap: 5px; cursor: pointer; padding: 4px 2px; border-radius: 8px;
-      background: transparent; border: 1px solid transparent;
-      transition: background 0.15s, border-color 0.15s;
+      width: 100%; height: 62px; box-sizing: border-box; padding: 7px 8px; border-radius: 8px;
+      display: flex; flex-direction: column; justify-content: space-between; align-items: stretch;
+      border: 1px solid rgba(127, 127, 127, 0.3); background: var(--t-bg); color: var(--t-ink);
+      font: inherit; text-align: left; cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.15s;
     }
-    .theme-swatch:hover {
-      background: var(--panel-bg);
-      border-color: var(--border);
-    }
-    .theme-swatch.active {
-      background: var(--panel-bg);
-    }
-    .theme-swatch-preview {
-      width: 48px; height: 32px; border-radius: 6px;
-      position: relative; border: 1px solid rgba(128, 128, 128, 0.2);
-      transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s;
-      overflow: hidden; display: flex; flex-direction: row;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-      flex-shrink: 0;
-    }
-    .theme-swatch:hover .theme-swatch-preview {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-    }
-    .theme-swatch.active .theme-swatch-preview {
-      box-shadow: 0 0 0 2px var(--accent);
-      border-color: transparent;
-    }
-    .theme-swatch-sidebar {
-      width: 13px; height: 100%; flex-shrink: 0;
-      display: flex; flex-direction: column; align-items: center;
-      padding-top: 4px; gap: 2.5px;
-      border-right: 1px solid rgba(0, 0, 0, 0.1);
-    }
-    .theme-swatch-sidebar-pill {
-      width: 7px; height: 2.5px; border-radius: 1.5px;
-      opacity: 0.95;
-    }
-    .theme-swatch-content {
-      flex: 1; height: 100%;
-      padding: 3.5px 3px 3px 3.5px;
-      display: flex; flex-direction: column; gap: 2.5px;
-      overflow: hidden;
-    }
-    .theme-swatch-card {
-      width: 100%; height: 11px; border-radius: 2px;
-      box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.12);
-      border: 0.5px solid rgba(128, 128, 128, 0.18);
-      display: flex; align-items: center; padding: 0 2.5px;
-    }
-    .theme-swatch-card-line {
-      width: 11px; height: 2px; border-radius: 1px;
-    }
-    .theme-swatch-card.secondary {
-      height: 8px; opacity: 0.75;
-      box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.08);
-      border: 0.5px solid rgba(128, 128, 128, 0.15);
-    }
+    .theme-swatch:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18); }
+    .theme-swatch.active { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .theme-swatch:focus-visible { outline: 2px dashed var(--accent); outline-offset: 2px; }
+    .theme-swatch.active:focus-visible { outline-style: solid; box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 35%, transparent); }
+    .theme-tile-dots { display: flex; gap: 3px; padding-right: 22px; }
+    .theme-tile-dots i { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(127, 127, 127, 0.45); }
     .theme-swatch-name {
-      font-size: 0.63rem; font-weight: 500; color: var(--text-muted);
-      text-align: center; white-space: nowrap;
-      max-width: 100%; overflow: hidden; text-overflow: ellipsis;
-      line-height: 1.15;
+      font-size: 0.72rem; font-weight: 600; line-height: 1.15; overflow-wrap: anywhere;
+      overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     }
-    .theme-picker-grid .theme-swatch-name {
-      white-space: normal; text-wrap: balance; text-overflow: clip;
+    .theme-star {
+      position: absolute; top: 2px; right: 2px; width: 26px; height: 26px; padding: 0;
+      border: none; border-radius: 6px; background: none; color: var(--t-ink);
+      font-size: 14px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 0.12s;
     }
-    .theme-swatch-name.long { font-size: 0.56rem; letter-spacing: -0.01em; }
-    .theme-swatch.active .theme-swatch-name {
-      color: var(--text); font-weight: 600;
+    .theme-tile-wrap:hover .theme-star, .theme-star:focus-visible, .theme-star[aria-pressed="true"] { opacity: 1; }
+    @media (hover: none) {
+      .theme-star { opacity: 0.45; }
+      .theme-star[aria-pressed="true"] { opacity: 1; }
     }
+    .theme-picker-note { margin: 10px 2px 0; font-size: 0.74rem; line-height: 1.4; color: var(--text-muted); }
 
     /* ── Custom theme builder ─────────────────────────── */
     .custom-theme-panel.hidden { display: none; }
-    .custom-theme-panel { margin-top: 2px; }
-
-    .custom-themes-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 8px;
+    .custom-count { font-size: 0.65rem; color: var(--text-muted); font-weight: 500; }
+    .custom-swatch-wrap { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .custom-theme-links { display: flex; gap: 12px; padding: 0 2px; }
+    .custom-theme-link {
+      padding: 3px 0; border: none; background: none; font: inherit; font-size: 0.7rem; color: var(--text-muted);
+      text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
     }
-    .custom-count {
-      font-size: 0.65rem; color: var(--text-muted); font-weight: 500;
-    }
-    .custom-swatches-row {
-      display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start;
-    }
-    .custom-swatch-wrap {
-      position: relative;
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-    }
-    .custom-swatch-delete {
-      position: absolute; top: -1px; right: -1px;
-      width: 14px; height: 14px; border-radius: 50%;
-      background: var(--danger); color: #fff;
-      border: 1.5px solid var(--surface);
-      font-size: 8px; font-weight: 700;
-      display: none; align-items: center; justify-content: center;
-      cursor: pointer; line-height: 1; z-index: 1;
-    }
-    .custom-swatch-wrap:hover .custom-swatch-delete { display: flex; }
+    .custom-theme-link:hover { color: var(--text); }
+    .custom-theme-delete:hover { color: var(--danger); }
     .custom-add-tile {
-      width: 48px; height: 32px; border-radius: 6px;
-      border: 2px dashed var(--border);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; color: var(--text-muted);
-      font-size: 16px; font-weight: 400;
+      height: 62px; border-radius: 8px; border: 1.5px dashed var(--border); background: transparent;
+      color: var(--text-muted); font: inherit; font-size: 0.76rem; cursor: pointer;
       transition: border-color 0.15s, color 0.15s;
-      background: transparent;
     }
     .custom-add-tile:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -3066,7 +3015,6 @@
       background: var(--panel-bg);
       border-radius: 8px; border: 1px solid var(--border);
     }
-    .custom-editor.hidden { display: none; }
     .custom-editor-title {
       font-size: 0.72rem; font-weight: 600; color: var(--text); margin-bottom: 10px;
     }
@@ -3121,24 +3069,7 @@
     .custom-editor-divider {
       border: none; border-top: 1px solid var(--border); margin: 8px 0;
     }
-    .custom-preview-label {
-      font-size: 0.65rem; font-weight: 600; color: var(--text-muted);
-      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;
-    }
-    .custom-preview-row {
-      display: flex; gap: 10px; align-items: center;
-    }
-    .custom-preview-app {
-      flex: 1; height: 68px; border-radius: 6px; overflow: hidden;
-      display: flex; border: 1px solid var(--border);
-    }
-    .custom-preview-sidebar {
-      width: 36px; display: flex; flex-direction: column;
-      align-items: center; padding-top: 8px; gap: 3px;
-    }
-    .custom-preview-content {
-      flex: 1; padding: 6px; display: flex; flex-direction: column; gap: 3px;
-    }
+    .custom-editor-note { margin: 2px 0 0; font-size: 0.68rem; line-height: 1.4; color: var(--text-muted); }
     .custom-editor-actions {
       display: flex; gap: 6px; justify-content: flex-end; margin-top: 10px;
     }
@@ -3153,10 +3084,6 @@
     .custom-btn-secondary:hover { background: var(--panel-bg); }
     .custom-btn-danger { background: transparent; color: var(--danger); border-color: transparent; font-size: 0.65rem; }
     .custom-btn-danger:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
-    .theme-filter-btn[data-theme-filter="custom"].active {
-      background: color-mix(in srgb, var(--accent) 15%, var(--surface));
-      color: var(--accent); font-weight: 600;
-    }
 
     .sidebar-header {
       display: flex;
@@ -3209,20 +3136,6 @@
       gap: 8px;
       min-height: 36px;
       flex-shrink: 0;
-    }
-    .sidebar-account-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      min-width: 0;
-    }
-    .sidebar-account-identity {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 1;
-      min-width: 0;
     }
     .sidebar-account-icon {
       width: 24px; height: 24px;
@@ -3405,18 +3318,6 @@
     .changelog-github-link a:hover { color: var(--text); text-decoration: underline; }
     .sb-account-btn.hidden { display: none; }
 
-    .theme-toggle-unused {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      border: 1px solid var(--sidebar-btn-border);
-      color: var(--sidebar-active);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      background: transparent;
-    }
     .theme-toggle:hover { background: var(--sidebar-hover); }
     .theme-toggle svg {
       width: 18px;
@@ -3597,7 +3498,6 @@
       background: var(--accent);
     }
 
-    .date-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
 
     .date-item {
       width: 100%; text-align: left; padding: 8px 12px; border-radius: 8px;
@@ -3687,16 +3587,7 @@
       color: var(--sidebar-muted);
     }
 
-    .empty-nav { font-size: 0.85rem; color: var(--sidebar-muted); padding: 8px 0; }
 
-    .backup-section {
-      margin-top: auto;
-      padding-top: 16px;
-      border-top: 1px solid var(--sidebar-border);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
 
     .sidebar-backup {
       margin-top: auto;
@@ -4028,12 +3919,6 @@
     .project-tab-pane { display: none; flex-direction: column; gap: 12px; }
     .project-tab-pane.active { display: flex; }
 
-    .project-notes-section,
-    .project-tasks-section {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
 
     .project-section-header {
       display: flex;
@@ -4041,13 +3926,6 @@
       justify-content: space-between;
     }
 
-    .project-section-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-    }
 
     /* ── Note truncation / preview ───────────────────── */
     .project-item-content.truncated {
@@ -4134,12 +4012,6 @@
       border-color: var(--note-border);
     }
 
-    .project-item-title {
-      font-size: 0.95rem;
-      color: var(--text);
-      font-weight: 500;
-      margin-bottom: 6px;
-    }
 
     .project-item-content {
       font-size: 0.88rem;
@@ -4529,14 +4401,6 @@
     .backup-btn.repair-btn { opacity: 0.65; font-size: 0.78rem; padding: 6px 12px; }
     .backup-btn.repair-btn:hover { opacity: 1; }
 
-    .backup-group {
-      margin-top: 12px;
-      padding-top: 14px;
-      border-top: 1px solid var(--sidebar-border);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
 
     .import-file { display: none; }
 
@@ -6248,27 +6112,33 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       box-shadow: 0 6px 24px var(--shadow);
-      padding: 12px;
-      width: 290px;
+      padding: 12px 0 0;
+      width: 420px;
       max-width: calc(100vw - 16px);
       /* Ends above .main's bottom padding so opening it never makes the page scrollable */
       max-height: calc(100vh - 112px);
-      overflow-y: auto;
+      /* Fits its content; past the cap only the open pane scrolls, so the tabs and search stay put */
+      display: flex; flex-direction: column;
+      overflow: hidden;
       box-sizing: border-box;
     }
     .density-popout.hidden { display: none; }
+    @media (min-width: 1024px) { .density-popout { width: 480px; --options-list-w: 172px; } }
+    @media (min-width: 1280px) { .density-popout { width: 560px; --options-list-w: 200px; } }
     @media (min-width: 769px) {
       .density-popout.options-floating { position: fixed; top: 64px; right: 28px; }
       [data-sidebar-position="top"] .density-popout.options-floating { top: calc(var(--sidebar-bar-h, 0px) + 16px); }
+      [data-sidebar-position="right"] .app:not(.sidebar-collapsed) ~ .density-popout.options-floating { right: calc(256px + 16px); }
     }
 
     .options-nav {
       display: flex;
+      flex-shrink: 0;
       gap: 4px;
       background: var(--panel-bg);
       padding: 3px;
       border-radius: 8px;
-      margin-bottom: 12px;
+      margin: 0 12px 12px;
       border: 1px solid var(--border);
     }
     .options-nav-btn {
@@ -6296,6 +6166,7 @@
       font-weight: 600;
       box-shadow: 0 1px 3px var(--shadow);
     }
+    .options-pane { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
     .options-pane.hidden { display: none; }
     .options-summary { display: flex; flex-direction: column; margin: -2px -4px 0; }
     .options-row {
@@ -6322,6 +6193,23 @@
     }
     .options-pane.in-section .options-summary,
     .options-pane.in-section > .options-reset-btn { display: none; }
+    /* Wide panels: the section list stays on the left and the open section fills the right, so there's no Back */
+    .options-pane.options-split:not(.hidden) {
+      display: grid; grid-template-columns: var(--options-list-w, 200px) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr); padding: 0; overflow: hidden;
+    }
+    .options-pane.options-split .options-summary { display: flex; grid-column: 1; grid-row: 1; margin: 0; padding: 0 8px 0 10px; }
+    .options-pane.options-split > .options-reset-btn { display: block; grid-column: 1; grid-row: 2; align-self: start; margin: 10px 8px 12px 10px; width: auto; }
+    .options-pane.options-split .options-section {
+      grid-column: 2; grid-row: 1 / span 2; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+      padding: 0 14px 12px; border-left: 1px solid var(--border); animation: none;
+    }
+    .options-split .options-row { padding: 8px; gap: 8px; }
+    .options-split .options-row-chev, .options-split .options-back-btn { display: none; }
+    .options-split .options-row-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .options-split .options-row[aria-current="true"] { background: color-mix(in srgb, var(--accent) 10%, var(--panel-bg)); box-shadow: inset 3px 0 0 var(--accent); }
+    .options-split .options-section-head { margin-top: 0; }
+    .options-split .options-section-title { position: static; text-align: left; }
     .options-section[hidden] { display: none; }
     .options-section { animation: options-section-in 0.18s ease-out; }
     @keyframes options-section-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
@@ -6345,13 +6233,6 @@
     }
     .options-new-tag[hidden] { display: none; }
 
-    .theme-filter-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
     .theme-filter-group {
       display: flex;
       gap: 2px;
@@ -6361,8 +6242,8 @@
       border: 1px solid var(--border);
     }
     .theme-filter-btn {
-      padding: 3px 6px;
-      font-size: 0.68rem;
+      padding: 4px 6px;
+      font-size: 0.74rem;
       font-weight: 500;
       border: none;
       background: transparent;
@@ -6372,22 +6253,6 @@
       transition: background 0.12s, color 0.12s;
     }
     .theme-filter-btn:hover { color: var(--text); }
-    .current-theme-btn {
-      display: block;
-      margin: -2px 0 10px;
-      padding: 0;
-      background: none;
-      border: none;
-      font: inherit;
-      font-size: 0.74rem;
-      color: var(--text-muted);
-      text-align: left;
-      cursor: default;
-    }
-    .current-theme-btn strong { color: var(--text); font-weight: 600; }
-    .current-theme-btn.can-jump { cursor: pointer; }
-    .current-theme-btn.can-jump .current-theme-jump { color: var(--accent); margin-left: 4px; }
-    .current-theme-btn.can-jump:hover .current-theme-jump { text-decoration: underline; }
     .theme-filter-btn.active {
       background: var(--surface);
       color: var(--text);
@@ -7300,16 +7165,6 @@
       color: var(--text);
     }
 
-    .date-badge {
-      margin-left: auto;
-      font-size: 0.68rem;
-      font-weight: 600;
-      padding: 1px 6px;
-      border-radius: 10px;
-      background: rgba(239, 68, 68, 0.18);
-      color: #f87171;
-      flex-shrink: 0;
-    }
 
     .column-empty {
       display: flex;
@@ -7442,9 +7297,6 @@
       font-size: 0.72rem; text-transform: uppercase;
       letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px;
     }
-    .done-label { color: var(--done); }
-    .shelved-label { color: var(--shelved-label); }
-
     .item.shelved .item-content { color: var(--text-muted); }
     .item-card.shelved-card { border-style: dashed; border-color: var(--shelved-border); }
 
@@ -7560,24 +7412,6 @@
     .comments-toggle.active { background: var(--accent-light); color: var(--accent); }
     .comments-toggle.has-comments { color: var(--accent); }
 
-    .comment-count-badge {
-      position: absolute;
-      top: -3px;
-      right: -4px;
-      min-width: 14px;
-      height: 14px;
-      padding: 0 3px;
-      background: var(--accent);
-      color: white;
-      font-size: 0.6rem;
-      font-weight: 700;
-      border-radius: 7px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      pointer-events: none;
-    }
 
     /* ── Comments panel — inline thread style ─────────────────────────── */
     .comments-panel {
@@ -7711,7 +7545,9 @@
       margin-right: -36px; /* sit near the card edge, inside the .item trigger-area padding */
     }
     .tag-chip-row .tag-chip { max-width: 100%; }
-    .tag-chip-row .tag-chip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    /* The label is trimmed to cap height, so a clip at its edge shaves glyph tops whenever the card sits on a
+       fractional pixel; the padding gives the ellipsis clip room and the negative margin keeps the chip's size */
+    .tag-chip-row .tag-chip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 0.3em; margin-block: -0.3em; }
     .board-column .item.has-tags {
       grid-template-columns: auto minmax(0, 1fr);
       grid-template-areas:
@@ -8118,7 +7954,6 @@
     .comment-add-btn:hover:not(:disabled) { background: var(--accent-hover); }
     .comment-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .no-comments { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 10px; }
 
     .item-actions {
       display: flex;
@@ -8494,7 +8329,8 @@
         position: fixed;
         left: 0;
         right: 0;
-        bottom: 0;
+        /* Rides above the on-screen keyboard where the browser overlays it instead of resizing the page */
+        bottom: var(--keyboard-inset, 0px);
         z-index: 45;
         margin: 0;
         border-radius: 14px 14px 0 0;
@@ -8508,6 +8344,8 @@
       #desk-view .desk-board-area {
         padding-bottom: calc(150px + env(safe-area-inset-bottom));
       }
+      /* About four lines, then it scrolls, so a long entry can't push the dock up past what's being typed */
+      #desk-view .add-form .rich-editor.add-input { max-height: calc(4 * 1.5em + 16px); overflow-y: auto; overscroll-behavior: contain; }
       /* Placeholder so sticky header layout doesn't collapse when add-form is fixed */
       #desk-view .desk-sticky::after {
         content: '';
@@ -8614,13 +8452,27 @@
       .mobile-menu-link:last-child { border-bottom: none; }
       .mobile-menu-link-sub { margin-left: auto; color: var(--sidebar-muted); font-size: 0.75rem; }
 
-      /* Options opens as its own bottom sheet instead of hanging off the (hidden) gear */
+      /* Options opens as its own bottom sheet instead of hanging off the (hidden) gear.
+         Its tabs sit at the bottom within thumb reach, and stay in the same spot on every tab. */
       .density-popout {
         position: fixed; top: auto; left: 0; right: 0; bottom: 0;
-        width: auto; max-width: none; max-height: 80vh;
+        width: auto; max-width: none; max-height: 75vh; max-height: 75dvh;
         border-radius: 16px 16px 0 0; z-index: 95;
-        padding-bottom: max(16px, env(safe-area-inset-bottom));
+        padding: 14px 0 0;
       }
+      .density-popout[data-options-tab="themes"] { height: 75vh; height: 75dvh; }
+      /* Appearance and Behavior share the taller list's height, so switching tabs doesn't move the top edge */
+      .density-popout:not([data-options-tab="themes"]) { min-height: min(var(--options-sheet-min, 0px), 75dvh); }
+      .density-popout > .options-pane:not(.hidden) { flex: 1 1 auto; }
+      .density-popout .theme-body { flex: 1 1 auto; }
+      .density-popout .options-nav {
+        order: 2; position: relative; margin: auto 12px max(12px, env(safe-area-inset-bottom));
+      }
+      .density-popout .options-nav::before {
+        content: ''; position: absolute; left: -12px; right: -12px; top: -9px; height: 1px; background: var(--border);
+      }
+      .density-popout .options-nav-btn { min-height: 40px; font-size: 0.84rem; }
+      .density-popout > .options-pane { margin-bottom: 18px; }
     }
   </style>
   <link rel="manifest" href="/work_desk/manifest.json" />
@@ -8828,7 +8680,7 @@
                     <path d="M19.14 12.94a7.07 7.07 0 0 0 .06-.94c0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.04 7.04 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.37 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>
                   </svg>
                 </button>
-                <div id="density-popout" class="density-popout hidden" role="dialog" aria-label="Customize">
+                <div id="density-popout" class="density-popout hidden" role="dialog" aria-label="Customize" data-options-tab="themes">
                   <div class="options-nav">
                     <button type="button" class="options-nav-btn active" data-options-tab="themes">Themes</button>
                     <button type="button" class="options-nav-btn" data-options-tab="appearance">Appearance</button>
@@ -8837,19 +8689,21 @@
 
                   <!-- Themes Tab Pane -->
                   <div class="options-pane" id="options-pane-themes">
-                    <div class="theme-filter-row">
-                      <span class="density-popout-label" style="margin-bottom:0;">Theme</span>
-                      <div class="theme-filter-group">
-                        <button type="button" class="theme-filter-btn active" data-theme-filter="light">Light</button>
-                        <button type="button" class="theme-filter-btn" data-theme-filter="medium">Med</button>
-                        <button type="button" class="theme-filter-btn" data-theme-filter="dark">Dark</button>
-                        <button type="button" class="theme-filter-btn" data-theme-filter="seasonal">Season</button>
-                        <button type="button" class="theme-filter-btn" data-theme-filter="custom">Custom</button>
+                    <div class="theme-head" id="theme-head">
+                      <input type="search" id="theme-search" class="theme-search" placeholder="Search themes, like rose, warm or dark" aria-label="Search themes" autocomplete="off" spellcheck="false" enterkeyhint="search">
+                      <div class="theme-filter-group" role="tablist" aria-label="Theme groups">
+                        <button type="button" class="theme-filter-btn active" data-theme-filter="light" role="tab">Light</button>
+                        <button type="button" class="theme-filter-btn" data-theme-filter="medium" role="tab">Dim</button>
+                        <button type="button" class="theme-filter-btn" data-theme-filter="dark" role="tab">Dark</button>
+                        <button type="button" class="theme-filter-btn" data-theme-filter="seasonal" role="tab">Season</button>
+                        <button type="button" class="theme-filter-btn" data-theme-filter="custom" role="tab">Custom</button>
                       </div>
+                      <div id="theme-pins" class="theme-pins-wrap"></div>
                     </div>
-                    <button type="button" id="current-theme-btn" class="current-theme-btn" title="Show the current theme"></button>
-                    <div id="customize-theme-grid"></div>
-                    <div id="custom-theme-panel" class="custom-theme-panel hidden"></div>
+                    <div id="theme-body" class="theme-body">
+                      <div id="customize-theme-grid"></div>
+                      <div id="custom-theme-panel" class="custom-theme-panel hidden"></div>
+                    </div>
                   </div>
 
                   <!-- Appearance Tab Pane -->
@@ -9420,8 +9274,10 @@
         <details class="help-section" id="help-options" open>
           <summary>Options</summary>
           <ul>
-            <li>Open with ⚙ near the date or <strong>Options</strong> in the account menu. Each tab opens on a short list; click a row to open it, and <strong>‹ Back</strong> or <strong>Esc</strong> to return</li>
-            <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) with previews and a Light/Med/Dark filter, 12 <strong>Season</strong> themes (each season in light, medium, and dark), plus up to 5 <strong>Custom</strong> themes from 5 colors</li>
+            <li>Open with ⚙ near the date or <strong>Options</strong> in the account menu. On a wide screen, Appearance and Behavior show their list beside the open section; narrower, click a row and use <strong>‹ Back</strong>. <strong>Esc</strong> steps back, then closes. On phones the tabs sit at the bottom and Back steps back too</li>
+            <li><strong>Themes</strong> — 108 presets (36 light, 36 medium, 36 dark) under <strong>Light</strong>, <strong>Dim</strong>, and <strong>Dark</strong>, plus 12 <strong>Season</strong> themes. Search by name, color (warm, green), or tier. With a mouse, hover a tile to try it on the desk and click to keep it; on a touch screen, tap to try</li>
+            <li><strong>Pinned row</strong> — your current theme, ★ starred ones, and your last 3. Arrow keys move between tiles, Enter picks, and <kbd>S</kbd> stars</li>
+            <li><strong>Custom</strong> — up to 5 themes from 5 colors. <em>+ New theme</em> starts from the one you're using, and the desk shows your colors as you edit</li>
             <li><strong>Appearance</strong> — card layout, text size and font, layout (sidebar position left, right, top, or bottom, plus the calendar legend and Today's Progress; tablets and computers only, since phones always use the top bar), effects, a patterned background (including snow crystals, cherry petals, water ripples, and maple leaves), and tag colors</li>
             <li><strong>Behavior</strong> — startup, week start, quieter weekends, full screen, comments, auto-collapse and auto carry, confetti, delete confirmation, strikethrough, long notes, and holidays (US federal plus your own dates)</li>
             <li><strong>Reset to defaults</strong> at the bottom of a tab resets just that tab; your theme, pinned tag colors, and custom holidays stay. A <em>New</em> tag marks settings from the latest release</li>
@@ -9446,7 +9302,7 @@
           <ul>
             <li><strong>Install</strong> — use your browser's install option, or on iPhone <strong>Share → Add to Home Screen</strong>. Installed, it opens in its own window and works offline</li>
             <li><strong>Phone menu</strong> — the top bar keeps your tabs (Desk and Insights, with Work, Personal, and Projects underneath), search, and Help; the <strong>menu button</strong> holds your account, backup, Options, and What's new. The dot beside it shows sync status</li>
-            <li>The add bar stays at the bottom, the week strip picks the day, and a task's left edge is wider for tapping (a bit narrower on a tablet in landscape)</li>
+            <li>The add bar stays at the bottom, above the keyboard while you type, and grows to about 4 lines before it scrolls. The week strip picks the day, and a task's left edge is wider for tapping (a bit narrower on a tablet in landscape)</li>
             <li><strong>Full screen</strong> — Options → Behavior → General hides the status bar and app tray on that device only; swipe from an edge to see them. If the tablet drops out of full screen, your next tap brings it back (typing doesn't). Esc on a tablet keyboard closes what's open, never the app</li>
           </ul>
         </details>
@@ -9641,12 +9497,36 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.24.0';
+    const APP_VERSION = '1.25.0';
     const CHANGELOG = [
+      {
+        version: '1.25.0',
+        date: 'Nov 10, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'A new theme picker in Options → Themes. Themes show as color tiles grouped by color (Cool, Green, Warm, and so on), and a search box finds them by name, color, or tier. Rosé Pine turns up when you type rose',
+            'Try a theme before you pick it. With a mouse, hover a tile to see it on your desk, and move away or press Esc to go back. On a phone or tablet, tap to try one and Options stays open so you can try the next',
+            'Star your favorites. The row at the top of Themes keeps your current theme, your starred themes, and the last 3 you picked, on every device you sign in on',
+            'Arrow keys move between theme tiles, Enter picks one, and S stars it',
+          ] },
+          { label: 'Improved', items: [
+            'Options is wider on computers and tablets and only as tall as what\'s in it. On a wide screen, Appearance and Behavior show their list on the left with the open section beside it, so there\'s no going back and forth',
+            'On phones, the Themes, Appearance, and Behavior tabs sit at the bottom of the sheet within thumb reach, the sheet stays the same height when you switch between Appearance and Behavior, and Android\'s Back button steps back one level before closing Options',
+            'Custom themes: + New theme starts from the theme you\'re using, your desk shows the new colors as you edit, and each theme has Edit and Delete links you can see',
+            'The Medium tab is now called Dim',
+            'Typing on an Android phone: the add box stays above the keyboard, grows to about 4 lines before it scrolls, and a card you\'re editing scrolls into view',
+            'Removed 20 leftover style rules for parts of the app that were redesigned or removed earlier (the old sidebar backup area, theme section headings, the comment count bubble, and more). Nothing you see changes',
+          ] },
+          { label: 'Fixed', items: [
+            'Deleting the custom theme you were using left its colors on the desk. Your theme now switches back to Default',
+            'Tags on cards no longer lose the top of their letters now and then. Depending on where a card landed on screen, a tag like GSAR could look cut off across the top while the one next to it was fine',
+          ] },
+        ],
+      },
       {
         version: '1.24.0',
         date: 'Nov 5, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Seasonal themes: a new Season tab in Options → Themes with 12 themes, each season in light, medium, and dark. Winter: Frost, Winter Dusk, Evergreen Night. Spring: Blossom, Spring Rain, Orchard Night. Summer: Sunlit, Sea Glass, Midsummer Night. Autumn: Harvest, Red Maple, Bonfire',
@@ -10949,134 +10829,133 @@
     // ── Theme system ───────────────────────────────────────────────────────────
     const THEMES = [
       // Light — Blue/cool
-      { id: '',                name: 'Default',   sidebar: '#1e2433', bg: '#f4f2ee', surface: '#ffffff', accent: '#3b6fd9', dark: false },
-      { id: 'slate',           name: 'Slate',     sidebar: '#334155', bg: '#f1f5f9', surface: '#ffffff', accent: '#3b82f6', dark: false },
-      { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', bg: '#f0f6ff', surface: '#ffffff', accent: '#0ea5e9', dark: false },
-      { id: 'cloud',           name: 'Cloud',     sidebar: '#283848', bg: '#f4f8fc', surface: '#ffffff', accent: '#4a90d9', dark: false },
-      { id: 'nord-light',      name: 'Nord Light',sidebar: '#2e3440', bg: '#eceff4', surface: '#ffffff', accent: '#5e81ac', dark: false },
-      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', surface: '#e9e9ec', accent: '#7aa2f7', dark: false },
-      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', bg: '#fdf6e3', surface: '#eee8d5', accent: '#268bd2', dark: false },
+      { id: '',                name: 'Default',   sidebar: '#1e2433', bg: '#f4f2ee', surface: '#ffffff', accent: '#3b6fd9', dark: false, family: 'Cool' },
+      { id: 'slate',           name: 'Slate',     sidebar: '#334155', bg: '#f1f5f9', surface: '#ffffff', accent: '#3b82f6', dark: false, family: 'Cool' },
+      { id: 'arctic',          name: 'Arctic',    sidebar: '#0f2044', bg: '#f0f6ff', surface: '#ffffff', accent: '#0ea5e9', dark: false, family: 'Cool' },
+      { id: 'cloud',           name: 'Cloud',     sidebar: '#283848', bg: '#f4f8fc', surface: '#ffffff', accent: '#4a90d9', dark: false, family: 'Cool' },
+      { id: 'nord-light',      name: 'Nord Light',sidebar: '#2e3440', bg: '#eceff4', surface: '#ffffff', accent: '#5e81ac', dark: false, family: 'Cool' },
+      { id: 'tokyo-day',       name: 'Tokyo Day', sidebar: '#1a1b26', bg: '#d5d6db', surface: '#e9e9ec', accent: '#7aa2f7', dark: false, family: 'Cool' },
+      { id: 'solarized-light', name: 'Solarized', sidebar: '#073642', bg: '#fdf6e3', surface: '#eee8d5', accent: '#268bd2', dark: false, family: 'Cool' },
       // Light — Green/earth
-      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', bg: '#f0faf4', surface: '#ffffff', accent: '#16a34a', dark: false },
-      { id: 'sage',            name: 'Sage',      sidebar: '#1f3024', bg: '#f1f5f2', surface: '#ffffff', accent: '#3b7a57', dark: false },
-      { id: 'olive',           name: 'Olive',     sidebar: '#2a3020', bg: '#f2f0e6', surface: '#fafaf4', accent: '#6a8040', dark: false },
-      { id: 'seafoam',         name: 'Seafoam',   sidebar: '#0f3b3a', bg: '#eef8f6', surface: '#ffffff', accent: '#0d9488', dark: false },
-      { id: 'citrus',          name: 'Citrus',    sidebar: '#283214', bg: '#fafbe9', surface: '#ffffff', accent: '#4d7c0f', dark: false },
-      { id: 'everforest-light',name: 'Everforest',sidebar: '#2d353b', bg: '#fdf6e3', surface: '#fffbef', accent: '#8da101', dark: false },
+      { id: 'mint',            name: 'Mint',      sidebar: '#1a3d2a', bg: '#f0faf4', surface: '#ffffff', accent: '#16a34a', dark: false, family: 'Green' },
+      { id: 'sage',            name: 'Sage',      sidebar: '#1f3024', bg: '#f1f5f2', surface: '#ffffff', accent: '#3b7a57', dark: false, family: 'Green' },
+      { id: 'olive',           name: 'Olive',     sidebar: '#2a3020', bg: '#f2f0e6', surface: '#fafaf4', accent: '#6a8040', dark: false, family: 'Green' },
+      { id: 'seafoam',         name: 'Seafoam',   sidebar: '#0f3b3a', bg: '#eef8f6', surface: '#ffffff', accent: '#0d9488', dark: false, family: 'Green' },
+      { id: 'citrus',          name: 'Citrus',    sidebar: '#283214', bg: '#fafbe9', surface: '#ffffff', accent: '#4d7c0f', dark: false, family: 'Green' },
+      { id: 'everforest-light',name: 'Everforest',sidebar: '#2d353b', bg: '#fdf6e3', surface: '#fffbef', accent: '#8da101', dark: false, family: 'Green' },
       // Light — Warm/earthy
-      { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', bg: '#fdf6ee', surface: '#ffffff', accent: '#b5611a', dark: false },
-      { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', bg: '#f7f0e6', surface: '#fffcf8', accent: '#d2691e', dark: false },
-      { id: 'honey',           name: 'Honey',     sidebar: '#4a3010', bg: '#fef9ec', surface: '#fffef8', accent: '#d4940a', dark: false },
-      { id: 'sepia',           name: 'Sepia',     sidebar: '#382a1d', bg: '#f4ecd8', surface: '#faf6eb', accent: '#8c5828', dark: false },
-      { id: 'mediterranean',   name: 'Mediterranean', sidebar: '#13315c', bg: '#f6f1e7', surface: '#fffdf8', accent: '#c8553d', dark: false },
-      { id: 'gruvbox-light',   name: 'Gruvbox Light', sidebar: '#3c3836', bg: '#fbf1c7', surface: '#f9f5d7', accent: '#af3a03', dark: false },
+      { id: 'latte',           name: 'Latte',     sidebar: '#3b2314', bg: '#fdf6ee', surface: '#ffffff', accent: '#b5611a', dark: false, family: 'Warm' },
+      { id: 'sand',            name: 'Sand',      sidebar: '#7a3520', bg: '#f7f0e6', surface: '#fffcf8', accent: '#d2691e', dark: false, family: 'Warm' },
+      { id: 'honey',           name: 'Honey',     sidebar: '#4a3010', bg: '#fef9ec', surface: '#fffef8', accent: '#d4940a', dark: false, family: 'Warm' },
+      { id: 'sepia',           name: 'Sepia',     sidebar: '#382a1d', bg: '#f4ecd8', surface: '#faf6eb', accent: '#8c5828', dark: false, family: 'Warm' },
+      { id: 'mediterranean',   name: 'Mediterranean', sidebar: '#13315c', bg: '#f6f1e7', surface: '#fffdf8', accent: '#c8553d', dark: false, family: 'Warm' },
+      { id: 'gruvbox-light',   name: 'Gruvbox Light', sidebar: '#3c3836', bg: '#fbf1c7', surface: '#f9f5d7', accent: '#af3a03', dark: false, family: 'Warm' },
       // Light — Red/pink
-      { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', bg: '#fff5f0', surface: '#ffffff', accent: '#f05040', dark: false },
-      { id: 'peach',           name: 'Peach',     sidebar: '#5a2838', bg: '#fff5ee', surface: '#ffffff', accent: '#e87050', dark: false },
-      { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', bg: '#fff1f2', surface: '#ffffff', accent: '#f43f5e', dark: false },
-      { id: 'sakura',          name: 'Sakura',    sidebar: '#4a1525', bg: '#fdf2f4', surface: '#ffffff', accent: '#e11d48', dark: false },
-      { id: 'rose-pine-dawn',  name: 'Rosé Pine Dawn', sidebar: '#26233a', bg: '#faf4ed', surface: '#fffaf3', accent: '#b4637a', dark: false },
+      { id: 'coral',           name: 'Coral',     sidebar: '#8b2635', bg: '#fff5f0', surface: '#ffffff', accent: '#f05040', dark: false, family: 'Red & pink' },
+      { id: 'peach',           name: 'Peach',     sidebar: '#5a2838', bg: '#fff5ee', surface: '#ffffff', accent: '#e87050', dark: false, family: 'Red & pink' },
+      { id: 'rose',            name: 'Rose',      sidebar: '#4c0519', bg: '#fff1f2', surface: '#ffffff', accent: '#f43f5e', dark: false, family: 'Red & pink' },
+      { id: 'sakura',          name: 'Sakura',    sidebar: '#4a1525', bg: '#fdf2f4', surface: '#ffffff', accent: '#e11d48', dark: false, family: 'Red & pink' },
+      { id: 'rose-pine-dawn',  name: 'Rosé Pine Dawn', sidebar: '#26233a', bg: '#faf4ed', surface: '#fffaf3', accent: '#b4637a', dark: false, family: 'Red & pink' },
       // Light — Purple/neutral
-      { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', bg: '#f3f0fa', surface: '#ffffff', accent: '#7c3aed', dark: false },
-      { id: 'catppuccin-latte', name: 'Catppuccin Latte', sidebar: '#303446', bg: '#e6e9ef', surface: '#eff1f5', accent: '#8839ef', dark: false },
-      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', surface: '#ffffff', accent: '#555555', dark: false },
+      { id: 'lavender',        name: 'Lavender',  sidebar: '#2d1f5e', bg: '#f3f0fa', surface: '#ffffff', accent: '#7c3aed', dark: false, family: 'Purple & neutral' },
+      { id: 'catppuccin-latte', name: 'Catppuccin Latte', sidebar: '#303446', bg: '#e6e9ef', surface: '#eff1f5', accent: '#8839ef', dark: false, family: 'Purple & neutral' },
+      { id: 'paper',           name: 'Paper',     sidebar: '#2c2c2c', bg: '#f8f4ed', surface: '#ffffff', accent: '#555555', dark: false, family: 'Purple & neutral' },
+      { id: 'retro',           name: 'Retro',     sidebar: '#2e2a3c', bg: '#dcdce4', surface: '#f0f0f4', accent: '#5b4cbf', dark: false, family: 'Purple & neutral' },
       // Light — Neon/vibrant
-      { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#a8e8ff', surface: '#ccf4ff', accent: '#ff1493', dark: false },
-      { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', bg: '#d8c0f0', surface: '#ece0f8', accent: '#ff2d95', dark: false },
-      { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', bg: '#d9dce3', surface: '#f3f5f8', accent: '#00d084', dark: false },
-      { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', bg: '#ffe0c8', surface: '#fff0e4', accent: '#ff2d95', dark: false },
-      // Light — Retro
-      { id: 'retro',           name: 'Retro',     sidebar: '#2e2a3c', bg: '#dcdce4', surface: '#f0f0f4', accent: '#5b4cbf', dark: false },
+      { id: 'vaporwave',       name: 'Vaporwave', sidebar: '#24085a', bg: '#a8e8ff', surface: '#ccf4ff', accent: '#ff1493', dark: false, family: 'Neon' },
+      { id: 'synthwave-light', name: 'Synthwave', sidebar: '#140428', bg: '#d8c0f0', surface: '#ece0f8', accent: '#ff2d95', dark: false, family: 'Neon' },
+      { id: 'cyberpunk-light', name: 'Cyberpunk', sidebar: '#111319', bg: '#d9dce3', surface: '#f3f5f8', accent: '#00d084', dark: false, family: 'Neon' },
+      { id: 'outrun-light',    name: 'Outrun',    sidebar: '#200838', bg: '#ffe0c8', surface: '#fff0e4', accent: '#ff2d95', dark: false, family: 'Neon' },
       // Light — Units
-      { id: 'unit-zero-light', name: 'Unit Zero', sidebar: '#14233d', bg: '#eef3fa', surface: '#ffffff', accent: '#2f6fb8', dark: false },
-      { id: 'unit-one-light',  name: 'Unit One',  sidebar: '#24133f', bg: '#f4f1fa', surface: '#ffffff', accent: '#6b3fa0', dark: false },
-      { id: 'unit-two-light',  name: 'Unit Two',  sidebar: '#3e0b12', bg: '#fdf2ef', surface: '#ffffff', accent: '#c81e32', dark: false },
-      { id: 'unit-eight-light',name: 'Unit Eight',sidebar: '#3a1430', bg: '#fdf1f6', surface: '#ffffff', accent: '#c8377a', dark: false },
+      { id: 'unit-zero-light', name: 'Unit Zero', sidebar: '#14233d', bg: '#eef3fa', surface: '#ffffff', accent: '#2f6fb8', dark: false, family: 'Unit series' },
+      { id: 'unit-one-light',  name: 'Unit One',  sidebar: '#24133f', bg: '#f4f1fa', surface: '#ffffff', accent: '#6b3fa0', dark: false, family: 'Unit series' },
+      { id: 'unit-two-light',  name: 'Unit Two',  sidebar: '#3e0b12', bg: '#fdf2ef', surface: '#ffffff', accent: '#c81e32', dark: false, family: 'Unit series' },
+      { id: 'unit-eight-light',name: 'Unit Eight',sidebar: '#3a1430', bg: '#fdf1f6', surface: '#ffffff', accent: '#c8377a', dark: false, family: 'Unit series' },
       // Medium — Blue/cool
-      { id: 'fog',             name: 'Fog',        sidebar: '#2a3040', bg: '#6b7280', surface: '#7d8594', accent: '#60a5fa', dark: false, medium: true },
-      { id: 'overcast',        name: 'Overcast',   sidebar: '#1e2838', bg: '#5c6878', surface: '#6a7688', accent: '#38bdf8', dark: false, medium: true },
-      { id: 'steel',           name: 'Steel',      sidebar: '#1a2430', bg: '#546070', surface: '#627080', accent: '#3b82f6', dark: false, medium: true },
-      { id: 'fjord',           name: 'Fjord',      sidebar: '#152030', bg: '#4a5c70', surface: '#586a7e', accent: '#22d3ee', dark: false, medium: true },
-      { id: 'nimbus',          name: 'Nimbus',     sidebar: '#202838', bg: '#606c7c', surface: '#6e7a8a', accent: '#818cf8', dark: false, medium: true },
-      { id: 'pewter',          name: 'Pewter',     sidebar: '#1c2430', bg: '#586878', surface: '#667686', accent: '#94a3b8', dark: false, medium: true },
-      { id: 'horizon',         name: 'Horizon',    sidebar: '#182838', bg: '#4e6478', surface: '#5c728a', accent: '#0ea5e9', dark: false, medium: true },
-      { id: 'solarized-mid',   name: 'Solarized Mid', sidebar: '#002b36', bg: '#4b5f66', surface: '#586e75', accent: '#e6b422', dark: false, medium: true },
-      { id: 'denim',           name: 'Denim',      sidebar: '#1a2238', bg: '#4a5a7a', surface: '#586a8c', accent: '#f59e0b', dark: false, medium: true },
+      { id: 'fog',             name: 'Fog',        sidebar: '#2a3040', bg: '#6b7280', surface: '#7d8594', accent: '#60a5fa', dark: false, medium: true, family: 'Cool' },
+      { id: 'overcast',        name: 'Overcast',   sidebar: '#1e2838', bg: '#5c6878', surface: '#6a7688', accent: '#38bdf8', dark: false, medium: true, family: 'Cool' },
+      { id: 'steel',           name: 'Steel',      sidebar: '#1a2430', bg: '#546070', surface: '#627080', accent: '#3b82f6', dark: false, medium: true, family: 'Cool' },
+      { id: 'fjord',           name: 'Fjord',      sidebar: '#152030', bg: '#4a5c70', surface: '#586a7e', accent: '#22d3ee', dark: false, medium: true, family: 'Cool' },
+      { id: 'nimbus',          name: 'Nimbus',     sidebar: '#202838', bg: '#606c7c', surface: '#6e7a8a', accent: '#818cf8', dark: false, medium: true, family: 'Cool' },
+      { id: 'pewter',          name: 'Pewter',     sidebar: '#1c2430', bg: '#586878', surface: '#667686', accent: '#94a3b8', dark: false, medium: true, family: 'Cool' },
+      { id: 'horizon',         name: 'Horizon',    sidebar: '#182838', bg: '#4e6478', surface: '#5c728a', accent: '#0ea5e9', dark: false, medium: true, family: 'Cool' },
+      { id: 'solarized-mid',   name: 'Solarized Mid', sidebar: '#002b36', bg: '#4b5f66', surface: '#586e75', accent: '#e6b422', dark: false, medium: true, family: 'Cool' },
+      { id: 'denim',           name: 'Denim',      sidebar: '#1a2238', bg: '#4a5a7a', surface: '#586a8c', accent: '#f59e0b', dark: false, medium: true, family: 'Cool' },
       // Medium — Green/earth
-      { id: 'lichen',          name: 'Lichen',     sidebar: '#1a2820', bg: '#5a6e5c', surface: '#6a7e6c', accent: '#4ade80', dark: false, medium: true },
-      { id: 'fern',            name: 'Fern',       sidebar: '#162418', bg: '#4e6450', surface: '#5e7460', accent: '#22c55e', dark: false, medium: true },
-      { id: 'tundra',          name: 'Tundra',     sidebar: '#1c2c24', bg: '#566e60', surface: '#647e70', accent: '#2dd4bf', dark: false, medium: true },
-      { id: 'moss',            name: 'Moss',       sidebar: '#1a2818', bg: '#4c5e44', surface: '#5c6e54', accent: '#84cc16', dark: false, medium: true },
-      { id: 'basalt',          name: 'Basalt',     sidebar: '#18201c', bg: '#505c54', surface: '#606c64', accent: '#34d399', dark: false, medium: true },
-      { id: 'dot-matrix',      name: 'Dot Matrix', sidebar: '#0f380f', bg: '#4f6b24', surface: '#5e7b2e', accent: '#9bbc0f', dark: false, medium: true },
+      { id: 'lichen',          name: 'Lichen',     sidebar: '#1a2820', bg: '#5a6e5c', surface: '#6a7e6c', accent: '#4ade80', dark: false, medium: true, family: 'Green' },
+      { id: 'fern',            name: 'Fern',       sidebar: '#162418', bg: '#4e6450', surface: '#5e7460', accent: '#22c55e', dark: false, medium: true, family: 'Green' },
+      { id: 'tundra',          name: 'Tundra',     sidebar: '#1c2c24', bg: '#566e60', surface: '#647e70', accent: '#2dd4bf', dark: false, medium: true, family: 'Green' },
+      { id: 'moss',            name: 'Moss',       sidebar: '#1a2818', bg: '#4c5e44', surface: '#5c6e54', accent: '#84cc16', dark: false, medium: true, family: 'Green' },
+      { id: 'basalt',          name: 'Basalt',     sidebar: '#18201c', bg: '#505c54', surface: '#606c64', accent: '#34d399', dark: false, medium: true, family: 'Green' },
+      { id: 'dot-matrix',      name: 'Dot Matrix', sidebar: '#0f380f', bg: '#4f6b24', surface: '#5e7b2e', accent: '#9bbc0f', dark: false, medium: true, family: 'Green' },
       // Medium — Warm/earthy
-      { id: 'driftwood',       name: 'Driftwood',  sidebar: '#2e2418', bg: '#7a6e5e', surface: '#8a7e6e', accent: '#e8a040', dark: false, medium: true },
-      { id: 'clay',            name: 'Clay',       sidebar: '#2a1c14', bg: '#6e5848', surface: '#7e6858', accent: '#f59e0b', dark: false, medium: true },
-      { id: 'sandstone',       name: 'Sandstone',  sidebar: '#282018', bg: '#72685c', surface: '#82786c', accent: '#d4940a', dark: false, medium: true },
-      { id: 'umber',           name: 'Umber',      sidebar: '#201410', bg: '#5e4838', surface: '#6e5848', accent: '#fb923c', dark: false, medium: true },
-      { id: 'flint',           name: 'Flint',      sidebar: '#1e1810', bg: '#585048', surface: '#686058', accent: '#fbbf24', dark: false, medium: true },
-      { id: 'terracotta',      name: 'Terracotta', sidebar: '#2e1a14', bg: '#7a5244', surface: '#8a6254', accent: '#fdba74', dark: false, medium: true },
-      { id: 'gruvbox-mid',     name: 'Gruvbox Mid', sidebar: '#282828', bg: '#504945', surface: '#665c54', accent: '#fe8019', dark: false, medium: true },
+      { id: 'driftwood',       name: 'Driftwood',  sidebar: '#2e2418', bg: '#7a6e5e', surface: '#8a7e6e', accent: '#e8a040', dark: false, medium: true, family: 'Warm' },
+      { id: 'clay',            name: 'Clay',       sidebar: '#2a1c14', bg: '#6e5848', surface: '#7e6858', accent: '#f59e0b', dark: false, medium: true, family: 'Warm' },
+      { id: 'sandstone',       name: 'Sandstone',  sidebar: '#282018', bg: '#72685c', surface: '#82786c', accent: '#d4940a', dark: false, medium: true, family: 'Warm' },
+      { id: 'umber',           name: 'Umber',      sidebar: '#201410', bg: '#5e4838', surface: '#6e5848', accent: '#fb923c', dark: false, medium: true, family: 'Warm' },
+      { id: 'flint',           name: 'Flint',      sidebar: '#1e1810', bg: '#585048', surface: '#686058', accent: '#fbbf24', dark: false, medium: true, family: 'Warm' },
+      { id: 'terracotta',      name: 'Terracotta', sidebar: '#2e1a14', bg: '#7a5244', surface: '#8a6254', accent: '#fdba74', dark: false, medium: true, family: 'Warm' },
+      { id: 'gruvbox-mid',     name: 'Gruvbox Mid', sidebar: '#282828', bg: '#504945', surface: '#665c54', accent: '#fe8019', dark: false, medium: true, family: 'Warm' },
+      { id: 'rosewood',        name: 'Rosewood',   sidebar: '#2a1618', bg: '#6e4a4e', surface: '#7e5a5e', accent: '#e8b84a', dark: false, medium: true, family: 'Warm' },
       // Medium — Purple/pink
-      { id: 'twilight',        name: 'Twilight',   sidebar: '#14102a', bg: '#4a4466', surface: '#5a5478', accent: '#c084fc', dark: false, medium: true },
-      { id: 'haze',            name: 'Haze',       sidebar: '#22202a', bg: '#706878', surface: '#807888', accent: '#f472b6', dark: false, medium: true },
-      { id: 'plum-mid',        name: 'Plum Mid',   sidebar: '#1a1028', bg: '#544868', surface: '#645878', accent: '#a78bfa', dark: false, medium: true },
-      { id: 'mulberry',        name: 'Mulberry',   sidebar: '#201428', bg: '#5e4a64', surface: '#6e5a74', accent: '#e879f9', dark: false, medium: true },
-      { id: 'merlot',          name: 'Merlot',     sidebar: '#2a1018', bg: '#6a3a4a', surface: '#7a4a5a', accent: '#fda4af', dark: false, medium: true },
-      { id: 'rosewood',        name: 'Rosewood',   sidebar: '#2a1618', bg: '#6e4a4e', surface: '#7e5a5e', accent: '#e8b84a', dark: false, medium: true },
-      { id: 'catppuccin-frappe', name: 'Catppuccin Frappé', sidebar: '#232634', bg: '#51576d', surface: '#626880', accent: '#ca9ee6', dark: false, medium: true },
+      { id: 'twilight',        name: 'Twilight',   sidebar: '#14102a', bg: '#4a4466', surface: '#5a5478', accent: '#c084fc', dark: false, medium: true, family: 'Purple & pink' },
+      { id: 'haze',            name: 'Haze',       sidebar: '#22202a', bg: '#706878', surface: '#807888', accent: '#f472b6', dark: false, medium: true, family: 'Purple & pink' },
+      { id: 'plum-mid',        name: 'Plum Mid',   sidebar: '#1a1028', bg: '#544868', surface: '#645878', accent: '#a78bfa', dark: false, medium: true, family: 'Purple & pink' },
+      { id: 'mulberry',        name: 'Mulberry',   sidebar: '#201428', bg: '#5e4a64', surface: '#6e5a74', accent: '#e879f9', dark: false, medium: true, family: 'Purple & pink' },
+      { id: 'merlot',          name: 'Merlot',     sidebar: '#2a1018', bg: '#6a3a4a', surface: '#7a4a5a', accent: '#fda4af', dark: false, medium: true, family: 'Purple & pink' },
+      { id: 'catppuccin-frappe', name: 'Catppuccin Frappé', sidebar: '#232634', bg: '#51576d', surface: '#626880', accent: '#ca9ee6', dark: false, medium: true, family: 'Purple & pink' },
       // Medium — Neutral/gray
-      { id: 'ash',             name: 'Ash',        sidebar: '#1a1a1a', bg: '#585858', surface: '#686868', accent: '#a78bfa', dark: false, medium: true },
-      { id: 'graphite',        name: 'Graphite',   sidebar: '#101418', bg: '#484e58', surface: '#565c66', accent: '#fb923c', dark: false, medium: true },
-      { id: 'concrete',        name: 'Concrete',   sidebar: '#1c1c1c', bg: '#6a6a6a', surface: '#7a7a7a', accent: '#3b82f6', dark: false, medium: true },
+      { id: 'ash',             name: 'Ash',        sidebar: '#1a1a1a', bg: '#585858', surface: '#686868', accent: '#a78bfa', dark: false, medium: true, family: 'Neutral' },
+      { id: 'graphite',        name: 'Graphite',   sidebar: '#101418', bg: '#484e58', surface: '#565c66', accent: '#fb923c', dark: false, medium: true, family: 'Neutral' },
+      { id: 'concrete',        name: 'Concrete',   sidebar: '#1c1c1c', bg: '#6a6a6a', surface: '#7a7a7a', accent: '#3b82f6', dark: false, medium: true, family: 'Neutral' },
       // Medium — Units
-      { id: 'unit-zero-mid',   name: 'Unit Zero',  sidebar: '#121c30', bg: '#4c6282', surface: '#5a7194', accent: '#a8cdf0', dark: false, medium: true },
-      { id: 'unit-one-mid',    name: 'Unit One',   sidebar: '#1a1028', bg: '#4e3f6a', surface: '#5d4d7c', accent: '#8be04e', dark: false, medium: true },
-      { id: 'unit-two-mid',    name: 'Unit Two',   sidebar: '#2a0a0c', bg: '#7a3436', surface: '#8a4244', accent: '#ffa060', dark: false, medium: true },
-      { id: 'unit-eight-mid',  name: 'Unit Eight', sidebar: '#26101f', bg: '#6e4560', surface: '#7e5470', accent: '#ff9cc8', dark: false, medium: true },
+      { id: 'unit-zero-mid',   name: 'Unit Zero',  sidebar: '#121c30', bg: '#4c6282', surface: '#5a7194', accent: '#a8cdf0', dark: false, medium: true, family: 'Unit series' },
+      { id: 'unit-one-mid',    name: 'Unit One',   sidebar: '#1a1028', bg: '#4e3f6a', surface: '#5d4d7c', accent: '#8be04e', dark: false, medium: true, family: 'Unit series' },
+      { id: 'unit-two-mid',    name: 'Unit Two',   sidebar: '#2a0a0c', bg: '#7a3436', surface: '#8a4244', accent: '#ffa060', dark: false, medium: true, family: 'Unit series' },
+      { id: 'unit-eight-mid',  name: 'Unit Eight', sidebar: '#26101f', bg: '#6e4560', surface: '#7e5470', accent: '#ff9cc8', dark: false, medium: true, family: 'Unit series' },
       // Dark — Blue/cool
-      { id: 'dark',            name: 'Default',   sidebar: '#0d1017', bg: '#12151c', surface: '#1a1f2b', accent: '#5b8def', dark: true  },
-      { id: 'oled',            name: 'OLED',      sidebar: '#000000', bg: '#000000', surface: '#0c0c0c', accent: '#3b82f6', dark: true  },
-      { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', bg: '#242933', surface: '#2e3440', accent: '#88c0d0', dark: true  },
-      { id: 'tokyo-storm',     name: 'Tokyo Storm',sidebar: '#1f2335',bg: '#24283b', surface: '#292e42', accent: '#7aa2f7', dark: true  },
-      { id: 'solarized-dark',  name: 'Solarized', sidebar: '#011d27', bg: '#002b36', surface: '#073642', accent: '#268bd2', dark: true  },
-      { id: 'midnight',        name: 'Midnight',  sidebar: '#050810', bg: '#070a14', surface: '#0d1224', accent: '#6080e8', dark: true  },
-      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', bg: '#051320', surface: '#07192b', accent: '#22d3ee', dark: true  },
-      { id: 'glacier',         name: 'Glacier',   sidebar: '#04101a', bg: '#08141e', surface: '#0e1e2c', accent: '#40b8e0', dark: true  },
-      { id: 'storm',           name: 'Storm',     sidebar: '#0a0e12', bg: '#101418', surface: '#181e24', accent: '#6898d0', dark: true  },
-      { id: 'one-dark',        name: 'One Dark',  sidebar: '#21252b', bg: '#282c34', surface: '#2f343f', accent: '#61afef', dark: true  },
+      { id: 'dark',            name: 'Default',   sidebar: '#0d1017', bg: '#12151c', surface: '#1a1f2b', accent: '#5b8def', dark: true, family: 'Cool' },
+      { id: 'oled',            name: 'OLED',      sidebar: '#000000', bg: '#000000', surface: '#0c0c0c', accent: '#3b82f6', dark: true, family: 'Cool' },
+      { id: 'nord',            name: 'Nord',      sidebar: '#1b1f27', bg: '#242933', surface: '#2e3440', accent: '#88c0d0', dark: true, family: 'Cool' },
+      { id: 'tokyo-storm',     name: 'Tokyo Storm',sidebar: '#1f2335',bg: '#24283b', surface: '#292e42', accent: '#7aa2f7', dark: true, family: 'Cool' },
+      { id: 'solarized-dark',  name: 'Solarized', sidebar: '#011d27', bg: '#002b36', surface: '#073642', accent: '#268bd2', dark: true, family: 'Cool' },
+      { id: 'midnight',        name: 'Midnight',  sidebar: '#050810', bg: '#070a14', surface: '#0d1224', accent: '#6080e8', dark: true, family: 'Cool' },
+      { id: 'ocean',           name: 'Ocean',     sidebar: '#030e18', bg: '#051320', surface: '#07192b', accent: '#22d3ee', dark: true, family: 'Cool' },
+      { id: 'glacier',         name: 'Glacier',   sidebar: '#04101a', bg: '#08141e', surface: '#0e1e2c', accent: '#40b8e0', dark: true, family: 'Cool' },
+      { id: 'storm',           name: 'Storm',     sidebar: '#0a0e12', bg: '#101418', surface: '#181e24', accent: '#6898d0', dark: true, family: 'Cool' },
+      { id: 'one-dark',        name: 'One Dark',  sidebar: '#21252b', bg: '#282c34', surface: '#2f343f', accent: '#61afef', dark: true, family: 'Cool' },
       // Dark — Green/earth
-      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', surface: '#143323', accent: '#46d17c', dark: true  },
-      { id: 'phosphor',        name: 'Phosphor',  sidebar: '#020703', bg: '#050d07', surface: '#0b1a0f', accent: '#33ff66', dark: true  },
-      { id: 'everforest-dark', name: 'Everforest',sidebar: '#232a2e', bg: '#2d353b', surface: '#343f44', accent: '#a7c080', dark: true  },
+      { id: 'forest',          name: 'Forest',    sidebar: '#0b2218', bg: '#071b12', surface: '#143323', accent: '#46d17c', dark: true, family: 'Green' },
+      { id: 'phosphor',        name: 'Phosphor',  sidebar: '#020703', bg: '#050d07', surface: '#0b1a0f', accent: '#33ff66', dark: true, family: 'Green' },
+      { id: 'everforest-dark', name: 'Everforest',sidebar: '#232a2e', bg: '#2d353b', surface: '#343f44', accent: '#a7c080', dark: true, family: 'Green' },
       // Dark — Warm/amber
-      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', surface: '#1e1006', accent: '#f59e0b', dark: true  },
-      { id: 'gruvbox-dark',    name: 'Gruvbox',   sidebar: '#1d2021', bg: '#282828', surface: '#3c3836', accent: '#fe8019', dark: true  },
-      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', surface: '#261610', accent: '#d4883c', dark: true  },
-      { id: 'ember',           name: 'Ember',     sidebar: '#100604', bg: '#1a0e08', surface: '#281810', accent: '#e06830', dark: true  },
-      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', surface: '#1c1c1c', accent: '#c8a84a', dark: true  },
-      { id: 'kanagawa',        name: 'Kanagawa',  sidebar: '#16161d', bg: '#1f1f28', surface: '#2a2a37', accent: '#e6c384', dark: true  },
+      { id: 'warm',            name: 'Warm',      sidebar: '#0e0601', bg: '#140a02', surface: '#1e1006', accent: '#f59e0b', dark: true, family: 'Warm' },
+      { id: 'gruvbox-dark',    name: 'Gruvbox',   sidebar: '#1d2021', bg: '#282828', surface: '#3c3836', accent: '#fe8019', dark: true, family: 'Warm' },
+      { id: 'mocha',           name: 'Mocha',     sidebar: '#0e0804', bg: '#180e08', surface: '#261610', accent: '#d4883c', dark: true, family: 'Warm' },
+      { id: 'ember',           name: 'Ember',     sidebar: '#100604', bg: '#1a0e08', surface: '#281810', accent: '#e06830', dark: true, family: 'Warm' },
+      { id: 'noir',            name: 'Noir',      sidebar: '#0a0a0a', bg: '#121212', surface: '#1c1c1c', accent: '#c8a84a', dark: true, family: 'Warm' },
+      { id: 'kanagawa',        name: 'Kanagawa',  sidebar: '#16161d', bg: '#1f1f28', surface: '#2a2a37', accent: '#e6c384', dark: true, family: 'Warm' },
+      { id: 'monokai-pro',     name: 'Monokai Pro', sidebar: '#221f22', bg: '#2d2a2e', surface: '#403e41', accent: '#ffd866', dark: true, family: 'Warm' },
       // Dark — Red/pink
-      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', surface: '#2a1018', accent: '#e8608a', dark: true  },
-      { id: 'monokai',         name: 'Monokai',   sidebar: '#1e1f1c', bg: '#272822', surface: '#3e3d32', accent: '#f92672', dark: true  },
-      { id: 'monokai-pro',     name: 'Monokai Pro', sidebar: '#221f22', bg: '#2d2a2e', surface: '#403e41', accent: '#ffd866', dark: true  },
+      { id: 'rose-dark',       name: 'Rose',      sidebar: '#120608', bg: '#1a0810', surface: '#2a1018', accent: '#e8608a', dark: true, family: 'Red & pink' },
+      { id: 'monokai',         name: 'Monokai',   sidebar: '#1e1f1c', bg: '#272822', surface: '#3e3d32', accent: '#f92672', dark: true, family: 'Red & pink' },
       // Dark — Purple
-      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', surface: '#383a4a', accent: '#bd93f9', dark: true  },
-      { id: 'catppuccin',      name: 'Catppuccin',sidebar: '#181825', bg: '#1e1e2e', surface: '#313244', accent: '#cba6f7', dark: true  },
-      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0e0620', surface: '#160a30', accent: '#a78bfa', dark: true  },
-      { id: 'plum',            name: 'Plum',      sidebar: '#0c0410', bg: '#140818', surface: '#221028', accent: '#b868d8', dark: true  },
-      { id: 'rose-pine',       name: 'Rosé Pine', sidebar: '#13111e', bg: '#191724', surface: '#1f1d2e', accent: '#ebbcba', dark: true  },
-      { id: 'rose-pine-moon',  name: 'Rosé Pine Moon', sidebar: '#1c1a2e', bg: '#232136', surface: '#2a273f', accent: '#c4a7e7', dark: true  },
+      { id: 'dracula',         name: 'Dracula',   sidebar: '#1e2029', bg: '#282a36', surface: '#383a4a', accent: '#bd93f9', dark: true, family: 'Purple' },
+      { id: 'catppuccin',      name: 'Catppuccin',sidebar: '#181825', bg: '#1e1e2e', surface: '#313244', accent: '#cba6f7', dark: true, family: 'Purple' },
+      { id: 'dusk',            name: 'Dusk',      sidebar: '#090318', bg: '#0e0620', surface: '#160a30', accent: '#a78bfa', dark: true, family: 'Purple' },
+      { id: 'plum',            name: 'Plum',      sidebar: '#0c0410', bg: '#140818', surface: '#221028', accent: '#b868d8', dark: true, family: 'Purple' },
+      { id: 'rose-pine',       name: 'Rosé Pine', sidebar: '#13111e', bg: '#191724', surface: '#1f1d2e', accent: '#ebbcba', dark: true, family: 'Purple' },
+      { id: 'rose-pine-moon',  name: 'Rosé Pine Moon', sidebar: '#1c1a2e', bg: '#232136', surface: '#2a273f', accent: '#c4a7e7', dark: true, family: 'Purple' },
       // Dark — Neon/vibrant
-      { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', surface: '#16082e', accent: '#ff71ce', dark: true  },
-      { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', surface: '#121218', accent: '#00ff9f', dark: true  },
-      { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', bg: '#1a0828', surface: '#280a3a', accent: '#ff2d95', dark: true  },
-      { id: 'vaporwave-dark',  name: 'Vaporwave', sidebar: '#1a1030', bg: '#120a24', surface: '#24163d', accent: '#ff77c8', dark: true  },
+      { id: 'synthwave',       name: 'Synthwave', sidebar: '#060014', bg: '#0c0020', surface: '#16082e', accent: '#ff71ce', dark: true, family: 'Neon' },
+      { id: 'cyberpunk',       name: 'Cyberpunk', sidebar: '#050508', bg: '#0a0a0c', surface: '#121218', accent: '#00ff9f', dark: true, family: 'Neon' },
+      { id: 'outrun',          name: 'Outrun',    sidebar: '#10041c', bg: '#1a0828', surface: '#280a3a', accent: '#ff2d95', dark: true, family: 'Neon' },
+      { id: 'vaporwave-dark',  name: 'Vaporwave', sidebar: '#1a1030', bg: '#120a24', surface: '#24163d', accent: '#ff77c8', dark: true, family: 'Neon' },
       // Dark — Units
-      { id: 'unit-zero',       name: 'Unit Zero', sidebar: '#060b16', bg: '#0a1120', surface: '#121c30', accent: '#7fb2ea', dark: true  },
-      { id: 'unit-one',        name: 'Unit One',  sidebar: '#08050f', bg: '#100a1c', surface: '#1a1229', accent: '#8be04e', dark: true  },
-      { id: 'unit-two',        name: 'Unit Two',  sidebar: '#0d0405', bg: '#160708', surface: '#241012', accent: '#ff4d4d', dark: true  },
-      { id: 'unit-eight',      name: 'Unit Eight',sidebar: '#0e050b', bg: '#160a12', surface: '#24101e', accent: '#ff79b0', dark: true  },
+      { id: 'unit-zero',       name: 'Unit Zero', sidebar: '#060b16', bg: '#0a1120', surface: '#121c30', accent: '#7fb2ea', dark: true, family: 'Unit series' },
+      { id: 'unit-one',        name: 'Unit One',  sidebar: '#08050f', bg: '#100a1c', surface: '#1a1229', accent: '#8be04e', dark: true, family: 'Unit series' },
+      { id: 'unit-two',        name: 'Unit Two',  sidebar: '#0d0405', bg: '#160708', surface: '#241012', accent: '#ff4d4d', dark: true, family: 'Unit series' },
+      { id: 'unit-eight',      name: 'Unit Eight',sidebar: '#0e050b', bg: '#160a12', surface: '#24101e', accent: '#ff79b0', dark: true, family: 'Unit series' },
       // Seasonal — shown under the Season tab, one row per season (light, medium, dark)
       { id: 'frost', name: 'Frost', sidebar: '#1e2a3a', bg: '#eef3f8', surface: '#ffffff', accent: '#3f74ad', dark: false, season: 'winter' },
       { id: 'winter-dusk', name: 'Winter Dusk', sidebar: '#1f2633', bg: '#505a68', surface: '#5c6675', accent: '#a5c8f0', dark: false, medium: true, season: 'winter' },
@@ -11202,9 +11081,45 @@
     }
 
     function deleteCustomTheme(id) {
+      const wasCurrent = savedThemeId() === id;
       const themes = loadCustomThemes();
       saveCustomThemes(themes.filter(t => t.id !== id));
-      if (getCurrentThemeId() === id) applyTheme('');
+      saveThemePins({ stars: loadThemeStars().filter(s => s !== id), recent: loadThemeRecent().filter(r => r !== id) });
+      if (wasCurrent) applyTheme('');
+    }
+
+    // Starred and recently picked themes, shown as the picker's pinned row
+    const THEME_STARS_KEY = 'work-desk-theme-stars';
+    const THEME_RECENT_KEY = 'work-desk-theme-recent';
+    const MAX_RECENT_THEMES = 3;
+
+    function readIdList(key) {
+      try {
+        const list = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(list) ? list.filter(id => typeof id === 'string') : [];
+      } catch { return []; }
+    }
+    function loadThemeStars() { return readIdList(THEME_STARS_KEY); }
+    function loadThemeRecent() { return readIdList(THEME_RECENT_KEY).slice(0, MAX_RECENT_THEMES); }
+    function saveThemePins({ stars, recent }) {
+      if (stars) localStorage.setItem(THEME_STARS_KEY, JSON.stringify([...new Set(stars)]));
+      if (recent) localStorage.setItem(THEME_RECENT_KEY, JSON.stringify([...new Set(recent)].slice(0, MAX_RECENT_THEMES)));
+    }
+
+    // Pure: the newest pick goes first, and the list keeps the last few distinct themes
+    function nextRecentThemes(recent, id, max = MAX_RECENT_THEMES) {
+      return [id, ...recent.filter(r => r !== id)].slice(0, max);
+    }
+
+    // Pure: current first, then starred, then recent, each once, skipping themes that no longer exist
+    function pinnedThemeIds(current, stars, recent, exists = () => true) {
+      return [current, ...stars, ...recent].filter((id, i, all) => typeof id === 'string' && all.indexOf(id) === i && exists(id));
+    }
+
+    function savedThemeId() {
+      const id = localStorage.getItem(THEME_KEY) || '';
+      if (isCustomThemeId(id)) return loadCustomThemes().some(t => t.id === id) ? id : '';
+      return THEMES.some(t => t.id === id) ? id : '';
     }
 
     function isCustomThemeId(id) {
@@ -11258,6 +11173,8 @@
         tagPosition: normalizeTagPosition(localStorage.getItem(TAG_POSITION_KEY)),
         customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
         customThemes: loadCustomThemes(),
+        themeStars: loadThemeStars(),
+        themeRecent: loadThemeRecent(),
         updatedAt: localStorage.getItem(PREFS_UPDATED_AT_KEY) || null,
       };
     }
@@ -11299,6 +11216,19 @@
         const cur = JSON.stringify(loadCustomThemes());
         if (JSON.stringify(prefs.customThemes) !== cur) {
           saveCustomThemes(prefs.customThemes);
+          changed = true;
+        }
+      }
+
+      {
+        const ids = (list) => (Array.isArray(list) ? list.filter(id => typeof id === 'string') : null);
+        const stars = ids(prefs.themeStars);
+        const recent = ids(prefs.themeRecent)?.slice(0, MAX_RECENT_THEMES) ?? null;
+        const starsChanged = !!stars && JSON.stringify(stars) !== JSON.stringify(loadThemeStars());
+        const recentChanged = !!recent && JSON.stringify(recent) !== JSON.stringify(loadThemeRecent());
+        if (starsChanged || recentChanged) {
+          saveThemePins({ stars: starsChanged ? stars : null, recent: recentChanged ? recent : null });
+          renderThemeSwatches();
           changed = true;
         }
       }
@@ -11577,7 +11507,7 @@
     }
 
     // Inline vars on <html> that belong to other settings and must survive theme changes
-    const NON_THEME_INLINE_VARS = new Set(['--font-family']);
+    const NON_THEME_INLINE_VARS = new Set(['--font-family', '--add-dock-h', '--keyboard-inset']);
 
     function clearCustomThemeInlineVars() {
       const el = document.documentElement;
@@ -11590,27 +11520,31 @@
       el.style.removeProperty('color-scheme');
     }
 
+    // Puts a theme (or an unsaved custom draft) on screen without saving it; previews use this directly
+    function paintTheme(id, draft = null) {
+      const root = document.documentElement;
+      clearCustomThemeInlineVars();
+      const ct = draft || (isCustomThemeId(id) ? loadCustomThemes().find(t => t.id === id) : null);
+      if (ct) {
+        delete root.dataset.theme;
+        Object.entries(deriveCustomThemeVars(ct)).forEach(([k, v]) => root.style.setProperty(k, v));
+        root.style.setProperty('color-scheme', ct.dark ? 'dark' : 'light');
+      } else if (id && !isCustomThemeId(id)) {
+        root.dataset.theme = id;
+      } else {
+        delete root.dataset.theme;
+      }
+      syncThemeColorMeta();
+    }
+
     function applyTheme(id, options = {}) {
       const { fromSync = false } = options;
+      themePreviewId = null;
       document.body.classList.add('theme-transitioning');
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          clearCustomThemeInlineVars();
-          if (isCustomThemeId(id)) {
-            const ct = loadCustomThemes().find(t => t.id === id);
-            if (ct) {
-              delete document.documentElement.dataset.theme;
-              const vars = deriveCustomThemeVars(ct);
-              Object.entries(vars).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
-              document.documentElement.style.setProperty('color-scheme', ct.dark ? 'dark' : 'light');
-            }
-          } else if (id) {
-            document.documentElement.dataset.theme = id;
-          } else {
-            delete document.documentElement.dataset.theme;
-          }
+          paintTheme(id);
           if (window.__setThemeFavicon) window.__setThemeFavicon(id);
-          syncThemeColorMeta();
           renderThemeSwatches();
           setTimeout(() => {
             document.body.classList.remove('theme-transitioning');
@@ -11641,236 +11575,491 @@
     // ── Theme picker ───────────────────────────────────────────────────────────
     const elThemeGrid   = document.getElementById('customize-theme-grid');
     const elCustomPanel = document.getElementById('custom-theme-panel');
+    const elThemeBody   = document.getElementById('theme-body');
+    const elThemePins   = document.getElementById('theme-pins');
+    const elThemeSearch = document.getElementById('theme-search');
+    const elThemeHead   = document.getElementById('theme-head');
     let currentThemeFilter = 'light';
+    let themeQuery = '';
+    let themePreviewId = null; // shown on hover or keyboard focus, not saved
+    let themePreviewEndTimer = null;
+    let lastThemeView = '';
     let customEditorState = null; // null = browse, { id, name, dark, bg, surface, sidebar, accent, text } = editing
+    // Hover previews need a real mouse; on touch screens a tap applies the theme
+    const HOVER_PREVIEW_QUERY = window.matchMedia('(hover: hover) and (pointer: fine)');
 
-    const THEME_GROUP_LABELS = { light: 'Light', medium: 'Medium', dark: 'Dark', seasonal: 'Seasonal', custom: 'Custom' };
+    const THEME_GROUP_LABELS = { light: 'Light', medium: 'Dim', dark: 'Dark', seasonal: 'Season', custom: 'Custom' };
+    const THEME_GROUP_SEARCH_WORDS = { light: ['light'], medium: ['dim', 'medium', 'mid'], dark: ['dark'], seasonal: ['season', 'seasonal', 'seasons'], custom: ['custom'] };
     const SEASONS = [
       { id: 'winter', name: 'Winter', icon: '❄️' },
       { id: 'spring', name: 'Spring', icon: '🌸' },
       { id: 'summer', name: 'Summer', icon: '☀️' },
       { id: 'autumn', name: 'Autumn', icon: '🍁' },
     ];
-    const themeGroup = (t) => t.season ? 'seasonal' : t.medium ? 'medium' : t.dark ? 'dark' : 'light';
+    const themeGroup = (t) => t.custom ? 'custom' : t.season ? 'seasonal' : t.medium ? 'medium' : t.dark ? 'dark' : 'light';
+    const themeFamily = (t) => t.custom ? 'Your themes' : t.season ? (SEASONS.find(s => s.id === t.season)?.name || '') : (t.family || '');
 
-    function describeCurrentTheme() {
-      const stored = localStorage.getItem(THEME_KEY) || '';
-      if (isCustomThemeId(stored)) {
-        const ct = loadCustomThemes().find(t => t.id === stored);
-        if (ct) return { name: ct.name || 'Custom', group: 'custom' };
-      }
-      const t = THEMES.find(x => x.id === stored) || THEMES[0];
-      return { name: t.name, group: themeGroup(t) };
+    function allThemes() {
+      return [...THEMES, ...loadCustomThemes().map(t => ({ ...t, custom: true }))];
+    }
+    function lookupTheme(id) {
+      return allThemes().find(t => t.id === id) || null;
     }
 
-    function renderCurrentThemeName() {
-      const el = document.getElementById('current-theme-btn');
-      if (!el) return;
-      const { name, group } = describeCurrentTheme();
-      const canJump = group !== currentThemeFilter;
-      el.innerHTML = '';
-      el.append('Current: ');
-      const strong = document.createElement('strong');
-      strong.textContent = name;
-      el.append(strong, ` · ${THEME_GROUP_LABELS[group]}`);
-      if (canJump) {
-        const jump = document.createElement('span');
-        jump.className = 'current-theme-jump';
-        jump.textContent = 'Show';
-        el.append(jump);
-      }
-      el.classList.toggle('can-jump', canJump);
-      el.dataset.themeGroup = group;
-      el.title = canJump ? `Show ${THEME_GROUP_LABELS[group]} themes` : 'Your current theme';
+    const THEME_INK_DARK = '#16181d';
+    const THEME_INK_LIGHT = '#ffffff';
+    // Pure: whichever ink reads better on a tile's background
+    function themeTileInk(bg) {
+      return contrastRatio(bg, THEME_INK_DARK) >= contrastRatio(bg, THEME_INK_LIGHT) ? THEME_INK_DARK : THEME_INK_LIGHT;
+    }
+
+    // Pure: accents and case don't matter, so "rose" finds Rosé Pine
+    function foldThemeText(s) {
+      return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
+
+    // Pure: themes whose name or color family contains the query, or whose group it names
+    function searchThemes(list, query) {
+      const q = foldThemeText(query).trim();
+      if (!q) return [];
+      return list.filter(t => foldThemeText(t.name).includes(q) || foldThemeText(themeFamily(t)).includes(q)
+        || THEME_GROUP_SEARCH_WORDS[themeGroup(t)].includes(q));
+    }
+
+    // Pure: where an arrow key moves in a wrapping tile grid, from each tile's on-screen position
+    function nextThemeTileIndex(points, index, key) {
+      const last = points.length - 1;
+      if (key === 'Home') return 0;
+      if (key === 'End') return last;
+      if (key === 'ArrowRight') return Math.min(index + 1, last);
+      if (key === 'ArrowLeft') return Math.max(index - 1, 0);
+      if (key !== 'ArrowDown' && key !== 'ArrowUp') return null;
+      const here = points[index];
+      const down = key === 'ArrowDown';
+      const rows = points.map(p => p.y).filter(y => (down ? y > here.y + 1 : y < here.y - 1));
+      if (!rows.length) return index;
+      const rowY = down ? Math.min(...rows) : Math.max(...rows);
+      let best = index;
+      points.forEach((p, i) => {
+        if (Math.abs(p.y - rowY) > 1) return;
+        if (best === index || Math.abs(p.x - here.x) < Math.abs(points[best].x - here.x)) best = i;
+      });
+      return best;
+    }
+
+    function themeTile(t, current, stars) {
+      const wrap = document.createElement('div');
+      wrap.className = 'theme-tile-wrap';
+      wrap.style.setProperty('--t-bg', t.bg);
+      wrap.style.setProperty('--t-ink', themeTileInk(t.bg));
+      const on = t.id === current;
+      const starred = stars.includes(t.id);
+      const sw = document.createElement('button');
+      sw.type = 'button';
+      sw.className = 'theme-swatch' + (on ? ' active' : '');
+      sw.dataset.themeId = t.id;
+      sw.tabIndex = -1;
+      sw.title = t.name;
+      sw.setAttribute('role', 'radio');
+      sw.setAttribute('aria-checked', on ? 'true' : 'false');
+      sw.setAttribute('aria-keyshortcuts', 'S');
+      sw.setAttribute('aria-label', `${t.name}${starred ? ', starred' : ''}`);
+      const dots = document.createElement('span');
+      dots.className = 'theme-tile-dots';
+      dots.setAttribute('aria-hidden', 'true');
+      [t.sidebar, t.surface, t.accent].forEach(c => {
+        const dot = document.createElement('i');
+        dot.style.background = c;
+        dots.appendChild(dot);
+      });
+      const name = document.createElement('span');
+      name.className = 'theme-swatch-name';
+      name.textContent = t.name;
+      sw.append(dots, name);
+      const star = document.createElement('button');
+      star.type = 'button';
+      star.className = 'theme-star';
+      star.dataset.starId = t.id;
+      star.tabIndex = -1;
+      star.textContent = starred ? '★' : '☆';
+      star.title = starred ? 'Unstar' : 'Star to keep it in the pinned row';
+      star.setAttribute('aria-label', `${starred ? 'Unstar' : 'Star'} ${t.name}`);
+      star.setAttribute('aria-pressed', starred ? 'true' : 'false');
+      wrap.append(sw, star);
+      return wrap;
+    }
+
+    function themeGridSection(parent, label, list, current, stars, labelHtml = null) {
+      const head = document.createElement('div');
+      head.className = 'theme-family-label';
+      if (labelHtml) head.innerHTML = labelHtml;
+      else head.textContent = label;
+      const grid = document.createElement('div');
+      grid.className = 'theme-picker-grid';
+      grid.setAttribute('role', 'radiogroup');
+      grid.setAttribute('aria-label', label);
+      list.forEach(t => grid.appendChild(themeTile(t, current, stars)));
+      parent.append(head, grid);
+    }
+
+    function themePickerNote(text) {
+      const note = document.createElement('p');
+      note.className = 'theme-picker-note';
+      note.textContent = text;
+      return note;
     }
 
     function renderThemeSwatches(filter) {
       if (!elThemeGrid) return;
-      const current = getCurrentThemeId();
-      if (!filter) {
-        if (isCustomThemeId(current)) {
-          currentThemeFilter = 'custom';
-        } else {
-          const currentThemeObj = THEMES.find(t => t.id === current);
-          if (currentThemeObj && themeGroup(currentThemeObj) !== 'light') currentThemeFilter = themeGroup(currentThemeObj);
-        }
-      } else {
+      const current = savedThemeId();
+      const popout = document.getElementById('density-popout');
+      if (filter) {
+        if (filter !== 'custom') cancelCustomEditor();
         currentThemeFilter = filter;
-        if (filter !== 'custom') customEditorState = null;
+      } else if (!popout || popout.classList.contains('hidden')) {
+        currentThemeFilter = themeGroup(lookupTheme(current) || THEMES[0]);
       }
 
       document.querySelectorAll('.theme-filter-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.themeFilter === currentThemeFilter);
+        const on = btn.dataset.themeFilter === currentThemeFilter;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
       });
-      renderCurrentThemeName();
+      const searching = !!themeQuery.trim();
+      elThemeHead?.classList.toggle('searching', searching);
+      if (elThemeSearch && elThemeSearch.value !== themeQuery) elThemeSearch.value = themeQuery;
 
-      const isCustom = currentThemeFilter === 'custom';
+      const focusedId = document.activeElement && elThemeBody?.contains?.(document.activeElement)
+        ? (document.activeElement.dataset.themeId ?? document.activeElement.dataset.starId ?? null) : null;
+      const focusedStar = !!document.activeElement?.classList?.contains('theme-star');
+      const view = `${currentThemeFilter}|${themeQuery}`;
+      const scroll = view === lastThemeView && elThemeBody ? elThemeBody.scrollTop : 0;
+      lastThemeView = view;
+
+      renderThemePins(current, searching);
+      const isCustom = currentThemeFilter === 'custom' && !searching;
       elThemeGrid.innerHTML = '';
-      elThemeGrid.style.display = isCustom ? 'none' : '';
+      elThemeGrid.hidden = isCustom;
       if (elCustomPanel) {
         elCustomPanel.classList.toggle('hidden', !isCustom);
-        if (isCustom) renderCustomThemePanel();
+        // An open editor keeps its fields (and focus) when something else re-renders the picker
+        if (isCustom && !(customEditorState && elCustomPanel.querySelector('.custom-editor'))) renderCustomThemePanel();
       }
-      if (isCustom) return;
-
-      const light  = THEMES.filter(t => themeGroup(t) === 'light');
-      const medium = THEMES.filter(t => themeGroup(t) === 'medium');
-      const dark   = THEMES.filter(t => themeGroup(t) === 'dark');
-
-      function renderGrid(list, extraClass = '') {
-        const grid = document.createElement('div');
-        grid.className = 'theme-picker-grid' + extraClass;
-        list.forEach(t => {
-          const sw = document.createElement('button');
-          sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
-          sw.type = 'button';
-          sw.title = t.name;
-          sw.dataset.themeId = t.id;
-          sw.innerHTML = `
-            <div class="theme-swatch-preview" style="background:${t.bg}">
-              <div class="theme-swatch-sidebar" style="background:${t.sidebar}">
-                <div class="theme-swatch-sidebar-pill" style="background:${t.accent}"></div>
-              </div>
-              <div class="theme-swatch-content">
-                <div class="theme-swatch-card" style="background:${t.surface}">
-                  <div class="theme-swatch-card-line" style="background:${t.accent}"></div>
-                </div>
-                <div class="theme-swatch-card secondary" style="background:${t.surface}"></div>
-              </div>
-            </div>
-            <span class="theme-swatch-name${t.name.length > 11 ? ' long' : ''}">${t.name}</span>`;
-          sw.addEventListener('click', () => { applyTheme(t.id); closeDensityPopout(); });
-          grid.appendChild(sw);
-        });
-        return grid;
-      }
-
-      if (currentThemeFilter === 'light') {
-        elThemeGrid.appendChild(renderGrid(light));
-      } else if (currentThemeFilter === 'medium') {
-        elThemeGrid.appendChild(renderGrid(medium));
-      } else if (currentThemeFilter === 'dark') {
-        elThemeGrid.appendChild(renderGrid(dark));
-      } else if (currentThemeFilter === 'seasonal') {
-        SEASONS.forEach(s => {
-          const label = document.createElement('div');
-          label.className = 'theme-season-label';
-          label.innerHTML = `<span aria-hidden="true">${s.icon}</span> ${s.name}`;
-          elThemeGrid.append(label, renderGrid(THEMES.filter(t => t.season === s.id), ' seasonal'));
-        });
-      }
-      requestAnimationFrame(fitThemeNames);
-      document.fonts?.ready.then(fitThemeNames);
-    }
-
-    // Names wrap at spaces; a single word wider than its column (wide fonts, Large text) shrinks to fit
-    function fitThemeNames() {
-      if (!elThemeGrid || !elThemeGrid.offsetParent) return;
-      elThemeGrid.querySelectorAll('.theme-swatch-name').forEach((name) => {
-        name.style.fontSize = '';
-        let size = parseFloat(getComputedStyle(name).fontSize);
-        const min = size * 0.7;
-        while (name.scrollWidth > name.clientWidth + 0.5 && size > min) {
-          size -= 0.25;
-          name.style.fontSize = `${size}px`;
+      if (!isCustom) {
+        const stars = loadThemeStars();
+        if (searching) {
+          const found = searchThemes(allThemes(), themeQuery);
+          const groups = [];
+          found.forEach(t => {
+            const label = `${THEME_GROUP_LABELS[themeGroup(t)]} · ${themeFamily(t)}`;
+            const group = groups.find(g => g.label === label);
+            if (group) group.items.push(t);
+            else groups.push({ label, items: [t] });
+          });
+          groups.forEach(g => themeGridSection(elThemeGrid, g.label, g.items, current, stars));
+          if (!found.length) elThemeGrid.appendChild(themePickerNote(`No themes match “${themeQuery.trim()}”.`));
+        } else if (currentThemeFilter === 'pinned') {
+          const ids = pinnedThemeIds(current, stars, loadThemeRecent(), id => !!lookupTheme(id));
+          themeGridSection(elThemeGrid, 'Current, starred and recent', ids.map(lookupTheme), current, stars);
+          elThemeGrid.appendChild(themePickerNote(`Star a theme to keep it here. Recent themes rotate out after ${MAX_RECENT_THEMES}.`));
+        } else if (currentThemeFilter === 'seasonal') {
+          SEASONS.forEach(s => {
+            themeGridSection(elThemeGrid, s.name, THEMES.filter(t => t.season === s.id), current, stars,
+              `<span aria-hidden="true">${s.icon}</span> ${s.name}`);
+          });
+        } else {
+          const families = [];
+          THEMES.filter(t => themeGroup(t) === currentThemeFilter).forEach(t => {
+            const group = families.find(g => g.label === t.family);
+            if (group) group.items.push(t);
+            else families.push({ label: t.family, items: [t] });
+          });
+          families.forEach(g => themeGridSection(elThemeGrid, g.label, g.items, current, stars));
         }
-      });
+      }
+      syncThemeTabStops();
+      if (elThemeBody) elThemeBody.scrollTop = scroll;
+      if (focusedId !== null) {
+        const sel = focusedStar ? `.theme-star[data-star-id="${CSS.escape(focusedId)}"]` : `.theme-swatch[data-theme-id="${CSS.escape(focusedId)}"]`;
+        elThemeBody.querySelector(sel)?.focus({ preventScroll: true });
+      }
     }
-    window.addEventListener('resize', () => requestAnimationFrame(fitThemeNames));
+
+    // One tab stop for the tiles (the current theme, else the first); arrow keys move between them
+    function syncThemeTabStops() {
+      if (!elThemeBody) return;
+      const tiles = [...elThemeBody.querySelectorAll('.theme-swatch[data-theme-id]')];
+      const stop = tiles.find(t => t.classList.contains('active')) || tiles[0];
+      tiles.forEach(t => { t.tabIndex = t === stop ? 0 : -1; });
+    }
+
+    function focusThemeTile(tile) {
+      if (!tile) return;
+      elThemeBody.querySelectorAll('.theme-swatch[data-theme-id]').forEach(t => { t.tabIndex = t === tile ? 0 : -1; });
+      tile.focus({ preventScroll: true });
+      tile.scrollIntoView({ block: 'nearest' });
+    }
+
+    function renderThemePins(current, hide) {
+      if (!elThemePins) return;
+      elThemePins.innerHTML = '';
+      if (hide || currentThemeFilter === 'pinned' || customEditorState) return;
+      const ids = pinnedThemeIds(current, loadThemeStars(), loadThemeRecent(), id => !!lookupTheme(id));
+      const label = document.createElement('div');
+      label.className = 'theme-pins-label';
+      label.textContent = 'Current · starred · recent';
+      const row = document.createElement('div');
+      row.className = 'theme-pins';
+      ids.forEach(id => {
+        const t = lookupTheme(id);
+        const pin = document.createElement('button');
+        pin.type = 'button';
+        pin.className = 'theme-pin' + (id === current ? ' active' : '');
+        pin.dataset.themeId = id;
+        pin.title = id === current ? `${t.name} (current)` : t.name;
+        pin.style.setProperty('--t-bg', t.bg);
+        pin.style.setProperty('--t-ink', themeTileInk(t.bg));
+        pin.style.setProperty('--t-accent', t.accent);
+        if (id === current) pin.setAttribute('aria-current', 'true');
+        pin.append(document.createElement('i'), t.name);
+        row.appendChild(pin);
+      });
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'theme-pin theme-pin-more';
+      more.hidden = true;
+      more.title = 'Show every pinned theme';
+      row.appendChild(more);
+      elThemePins.append(label, row);
+      fitThemePins();
+    }
+
+    // Keeps the pinned row to one line: chips that would wrap hide behind a "+N more" chip
+    function fitThemePins() {
+      const row = elThemePins?.querySelector('.theme-pins');
+      if (!row || !row.offsetParent) return;
+      const chips = [...row.querySelectorAll('.theme-pin:not(.theme-pin-more)')];
+      const more = row.querySelector('.theme-pin-more');
+      chips.forEach(c => { c.hidden = false; });
+      more.hidden = true;
+      if (!chips.length) return;
+      const top = chips[0].offsetTop;
+      let hidden = 0;
+      const label = () => { more.textContent = `+${hidden} more`; more.hidden = hidden === 0; };
+      for (let i = chips.length - 1; i > 0 && chips[i].offsetTop > top; i--) { chips[i].hidden = true; hidden++; }
+      label();
+      for (let i = chips.length - 1 - hidden; i > 0 && more.offsetTop > top; i--) { chips[i].hidden = true; hidden++; label(); }
+    }
+    window.addEventListener('resize', () => requestAnimationFrame(fitThemePins));
+
+    function pickTheme(id) {
+      saveThemePins({ recent: nextRecentThemes(loadThemeRecent(), id) });
+      applyTheme(id);
+    }
+
+    // With a mouse the hover already previewed it, so a click is the final choice and Options closes.
+    // On touch the tap is the preview, so Options stays open to try another.
+    function pickThemeFromPicker(id) {
+      pickTheme(id);
+      if (HOVER_PREVIEW_QUERY.matches) closeDensityPopout();
+    }
+
+    function toggleThemeStar(id) {
+      const stars = loadThemeStars();
+      saveThemePins({ stars: stars.includes(id) ? stars.filter(s => s !== id) : [...stars, id] });
+      schedulePrefsPush();
+      renderThemeSwatches();
+    }
+
+    function previewTheme(id) {
+      clearTimeout(themePreviewEndTimer);
+      if (customEditorState) return;
+      if (id === savedThemeId()) { endThemePreview(); return; }
+      if (themePreviewId === id) return;
+      themePreviewId = id;
+      paintTheme(id);
+    }
+
+    function endThemePreview() {
+      clearTimeout(themePreviewEndTimer);
+      if (themePreviewId === null) return;
+      themePreviewId = null;
+      paintTheme(savedThemeId());
+    }
+
+    // Moving across the gap between two tiles shouldn't flash the saved theme
+    function scheduleThemePreviewEnd() {
+      clearTimeout(themePreviewEndTimer);
+      themePreviewEndTimer = setTimeout(endThemePreview, 120);
+    }
+
+    function previewTargetId(el) {
+      const host = el?.closest?.('.theme-tile-wrap, .theme-pin[data-theme-id]');
+      if (!host) return null;
+      return host.dataset.themeId ?? host.querySelector('.theme-swatch')?.dataset.themeId ?? null;
+    }
+
+    elThemeBody?.addEventListener('click', (e) => {
+      const star = e.target.closest('.theme-star[data-star-id]');
+      if (star) { toggleThemeStar(star.dataset.starId); return; }
+      const tile = e.target.closest('.theme-swatch[data-theme-id]');
+      if (tile) pickThemeFromPicker(tile.dataset.themeId);
+    });
+    elThemePins?.addEventListener('click', (e) => {
+      if (e.target.closest('.theme-pin-more')) { renderThemeSwatches('pinned'); return; }
+      const pin = e.target.closest('.theme-pin[data-theme-id]');
+      if (pin) pickThemeFromPicker(pin.dataset.themeId);
+    });
+    [elThemeBody, elThemePins].forEach(host => {
+      // Only a real mouse move previews: Options opening under a resting cursor sends a hover with no movement
+      host?.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse' || !HOVER_PREVIEW_QUERY.matches || (!e.movementX && !e.movementY)) return;
+        const id = previewTargetId(e.target);
+        if (id !== null) previewTheme(id);
+      });
+      host?.addEventListener('pointerout', (e) => {
+        if (e.pointerType !== 'mouse' || previewTargetId(e.relatedTarget) !== null) return;
+        scheduleThemePreviewEnd();
+      });
+    });
+    elThemeBody?.addEventListener('focusin', (e) => {
+      const tile = e.target.closest('.theme-swatch[data-theme-id]');
+      if (tile && tile.matches(':focus-visible')) previewTheme(tile.dataset.themeId);
+    });
+    elThemeBody?.addEventListener('focusout', (e) => {
+      if (!elThemeBody.contains(e.relatedTarget)) scheduleThemePreviewEnd();
+    });
+    elThemeBody?.addEventListener('keydown', (e) => {
+      const tile = e.target.closest?.('.theme-swatch[data-theme-id]');
+      if (!tile || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        toggleThemeStar(tile.dataset.themeId);
+        return;
+      }
+      const tiles = [...elThemeBody.querySelectorAll('.theme-swatch[data-theme-id]')];
+      const points = tiles.map(t => { const r = t.getBoundingClientRect(); return { x: r.left, y: r.top }; });
+      const next = nextThemeTileIndex(points, tiles.indexOf(tile), e.key);
+      if (next === null) return;
+      e.preventDefault();
+      focusThemeTile(tiles[next]);
+    });
+    elThemeSearch?.addEventListener('input', () => {
+      themeQuery = elThemeSearch.value;
+      if (customEditorState) cancelCustomEditor();
+      renderThemeSwatches();
+    });
+    elThemeSearch?.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        const tile = elThemeBody?.querySelector('.theme-swatch[data-theme-id]');
+        if (tile) { e.preventDefault(); focusThemeTile(tile); }
+      } else if (e.key === 'Escape' && elThemeSearch.value) {
+        // First Esc clears the search; the next one closes Options
+        e.stopPropagation();
+        themeQuery = '';
+        renderThemeSwatches();
+      }
+    });
 
     // ── Custom theme panel (browse + editor) ──────────────────────────────────
-    function renderCustomThemePanel() {
+    function renderCustomThemePanel({ focusName = false } = {}) {
       if (!elCustomPanel) return;
       elCustomPanel.innerHTML = '';
       if (customEditorState) {
-        renderCustomEditor();
+        renderCustomEditor(focusName);
       } else {
         renderCustomBrowse();
       }
     }
 
+    function openCustomEditor(draft) {
+      endThemePreview();
+      customEditorState = draft;
+      renderThemePins(savedThemeId(), true);
+      renderCustomThemePanel({ focusName: true });
+      paintTheme('', customEditorState);
+    }
+
+    function cancelCustomEditor() {
+      if (!customEditorState) return;
+      customEditorState = null;
+      paintTheme(savedThemeId());
+    }
+
+    // New themes start from the one on screen, so it's easy to tweak a favorite
+    function customDraftFromCurrent() {
+      endThemePreview();
+      const id = savedThemeId();
+      const ct = isCustomThemeId(id) ? loadCustomThemes().find(t => t.id === id) : null;
+      if (ct) return { id: null, name: `${ct.name} copy`.slice(0, 20), dark: !!ct.dark, bg: ct.bg, surface: ct.surface, sidebar: ct.sidebar, accent: ct.accent, text: ct.text };
+      const t = THEMES.find(x => x.id === id) || THEMES[0];
+      const text = cssColorToHex(getComputedStyle(document.documentElement).getPropertyValue('--text').trim()) || themeTileInk(t.bg);
+      return { id: null, name: `My ${t.name}`.slice(0, 20), dark: !!(t.dark || t.medium), bg: t.bg, surface: t.surface, sidebar: t.sidebar, accent: t.accent, text };
+    }
+
+    async function confirmDeleteCustomTheme(t) {
+      if (!(await appConfirm(`Delete the “${t.name}” theme?`, { okLabel: 'Delete', danger: true }))) return false;
+      deleteCustomTheme(t.id);
+      schedulePrefsPush();
+      return true;
+    }
+
     function renderCustomBrowse() {
-      const current = getCurrentThemeId();
+      const current = savedThemeId();
       const customs = loadCustomThemes();
+      const stars = loadThemeStars();
+      const full = customs.length >= MAX_CUSTOM_THEMES;
 
-      const header = document.createElement('div');
-      header.className = 'custom-themes-header';
-      header.innerHTML = `<span class="density-popout-label" style="font-size:0.65rem;">Your themes</span>
-        <span class="custom-count">${customs.length} / ${MAX_CUSTOM_THEMES}</span>`;
-      elCustomPanel.appendChild(header);
-
-      const row = document.createElement('div');
-      row.className = 'custom-swatches-row';
+      const head = document.createElement('div');
+      head.className = 'theme-family-label';
+      head.innerHTML = `<span>Your themes</span><span class="custom-count">${customs.length} / ${MAX_CUSTOM_THEMES}</span>`;
+      const grid = document.createElement('div');
+      grid.className = 'theme-picker-grid';
+      grid.setAttribute('role', 'radiogroup');
+      grid.setAttribute('aria-label', 'Your themes');
 
       customs.forEach(t => {
         const wrap = document.createElement('div');
         wrap.className = 'custom-swatch-wrap';
-
+        const links = document.createElement('div');
+        links.className = 'custom-theme-links';
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'custom-theme-link custom-theme-edit';
+        edit.textContent = 'Edit';
+        edit.setAttribute('aria-label', `Edit ${t.name}`);
+        edit.addEventListener('click', () => openCustomEditor({ ...t }));
         const del = document.createElement('button');
-        del.className = 'custom-swatch-delete';
         del.type = 'button';
-        del.textContent = '\u00d7';
-        del.title = 'Delete theme';
-        del.addEventListener('click', e => {
-          e.stopPropagation();
-          deleteCustomTheme(t.id);
-          schedulePrefsPush();
-          renderCustomThemePanel();
+        del.className = 'custom-theme-link custom-theme-delete';
+        del.textContent = 'Delete';
+        del.setAttribute('aria-label', `Delete ${t.name}`);
+        del.addEventListener('click', async () => {
+          if (await confirmDeleteCustomTheme(t)) renderThemeSwatches();
         });
-        wrap.appendChild(del);
-
-        const sw = document.createElement('button');
-        sw.className = 'theme-swatch' + (t.id === current ? ' active' : '');
-        sw.type = 'button';
-        sw.title = `${t.name} — click to apply, right-click to edit`;
-        sw.innerHTML = `
-          <div class="theme-swatch-preview" style="background:${t.bg}">
-            <div class="theme-swatch-sidebar" style="background:${t.sidebar}">
-              <div class="theme-swatch-sidebar-pill" style="background:${t.accent}"></div>
-            </div>
-            <div class="theme-swatch-content">
-              <div class="theme-swatch-card" style="background:${t.surface}">
-                <div class="theme-swatch-card-line" style="background:${t.accent}"></div>
-              </div>
-              <div class="theme-swatch-card secondary" style="background:${t.surface}"></div>
-            </div>
-          </div>
-          <span class="theme-swatch-name${t.name.length > 11 ? ' long' : ''}">${t.name}</span>`;
-        sw.addEventListener('click', () => { applyTheme(t.id); });
-        sw.addEventListener('contextmenu', e => {
-          e.preventDefault();
-          customEditorState = { ...t };
-          renderCustomThemePanel();
-        });
-        wrap.appendChild(sw);
-        row.appendChild(wrap);
+        links.append(edit, del);
+        wrap.append(themeTile({ ...t, custom: true }, current, stars), links);
+        grid.appendChild(wrap);
       });
 
-      if (customs.length < MAX_CUSTOM_THEMES) {
-        const addWrap = document.createElement('div');
-        addWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;';
-        const addBtn = document.createElement('button');
-        addBtn.className = 'custom-add-tile';
-        addBtn.type = 'button';
-        addBtn.title = 'Create new theme';
-        addBtn.textContent = '+';
-        addBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          customEditorState = { id: null, name: '', dark: false, bg: '#f4f2ee', surface: '#ffffff', sidebar: '#1e2433', accent: '#3b6fd9', text: '#1a1f2e' };
-          renderCustomThemePanel();
-        });
-        const addLabel = document.createElement('span');
-        addLabel.style.cssText = 'font-size:0.55rem;color:var(--text-muted);';
-        addLabel.textContent = 'New';
-        addWrap.appendChild(addBtn);
-        addWrap.appendChild(addLabel);
-        row.appendChild(addWrap);
+      if (!full) {
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'custom-add-tile';
+        add.textContent = '+ New theme';
+        add.title = "Starts from the theme you're using now";
+        add.addEventListener('click', () => openCustomEditor(customDraftFromCurrent()));
+        grid.appendChild(add);
       }
 
-      elCustomPanel.appendChild(row);
+      const base = lookupTheme(current)?.name || 'Default';
+      elCustomPanel.append(head, grid, themePickerNote(full
+        ? `You've reached ${MAX_CUSTOM_THEMES} custom themes. Delete one to make room for a new one.`
+        : `New themes start from ${base}, so you can tweak the one you're using.`));
+      syncThemeTabStops();
     }
 
-    function renderCustomEditor() {
+    function renderCustomEditor(focusName = false) {
       const s = customEditorState;
       const isNew = !s.id;
 
@@ -11892,7 +12081,8 @@
       nameInput.value = s.name;
       nameInput.placeholder = 'My Theme';
       nameInput.maxLength = 20;
-      nameInput.addEventListener('input', () => { s.name = nameInput.value; updateEditorPreview(); });
+      nameInput.setAttribute('aria-label', 'Theme name');
+      nameInput.addEventListener('input', () => { s.name = nameInput.value; });
       nameRow.appendChild(nameInput);
       editor.appendChild(nameRow);
 
@@ -11910,18 +12100,14 @@
       darkBtn.className = 'custom-mode-btn' + (s.dark ? ' active' : '');
       darkBtn.type = 'button';
       darkBtn.textContent = 'Dark';
-      lightBtn.addEventListener('click', () => {
-        s.dark = false;
-        lightBtn.classList.add('active');
-        darkBtn.classList.remove('active');
-        updateEditorPreview();
-      });
-      darkBtn.addEventListener('click', () => {
-        s.dark = true;
-        darkBtn.classList.add('active');
-        lightBtn.classList.remove('active');
-        updateEditorPreview();
-      });
+      const setMode = (dark) => {
+        s.dark = dark;
+        lightBtn.classList.toggle('active', !dark);
+        darkBtn.classList.toggle('active', dark);
+        paintTheme('', s);
+      };
+      lightBtn.addEventListener('click', () => setMode(false));
+      darkBtn.addEventListener('click', () => setMode(true));
       modeToggle.appendChild(lightBtn);
       modeToggle.appendChild(darkBtn);
       modeRow.appendChild(modeToggle);
@@ -11955,11 +12141,12 @@
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
         colorInput.value = s[key];
+        colorInput.setAttribute('aria-label', label);
         colorInput.addEventListener('input', () => {
           s[key] = colorInput.value;
           swatch.style.background = colorInput.value;
           hexInput.value = colorInput.value;
-          updateEditorPreview();
+          paintTheme('', s);
         });
         swatch.appendChild(colorInput);
         row.appendChild(swatch);
@@ -11968,13 +12155,14 @@
         hexInput.className = 'custom-color-hex';
         hexInput.type = 'text';
         hexInput.value = s[key];
+        hexInput.setAttribute('aria-label', `${label} hex`);
         hexInput.addEventListener('change', () => {
           const v = hexInput.value.trim();
           if (/^#[0-9a-fA-F]{6}$/.test(v)) {
             s[key] = v;
             swatch.style.background = v;
             colorInput.value = v;
-            updateEditorPreview();
+            paintTheme('', s);
           } else {
             hexInput.value = s[key];
           }
@@ -11983,70 +12171,10 @@
         editor.appendChild(row);
       });
 
-      const divider2 = document.createElement('hr');
-      divider2.className = 'custom-editor-divider';
-      editor.appendChild(divider2);
-
-      // Live preview
-      const previewLabel = document.createElement('div');
-      previewLabel.className = 'custom-preview-label';
-      previewLabel.textContent = 'Live preview';
-      editor.appendChild(previewLabel);
-
-      const previewRow = document.createElement('div');
-      previewRow.className = 'custom-preview-row';
-
-      // Mini swatch preview
-      const miniWrap = document.createElement('div');
-      miniWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;';
-      miniWrap.innerHTML = `
-        <div class="theme-swatch-preview" data-mini-preview style="background:${s.bg}">
-          <div class="theme-swatch-sidebar" data-mini-sidebar style="background:${s.sidebar}">
-            <div class="theme-swatch-sidebar-pill" data-mini-accent style="background:${s.accent}"></div>
-          </div>
-          <div class="theme-swatch-content">
-            <div class="theme-swatch-card" data-mini-card1 style="background:${s.surface}">
-              <div class="theme-swatch-card-line" data-mini-line style="background:${s.accent}"></div>
-            </div>
-            <div class="theme-swatch-card secondary" data-mini-card2 style="background:${s.surface}"></div>
-          </div>
-        </div>
-        <span class="theme-swatch-name" data-mini-name>${s.name || 'Untitled'}</span>`;
-      previewRow.appendChild(miniWrap);
-
-      // Larger app wireframe
-      const appPreview = document.createElement('div');
-      appPreview.className = 'custom-preview-app';
-      appPreview.dataset.previewApp = '';
-      appPreview.style.background = s.bg;
-      appPreview.innerHTML = `
-        <div class="custom-preview-sidebar" data-preview-sidebar style="background:${s.sidebar}">
-          <div style="width:18px;height:3px;border-radius:1.5px;background:${s.accent}" data-preview-pill></div>
-          <div style="width:12px;height:2px;border-radius:1px;background:${s.accent};opacity:0.4"></div>
-          <div style="width:15px;height:2px;border-radius:1px;background:${s.accent};opacity:0.4"></div>
-        </div>
-        <div class="custom-preview-content">
-          <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
-            <div style="width:40px;height:4px;border-radius:2px;opacity:0.8;background:${s.text}" data-preview-title></div>
-            <div style="margin-left:auto;width:22px;height:8px;border-radius:3px;background:${s.accent}" data-preview-btn></div>
-          </div>
-          <div style="display:flex;gap:3px;flex:1;">
-            <div style="flex:1;border-radius:3px;padding:3px;display:flex;flex-direction:column;gap:2px;background:${s.surface}" data-preview-col1>
-              <div style="height:2px;border-radius:1px;width:60%;opacity:0.6;background:${s.accent}"></div>
-              <div style="height:2px;border-radius:1px;width:80%;opacity:0.25;background:${s.text}"></div>
-            </div>
-            <div style="flex:1;border-radius:3px;padding:3px;display:flex;flex-direction:column;gap:2px;background:${s.surface}" data-preview-col2>
-              <div style="height:2px;border-radius:1px;width:50%;opacity:0.6;background:${s.accent}"></div>
-              <div style="height:2px;border-radius:1px;width:70%;opacity:0.25;background:${s.text}"></div>
-            </div>
-          </div>
-        </div>`;
-      previewRow.appendChild(appPreview);
-      editor.appendChild(previewRow);
-
-      const divider3 = document.createElement('hr');
-      divider3.className = 'custom-editor-divider';
-      editor.appendChild(divider3);
+      const note = document.createElement('p');
+      note.className = 'custom-editor-note';
+      note.textContent = 'The desk shows your colors as you edit. Cancel puts your theme back.';
+      editor.appendChild(note);
 
       // Action buttons
       const actions = document.createElement('div');
@@ -12057,11 +12185,10 @@
         delBtn.className = 'custom-btn custom-btn-danger';
         delBtn.type = 'button';
         delBtn.textContent = 'Delete';
-        delBtn.addEventListener('click', () => {
-          deleteCustomTheme(s.id);
-          schedulePrefsPush();
-          customEditorState = null;
-          renderCustomThemePanel();
+        delBtn.addEventListener('click', async () => {
+          if (!(await confirmDeleteCustomTheme(s))) return;
+          cancelCustomEditor();
+          renderThemeSwatches();
         });
         actions.appendChild(delBtn);
       }
@@ -12074,10 +12201,9 @@
       cancelBtn.className = 'custom-btn custom-btn-secondary';
       cancelBtn.type = 'button';
       cancelBtn.textContent = 'Cancel';
-      cancelBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        customEditorState = null;
-        renderCustomThemePanel();
+      cancelBtn.addEventListener('click', () => {
+        cancelCustomEditor();
+        renderThemeSwatches();
       });
       actions.appendChild(cancelBtn);
 
@@ -12085,66 +12211,22 @@
       saveBtn.className = 'custom-btn custom-btn-primary';
       saveBtn.type = 'button';
       saveBtn.textContent = isNew ? 'Create' : 'Save';
-      saveBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
+      saveBtn.addEventListener('click', () => {
         const trimmed = s.name.trim();
         if (!trimmed) { nameInput.focus(); return; }
         const payload = { name: trimmed, dark: s.dark, bg: s.bg, surface: s.surface, sidebar: s.sidebar, accent: s.accent, text: s.text };
-        let saved;
-        if (isNew) {
-          saved = createCustomTheme(payload);
-        } else {
-          saved = updateCustomTheme(s.id, payload);
-        }
-        if (saved) {
-          applyTheme(saved.id);
-          schedulePrefsPush();
-        }
+        const saved = isNew ? createCustomTheme(payload) : updateCustomTheme(s.id, payload);
         customEditorState = null;
-        renderCustomThemePanel();
+        if (saved) pickTheme(saved.id);
+        else paintTheme(savedThemeId());
+        renderThemeSwatches();
       });
       actions.appendChild(saveBtn);
 
       editor.appendChild(actions);
       elCustomPanel.appendChild(editor);
 
-      nameInput.focus();
-    }
-
-    function updateEditorPreview() {
-      if (!customEditorState || !elCustomPanel) return;
-      const s = customEditorState;
-      const q = sel => elCustomPanel.querySelector(sel);
-
-      const mini = q('[data-mini-preview]');
-      if (mini) mini.style.background = s.bg;
-      const miniSb = q('[data-mini-sidebar]');
-      if (miniSb) miniSb.style.background = s.sidebar;
-      const miniAcc = q('[data-mini-accent]');
-      if (miniAcc) miniAcc.style.background = s.accent;
-      const miniC1 = q('[data-mini-card1]');
-      if (miniC1) miniC1.style.background = s.surface;
-      const miniLine = q('[data-mini-line]');
-      if (miniLine) miniLine.style.background = s.accent;
-      const miniC2 = q('[data-mini-card2]');
-      if (miniC2) miniC2.style.background = s.surface;
-      const miniName = q('[data-mini-name]');
-      if (miniName) miniName.textContent = s.name || 'Untitled';
-
-      const app = q('[data-preview-app]');
-      if (app) app.style.background = s.bg;
-      const pSb = q('[data-preview-sidebar]');
-      if (pSb) pSb.style.background = s.sidebar;
-      const pPill = q('[data-preview-pill]');
-      if (pPill) pPill.style.background = s.accent;
-      const pTitle = q('[data-preview-title]');
-      if (pTitle) pTitle.style.background = s.text;
-      const pBtn = q('[data-preview-btn]');
-      if (pBtn) pBtn.style.background = s.accent;
-      const pCol1 = q('[data-preview-col1]');
-      if (pCol1) pCol1.style.background = s.surface;
-      const pCol2 = q('[data-preview-col2]');
-      if (pCol2) pCol2.style.background = s.surface;
+      if (focusName) nameInput.focus({ preventScroll: true });
     }
 
     let addEditor = null;
@@ -12677,6 +12759,39 @@
       });
     }
 
+    // Pure: how much of the page an on-screen keyboard covers. Zero while pinch-zoomed, when the
+    // visual viewport is small for another reason, and where the browser resizes the page instead.
+    function keyboardInset(layoutHeight, viewportHeight, viewportTop, scale = 1) {
+      if (Math.abs(scale - 1) > 0.01) return 0;
+      return Math.max(0, Math.round(layoutHeight - viewportHeight - viewportTop));
+    }
+
+    // Lifts the phone's add dock above a keyboard that overlays the page, and keeps a card
+    // being edited in view when the keyboard opens
+    function initKeyboardInset() {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      let queued = false;
+      let lastHeight = vv.height;
+      const update = () => {
+        queued = false;
+        document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset(window.innerHeight, vv.height, vv.offsetTop, vv.scale)}px`);
+        const shrank = vv.height < lastHeight - 80;
+        lastHeight = vv.height;
+        const el = document.activeElement;
+        if (!shrank || !el || els.addForm.contains(el)) return;
+        if (!(el.isContentEditable || el.matches('textarea, input:not([type="checkbox"]):not([type="radio"])'))) return;
+        (el.closest('[id^="item-"]') || el).scrollIntoView({ block: 'center' });
+      };
+      const queue = () => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(update);
+      };
+      vv.addEventListener('resize', queue);
+      vv.addEventListener('scroll', queue);
+    }
+
     function initAddEditor() {
       const { wrap, editor } = createRichEditor({
         className: 'add-input',
@@ -12697,6 +12812,7 @@
       if (typeof ResizeObserver === 'function') new ResizeObserver(syncAddDock).observe(els.addForm);
       window.addEventListener('resize', syncAddDock);
       syncAddDock();
+      initKeyboardInset();
 
       els.formatToggleBtn.addEventListener('click', () => {
         const expanded = els.addForm.classList.toggle('format-expanded');
@@ -13026,6 +13142,7 @@
     }
 
     function openDensityPopout() {
+      themeQuery = '';
       renderThemeSwatches();
       renderTagColorList();
       const btn    = document.getElementById('density-toggle');
@@ -13034,7 +13151,98 @@
       renderOptionsSummaries();
       popout.classList.remove('hidden');
       btn.setAttribute('aria-expanded', 'true');
+      syncNewTags();
+      syncOptionsLayout();
+      fitThemePins();
+      requestAnimationFrame(fitThemePins);
+      pushOptionsHistory();
     }
+
+    // Wide panels show the section list and the open section side by side
+    const OPTIONS_SPLIT_QUERY = window.matchMedia('(min-width: 1024px)');
+    const OPTIONS_PHONE_QUERY = window.matchMedia('(max-width: 768px)');
+    const optionsSplitOpen = { appearance: 'card-layout', behavior: 'general' };
+
+    function syncOptionsLayout() {
+      const split = OPTIONS_SPLIT_QUERY.matches;
+      ['appearance', 'behavior'].forEach(name => {
+        const pane = document.getElementById(`options-pane-${name}`);
+        if (!pane) return;
+        const was = pane.classList.contains('options-split');
+        if (split) {
+          const open = pane.querySelector('.options-section:not([hidden])')?.dataset.optionsSection;
+          pane.classList.add('options-split');
+          pane.style.minHeight = '';
+          openOptionsSection(pane, open || optionsSplitOpen[name], { auto: true });
+        } else if (was) {
+          pane.classList.remove('options-split');
+          closeOptionsSection(pane, { focus: false });
+        }
+      });
+      syncOptionsSheetHeight();
+    }
+    OPTIONS_SPLIT_QUERY.addEventListener('change', syncOptionsLayout);
+
+    // Phones: Appearance and Behavior share the height of the taller section list, so the sheet's top edge
+    // stays put between them. Measured once per open, with every pane laid out as its list.
+    function syncOptionsSheetHeight() {
+      const popout = document.getElementById('density-popout');
+      if (!OPTIONS_PHONE_QUERY.matches || popout.classList.contains('hidden')) {
+        popout.style.removeProperty('--options-sheet-min');
+        return;
+      }
+      if (popout.style.getPropertyValue('--options-sheet-min')) return;
+      const panes = [...popout.querySelectorAll('.options-pane')];
+      const settings = panes.filter(p => p.id !== 'options-pane-themes');
+      const saved = panes.map(p => ({ hidden: p.classList.contains('hidden'), inSection: p.classList.contains('in-section'), minHeight: p.style.minHeight }));
+      const openSections = [...popout.querySelectorAll('.options-section:not([hidden])')];
+      const tab = popout.dataset.optionsTab;
+      popout.dataset.optionsTab = 'measuring';
+      openSections.forEach(s => { s.hidden = true; });
+      let tallest = 0;
+      settings.forEach(pane => {
+        panes.forEach(p => p.classList.toggle('hidden', p !== pane));
+        pane.classList.remove('in-section');
+        pane.style.minHeight = '';
+        tallest = Math.max(tallest, popout.offsetHeight);
+      });
+      panes.forEach((p, i) => {
+        p.classList.toggle('hidden', saved[i].hidden);
+        p.classList.toggle('in-section', saved[i].inSection);
+        p.style.minHeight = saved[i].minHeight;
+      });
+      openSections.forEach(s => { s.hidden = false; });
+      popout.dataset.optionsTab = tab;
+      popout.style.setProperty('--options-sheet-min', `${tallest}px`);
+    }
+
+    // Android's Back button steps out of an open section or the theme editor, then closes Options,
+    // instead of leaving the app. Phones only; computers keep their history untouched.
+    let optionsHistoryArmed = false;
+    function pushOptionsHistory() {
+      if (!OPTIONS_PHONE_QUERY.matches || optionsHistoryArmed) return;
+      history.pushState({ workDeskOptions: true }, '');
+      optionsHistoryArmed = true;
+    }
+
+    // One step back inside Options: true if something was undone, false when only closing is left
+    function stepBackInOptions() {
+      const popout = document.getElementById('density-popout');
+      if (themePreviewId !== null) { endThemePreview(); return true; }
+      if (customEditorState) { cancelCustomEditor(); renderThemeSwatches(); return true; }
+      const pane = popout.querySelector('.options-pane.in-section:not(.hidden):not(.options-split)');
+      if (pane) { closeOptionsSection(pane); return true; }
+      return false;
+    }
+
+    window.addEventListener('popstate', () => {
+      if (!optionsHistoryArmed) return;
+      optionsHistoryArmed = false;
+      const popout = document.getElementById('density-popout');
+      if (popout.classList.contains('hidden')) return;
+      if (stepBackInOptions()) pushOptionsHistory();
+      else closeDensityPopout({ fromHistory: true });
+    });
 
     const OPTIONS_FONT_LABELS = {
       system: 'System font', inter: 'Inter', roboto: 'Roboto', 'source-sans': 'Source Sans 3', 'open-sans': 'Open Sans',
@@ -13148,25 +13356,33 @@
       });
     }
 
-    function openOptionsSection(pane, id) {
+    // auto: shown because the wide layout always has a section open, not because it was picked
+    function openOptionsSection(pane, id, { auto = false } = {}) {
       if (!pane) return;
       const section = pane.querySelector(`[data-options-section="${id}"]`);
       if (!section) return;
+      const split = pane.classList.contains('options-split');
       // A short section keeps the list's height so the panel doesn't jump
-      pane.style.minHeight = `${pane.getBoundingClientRect().height}px`;
+      if (!split && !pane.classList.contains('in-section')) pane.style.minHeight = `${pane.getBoundingClientRect().height}px`;
       pane.querySelectorAll('.options-section').forEach(s => { s.hidden = s !== section; });
       pane.classList.add('in-section');
+      pane.querySelectorAll('.options-row[data-options-open]').forEach(row => {
+        if (split && row.dataset.optionsOpen === id) row.setAttribute('aria-current', 'true');
+        else row.removeAttribute('aria-current');
+      });
+      if (split) optionsSplitOpen[pane.id.replace('options-pane-', '')] = id;
       // Tags inside stay up for this visit and are gone on the way back
-      markNewTagsSeen(id);
+      if (!auto) markNewTagsSeen(id);
       if (id === 'tags') renderTagColorList();
-      document.getElementById('density-popout').scrollTop = 0;
-      section.querySelector('.options-back-btn')?.focus({ preventScroll: true });
+      (split ? section : pane).scrollTop = 0;
+      if (!split && !auto) section.querySelector('.options-back-btn')?.focus({ preventScroll: true });
     }
 
     function closeOptionsSection(pane, { focus = true } = {}) {
-      if (!pane) return;
+      if (!pane || pane.classList.contains('options-split')) return;
       const open = pane.querySelector('.options-section:not([hidden])');
       pane.querySelectorAll('.options-section').forEach(s => { s.hidden = true; });
+      pane.querySelectorAll('.options-row[aria-current]').forEach(row => row.removeAttribute('aria-current'));
       pane.classList.remove('in-section');
       pane.style.minHeight = '';
       syncNewTags();
@@ -13175,7 +13391,7 @@
     }
 
     function resetOptionsNavigation() {
-      document.querySelectorAll('#density-popout .options-pane.in-section').forEach(pane => closeOptionsSection(pane, { focus: false }));
+      document.querySelectorAll('#density-popout .options-pane.in-section:not(.options-split)').forEach(pane => closeOptionsSection(pane, { focus: false }));
     }
 
     // "New" tags expire on their own once the app moves to the next minor version
@@ -13214,10 +13430,18 @@
       });
     }
 
-    function closeDensityPopout() {
+    function closeDensityPopout({ fromHistory = false } = {}) {
       const btn    = document.getElementById('density-toggle');
       const popout = document.getElementById('density-popout');
+      const wasOpen = !popout.classList.contains('hidden');
+      endThemePreview();
+      if (customEditorState) { cancelCustomEditor(); renderThemeSwatches(); }
       popout.classList.add('hidden');
+      popout.style.removeProperty('--options-sheet-min');
+      if (optionsHistoryArmed && !fromHistory) {
+        optionsHistoryArmed = false;
+        if (wasOpen) history.back();
+      }
       popout.classList.remove('options-floating');
       btn.setAttribute('aria-expanded', 'false');
       // Always return the popout to its original home (desk-view density-wrap)
@@ -13383,12 +13607,14 @@
           popout.querySelectorAll('.options-nav-btn').forEach(b => b.classList.remove('active'));
           tabBtn.classList.add('active');
           const targetTab = tabBtn.dataset.optionsTab;
+          if (targetTab !== 'themes') { endThemePreview(); if (customEditorState) { cancelCustomEditor(); renderThemeSwatches(); } }
           resetOptionsNavigation();
           ['themes', 'appearance', 'behavior'].forEach(p => {
             const el = document.getElementById('options-pane-' + p);
             if (el) el.classList.toggle('hidden', p !== targetTab);
           });
-          if (targetTab === 'themes') renderThemeSwatches();
+          popout.dataset.optionsTab = targetTab;
+          if (targetTab === 'themes') { renderThemeSwatches(); fitThemePins(); }
           if (targetTab === 'appearance') renderTagColorList();
         });
       });
@@ -13398,16 +13624,6 @@
           renderThemeSwatches(fBtn.dataset.themeFilter);
         });
       });
-
-      const currentThemeBtn = document.getElementById('current-theme-btn');
-      if (currentThemeBtn) {
-        currentThemeBtn.addEventListener('click', (e) => {
-          if (!currentThemeBtn.classList.contains('can-jump')) return;
-          // The button's contents are rebuilt, detaching the clicked span
-          e.stopPropagation();
-          renderThemeSwatches(currentThemeBtn.dataset.themeGroup);
-        });
-      }
 
       popout.querySelectorAll('[data-options-reset]').forEach(resetBtn => {
         resetBtn.addEventListener('click', async () => {
@@ -13634,8 +13850,9 @@
       document.addEventListener('click', (e) => {
         if (popout.classList.contains('hidden')) return;
         if (popout.contains(e.target) || e.target === btn || els.projectCustomizeBtn.contains(e.target)) return;
-        // Guard: buttons inside the custom-theme editor replace innerHTML on click,
-        // detaching the original target before this handler runs. Check bounding rect.
+        // Buttons inside the custom-theme editor re-render on click, detaching the target before this runs;
+        // the event path is fixed at dispatch, so it still holds the popout. The rect check covers old browsers.
+        if (e.composedPath?.().includes(popout)) return;
         const r = popout.getBoundingClientRect();
         if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
         closeDensityPopout();
@@ -13643,9 +13860,7 @@
 
       document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape' || popout.classList.contains('hidden')) return;
-        const pane = popout.querySelector('.options-pane.in-section:not(.hidden)');
-        if (pane) closeOptionsSection(pane);
-        else closeDensityPopout();
+        if (!stepBackInOptions()) closeDensityPopout();
       });
     }
 
