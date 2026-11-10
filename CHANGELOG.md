@@ -6,6 +6,38 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.25.0] — 2026-11-10
+
+### Added
+
+- **Palette-tile theme picker.** The wireframe previews are replaced by color tiles (the theme's background with its name in whichever of `#16181d` or white reads better, plus accent and surface dots), grouped under color-family headings. Every built-in theme now has a `family` (Cool, Green, Warm, Red & pink, Purple & neutral, Purple & pink, Neutral, Purple, Neon, Unit series); Retro moved to Purple & neutral and Rosewood and Monokai Pro to Warm. Tier tabs are *Light / Dim / Dark / Season / Custom* (Medium is renamed Dim).
+- **Theme search.** Matches names, families, and tier words, with accents and case ignored, so *rose* finds Rosé Pine and *warm* or *dim* list that group. Results are grouped by tier and family; the tabs hide while searching; ↓ moves to the first tile; the first Esc clears the search and the next closes Options.
+- **Pinned row, stars, and recent.** A one-line row of chips under the tabs holds the current theme, starred themes, and the last 3 picked. Chips that would wrap hide behind *+N more*, which opens a Pinned view of all of them. Each tile has a ★ toggle. Stars (`work-desk-theme-stars`) and recent (`work-desk-theme-recent`) sync with preferences, and deleting a custom theme removes it from both.
+- **Hover preview.** With a fine pointer that can hover, hovering a tile or chip paints that theme on the desk without saving it. Moving off (with a 120ms grace between tiles), Esc, switching tabs, or closing Options repaints the saved theme. A mouse click keeps the theme and closes Options. On touch, a tap applies it and Options stays open to try another.
+- **Keyboard and screen readers.** Tile grids are `radiogroup`s of `radio` tiles with one tab stop. Arrow keys move by on-screen position (rows by y, nearest column by x), Home and End go to the ends, Enter or Space picks, and *S* stars. Keyboard focus previews like hover. The tier tabs are a `tablist`.
+
+### Improved
+
+- **Options panel size and layout.** 560px wide on desktops (1280px and wider), 480px from 1024px, and 420px below that. It fits its content up to the window height. From 1024px, Appearance and Behavior use two columns: the section list (200px, or 172px from 1024–1279px) stays on the left with the open section on the right, the current row is marked, and there's no *‹ Back*. Each tab opens on its first section, or the one you last opened. With the sidebar on the right, Options opens to the left of it.
+- **Phone Options sheet.** Tabs moved to the bottom of the sheet. Themes uses 75% of the screen height. Appearance and Behavior share the height of the taller list so the sheet doesn't jump between them. Android's Back steps back one level (end a preview, close the theme editor, close a section) and then closes the sheet, without leaving an extra history entry.
+- **Custom themes.** The Custom tab shows your themes as tiles with visible *Edit* and *Delete* links and a count (*2 / 5*). *+ New theme* starts from the theme you're using. While editing, the desk itself shows the colors, replacing the small preview, and Cancel or Esc repaints your theme. Delete asks in the in-app dialog. At 5 themes the add tile is replaced by a note.
+- **Android keyboard.** The viewport uses `interactive-widget=resizes-content`, so Chrome shrinks the page above the keyboard. Where a browser overlays the keyboard instead, `--keyboard-inset` (from `visualViewport`, ignored while pinch-zoomed) lifts the add dock above it. The phone add box is capped at about 4 lines and then scrolls, and when the keyboard opens the card being edited scrolls to the middle.
+- **Tests for code nothing ran.** `sbPull`, `sortByReference`, and `tagPaletteSlot` have unit tests, and the move dialog's month arrows (`shiftMoveCalendarMonth`) have an end-to-end test. A unit test checks that every built-in tile name reads at 4.5:1 or better.
+- **Removed 20 unused CSS rules.** Each class appeared only in its own rule. Ten styled features later redesigned: the July sidebar's backup group, theme picker label, and empty comments line; the Oct 13 account card (`sidebar-account-top`, `-identity`) that became the account menu; the theme section wrapper, labels, and dividers that became the Light / Med / Dark / Season tabs; and the comment count bubble that became *comments (N)* in the action row. The other ten (`date-list`, `empty-nav`, `date-badge`, `done-label`, `shelved-label`, `theme-toggle-unused`, and four Projects prototype classes) aren't used in any copy back to July. A unit test now fails if a class is styled but never used.
+
+### Fixed
+
+- **Deleting the current custom theme left it applied.** `deleteCustomTheme` checked `savedThemeId()` after removing the theme, and that check validates the id against the remaining themes, so it never matched. The saved id stayed and the custom colors stayed on the desk. It now checks before deleting and switches to Default.
+- **Options could close when a button inside it re-rendered.** The click-outside check fell back to the popout's rectangle when the clicked element had been removed. When a re-render shrank the panel (saving a custom theme turns the taller editor into the tile list), the click point fell outside and Options closed. It now checks the event's `composedPath()`, which is fixed when the event is dispatched.
+- **Tag chips lost the top of their letters.** Chip labels in the tag row and the action row use `text-box: trim-both cap alphabetic`, so the label box is exactly cap height (about 6.8px), and they also set `overflow: hidden` for the long-tag ellipsis. When a card sat on a fractional pixel (say a label top of 568.55px), the clip edge rounded into the glyphs and shaved off the top row, sometimes most of the top half of a letter at small sizes, so one chip looked cut off while its neighbor was fine. Any font, theme, or resolution could hit it. The label now has `padding-block: 0.3em` and a matching negative `margin-block`, so the clip sits outside the glyphs while the chip keeps its size and position and long tags still end in "…".
+- **Unit test expired.** `mergeImportInto keeps deletedIds` dated its tombstone 2026-08-12, and tombstones older than 90 days are pruned, so it started failing on Nov 10. It now uses yesterday's date. Running the suite with the clock moved up to a year ahead found no other date-dependent tests.
+
+### Removed
+
+- The *Current: … Show* line under the theme tabs (the pinned row covers it), the wireframe theme previews, the custom editor's mini preview, and the hover × and right-click edit on custom tiles, along with their CSS.
+
+---
+
 ## [1.24.0] — 2026-11-05
 
 ### Added
