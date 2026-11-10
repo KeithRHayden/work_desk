@@ -494,7 +494,8 @@ describe('toggleItem / boardColumn', () => {
 
 describe('import/export tombstones', () => {
   it('mergeImportInto keeps deletedIds and strips resurrected items', () => {
-    const ts = '2026-08-12T10:00:00.000Z';
+    // Recent, so the 90-day tombstone pruning keeps it
+    const ts = new Date(Date.now() - 86400000).toISOString();
     const merged = deskSandbox().mergeImportInto(
       {
         days: {
@@ -988,15 +989,18 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
     assert.doesNotMatch(jumpFn[0], /state\.expandedTaskIds\.clear\(\)/);
   });
 
-  it('THEMES contains 108 themes (36 light, 36 medium, 36 dark) with complete wireframe properties', () => {
+  it('THEMES contains 108 core themes (36 light, 36 medium, 36 dark) plus 12 seasonal, with complete wireframe properties', () => {
     const themesMatch = html.match(/const THEMES = (\[[\s\S]*?\n    \]);/);
     assert.ok(themesMatch, 'THEMES array not found in work-desk.html');
     const themes = new Function(`return ${themesMatch[1]}`)();
-    assert.equal(themes.length, 108);
-    assert.equal(new Set(themes.map((t) => t.id)).size, 108, 'theme ids must be unique');
-    const light  = themes.filter((t) => !t.dark && !t.medium);
-    const medium = themes.filter((t) => t.medium);
-    const dark   = themes.filter((t) => t.dark);
+    assert.equal(themes.length, 120);
+    assert.equal(new Set(themes.map((t) => t.id)).size, 120, 'theme ids must be unique');
+    assert.equal(new Set(themes.map((t) => `${t.name}|${t.dark}|${t.medium}`)).size, 120, 'no two themes share a name within a tier');
+    const core = themes.filter((t) => !t.season);
+    assert.equal(themes.length - core.length, 12, 'expected 12 seasonal themes');
+    const light  = core.filter((t) => !t.dark && !t.medium);
+    const medium = core.filter((t) => t.medium);
+    const dark   = core.filter((t) => t.dark);
     assert.equal(light.length, 36, 'expected 36 light themes');
     assert.equal(medium.length, 36, 'expected 36 medium themes');
     assert.equal(dark.length, 36, 'expected 36 dark themes');
@@ -1033,13 +1037,13 @@ describe('HTML invariants (work-desk.html stays aligned)', () => {
     assert.match(html, /id="startup-view-select"/);
   });
 
-  it('theme swatches render mini app wireframe elements', () => {
-    assert.match(html, /class="theme-swatch-preview"/);
-    assert.match(html, /class="theme-swatch-sidebar"/);
-    assert.match(html, /class="theme-swatch-sidebar-pill"/);
-    assert.match(html, /class="theme-swatch-content"/);
-    assert.match(html, /class="theme-swatch-card"/);
-    assert.match(html, /class="theme-swatch-card-line"/);
+  it('theme tiles are filled with the theme background and show sidebar, surface and accent dots', () => {
+    const tile = fnSource('themeTile');
+    assert.match(tile, /wrap\.style\.setProperty\('--t-bg', t\.bg\);/);
+    assert.match(tile, /wrap\.style\.setProperty\('--t-ink', themeTileInk\(t\.bg\)\);/);
+    assert.match(tile, /\[t\.sidebar, t\.surface, t\.accent\]\.forEach/);
+    assert.match(tile, /name\.textContent = t\.name;/);
+    assert.doesNotMatch(mainScript, /theme-swatch-preview/);
   });
 
   it('sidebar includes today at a glance widget, streamlined backup, and polished account footer', () => {
@@ -1393,15 +1397,30 @@ describe('1.23.1 Phone Insights spacing', () => {
 });
 
 describe('1.23.4 Tablet: in-app dialogs, full screen, Done edge', () => {
+  it('every Escape is marked handled in the capture phase, so Android never turns it into Back', () => {
+    const src = fnSource('initEscapeGuard');
+    assert.match(src, /document\.addEventListener\('keydown'/);
+    assert.match(src, /e\.key === 'Escape'\) e\.preventDefault\(\)/);
+    assert.match(src, /\}, true\);/);
+    assert.match(mainScript, /initFullscreen\(\);\s*initEscapeGuard\(\);/);
+  });
+
+  it('search Escape clears the box the same way its close button does', () => {
+    const src = fnSource('clearSearch');
+    for (const part of ["state.searchQuery = ''", "els.searchInput.value = ''", 'closeSearchOverlay()', 'els.searchInput.blur()']) assert.ok(src.includes(part), part);
+    assert.match(mainScript, /if \(e\.key === 'Escape'\) clearSearch\(\);/);
+    assert.match(mainScript, /els\.searchOverlayClose\.addEventListener\('click', clearSearch\)/);
+  });
+
   it('the app never calls the browser confirm, prompt, or alert', () => {
     assert.doesNotMatch(mainScript, /[^\w.](confirm|prompt|alert)\((?!\))/);
     assert.doesNotMatch(mainScript, /window\.(confirm|prompt|alert)\(/);
   });
 
-  it('all 11 questions go through appConfirm / appPrompt, with red buttons for deletes and Replace', () => {
-    assert.equal((mainScript.match(/await appConfirm\(/g) || []).length, 8);
+  it('all 12 questions go through appConfirm / appPrompt, with red buttons for deletes and Replace', () => {
+    assert.equal((mainScript.match(/await appConfirm\(/g) || []).length, 9);
     assert.equal((mainScript.match(/await appPrompt\(/g) || []).length, 3);
-    assert.equal((mainScript.match(/okLabel: 'Delete', danger: true/g) || []).length, 5);
+    assert.equal((mainScript.match(/okLabel: 'Delete', danger: true/g) || []).length, 6);
     assert.match(mainScript, /appConfirm\(msg, \{ okLabel: 'Replace', danger: true \}\)/);
     assert.match(mainScript, /appPrompt\('Rename project:', project\.name, \{ okLabel: 'Rename' \}\)/);
     assert.match(mainScript, /async function deleteItem\(id\) \{/);
@@ -1465,7 +1484,7 @@ describe('1.23.3 Phone Options: layout, week strip weekends, tap targets', () =>
   });
 
   it('Options controls are at least 36px tall on phones only', () => {
-    const block = html.match(/@media \(max-width: 768px\) \{\s*\.density-popout select, \.custom-holiday-input \{ min-height: 36px; \}\s*\.options-back-btn, \.custom-holiday-add-btn \{ min-height: 36px; padding-inline: 10px; \}\s*\.current-theme-btn \{ min-height: 32px; \}\s*\}/);
+    const block = html.match(/@media \(max-width: 768px\) \{\s*\.density-popout select, \.custom-holiday-input \{ min-height: 36px; \}\s*\.options-back-btn, \.custom-holiday-add-btn \{ min-height: 36px; padding-inline: 10px; \}\s*\.theme-pin \{ min-height: 30px; \}\s*\.custom-theme-link \{ min-height: 30px; \}\s*\}/);
     assert.ok(block);
   });
 });
@@ -2527,13 +2546,14 @@ describe('Medium themes (HTML invariants)', () => {
     }
   });
 
-  it('renderThemeSwatches filters on medium property', () => {
-    assert.match(html, /THEMES\.filter\(t\s*=>\s*t\.medium\)/);
-    assert.match(html, /currentThemeFilter\s*===\s*'medium'/);
+  it('renderThemeSwatches filters medium themes through themeGroup', () => {
+    assert.match(html, /const themeGroup = \(t\) => t\.custom \? 'custom' : t\.season \? 'seasonal' : t\.medium \? 'medium' : t\.dark \? 'dark' : 'light';/);
+    assert.match(fnSource('renderThemeSwatches'), /THEMES\.filter\(t => themeGroup\(t\) === currentThemeFilter\)/);
   });
 
-  it('medium filter button exists with data-theme-filter="medium"', () => {
-    assert.match(html, /data-theme-filter="medium"[^>]*>Med</);
+  it('the medium tier is labeled Dim (data-theme-filter stays "medium")', () => {
+    assert.match(html, /data-theme-filter="medium"[^>]*>Dim</);
+    assert.match(html, /medium: 'Dim'/);
   });
 });
 
@@ -2608,16 +2628,18 @@ describe('Custom theme builder (HTML invariants)', () => {
     assert.match(html, /\.custom-editor/);
     assert.match(html, /\.custom-color-swatch/);
     assert.match(html, /\.custom-color-hex/);
-    assert.match(html, /\.custom-swatch-delete/);
+    assert.match(html, /\.custom-theme-link/);
     assert.match(html, /\.custom-add-tile/);
-    assert.match(html, /\.custom-preview-app/);
+    assert.doesNotMatch(html, /custom-swatch-delete|custom-preview-app/);
   });
 
-  it('renderCustomThemePanel / browse / editor functions exist', () => {
+  it('renderCustomThemePanel / browse / editor functions exist, and the editor previews on the desk', () => {
     assert.match(html, /function renderCustomThemePanel\s*\(/);
     assert.match(html, /function renderCustomBrowse\s*\(/);
     assert.match(html, /function renderCustomEditor\s*\(/);
-    assert.match(html, /function updateEditorPreview\s*\(/);
+    assert.doesNotMatch(html, /function updateEditorPreview\s*\(/);
+    assert.equal((fnSource('renderCustomEditor').match(/paintTheme\('', s\);/g) || []).length, 3);
+    assert.match(fnSource('cancelCustomEditor'), /paintTheme\(savedThemeId\(\)\);/);
   });
 
   it('themes pane is separate from appearance pane (3-tab split)', () => {
@@ -3117,7 +3139,7 @@ describe('Comments system (HTML invariants)', () => {
     assert.match(html, /\.comments-list/);
     assert.match(html, /\.add-comment-form/);
     assert.match(html, /\.add-comment-trigger/);
-    assert.match(html, /\.comment-count-badge/);
+    assert.match(html, /\.card-action\.has-comments \{/, 'the comments (N) action replaced the old count badge');
   });
 
   it('splitCommentToItem function exists with correct signature', () => {
@@ -3654,9 +3676,9 @@ describe('v1.8.0 themes (HTML invariants)', () => {
   });
 
   it('theme swatches expose data-theme-id (not data-theme, which would match theme CSS selectors)', () => {
-    const fn = html.match(/function renderThemeSwatches[\s\S]*?grid\.appendChild\(sw\)/)[0];
+    const fn = fnSource('themeTile');
     assert.match(fn, /sw\.dataset\.themeId = t\.id/);
-    assert.doesNotMatch(fn, /sw\.dataset\.theme = /);
+    assert.doesNotMatch(fn, /\.dataset\.theme = /);
   });
 
   it('bright-accent themes use dark text on primary buttons', () => {
@@ -4164,11 +4186,14 @@ describe('v1.16.1 patterned backgrounds', () => {
   const build = (ls) => new Function('localStorage', `${consts}\n${block}\n${fnSource('normalizeBgPattern')}\n${fnSource('normalizeBgPatternStrength')}\n${fnSource('readBgPatternState')}\n${fnSource('bgPatternTileUrl')}
     return { BG_PATTERNS, normalizeBgPattern, normalizeBgPatternStrength, readBgPatternState, bgPatternTileUrl };`)(ls);
 
-  it('ships the 12 chosen patterns with unique ids, each a single SVG using the INK placeholder', () => {
+  it('ships the 16 chosen patterns with unique ids, each a single SVG using the INK placeholder', () => {
     const { BG_PATTERNS } = build(store());
     assert.deepEqual(BG_PATTERNS.map(p => p.name), ['Graph paper', 'Plus grid', 'Isometric', 'Diagonal', 'Pinstripe', 'Crosshatch',
-      'Hexagon', 'Herringbone', 'Basketweave', 'Chevron', 'Greek key', 'Dot grid']);
-    assert.equal(new Set(BG_PATTERNS.map(p => p.id)).size, 12);
+      'Hexagon', 'Herringbone', 'Basketweave', 'Chevron', 'Greek key', 'Dot grid',
+      'Snow crystals', 'Cherry petals', 'Water ripples', 'Maple leaves']);
+    assert.deepEqual(BG_PATTERNS.slice(12).map(p => p.id), ['snow-crystals', 'cherry-petals', 'ripples', 'maple-leaves']);
+    assert.equal(new Set(BG_PATTERNS.map(p => p.id)).size, 16);
+    assert.equal(BG_PATTERNS.length % 4, 0, 'patterns fill the 4-wide grid');
     for (const p of BG_PATTERNS) {
       assert.match(p.svg, /^<svg xmlns='http:\/\/www\.w3\.org\/2000\/svg' width='[\d.]+' height='[\d.]+'>[\s\S]*<\/svg>$/, p.id);
       assert.ok(p.svg.includes('INK'), `${p.id} uses INK`);
@@ -4288,9 +4313,10 @@ describe('clearCustomThemeInlineVars', () => {
   });
 
   it('applyTheme clears inline vars before applying, and the font is applied after initTheme', () => {
-    assert.match(fnSource('applyTheme'), /clearCustomThemeInlineVars\(\)/);
+    assert.match(fnSource('applyTheme'), /paintTheme\(id\);/);
+    assert.match(fnSource('paintTheme'), /^[^]*?clearCustomThemeInlineVars\(\);/);
     assert.match(fnSource('applyFontFamily'), /setProperty\('--font-family'/);
-    assert.match(html, /NON_THEME_INLINE_VARS = new Set\(\[[^\]]*'--font-family'/);
+    assert.match(html, /NON_THEME_INLINE_VARS = new Set\(\['--font-family', '--add-dock-h', '--keyboard-inset'\]\)/);
   });
 });
 
@@ -4688,10 +4714,10 @@ describe('UI audit fixes (1.12.1)', () => {
     assert.match(html, /\.progress-seg\.new \{ background: var\(--progress-new, color-mix\(in srgb, var\(--accent\) 22%/);
   });
 
-  it('long theme names get the compact label instead of being cut off', () => {
-    assert.equal((mainScript.match(/theme-swatch-name\$\{t\.name\.length > 11 \? ' long' : ''\}/g) || []).length, 2);
-    assert.match(html, /\.theme-swatch-name \{[^}]*max-width: 100%;/);
-    assert.match(html, /\.theme-swatch-name\.long \{ font-size: 0\.56rem;/);
+  it('long theme names get two lines on a fixed-height tile instead of being cut off', () => {
+    assert.match(html, /\.theme-swatch-name \{[^}]*-webkit-line-clamp: 2;/);
+    assert.match(html, /\.theme-swatch \{[^}]*height: 62px;/);
+    assert.doesNotMatch(html, /theme-swatch-name\.long/);
   });
 
   it('touch screens get finger-sized hit areas without shifting the layout', () => {
@@ -5003,8 +5029,8 @@ describe('v1.17.0 Options summary list', () => {
   });
 
   it('Esc closes an open section before the popout, and tabs / reopening return to the list', () => {
-    const init = fnSource('initDensityToggle');
-    assert.match(init, /\.options-pane\.in-section:not\(\.hidden\)/);
+    assert.match(fnSource('initDensityToggle'), /if \(!stepBackInOptions\(\)\) closeDensityPopout\(\);/);
+    assert.match(fnSource('stepBackInOptions'), /\.options-pane\.in-section:not\(\.hidden\):not\(\.options-split\)/);
     assert.match(fnSource('openDensityPopout'), /resetOptionsNavigation\(\);/);
     assert.match(fnSource('closeOptionsSection'), /renderOptionsSummaries\(\);/);
     assert.match(fnSource('openOptionsSection'), /if \(id === 'tags'\) renderTagColorList\(\);/);
@@ -5021,9 +5047,10 @@ describe('v1.17.0 Options summary list', () => {
     assert.ok((html.match(/class="options-new-tag" data-new-in="1\.17\.\d"/g) || []).length >= 2);
   });
 
-  it('switches replace checkboxes; patterns are 3 wide with the selected name below', () => {
+  it('switches replace checkboxes; patterns are 4 wide with the selected name below', () => {
     assert.match(html, /\.customize-toggle input \{[^}]*appearance: none;/);
-    assert.match(mainScript, /const BG_PATTERN_COLUMNS = 3;/);
+    assert.match(mainScript, /const BG_PATTERN_COLUMNS = 4;/);
+    assert.match(html, /\.bg-pattern-grid \{[^}]*grid-template-columns: repeat\(4, 1fr\)/);
     assert.match(html, /<p class="bg-pattern-picked">Selected: <strong id="bg-pattern-name"><\/strong><\/p>/);
     assert.match(fnSource('renderBgPattern'), /bg-pattern-name/);
     assert.doesNotMatch(html, /bg-pattern-tile-name/);
@@ -6517,14 +6544,18 @@ describe('docs stay in step with the app', () => {
 
   it('theme counts in Help and README match the theme list, and README names every theme', () => {
     const themes = new Function(`return ${html.match(/const THEMES = (\[[\s\S]*?\n    \]);/)[1]}`)();
+    const core = themes.filter((t) => !t.season);
     const tiers = {
-      Light: themes.filter((t) => !t.dark && !t.medium),
-      Medium: themes.filter((t) => t.medium),
-      Dark: themes.filter((t) => t.dark),
+      Light: core.filter((t) => !t.dark && !t.medium),
+      Medium: core.filter((t) => t.medium),
+      Dark: core.filter((t) => t.dark),
+      Seasonal: themes.filter((t) => t.season),
     };
-    const [l, m, d] = [tiers.Light.length, tiers.Medium.length, tiers.Dark.length];
-    assert.ok(readme.includes(`**${themes.length} preset themes** — ${l} light + ${m} medium + ${d} dark`), 'README count');
-    assert.ok(html.includes(`${themes.length} presets (${l} light, ${m} medium, ${d} dark`), 'Help count');
+    const [l, m, d, s] = [tiers.Light.length, tiers.Medium.length, tiers.Dark.length, tiers.Seasonal.length];
+    assert.ok(readme.includes(`**${core.length} preset themes** — ${l} light + ${m} medium + ${d} dark`), 'README count');
+    assert.ok(readme.includes(`plus **${s} seasonal themes**`), 'README seasonal count');
+    assert.ok(html.includes(`${core.length} presets (${l} light, ${m} medium, ${d} dark`), 'Help count');
+    assert.ok(html.includes(`${s} <strong>Season</strong> themes`), 'Help seasonal count');
     for (const [tier, list] of Object.entries(tiers)) {
       const line = readme.match(new RegExp(`\\*\\*${tier} \\(${list.length}\\):\\*\\*([^\\n]*)`));
       assert.ok(line, `README ${tier} line with count ${list.length}`);
@@ -6569,12 +6600,11 @@ describe('Help modal structure', () => {
 });
 
 describe('theme grid width', () => {
-  it('columns can shrink below their longest name, names wrap, and a too-wide word is shrunk after each render', () => {
-    assert.match(html, /\.theme-picker-grid \{\s*display: grid; grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
-    assert.match(html, /\.theme-swatch \{\s*min-width: 0;/);
-    assert.match(html, /\.theme-picker-grid \.theme-swatch-name \{\s*white-space: normal;/);
-    assert.match(fnSource('renderThemeSwatches'), /requestAnimationFrame\(fitThemeNames\);\s*document\.fonts\?\.ready\.then\(fitThemeNames\);\s*\}$/);
-    assert.match(fnSource('fitThemeNames'), /while \(name\.scrollWidth > name\.clientWidth \+ 0\.5 && size > min\)/);
+  it('tiles are at least 96px wide and fill the row, so the column count follows the panel width', () => {
+    assert.match(html, /\.theme-picker-grid \{ display: grid; grid-template-columns: repeat\(auto-fill, minmax\(96px, 1fr\)\); gap: 10px; \}/);
+    assert.match(html, /\.theme-tile-wrap \{ position: relative; min-width: 0; \}/);
+    assert.match(html, /\.theme-swatch-name \{[^}]*overflow-wrap: anywhere;/);
+    assert.doesNotMatch(mainScript, /fitThemeNames/);
   });
 });
 
@@ -6830,5 +6860,311 @@ describe('the app\'s own sync merge and dedupe code (run from work-desk.html)', 
       assert.equal(removed, 0);
       assert.deepEqual(items.map((i) => i.id), ['a', 'b']);
     });
+  });
+});
+
+describe('v1.24.0 seasonal themes, patterns, and theme-color', () => {
+  const themes = new Function(`return ${html.match(/const THEMES = (\[[\s\S]*?\n    \]);/)[1]}`)();
+  const seasonal = themes.filter((t) => t.season);
+  const cssBlock = (id) => [...html.matchAll(new RegExp(`\\[data-theme="${id}"\\] \\{([^}]*)\\}`, 'g'))]
+    .find((m) => /--accent:/.test(m[1]))?.[1];
+  const cssVar = (block, name) => (block.match(new RegExp(`${name}:\\s*([^;]+);`)) || [])[1]?.trim();
+  const { contrastRatio } = new Function(`${['hexToRgb', 'srgbToLinear', 'relativeLuminance', 'contrastRatio'].map(fnSource).join('\n')}
+    return { contrastRatio };`)();
+  const EXPECTED = {
+    winter: [['frost', 'Frost', 'light'], ['winter-dusk', 'Winter Dusk', 'medium'], ['evergreen-night', 'Evergreen Night', 'dark']],
+    spring: [['blossom', 'Blossom', 'light'], ['spring-rain', 'Spring Rain', 'medium'], ['orchard-night', 'Orchard Night', 'dark']],
+    summer: [['sunlit', 'Sunlit', 'light'], ['sea-glass', 'Sea Glass', 'medium'], ['midsummer-night', 'Midsummer Night', 'dark']],
+    autumn: [['harvest', 'Harvest', 'light'], ['red-maple', 'Red Maple', 'medium'], ['bonfire', 'Bonfire', 'dark']],
+  };
+  const tierOf = (t) => (t.medium ? 'medium' : t.dark ? 'dark' : 'light');
+
+  it('12 seasonal themes, each season in light, medium, and dark order', () => {
+    for (const [season, rows] of Object.entries(EXPECTED)) {
+      const list = seasonal.filter((t) => t.season === season);
+      assert.deepEqual(list.map((t) => [t.id, t.name, tierOf(t)]), rows, season);
+    }
+    assert.equal(seasonal.length, 12);
+    for (const t of seasonal.filter((x) => x.medium)) assert.strictEqual(t.dark, false, `${t.id} medium flags`);
+  });
+
+  it('each has a full CSS block whose swatch colors match, the right color-scheme, and a favicon', () => {
+    const favicons = html.match(/const FAVICONS = \{[\s\S]*?\n\s*\};/)[0];
+    for (const t of seasonal) {
+      const block = cssBlock(t.id);
+      assert.ok(block, `CSS block for ${t.id}`);
+      for (const v of ['--bg', '--surface', '--sidebar', '--accent', '--text', '--text-muted', '--done', '--carried', '--carried-ink', '--shelved-label', '--danger']) {
+        assert.ok(cssVar(block, v), `${t.id} sets ${v}`);
+      }
+      assert.equal(cssVar(block, '--accent').toLowerCase(), t.accent, `${t.id} accent`);
+      assert.equal(cssVar(block, '--surface').toLowerCase(), t.surface, `${t.id} surface`);
+      assert.equal(cssVar(block, '--sidebar').toLowerCase(), t.sidebar, `${t.id} sidebar`);
+      assert.equal(cssVar(block, '--bg').toLowerCase(), t.bg, `${t.id} bg`);
+      assert.match(block, tierOf(t) === 'light' ? /color-scheme: light;/ : /color-scheme: dark;/, `${t.id} color-scheme`);
+      assert.match(favicons, new RegExp(`'${t.id}': '`), `${t.id} favicon`);
+    }
+  });
+
+  it('text, sidebar text, and the accent stay readable (WCAG AA)', () => {
+    for (const t of seasonal) {
+      const b = cssBlock(t.id);
+      const v = (n) => cssVar(b, n).match(/#[0-9a-f]{6}/i)[0];
+      for (const bg of ['--surface', '--bg']) {
+        assert.ok(contrastRatio(v('--text'), v(bg)) >= 4.5, `${t.id} text on ${bg}`);
+        assert.ok(contrastRatio(v('--text-muted'), v(bg)) >= 4.5, `${t.id} muted on ${bg}`);
+      }
+      assert.ok(contrastRatio(v('--sidebar-text'), v('--sidebar')) >= 4.5, `${t.id} sidebar text`);
+      assert.ok(contrastRatio(v('--carried-ink'), v('--sidebar')) >= 4.5, `${t.id} carried ink on sidebar`);
+      for (const c of ['--accent', '--done', '--carried']) {
+        assert.ok(contrastRatio(v(c), v('--surface')) >= 3, `${t.id} ${c} on surface`);
+      }
+    }
+  });
+
+  it('bright-accent seasonal themes get dark text on filled buttons, and every button label is readable', () => {
+    const DARK_TEXT = ['winter-dusk', 'evergreen-night', 'spring-rain', 'orchard-night', 'sea-glass', 'midsummer-night', 'red-maple', 'bonfire'];
+    for (const t of seasonal) {
+      const m = html.match(new RegExp(`\\[data-theme="${t.id}"\\] \\.add-btn, \\[data-theme="${t.id}"\\] \\.modal-btn\\.primary \\{ color: (#[0-9a-f]{6}); \\}`));
+      assert.equal(!!m, DARK_TEXT.includes(t.id), `${t.id} dark-text override`);
+      assert.ok(contrastRatio(m ? m[1] : '#ffffff', t.accent) >= 4.5, `${t.id} button label on accent`);
+    }
+  });
+
+  it('the Season tab groups by season, and themeGroup keeps seasonal out of Light/Dim/Dark', () => {
+    assert.match(html, /<button type="button" class="theme-filter-btn" data-theme-filter="seasonal" role="tab">Season<\/button>/);
+    const filters = [...html.matchAll(/class="theme-filter-btn[^"]*" data-theme-filter="([a-z]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(filters, ['light', 'medium', 'dark', 'seasonal', 'custom'], 'Season sits between Dark and Custom');
+    const SEASONS = new Function(`${mainScript.match(/const SEASONS = \[[\s\S]*?\];/)[0]}\nreturn SEASONS;`)();
+    assert.deepEqual(SEASONS.map((s) => s.id), Object.keys(EXPECTED));
+    const themeGroup = new Function(`${mainScript.match(/const themeGroup = [^\n]*/)[0]}\nreturn themeGroup;`)();
+    assert.equal(themeGroup({ season: 'winter', medium: true, dark: false }), 'seasonal');
+    assert.equal(themeGroup({ medium: true, dark: false }), 'medium');
+    assert.equal(themeGroup({ dark: true }), 'dark');
+    assert.equal(themeGroup({}), 'light');
+    assert.equal(themeGroup({ custom: true, dark: true }), 'custom');
+    assert.match(mainScript, /seasonal: 'Season'/);
+    assert.match(fnSource('renderThemeSwatches'), /SEASONS\.forEach\(s => \{\s*themeGridSection\(elThemeGrid, s\.name, THEMES\.filter\(t => t\.season === s\.id\)/);
+  });
+
+  it('theme-color follows the sidebar on launch and on every theme change', () => {
+    const fn = fnSource('syncThemeColorMeta');
+    assert.match(fn, /meta\[name="theme-color"\]/);
+    assert.match(fn, /getPropertyValue\('--sidebar'\)/);
+    assert.match(fn, /typeof getComputedStyle !== 'function'/, 'safe outside a browser');
+    assert.match(fnSource('paintTheme'), /syncThemeColorMeta\(\);/);
+    assert.match(fnSource('applyTheme'), /paintTheme\(id\);/);
+    assert.match(fnSource('initTheme'), /syncThemeColorMeta\(\);/);
+    const meta = { content: '#1a1025', setAttribute(k, v) { this[k] = v; } };
+    const run = new Function('document', 'getComputedStyle', `${fn}\nsyncThemeColorMeta();`);
+    run({ querySelector: () => meta, documentElement: {} }, () => ({ getPropertyValue: () => ' #7c2a0e ' }));
+    assert.equal(meta.content, '#7c2a0e');
+    run({ querySelector: () => meta, documentElement: {} }, () => ({ getPropertyValue: () => '' }));
+    assert.equal(meta.content, '#7c2a0e', 'an empty value leaves the last color');
+  });
+
+  it('the Background row carries a New tag for 1.24.0', () => {
+    assert.match(html, /Background<span class="options-new-tag" data-new-in="1\.24\.0">New<\/span>/);
+  });
+});
+
+describe('v1.24.1 tag label clip and unused CSS', () => {
+  it('the ellipsis clip on chip labels has room above and below the cap-height-trimmed glyphs', () => {
+    const rule = html.match(/\.tag-chip-row \.tag-chip-label \{([^}]*)\}/)[1];
+    assert.match(rule, /overflow: hidden;/);
+    assert.match(rule, /text-overflow: ellipsis;/);
+    const pad = rule.match(/padding-block: ([\d.]+)em;/);
+    const margin = rule.match(/margin-block: -([\d.]+)em;/);
+    assert.ok(pad && margin, 'padding-block and a negative margin-block');
+    assert.equal(pad[1], margin[1], 'the margin cancels the padding, so the chip keeps its size');
+    assert.ok(Number(pad[1]) >= 0.25, 'enough room for the glyph tops to clear the clip');
+    assert.match(html, /\.tag-chip-label \{ text-box: trim-both cap alphabetic; \}/, 'the trim that makes the room necessary');
+  });
+
+  it('every class that starts a CSS rule is used somewhere else in the app', () => {
+    const classes = [...new Set([...html.matchAll(/^\s*\.([a-z][\w-]+)[\s,{:.[]/gm)].map((m) => m[1]))];
+    assert.ok(classes.length > 500, 'found the stylesheet');
+    const unused = classes.filter((c) => (html.match(new RegExp(`(?<![\\w-])${c}(?![\\w-])`, 'g')) || []).length <= 1);
+    assert.deepEqual(unused, [], 'styled but never used: remove the rule or use the class');
+  });
+
+  it('the removed leftovers stay gone', () => {
+    for (const c of ['theme-picker-label', 'theme-section', 'theme-section-label', 'theme-section-divider', 'sidebar-account-top',
+      'sidebar-account-identity', 'theme-toggle-unused', 'date-list', 'empty-nav', 'backup-section', 'backup-group',
+      'project-notes-section', 'project-tasks-section', 'project-section-title', 'project-item-title', 'date-badge',
+      'done-label', 'shelved-label', 'comment-count-badge', 'no-comments']) {
+      assert.doesNotMatch(html, new RegExp(`\\.${c}(?![\\w-])`), c);
+    }
+    assert.match(html, /--shelved-label:/, 'the theme variable of the same name is still in use');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// 1.25.0 theme picker, Options layout and keyboard inset
+// ═══════════════════════════════════════════════════════════════════════
+describe('1.25.0 theme picker logic', () => {
+  const THEMES = new Function(`return ${html.match(/const THEMES = (\[[\s\S]*?\n    \]);/)[1]}`)();
+  const { SEASONS } = appFns(['SEASONS']);
+  const themeGroup = new Function(`return ${html.match(/const themeGroup = (.*);/)[1]}`)();
+  const themeFamily = new Function('SEASONS', `return ${html.match(/const themeFamily = (.*);/)[1]}`)(SEASONS);
+  const fns = appFns(['nextRecentThemes', 'pinnedThemeIds', 'foldThemeText', 'searchThemes', 'nextThemeTileIndex', 'themeTileInk', 'contrastRatio', 'keyboardInset'],
+    { themeGroup, themeFamily, MAX_RECENT_THEMES: 3 });
+
+  it('recent keeps the last 3 picks, newest first, without repeats', () => {
+    assert.deepEqual(fns.nextRecentThemes([], 'a'), ['a']);
+    assert.deepEqual(fns.nextRecentThemes(['a', 'b', 'c'], 'd'), ['d', 'a', 'b']);
+    assert.deepEqual(fns.nextRecentThemes(['a', 'b', 'c'], 'b'), ['b', 'a', 'c']);
+    assert.match(html, /const MAX_RECENT_THEMES = 3;/);
+  });
+
+  it('the pinned row is current, then starred, then recent, each once, skipping deleted themes', () => {
+    assert.deepEqual(fns.pinnedThemeIds('x', ['y', 'x'], ['z', 'y', 'gone'], (id) => id !== 'gone'), ['x', 'y', 'z']);
+    assert.deepEqual(fns.pinnedThemeIds('', [], []), [''], 'Default (id "") still pins');
+    assert.deepEqual(fns.pinnedThemeIds('a', ['b', 7, null], ['c']), ['a', 'b', 'c']);
+  });
+
+  it('search ignores accents and case, and matches name, family and tier words', () => {
+    assert.equal(fns.foldThemeText('Rosé Pine Dawn'), 'rose pine dawn');
+    assert.equal(fns.foldThemeText(null), '');
+    const ids = (q) => fns.searchThemes(THEMES, q).map((t) => t.id);
+    for (const id of ['rose-pine-dawn', 'rose-pine', 'rose-pine-moon']) assert.ok(ids('ROSE').includes(id), id);
+    assert.deepEqual(ids('warm').sort(), THEMES.filter((t) => t.family === 'Warm').map((t) => t.id).sort());
+    assert.equal(ids('dim').length, 36);
+    assert.deepEqual(ids('dim'), ids('medium'));
+    assert.equal(ids('season').length, 12);
+    assert.ok(ids('winter').includes('frost'), 'season names count as the family');
+    assert.deepEqual(ids('  '), []);
+    assert.deepEqual(ids('zzzz'), []);
+  });
+
+  it('arrow keys move by on-screen position: rows by y, nearest column by x, clamped at the ends', () => {
+    // 3 columns, then a short last row of 2
+    const pts = [[0, 0], [100, 0], [200, 0], [0, 80], [100, 80], [200, 80], [0, 160], [100, 160]].map(([x, y]) => ({ x, y }));
+    const next = fns.nextThemeTileIndex;
+    assert.equal(next(pts, 0, 'ArrowRight'), 1);
+    assert.equal(next(pts, 7, 'ArrowRight'), 7);
+    assert.equal(next(pts, 0, 'ArrowLeft'), 0);
+    assert.equal(next(pts, 1, 'ArrowDown'), 4);
+    assert.equal(next(pts, 5, 'ArrowDown'), 7, 'short last row: nearest column');
+    assert.equal(next(pts, 7, 'ArrowDown'), 7);
+    assert.equal(next(pts, 4, 'ArrowUp'), 1);
+    assert.equal(next(pts, 2, 'ArrowUp'), 2);
+    assert.equal(next(pts, 4, 'Home'), 0);
+    assert.equal(next(pts, 1, 'End'), 7);
+    assert.equal(next(pts, 1, 'Enter'), null);
+  });
+
+  it('every built-in tile name reads at 4.5:1 or better on its own background', () => {
+    const weak = THEMES.map((t) => [t.id, fns.contrastRatio(t.bg, fns.themeTileInk(t.bg))]).filter(([, r]) => r < 4.5);
+    assert.deepEqual(weak, []);
+    assert.equal(fns.themeTileInk('#ffffff'), '#16181d');
+    assert.equal(fns.themeTileInk('#101010'), '#ffffff');
+  });
+
+  it('every built-in theme has a color family, seasonals use their season, custom themes group as Your themes', () => {
+    const FAMILIES = ['Cool', 'Green', 'Warm', 'Red & pink', 'Purple & neutral', 'Purple & pink', 'Neutral', 'Purple', 'Neon', 'Unit series'];
+    for (const t of THEMES.filter((x) => !x.season)) assert.ok(FAMILIES.includes(t.family), `${t.id}: ${t.family}`);
+    const by = (id) => THEMES.find((t) => t.id === id);
+    assert.equal(by('retro').family, 'Purple & neutral');
+    assert.equal(by('rosewood').family, 'Warm');
+    assert.equal(by('monokai-pro').family, 'Warm');
+    assert.equal(themeFamily(by('frost')), 'Winter');
+    assert.equal(themeFamily({ custom: true }), 'Your themes');
+    assert.equal(themeGroup({ custom: true, dark: true }), 'custom');
+  });
+
+  it('the keyboard inset is the covered height at normal zoom, and 0 when pinch-zoomed', () => {
+    assert.equal(fns.keyboardInset(800, 500, 0), 300);
+    assert.equal(fns.keyboardInset(800, 500, 40), 260);
+    assert.equal(fns.keyboardInset(800, 820, 0), 0);
+    assert.equal(fns.keyboardInset(800, 400, 0, 1.6), 0);
+    assert.match(html, /interactive-widget=resizes-content/);
+    assert.match(html, /bottom: var\(--keyboard-inset, 0px\)/);
+  });
+
+  it('deleting the current custom theme falls back to Default and unpins it', () => {
+    let customs = [{ id: 'custom-1', name: 'Mine' }, { id: 'custom-2', name: 'Other' }];
+    let stored = 'custom-1';
+    let pins = { stars: ['custom-1', 'nord'], recent: ['custom-1', 'dracula'] };
+    const applied = [];
+    const { deleteCustomTheme } = appFns(['deleteCustomTheme'], {
+      loadCustomThemes: () => customs,
+      saveCustomThemes: (list) => { customs = list; },
+      savedThemeId: () => (customs.some((t) => t.id === stored) || !stored.startsWith('custom-') ? stored : ''),
+      loadThemeStars: () => pins.stars,
+      loadThemeRecent: () => pins.recent,
+      saveThemePins: ({ stars, recent }) => { pins = { stars: stars ?? pins.stars, recent: recent ?? pins.recent }; },
+      applyTheme: (id) => { applied.push(id); stored = id; },
+    });
+    deleteCustomTheme('custom-2');
+    assert.deepEqual(applied, [], 'deleting another theme keeps the current one');
+    deleteCustomTheme('custom-1');
+    assert.deepEqual(applied, ['']);
+    assert.deepEqual(customs, []);
+    assert.deepEqual(pins, { stars: ['nord'], recent: ['dracula'] });
+  });
+
+  it('stars and recent sync with prefs', () => {
+    assert.match(fnSource('readLocalPrefs'), /themeStars: loadThemeStars\(\),\s*themeRecent: loadThemeRecent\(\),/);
+    const apply = fnSource('applyCloudPrefs');
+    assert.match(apply, /ids\(prefs\.themeStars\)/);
+    assert.match(apply, /ids\(prefs\.themeRecent\)\?\.slice\(0, MAX_RECENT_THEMES\)/);
+    assert.match(html, /const THEME_STARS_KEY = 'work-desk-theme-stars';/);
+    assert.match(html, /const THEME_RECENT_KEY = 'work-desk-theme-recent';/);
+  });
+
+  it('a mouse pick closes Options; a touch pick keeps it open to try another', () => {
+    assert.match(fnSource('pickThemeFromPicker'), /pickTheme\(id\);\s*if \(HOVER_PREVIEW_QUERY\.matches\) closeDensityPopout\(\);/);
+    assert.match(html, /const HOVER_PREVIEW_QUERY = window\.matchMedia\('\(hover: hover\) and \(pointer: fine\)'\)/);
+  });
+
+  it('click-outside trusts the event path, so a re-rendered button inside Options never closes it', () => {
+    assert.match(html, /if \(e\.composedPath\?\.\(\)\.includes\(popout\)\) return;/);
+  });
+
+  it('the controls the new picker replaced leave no CSS or markup behind', () => {
+    for (const c of ['current-theme-btn', 'current-theme-jump', 'theme-season-label', 'theme-filter-row', 'custom-swatches-row', 'custom-swatch-delete', 'custom-preview-app']) {
+      assert.doesNotMatch(html, new RegExp(`${c}(?![\\w-])`), c);
+    }
+  });
+
+  it('Options steps back one level at a time: preview, editor, then section', () => {
+    const src = fnSource('stepBackInOptions');
+    const order = ['endThemePreview', 'cancelCustomEditor', 'closeOptionsSection'].map((n) => src.indexOf(n));
+    assert.ok(order.every((i) => i > 0));
+    assert.deepEqual([...order].sort((a, b) => a - b), order);
+    assert.match(src, /\.options-pane\.in-section:not\(\.hidden\):not\(\.options-split\)/);
+  });
+});
+
+describe('functions no test ran before 1.25.0', () => {
+  it('sortByReference orders by the reference ids and keeps unknown ids, in order, at the end', () => {
+    const { sortByReference } = appFns(['sortByReference']);
+    const list = [{ id: 'a' }, { id: 'x' }, { id: 'b' }, { id: 'y' }, { id: 'c' }];
+    assert.deepEqual(sortByReference(list, [{ id: 'c' }, { id: 'a' }, { id: 'b' }]).map((o) => o.id), ['c', 'a', 'b', 'x', 'y']);
+    assert.deepEqual(sortByReference(list, null).map((o) => o.id), ['a', 'x', 'b', 'y', 'c']);
+    assert.deepEqual(sortByReference([], [{ id: 'a' }]), []);
+  });
+
+  it('tagPaletteSlot is a stable slot in the 8-color palette', () => {
+    const { tagPaletteSlot } = appFns(['tagPaletteSlot']);
+    const slots = ['ace', 'ids', 'oms', 'p1', 'databricks', 'emoji 🎯', ''].map(tagPaletteSlot);
+    for (const s of slots) assert.ok(Number.isInteger(s) && s >= 0 && s < 8, String(s));
+    assert.equal(tagPaletteSlot('ace'), tagPaletteSlot('ace'));
+    assert.equal(tagPaletteSlot(42), tagPaletteSlot('42'));
+    assert.ok(new Set(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(tagPaletteSlot)).size > 1, 'tags spread across slots');
+  });
+
+  it('sbPull returns the cloud row, or null when signed out or the pull fails', async () => {
+    const warn = console.warn;
+    const warned = [];
+    console.warn = (...a) => warned.push(a.join(' '));
+    try {
+      assert.equal(await appFns(['sbPull'], { sbClient: null, sbPullRow: async () => ({ data: 1 }) }).sbPull(), null);
+      assert.deepEqual(await appFns(['sbPull'], { sbClient: {}, sbPullRow: async () => ({ data: 1 }) }).sbPull(), { data: 1 });
+      assert.equal(await appFns(['sbPull'], { sbClient: {}, sbPullRow: async () => { throw new Error('offline'); } }).sbPull(), null);
+      assert.deepEqual(warned, ['[sync] pull failed: offline']);
+    } finally {
+      console.warn = warn;
+    }
   });
 });
