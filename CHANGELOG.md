@@ -6,6 +6,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.25.1] — 2026-11-10
+
+### Fixed
+
+- **Empty column on the Season tab.** The picker grid fits as many 96px tiles as the panel allows, so at 560px each season's three themes left a blank fourth column. Season grids now use `repeat(3, minmax(0, 1fr))`, so light, medium, and dark fill the row at every width. Light, Dim, and Dark keep the flexible grid.
+
+---
+
 ## [1.25.0] — 2026-11-10
 
 ### Added
