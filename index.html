@@ -2962,6 +2962,8 @@
     .theme-pin-more { padding: 3px 10px; background: var(--panel-bg); color: var(--text); }
     .theme-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 14px; }
     .theme-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+    /* Each season is exactly light, medium, dark: three columns that fill the row */
+    .theme-picker-grid.season-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .theme-tile-wrap { position: relative; min-width: 0; }
     .theme-swatch {
       width: 100%; height: 62px; box-sizing: border-box; padding: 7px 8px; border-radius: 8px;
@@ -9497,12 +9499,21 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.25.0';
+    const APP_VERSION = '1.25.1';
     const CHANGELOG = [
+      {
+        version: '1.25.1',
+        date: 'Nov 10, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'The Season tab in Options → Themes no longer leaves an empty column. Each season\'s three themes now stretch across the full width',
+          ] },
+        ],
+      },
       {
         version: '1.25.0',
         date: 'Nov 10, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'A new theme picker in Options → Themes. Themes show as color tiles grouped by color (Cool, Green, Warm, and so on), and a search box finds them by name, color, or tier. Rosé Pine turns up when you type rose',
@@ -11689,13 +11700,13 @@
       return wrap;
     }
 
-    function themeGridSection(parent, label, list, current, stars, labelHtml = null) {
+    function themeGridSection(parent, label, list, current, stars, labelHtml = null, gridClass = '') {
       const head = document.createElement('div');
       head.className = 'theme-family-label';
       if (labelHtml) head.innerHTML = labelHtml;
       else head.textContent = label;
       const grid = document.createElement('div');
-      grid.className = 'theme-picker-grid';
+      grid.className = gridClass ? `theme-picker-grid ${gridClass}` : 'theme-picker-grid';
       grid.setAttribute('role', 'radiogroup');
       grid.setAttribute('aria-label', label);
       list.forEach(t => grid.appendChild(themeTile(t, current, stars)));
@@ -11765,7 +11776,7 @@
         } else if (currentThemeFilter === 'seasonal') {
           SEASONS.forEach(s => {
             themeGridSection(elThemeGrid, s.name, THEMES.filter(t => t.season === s.id), current, stars,
-              `<span aria-hidden="true">${s.icon}</span> ${s.name}`);
+              `<span aria-hidden="true">${s.icon}</span> ${s.name}`, 'season-grid');
           });
         } else {
           const families = [];
