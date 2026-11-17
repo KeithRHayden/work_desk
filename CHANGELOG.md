@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.26.0] — 2026-11-16
+
+### Added
+
+- **Vacations.** Options → Behavior → Holidays has a Vacations list: an optional label plus first and last day off, so a trip like Dec 21 – Jan 4 is one entry instead of 15 custom holidays. The last-day box can't go before the first, and a range that overlaps an existing vacation is turned away with a message naming it. Each row shows the range, the day count, the label, and ✕ to remove; finished trips hide behind Show past. Stored as `work-desk-vacations` and synced with your other settings. Reset Behavior keeps them.
+- **Skip holidays covers vacations.** Recurring templates with *Skip holidays* on aren't added on vacation days, and their *next due* date skips past the trip. Templates without it keep appearing.
+- **Vacation band on the calendar.** A soft accent-tinted band runs across vacation days, joined within each week row and rounded at the ends. Holidays inside a vacation keep their accent number and dot, the hover tooltip names the vacation, and a Vacation legend item appears when the month shows one.
+
+### Improved
+
+- **Insights ignore time away.** Vacation days don't break a streak (whatever the weekend setting), Lingering Tasks subtracts them from how long a task has been open, and a carry made on a vacation day doesn't add to the task's Carry Chains count. Auto carry itself is unchanged: open tasks still carry to the day you're back.
+
+---
+
 ## [1.25.1] — 2026-11-10
 
 ### Fixed
