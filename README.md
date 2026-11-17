@@ -31,7 +31,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Organization
 
 - **Work / Personal / Projects** — separate contexts
-- **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens). The calendar's selected day is a solid fill in the theme color; yellow number badges count tasks left open (rose on amber-accent themes, matching Insights *carried over*); a legend underneath explains *Has items · Left open · Holiday*; and a *Today* chip appears when you've browsed to another month
+- **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens). The calendar's selected day is a solid fill in the theme color; yellow number badges count tasks left open (rose on amber-accent themes, matching Insights *carried over*); a legend underneath explains *Has items · Left open · Holiday* (plus *Vacation* when the month shows one); a soft shaded band marks vacation days; and a *Today* chip appears when you've browsed to another month
 - **Quieter weekends** — Options → Behavior → General grays Sat/Sun on the sidebar calendar, dims them on the week strip, and leaves empty weekend days out of the Insights Month chart: *Off* (default), *Work only*, or *Both desks*
 - **Open desk** — Options → Behavior → General picks the desk the app starts on: *Last used* (default), *Work*, or *Personal*
 - **Calendar legend / Today's Progress switches** — Options → Appearance → Layout can hide the key under the sidebar calendar and the Today's Progress card (both on by default; tablets and computers only, since phones don't show the sidebar)
@@ -51,14 +51,14 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **This week / month / year** button returns to the current period after stepping away
 - **Week-over-week, month-over-month, year-over-year** comparisons; an in-progress month or year is compared with the same days at the start of the previous one
 - **Tasks by Tag** — done / open / shelved / carried per tag for the period
-- **Lingering Tasks** — the five oldest open tasks right now, with days open and a jump link
+- **Lingering Tasks** — the five oldest open tasks right now, with days open (not counting vacation days) and a jump link
 - **Shelved Review** — shelved tasks in the period with *Bring back* (to today's Active column) and *Open*, plus an all-time shelved count
 - **Recurring Follow-through** — per recurring task, Done / Still open / Missed on the days it came up, lowest rate first; *Rarely done* flags under 50% after 3+ chances
 - **Carry Chains** — tasks carried forward 3 or more times, oldest first, with *Shelve* and *Open*
 - **Tag Trend** — each tag's share of tasks vs the previous period, with ▲ / ▼ for moves of 5 points or more
 - **Carry-over analysis** — counted on the day each task was left unfinished; Month/Year views add a by-week / by-month trend chart (Year stops at the current month) and show the specific dates behind each weekday bar inline (hover a row for the full list)
 - **Streak tracking** — current/longest streaks based on days with desk activity, with a heatmap matched to the selected period, labeled by weekday, date, or month
-- **Weekends don't break streaks** — Options → Behavior toggle (on by default); Fri → Mon stays consecutive; active weekend days still count, idle weekends do not reset the streak
+- **Weekends don't break streaks** — Options → Behavior toggle (on by default); Fri → Mon stays consecutive; active weekend days still count, idle weekends do not reset the streak. Vacation days never break a streak, whatever this is set to
 - **Charts** — bar, line, stacked, and pie, each with hover tooltips
 - Activity heatmap (year view) and a day-by-day progress breakdown table (real date labels; today marked e.g. `Tue, Sep 22 (Today)`)
 
@@ -71,8 +71,8 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
   - Themes: a search box (ignores accents, so *rose* finds Rosé Pine; also matches color families like *warm* and tiers like *dim*), tier tabs *Light / Dim / Dark / Season / Custom*, and a one-line pinned row of your current theme, ★ starred themes, and the last 3 you picked, with *+N more* opening the full Pinned view. Stars and recent themes sync with your settings. With a mouse, hovering a tile previews it on the desk (leaving, Esc, or closing puts your theme back) and a click keeps it and closes Options; on touch, a tap applies it and Options stays open to try another. Arrow keys, Home and End move between tiles, Enter picks, and *S* stars. Tile names are checked for at least 4.5:1 contrast on every theme
   - Phone sheet: the Themes / Appearance / Behavior tabs sit at the bottom within thumb reach; Themes uses 75% of the screen, Appearance and Behavior share the taller list's height so switching tabs doesn't make the sheet jump, and Android's Back button steps back one level (preview, editor, section) before closing
   - Appearance: Card layout (Comfortable/Compact, complete button style, tag position), Typography (text size, font family), Layout (sidebar left, right, top, or bottom, calendar legend, Today's Progress; tablets and computers only, so phones show a note instead), Effects (card glow, gradient header), Background (16 patterns, 2–45% strength), Tags (tag colors; top 8 tags with *Show all*; *Reset* only on pinned colors)
-  - Behavior: General (startup view, first day of week, quieter weekends), Tasks (keep comments open, auto-collapse completed with threshold 3–20, auto carry each day, celebration confetti, confirm before delete, strike-through completed tasks), Projects (truncate long notes), Insights (weekends don't break streaks), Holidays (past custom holidays hidden behind *Show past*)
-  - *Reset to defaults* at the bottom of Appearance and Behavior restores new-install settings for that tab; theme, pinned tag colors, and custom holidays are kept
+  - Behavior: General (startup view, first day of week, quieter weekends), Tasks (keep comments open, auto-collapse completed with threshold 3–20, auto carry each day, celebration confetti, confirm before delete, strike-through completed tasks), Projects (truncate long notes), Insights (weekends don't break streaks), Holidays (US federal, custom holidays, and vacation ranges; past ones hidden behind *Show past*)
+  - *Reset to defaults* at the bottom of Appearance and Behavior restores new-install settings for that tab; theme, pinned tag colors, custom holidays, and vacations are kept
 - **Keep comments open** — multiple comment panels at once; now persists correctly across day navigation and refresh
 - Collapsible sidebar on desktop, with a "Today's Progress" mini card that always reflects today regardless of which day you're viewing (hidden on phones, where the desk header's progress bar and Back to today cover it)
 
@@ -113,7 +113,8 @@ The details behind the features above: when things happen automatically, and wha
 - **Once per day** — each template adds at most one task per day; deleting or completing it won't bring it back that day
 - **No backfill, no preview** — days the app was never opened don't get filled in later, and future days stay empty until that day arrives
 - **Offline mode** — with no account there's no periodic sync, so a tab left open overnight adds the new day's tasks after a refresh or a Work/Personal switch
-- **Skip holidays** — templates with *skip holidays* on aren't added on US federal holidays (when enabled in Options → Behavior) or your custom holidays
+- **Skip holidays** — templates with *skip holidays* on aren't added on US federal holidays (when enabled in Options → Behavior) or your custom holidays, or any day of a vacation
+- **Vacations** — Options → Behavior → Holidays → Vacations takes an optional label and a first and last day off (e.g. Dec 21 – Jan 4) in one entry. Overlapping ranges are refused, each row shows the day count, and ✕ removes one. Vacations sync with your settings, show as a band on the sidebar calendar, don't break Insights streaks, don't age Lingering Tasks, and don't add to Carry Chains. Auto carry is unchanged
 - **Every 2 weeks** — counts from the first date you pick, so it lands on that weekday every other week
 - **Monthly and quarterly** — *Day of month* picks one or more dates; a 29th–31st falls on the last day in shorter months, and *Last* is always the last day. *Day of week* picks one or more weeks (1st–4th or Last) and a weekday. Quarterly runs in one of three month sets (Jan · Apr · Jul · Oct, Feb · May · Aug · Nov, or Mar · Jun · Sep · Dec)
 - **Ctrl+Enter** (Cmd+Enter on Mac) adds or saves a template, the same as it saves task, note, and comment edits
