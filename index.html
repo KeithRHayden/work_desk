@@ -3486,6 +3486,21 @@
     .cal-legend-dot.holiday { background: var(--accent); }
     /* Same color as the numbers on .cal-day-badge, the part of the badge you actually see */
     .cal-legend-badge { width: 5px; height: 5px; border-radius: 50%; background: var(--carried-ink); }
+    .cal-legend-band { width: 12px; height: 6px; border-radius: 999px; }
+
+    /* Vacation band: reaches 1px into the grid gap on each side so neighbors join into one bar */
+    .cal-day.vacation { isolation: isolate; }
+    .cal-day.vacation::before {
+      content: '';
+      position: absolute;
+      inset: 3px -1px;
+      z-index: -1;
+    }
+    .cal-day.vacation::before,
+    .cal-legend-band { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+    .cal-day.vac-start::before { left: 2px; border-radius: 999px 0 0 999px; }
+    .cal-day.vac-end::before { right: 2px; border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
+    .cal-day.vacation.selected::before { display: none; }
 
     .cal-day.holiday { color: var(--accent); font-weight: 600; }
     .cal-day.holiday.has-data:not(.selected)::after { display: none; }
@@ -6461,7 +6476,10 @@
       gap: 4px;
       align-items: center;
     }
-    #custom-holiday-label { grid-column: 1 / -1; }
+    #custom-holiday-label, #vacation-label { grid-column: 1 / -1; }
+    .vacation-add-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+    .vacation-hint { margin: 0 0 6px; font-size: 0.7rem; line-height: 1.35; color: var(--text-muted); }
+    .custom-holiday-item .vacation-days { white-space: nowrap; }
     .custom-holiday-input {
       font-size: 0.74rem;
       padding: 4px 6px;
@@ -8891,7 +8909,7 @@
                       <button type="button" class="options-row" data-options-open="tasks"><span class="options-row-icon" aria-hidden="true">☑</span><span class="options-row-text"><span class="options-row-name">Tasks</span><span class="options-row-desc">Delete, carry-forward, collapse, confetti</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="projects"><span class="options-row-icon" aria-hidden="true">▣</span><span class="options-row-text"><span class="options-row-name">Projects</span><span class="options-row-desc">Long project notes</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                       <button type="button" class="options-row" data-options-open="insights"><span class="options-row-icon" aria-hidden="true">↗</span><span class="options-row-text"><span class="options-row-name">Insights</span><span class="options-row-desc">Streak rules</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
-                      <button type="button" class="options-row" data-options-open="holidays"><span class="options-row-icon" aria-hidden="true">✶</span><span class="options-row-text"><span class="options-row-name">Holidays</span><span class="options-row-desc">US and custom holidays</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
+                      <button type="button" class="options-row" data-options-open="holidays"><span class="options-row-icon" aria-hidden="true">✶</span><span class="options-row-text"><span class="options-row-name">Holidays<span class="options-new-tag" data-new-in="1.26.0">New</span></span><span class="options-row-desc">US and custom holidays, vacations</span></span><span class="options-row-chev" aria-hidden="true">›</span></button>
                     </div>
 
                     <section class="options-section" data-options-section="general" aria-label="General" hidden>
@@ -9035,9 +9053,20 @@
                         <button id="custom-holiday-add-btn" type="button" class="custom-holiday-add-btn">Add</button>
                       </div>
                     </div>
+                    <div id="vacations-section" class="custom-holidays-section">
+                      <p class="density-popout-label" style="margin-top:6px;">Vacations<span class="options-new-tag" data-new-in="1.26.0">New</span></p>
+                      <p class="vacation-hint">Every day in the range counts as a holiday for "skip holidays" tasks, and doesn't break your Insights streak</p>
+                      <div id="vacations-list" class="custom-holidays-list"></div>
+                      <div class="custom-holiday-add-row vacation-add-row">
+                        <input id="vacation-label" type="text" class="custom-holiday-input" placeholder="Label (optional)" aria-label="Vacation label" maxlength="60" />
+                        <input id="vacation-start" type="date" class="custom-holiday-input" aria-label="First day off" title="First day off" />
+                        <input id="vacation-end" type="date" class="custom-holiday-input" aria-label="Last day off" title="Last day off" />
+                        <button id="vacation-add-btn" type="button" class="custom-holiday-add-btn">Add</button>
+                      </div>
+                    </div>
                     </section>
 
-                    <button type="button" class="options-reset-btn" data-options-reset="behavior" title="Custom holidays are kept">Reset Behavior to defaults</button>
+                    <button type="button" class="options-reset-btn" data-options-reset="behavior" title="Custom holidays and vacations are kept">Reset Behavior to defaults</button>
                   </div>
                 </div>
               </div>
@@ -9228,7 +9257,7 @@
             <li>Schedules: <strong>Daily</strong>, <strong>Weekdays</strong>, <strong>Weekly</strong>, <strong>Custom</strong> days, <strong>Every 2 weeks</strong> (from a start date), <strong>Monthly</strong>, and <strong>Quarterly</strong></li>
             <li><strong>Monthly and Quarterly</strong> — <em>Day of month</em> picks dates (the 1st and 15th, or <em>Last</em>; a 29th–31st falls on the last day of shorter months). <em>Day of week</em> picks weeks and a weekday (the 3rd Thursday, or the 1st and 3rd Tuesday). Quarterly also asks which months</li>
             <li><strong>When they appear</strong> — a due task is added to today when the app opens, syncs, or you switch desks, once per day, so deleting or completing it won't bring it back. Days the app wasn't opened aren't filled in afterward</li>
-            <li>Recurring tasks show a <strong><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></strong> badge. Tags on a template carry to every task, and <em>Skip holidays</em> skips federal and custom holidays</li>
+            <li>Recurring tasks show a <strong><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></strong> badge. Tags on a template carry to every task, and <em>Skip holidays</em> skips federal and custom holidays and your vacation days</li>
             <li><strong>Edit, tag, or delete</strong> — use a row's <strong>⋮</strong> menu in the Recurring panel, or <em>Edit recurring</em> in a recurring task's ⋮ menu. The panel flags templates with the same text</li>
           </ul>
         </details>
@@ -9248,7 +9277,7 @@
         <details class="help-section" id="help-navigation" data-short="Navigation" open>
           <summary>Navigation &amp; search</summary>
           <ul>
-            <li><strong>Calendar</strong> — dots mark days with data, and yellow badges count tasks left open on past days. The <strong>Today chip</strong> beside the month jumps back</li>
+            <li><strong>Calendar</strong> — dots mark days with data, and yellow badges count tasks left open on past days, holidays show in the accent color, and a shaded band marks <strong>vacations</strong>. The <strong>Today chip</strong> beside the month jumps back</li>
             <li><strong>Arrows</strong> step a day at a time, and <strong>Back to today</strong> returns. On narrow screens, or with the sidebar at the top or bottom, a week strip replaces the calendar</li>
             <li><strong>On launch</strong> — the app reopens your last desk and day; change it with <em>Open desk</em> and <em>On launch</em> in Options → Behavior → General</li>
             <li><strong>Search</strong> — the sidebar box matches text, comments, and <code>#tags</code> on every day. The scope chip switches between Work, Personal, and All (All includes Projects). Click a result to jump to it</li>
@@ -9262,12 +9291,12 @@
             <li>Pick <strong>Week</strong>, <strong>Month</strong>, or <strong>Year</strong>; the arrows step back, and <em>This week</em> (or month or year) returns</li>
             <li>The <strong>stat tiles</strong> (completed, shelved, still open, and more) sit at the top. On a large monitor the cards below split into two balanced columns; Day-by-day detail stays full width</li>
             <li><strong>Summary</strong> — completion rate, average completions, carry-over rate, most productive day (the weekday with the most completions per day you had tasks), and a comparison with the period before</li>
-            <li><strong>Tasks by Tag</strong>, <strong>Lingering Tasks</strong> (oldest open), and <strong>Shelved Review</strong>, where <em>Bring back</em> moves a task to today's Active column</li>
+            <li><strong>Tasks by Tag</strong>, <strong>Lingering Tasks</strong> (oldest open, not counting vacation days), and <strong>Shelved Review</strong>, where <em>Bring back</em> moves a task to today's Active column</li>
             <li><strong>Recurring Follow-through</strong> shows how often each recurring task got done on the days it came up (days you didn't open the desk don't count); under 50% after 3 or more chances gets a <em>Rarely done</em> flag</li>
-            <li><strong>Carry Chains</strong> lists tasks carried forward 3 or more times, with <em>Shelve</em> to park one that keeps slipping. Carries are counted from 1.23.0 on</li>
+            <li><strong>Carry Chains</strong> lists tasks carried forward 3 or more times, with <em>Shelve</em> to park one that keeps slipping. Carries are counted from 1.23.0 on, except onto a vacation day</li>
             <li><strong>Tag Trend</strong> compares each tag's share of your tasks with the period before (to the same point if this one isn't over). It needs 10 tasks on each side before showing arrows</li>
             <li><strong>Carry-over analysis</strong> shows when tasks were left unfinished, with the dates behind each weekday (e.g. Wed: Sep 9 (2) · Sep 23 (1))</li>
-            <li><strong>Streaks</strong> come with a heatmap. <strong>Weekends don't break streaks</strong> unless you turn that off in Options → Behavior → Insights</li>
+            <li><strong>Streaks</strong> come with a heatmap. <strong>Weekends don't break streaks</strong> unless you turn that off in Options → Behavior → Insights, and vacation days never do</li>
             <li><strong>Charts</strong> switch between bar, line, stacked, and pie. Click a day in the table, chart, or heatmap to open it on the desk</li>
             <li>The <strong>Month</strong> chart stops at today, and with <strong>Quieter weekends</strong> on for that desk it leaves out empty Saturdays and Sundays; a note under the legend says how many and links to the setting</li>
           </ul>
@@ -9281,8 +9310,8 @@
             <li><strong>Pinned row</strong> — your current theme, ★ starred ones, and your last 3. Arrow keys move between tiles, Enter picks, and <kbd>S</kbd> stars</li>
             <li><strong>Custom</strong> — up to 5 themes from 5 colors. <em>+ New theme</em> starts from the one you're using, and the desk shows your colors as you edit</li>
             <li><strong>Appearance</strong> — card layout, text size and font, layout (sidebar position left, right, top, or bottom, plus the calendar legend and Today's Progress; tablets and computers only, since phones always use the top bar), effects, a patterned background (including snow crystals, cherry petals, water ripples, and maple leaves), and tag colors</li>
-            <li><strong>Behavior</strong> — startup, week start, quieter weekends, full screen, comments, auto-collapse and auto carry, confetti, delete confirmation, strikethrough, long notes, and holidays (US federal plus your own dates)</li>
-            <li><strong>Reset to defaults</strong> at the bottom of a tab resets just that tab; your theme, pinned tag colors, and custom holidays stay. A <em>New</em> tag marks settings from the latest release</li>
+            <li><strong>Behavior</strong> — startup, week start, quieter weekends, full screen, comments, auto-collapse and auto carry, confetti, delete confirmation, strikethrough, long notes, and holidays (US federal plus your own dates and vacation ranges)</li>
+            <li><strong>Reset to defaults</strong> at the bottom of a tab resets just that tab; your theme, pinned tag colors, custom holidays, and vacations stay. A <em>New</em> tag marks settings from the latest release</li>
           </ul>
         </details>
 
@@ -9499,12 +9528,26 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.25.1';
+    const APP_VERSION = '1.26.0';
     const CHANGELOG = [
+      {
+        version: '1.26.0',
+        date: 'Nov 16, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Added', items: [
+            'Vacations in Options → Behavior → Holidays: add a first and last day off (with an optional label) instead of one holiday at a time. The list shows each range and how many days it covers, with ✕ to remove one and Show past for finished trips',
+            'Recurring tasks with Skip holidays on also skip every vacation day',
+            'A soft shaded band marks vacations on the sidebar calendar, with a Vacation item in the legend. Holidays inside a vacation keep their color and dot, and hovering a day shows the vacation\'s label',
+          ] },
+          { label: 'Improved', items: [
+            'Insights: vacation days don\'t break your streak, Lingering Tasks doesn\'t count them toward how long a task has been open, and a carry onto a vacation day doesn\'t add to Carry Chains',
+          ] },
+        ],
+      },
       {
         version: '1.25.1',
         date: 'Nov 10, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'The Season tab in Options → Themes no longer leaves an empty column. Each season\'s three themes now stretch across the full width',
@@ -10501,6 +10544,7 @@
       merriweather: '"Merriweather", serif',
     };
     const CUSTOM_HOLIDAYS_KEY = 'work-desk-custom-holidays';
+    const VACATIONS_KEY = 'work-desk-vacations';
     const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     function getListContext() {
@@ -10622,6 +10666,7 @@
       completeStyle: normalizeCompleteStyle(localStorage.getItem(COMPLETE_STYLE_KEY)),
       tagPosition: normalizeTagPosition(localStorage.getItem(TAG_POSITION_KEY)),
       customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
+      vacations: loadVacations(),
       highlightItemId: null,
       activeTab: (() => {
         const mode = localStorage.getItem(STARTUP_VIEW_KEY) || 'last_viewed';
@@ -11183,6 +11228,7 @@
         completeStyle: normalizeCompleteStyle(localStorage.getItem(COMPLETE_STYLE_KEY)),
         tagPosition: normalizeTagPosition(localStorage.getItem(TAG_POSITION_KEY)),
         customHolidays: (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_HOLIDAYS_KEY)) || []; } catch (_) { return []; } })(),
+        vacations: loadVacations(),
         customThemes: loadCustomThemes(),
         themeStars: loadThemeStars(),
         themeRecent: loadThemeRecent(),
@@ -11507,6 +11553,17 @@
           state.customHolidays = next;
           localStorage.setItem(CUSTOM_HOLIDAYS_KEY, JSON.stringify(next));
           renderCustomHolidaysList();
+          changed = true;
+        }
+      }
+
+      if (Array.isArray(prefs.vacations)) {
+        const next = normalizeVacations(prefs.vacations);
+        if (JSON.stringify(next) !== JSON.stringify(state.vacations)) {
+          state.vacations = next;
+          localStorage.setItem(VACATIONS_KEY, JSON.stringify(next));
+          renderVacationsList();
+          renderCalendar();
           changed = true;
         }
       }
@@ -13288,7 +13345,8 @@
         case 'tasks': return `${p.tasksOn} of ${p.tasksTotal} on`;
         case 'projects': return p.truncateNotes ? 'Truncate long notes' : 'Full notes';
         case 'insights': return p.streakSkipWeekends ? 'Weekends skipped' : 'Strict streaks';
-        case 'holidays': return (p.federalHolidays ? 'US federal' : 'No federal') + (p.customHolidays ? ` · ${p.customHolidays} custom` : '');
+        case 'holidays': return (p.federalHolidays ? 'US federal' : 'No federal') + (p.customHolidays ? ` · ${p.customHolidays} custom` : '')
+          + (p.vacations ? ` · ${p.vacations} vacation${p.vacations === 1 ? '' : 's'}` : '');
         default: return '';
       }
     }
@@ -13356,6 +13414,7 @@
         streakSkipWeekends: on('streak-skip-weekends-toggle'),
         federalHolidays: on('us-federal-holidays-toggle'),
         customHolidays: (state.customHolidays || []).length,
+        vacations: (state.vacations || []).filter(v => v.end >= todayKey()).length,
       };
     }
 
@@ -13640,7 +13699,7 @@
         resetBtn.addEventListener('click', async () => {
           const tab = resetBtn.dataset.optionsReset;
           const label = tab === 'appearance' ? 'Appearance' : 'Behavior';
-          const kept = tab === 'appearance' ? 'Pinned tag colors are kept.' : 'Custom holidays are kept.';
+          const kept = tab === 'appearance' ? 'Pinned tag colors are kept.' : 'Custom holidays and vacations are kept.';
           if (!(await appConfirm(`Reset ${label} settings to their defaults? ${kept}`, { okLabel: 'Reset' }))) return;
           const changed = resetOptionsTab(tab);
           renderOptionsSummaries();
@@ -13855,6 +13914,33 @@
         dateInput.value = '';
         labelInput.value = '';
         renderCustomHolidaysList();
+        renderOptionsSummaries();
+        renderCalendar();
+      });
+
+      renderVacationsList();
+
+      const vacStart = document.getElementById('vacation-start');
+      const vacEnd = document.getElementById('vacation-end');
+      vacStart.addEventListener('change', () => {
+        vacEnd.min = vacStart.value;
+        if (vacStart.value && (!vacEnd.value || vacEnd.value < vacStart.value)) vacEnd.value = vacStart.value;
+      });
+      document.getElementById('vacation-add-btn').addEventListener('click', () => {
+        const labelInput = document.getElementById('vacation-label');
+        const start = vacStart.value;
+        const end = vacEnd.value;
+        const error = vacationAddError(state.vacations, start, end);
+        if (error) { showToast(error); return; }
+        state.vacations = normalizeVacations([...state.vacations, { start, end, label: labelInput.value }]);
+        if (end < todayKey()) showPastVacations = true;
+        saveVacations();
+        vacStart.value = '';
+        vacEnd.value = '';
+        vacEnd.min = '';
+        labelInput.value = '';
+        renderVacationsList();
+        renderOptionsSummaries();
         renderCalendar();
       });
 
@@ -17664,8 +17750,9 @@
       return typeof task.carriedFrom === 'string' && task.carriedFrom ? 1 : 0;
     }
 
+    // A carry onto a vacation day doesn't add to the count, so time away doesn't grow Carry Chains
     function stampCarry(task, sourceDateKey) {
-      task.carryCount = carryCountOf(task) + 1;
+      if (!vacationOn(state.vacations, todayKey())) task.carryCount = carryCountOf(task) + 1;
       if (!task.carryStart) task.carryStart = task.carriedFrom || sourceDateKey;
       task.carriedFrom = sourceDateKey;
     }
@@ -18154,11 +18241,67 @@
       return { isHoliday: false, label: null };
     }
 
+    // Pure: valid { start, end, label } ranges with start <= end, sorted by start
+    function normalizeVacations(list) {
+      if (!Array.isArray(list)) return [];
+      const isKey = (k) => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(k);
+      return list
+        .filter(v => v && isKey(v.start) && isKey(v.end))
+        .map(v => {
+          const [start, end] = v.start <= v.end ? [v.start, v.end] : [v.end, v.start];
+          return { start, end, label: String(v.label || '').trim().slice(0, 60) };
+        })
+        .sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
+    }
+
+    function loadVacations() {
+      try { return normalizeVacations(JSON.parse(localStorage.getItem(VACATIONS_KEY))); } catch (_) { return []; }
+    }
+
+    function saveVacations() {
+      localStorage.setItem(VACATIONS_KEY, JSON.stringify(state.vacations));
+      schedulePrefsPush();
+    }
+
+    // Pure
+    function vacationOn(vacations, dateKey) {
+      return (vacations || []).find(v => v.start <= dateKey && dateKey <= v.end) || null;
+    }
+
+    // Pure: the first range that shares a day with start..end
+    function vacationOverlap(vacations, start, end) {
+      return (vacations || []).find(v => v.start <= end && start <= v.end) || null;
+    }
+
+    function vacationDayCount(v) {
+      return daysBetweenKeys(v.start, v.end) + 1;
+    }
+
+    // Pure: vacation days after fromKey, up to and including toKey
+    function vacationDaysBetween(vacations, fromKey, toKey) {
+      if (!vacations?.length || toKey <= fromKey) return 0;
+      const next = dateFromKey(fromKey);
+      next.setDate(next.getDate() + 1);
+      const afterFrom = formatDateKey(next);
+      let days = 0;
+      for (const v of vacations) {
+        const s = v.start > afterFrom ? v.start : afterFrom;
+        const e = v.end < toKey ? v.end : toKey;
+        if (s <= e) days += daysBetweenKeys(s, e) + 1;
+      }
+      return days;
+    }
+
+    // Skip holidays covers vacation days too
+    function isDayOff(dateKey) {
+      return checkHoliday(dateKey).isHoliday || !!vacationOn(state.vacations, dateKey);
+    }
+
     function isDueToday(template) {
       const today = todayKey();
       if (template.lastInjectedDate === today) return false;
       const due = recurringDueOn(template, today);
-      if (due && template.skipHolidays && checkHoliday(today).isHoliday) return false;
+      if (due && template.skipHolidays && isDayOff(today)) return false;
       return due;
     }
 
@@ -18417,7 +18560,7 @@
         const key = formatDateKey(d);
         if (i === 0 && template.lastInjectedDate === key) continue;
         if (!recurringDueOn(template, key)) continue;
-        if (template.skipHolidays && checkHoliday(key).isHoliday) continue;
+        if (template.skipHolidays && isDayOff(key)) continue;
         return key;
       }
       return null;
@@ -18463,6 +18606,7 @@
     function buildSkipHolidaysToggle(checked, id) {
       const label = document.createElement('label');
       label.className = 'customize-toggle recurring-skip-toggle';
+      label.title = 'Not added on holidays or vacation days (Options → Behavior → Holidays)';
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       if (id) cb.id = id;
@@ -18548,7 +18692,7 @@
         const mark = document.createElement('span');
         mark.className = 'recurring-skip-mark';
         mark.textContent = '*';
-        mark.title = 'Skips holidays';
+        mark.title = 'Skips holidays and vacations';
         schedule.appendChild(mark);
       }
 
@@ -18678,7 +18822,7 @@
       if (templates.some(t => t.skipHolidays)) {
         const note = document.createElement('p');
         note.className = 'recurring-footnote';
-        note.textContent = '* skips holidays';
+        note.textContent = '* skips holidays and vacations';
         body.appendChild(note);
       }
     }
@@ -19337,6 +19481,7 @@
           localStorage.setItem(CUSTOM_HOLIDAYS_KEY, JSON.stringify(state.customHolidays));
           schedulePrefsPush();
           renderCustomHolidaysList();
+          renderOptionsSummaries();
           renderCalendar();
         });
         row.appendChild(btn);
@@ -19355,6 +19500,91 @@
         });
         list.appendChild(toggle);
       }
+    }
+
+    let showPastVacations = false;
+
+    // Pure: "Dec 21 – 31, 2026", "Dec 21, 2026 – Jan 4, 2027", or one date for a single day
+    function formatVacationRange(v) {
+      const s = dateFromKey(v.start);
+      const e = dateFromKey(v.end);
+      const md = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const y = (d) => d.getFullYear();
+      if (v.start === v.end) return `${md(s)}, ${y(s)}`;
+      if (y(s) !== y(e)) return `${md(s)}, ${y(s)} – ${md(e)}, ${y(e)}`;
+      if (s.getMonth() === e.getMonth()) return `${md(s)} – ${e.getDate()}, ${y(e)}`;
+      return `${md(s)} – ${md(e)}, ${y(e)}`;
+    }
+
+    function renderVacationsList() {
+      const list = document.getElementById('vacations-list');
+      if (!list) return;
+      list.innerHTML = '';
+      const today = todayKey();
+      const past = state.vacations.filter(v => v.end < today);
+      const upcoming = state.vacations.filter(v => v.end >= today);
+      if (!state.vacations.length || (!upcoming.length && !showPastVacations)) {
+        const empty = document.createElement('span');
+        empty.className = 'custom-holidays-empty';
+        empty.style.cssText = 'font-size:.72rem;color:var(--text-muted)';
+        empty.textContent = state.vacations.length ? 'No upcoming vacations' : 'None added yet';
+        list.appendChild(empty);
+      }
+      for (const v of showPastVacations ? [...past, ...upcoming] : upcoming) {
+        const row = document.createElement('div');
+        row.className = 'custom-holiday-item vacation-item' + (v.end < today ? ' is-past' : '');
+        row.dataset.vacationStart = v.start;
+        const dateEl = document.createElement('span');
+        dateEl.className = 'holiday-date';
+        dateEl.textContent = formatVacationRange(v);
+        dateEl.title = `${v.start} to ${v.end}`;
+        const n = vacationDayCount(v);
+        const daysEl = document.createElement('span');
+        daysEl.className = 'vacation-days';
+        daysEl.textContent = `${n} day${n === 1 ? '' : 's'}`;
+        const labelEl = document.createElement('span');
+        labelEl.className = 'holiday-label';
+        labelEl.textContent = v.label || '(no label)';
+        if (v.label) labelEl.title = v.label;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'holiday-remove';
+        btn.textContent = '✕';
+        btn.title = 'Remove';
+        btn.setAttribute('aria-label', `Remove vacation ${v.start} to ${v.end}`);
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.vacations = state.vacations.filter(x => x.start !== v.start);
+          saveVacations();
+          renderVacationsList();
+          renderOptionsSummaries();
+          renderCalendar();
+        });
+        row.append(dateEl, daysEl, labelEl, btn);
+        list.appendChild(row);
+      }
+      if (past.length) {
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'custom-holidays-past-btn';
+        toggle.textContent = showPastVacations ? 'Hide past' : `Show past (${past.length})`;
+        toggle.setAttribute('aria-expanded', showPastVacations ? 'true' : 'false');
+        toggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showPastVacations = !showPastVacations;
+          renderVacationsList();
+        });
+        list.appendChild(toggle);
+      }
+    }
+
+    // Pure: an error message for a range that can't be added, or null
+    function vacationAddError(vacations, start, end) {
+      if (!start || !end) return 'Pick the first and last day off';
+      if (end < start) return 'The last day off is before the first';
+      const clash = vacationOverlap(vacations, start, end);
+      if (clash) return `That overlaps ${clash.label || 'a vacation'} (${formatVacationRange(clash)})`;
+      return null;
     }
 
     function renderCalendar() {
@@ -19428,6 +19658,7 @@
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const daysInPrevMonth = new Date(year, month, 0).getDate();
       const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+      let monthHasVacation = false;
 
       for (let i = 0; i < totalCells; i++) {
         let dayNum;
@@ -19484,10 +19715,20 @@
           btn.appendChild(dot);
         }
 
+        // The band joins across a week row, so each row's first and last cell round off too
+        const vac = vacationOn(state.vacations, dateKey);
+        if (vac) {
+          btn.classList.add('vacation');
+          if (dateKey === vac.start || i % 7 === 0) btn.classList.add('vac-start');
+          if (dateKey === vac.end || i % 7 === 6) btn.classList.add('vac-end');
+          if (!isOtherMonth) monthHasVacation = true;
+        }
+
         const monthLabel = new Date(cellYear, cellMonth, dayNum).toLocaleDateString('en-US', {
           month: 'long', day: 'numeric', year: 'numeric',
         });
-        btn.title = monthLabel + (hol.isHoliday ? ` — ${hol.label}` : '');
+        const notes = [hol.isHoliday && hol.label, vac && (vac.label || 'Vacation')].filter(Boolean);
+        btn.title = monthLabel + (notes.length ? ` — ${notes.join(' · ')}` : '');
         btn.setAttribute('aria-label', monthLabel + (dateKey === state.selectedDate ? ' (selected)' : ''));
 
         btn.addEventListener('click', () => selectCalendarDate(dateKey));
@@ -19501,7 +19742,8 @@
       legend.setAttribute('aria-hidden', 'true');
       legend.innerHTML = '<span class="cal-legend-item"><span class="cal-legend-dot"></span>Has items</span>'
         + '<span class="cal-legend-item" title="Past days with open tasks show how many in this color"><span class="cal-legend-badge" aria-hidden="true"></span>Left open</span>'
-        + '<span class="cal-legend-item"><span class="cal-legend-dot holiday"></span>Holiday</span>';
+        + '<span class="cal-legend-item"><span class="cal-legend-dot holiday"></span>Holiday</span>'
+        + (monthHasVacation ? '<span class="cal-legend-item"><span class="cal-legend-band"></span>Vacation</span>' : '');
       host.appendChild(legend);
     }
 
@@ -21543,7 +21785,7 @@
         if (from <= end) {
           eachDateInRange(from, end, (k) => {
             if (!usedDays.has(k) || !recurringDueOn(t, k)) return;
-            if (t.skipHolidays && checkHoliday(k).isHoliday) return;
+            if (t.skipHolidays && isDayOff(k)) return;
             chances.add(k);
           });
         }
@@ -21657,7 +21899,8 @@
           if (item.type !== 'task' || item.completed || item.shelved || seen.has(item.id)) continue;
           seen.add(item.id);
           const created = createdDateKey(item) || dayKey;
-          const age = daysBetweenKeys(created < dayKey ? created : dayKey, today);
+          const from = created < dayKey ? created : dayKey;
+          const age = daysBetweenKeys(from, today) - vacationDaysBetween(state.vacations, from, today);
           if (age < 1) continue;
           list.push({ item, dayKey, created, age });
         }
@@ -21762,15 +22005,15 @@
       return formatDateKey(d1) === day2;
     }
 
+    // Days between two active days only keep the streak if each is a vacation day or a skipped weekend
     function isStreakConsecutive(day1, day2) {
       if (isConsecutiveDay(day1, day2)) return true;
-      if (!state.streakSkipWeekends) return false;
-      const d1 = dateFromKey(day1);
-      const check = new Date(d1);
+      const check = dateFromKey(day1);
       check.setDate(check.getDate() + 1);
       while (formatDateKey(check) < day2) {
         const dow = check.getDay();
-        if (dow !== 0 && dow !== 6) return false;
+        const weekendSkipped = state.streakSkipWeekends && (dow === 0 || dow === 6);
+        if (!weekendSkipped && !vacationOn(state.vacations, formatDateKey(check))) return false;
         check.setDate(check.getDate() + 1);
       }
       return true;
