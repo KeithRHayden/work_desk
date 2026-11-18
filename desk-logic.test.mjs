@@ -1221,6 +1221,150 @@ describe('desk keyboard shortcuts', () => {
   });
 });
 
+describe('1.26.1 calendar marks are told apart on every theme', () => {
+  const { buildCalendarMarks, contrastRatio, tagShadeDistance, hexToOklch, CAL_MARK_MIN_GAP } = appFns(
+    ['buildCalendarMarks', 'contrastRatio', 'tagShadeDistance', 'hexToOklch', 'CAL_MARK_MIN_GAP'], {});
+  const mix = (hex, side) => {
+    const p = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    const [a, b] = [p(hex), p(side)];
+    return '#' + a.map((v, i) => Math.round(v * 0.24 + b[i] * 0.76).toString(16).padStart(2, '0')).join('');
+  };
+  const EVERFOREST = { sidebar: '#232a2e', text: '#9da9a0', muted: '#7a8478', accent: '#a7c080', carried: '#fbbf24',
+    palette: ['#a7c080', '#e67e80', '#7fbbb3', '#dbbc7f', '#d699b6', '#e69875', '#d3c6aa', '#83c092'] };
+
+  function assertReadable(m, side, label) {
+    for (const k of ['items', 'open', 'holiday']) assert.ok(contrastRatio(m[k], side) >= 3, `${label} ${k} ${m[k]} >= 3:1`);
+    assert.ok(contrastRatio(m.holiday, m.vacation) >= 3, `${label} holiday on the vacation band`);
+    assert.ok(contrastRatio(m.vacationDate, m.vacation) >= 3, `${label} dates on the vacation band`);
+    assert.equal(m.vacation, mix(m.holiday, side), `${label} band is the holiday color at 24%`);
+  }
+
+  it('Everforest: Left open leaves amber for Everforest\'s own red, clear of the sage Holiday', () => {
+    const m = buildCalendarMarks(EVERFOREST);
+    assert.equal(m.open, '#e67e80');
+    assert.equal(m.holiday, '#a7c080', 'an accent that already reads is left alone');
+    assert.ok(tagShadeDistance(m.open, m.holiday) >= CAL_MARK_MIN_GAP);
+    assertReadable(m, EVERFOREST.sidebar, 'everforest');
+  });
+
+  it('a gold accent (Solarized Mid) moves Left open off amber; without a palette a stock warm color is used', () => {
+    const sol = { sidebar: '#002b36', text: '#93a1a1', muted: '#657b83', accent: '#e6b422', carried: '#fbbf24' };
+    const m = buildCalendarMarks(sol);
+    assert.notEqual(m.open, '#fbbf24');
+    assert.ok(tagShadeDistance(m.open, m.holiday) >= CAL_MARK_MIN_GAP);
+    const { h } = hexToOklch(m.open);
+    assert.ok(h <= 110 || h >= 330, `Left open stays warm, got hue ${h.toFixed(0)}`);
+    assertReadable(m, sol.sidebar, 'solarized-mid');
+  });
+
+  it('Gruvbox keeps amber: none of its own warm colors is clearly better, and amber clears the floor', () => {
+    const gruvbox = { sidebar: '#1d2021', text: '#a89984', muted: '#928374', accent: '#fe8019', carried: '#fbbf24',
+      palette: ['#fe8019', '#83a598', '#b8bb26', '#fb4934', '#d3869b', '#fabd2f', '#8ec07c', '#ebdbb2'] };
+    assert.equal(buildCalendarMarks(gruvbox).open, '#fbbf24');
+    const noPalette = buildCalendarMarks({ ...gruvbox, palette: null });
+    assert.notEqual(noPalette.open, '#fbbf24', 'without a palette of its own, a stock warm color that clears the gap is used');
+    assert.ok(tagShadeDistance(noPalette.open, noPalette.holiday) >= CAL_MARK_MIN_GAP);
+  });
+
+  it('a Left open that is already distinct is kept as is', () => {
+    const nord = { sidebar: '#1b1f27', text: '#4c566a', muted: '#3b4252', accent: '#88c0d0', carried: '#fbbf24' };
+    assert.equal(buildCalendarMarks(nord).open, '#fbbf24');
+  });
+
+  it('Nord: the near-invisible Has items dot and dates on the vacation band are lifted to 3:1', () => {
+    const nord = { sidebar: '#1b1f27', text: '#4c566a', muted: '#3b4252', accent: '#88c0d0', carried: '#fbbf24' };
+    assert.ok(contrastRatio(nord.muted, nord.sidebar) < 2, 'precondition');
+    const m = buildCalendarMarks(nord);
+    assertReadable(m, nord.sidebar, 'nord');
+    assert.ok(hexToOklch(m.items).c <= 0.021, 'Has items is a near-neutral gray, so it never shares the accent\'s hue');
+  });
+
+  it('a tinted muted color (Sage) loses its hue, and a dark accent is lifted to read on the dark sidebar', () => {
+    const sage = { sidebar: '#1f3024', text: '#a3c2ab', muted: '#648a6e', accent: '#3b7a57', carried: '#fbbf24' };
+    assert.ok(tagShadeDistance(sage.muted, sage.accent) < 0.07, 'precondition: the old dots nearly matched');
+    const m = buildCalendarMarks(sage);
+    assert.ok(tagShadeDistance(m.items, m.holiday) >= 0.1);
+    assertReadable(m, sage.sidebar, 'sage');
+  });
+
+  it('a gray accent (Paper) is set apart from Has items by lightness', () => {
+    const paper = { sidebar: '#2c2c2c', text: '#a0a0a0', muted: '#707070', accent: '#555555', carried: '#fbbf24' };
+    const m = buildCalendarMarks(paper);
+    assert.ok(contrastRatio(m.holiday, paper.sidebar) >= contrastRatio(m.items, paper.sidebar) + 2.5);
+    assertReadable(m, paper.sidebar, 'paper');
+  });
+
+  it('a light sidebar steps colors darker instead of lighter', () => {
+    const light = { sidebar: '#f4f1ea', text: '#3a3a3a', muted: '#d8d4cc', accent: '#f2c94c', carried: '#fbbf24' };
+    const m = buildCalendarMarks(light);
+    assertReadable(m, light.sidebar, 'light');
+    assert.ok(hexToOklch(m.items).l < hexToOklch(light.muted).l);
+  });
+
+  it('the marks are scoped to the sidebar calendar and every rule keeps the old color as a fallback', () => {
+    assert.match(fnSource('refreshCalendarMarks'), /style\.textContent = `#sidebar-calendar \{ --cal-items:/);
+    assert.match(fnSource('refreshCalendarMarks'), /palette: THEME_TAG_PALETTES\[themeId\] \|\| null/);
+    for (const re of [
+      /\.cal-day\.has-data:not\(\.selected\)::after \{[^}]*background: var\(--cal-items, var\(--sidebar-muted\)\);/,
+      /\.cal-legend-dot \{[^}]*background: var\(--cal-items, var\(--sidebar-muted\)\); \}/,
+      /\.cal-legend-dot\.holiday \{ background: var\(--cal-holiday, var\(--accent\)\); \}/,
+      /\.cal-legend-badge \{[^}]*background: var\(--cal-open, var\(--carried-ink\)\); \}/,
+      /\.cal-day\.holiday \{ color: var\(--cal-holiday, var\(--accent\)\);/,
+      /\.cal-holiday-dot \{[^}]*background: var\(--cal-holiday, var\(--accent\)\);/,
+      /\.cal-legend-band \{ background: var\(--cal-vacation, color-mix\(in srgb, var\(--accent\) 22%, transparent\)\); \}/,
+      /#sidebar-calendar \.cal-day\.vacation:not\(\.selected\):not\(\.holiday\):not\(\.other-month\) \{ color: var\(--cal-vacation-date, var\(--sidebar-text\)\); \}/,
+    ]) assert.match(html, re);
+    assert.match(fnSource('scheduleTagShadeRefresh'), /refreshTagShades\(\);\s*refreshCalendarMarks\(\);/);
+    assert.match(fnSource('initTagShades'), /refreshCalendarMarks\(\);/);
+  });
+});
+
+describe('1.26.1 shortcut discoverability', () => {
+  it('? opens Help at Keyboard shortcuts, behind the same typing / modifier / overlay guards', () => {
+    const fn = fnSource('handleDeskShortcut');
+    assert.match(fn, /\} else if \(e\.key === '\?'\) \{\s*e\.preventDefault\(\);\s*openHelpAtShortcuts\(\);/);
+    assert.ok(fn.indexOf('isOverlayOpen()') < fn.indexOf("e.key === '?'"), 'guards run before ?');
+    const open = fnSource('openHelpAtShortcuts');
+    assert.match(open, /openHelpModal\(\);/);
+    assert.match(open, /getElementById\('help-shortcuts'\)/);
+    assert.match(open, /section\.open = true;/);
+    assert.match(open, /scrollIntoView/);
+    assert.match(fnSource('openHelpModal'), /classList\.remove\('hidden'\);\s*els\.helpModal\.querySelector\('\.help-modal-body'\)\.scrollTop = 0;/, 'a hidden body ignores scrollTop, so show first');
+  });
+
+  it('openHelpAtShortcuts opens the section, scrolls to it, and focuses its summary', () => {
+    const log = [];
+    const summary = { focus: (o) => log.push(['focus', o]) };
+    const section = { open: false, scrollIntoView: (o) => log.push(['scroll', o]), querySelector: (s) => (s === 'summary' ? summary : null) };
+    const { openHelpAtShortcuts } = appFns(['openHelpAtShortcuts'], {
+      openHelpModal: () => log.push(['help']),
+      document: { getElementById: (id) => (id === 'help-shortcuts' ? section : null) },
+    });
+    openHelpAtShortcuts();
+    assert.equal(section.open, true);
+    assert.deepEqual(log.map(l => l[0]), ['help', 'scroll', 'focus']);
+    assert.deepEqual(log[1][1], { block: 'start' });
+  });
+
+  it('the day arrows, Task, Note, Add, and Help buttons show their shortcut on hover', () => {
+    for (const [re, label] of [
+      [/id="prev-day"[^>]*title="Previous day \( \[ \)" aria-keyshortcuts="\["/, 'prev day'],
+      [/id="next-day"[^>]*title="Next day \( \] \)" aria-keyshortcuts="\]"/, 'next day'],
+      [/data-type="task" title="New task \(T\)" aria-keyshortcuts="T"/, 'task'],
+      [/data-type="note" title="New note \(N\)" aria-keyshortcuts="N"/, 'note'],
+      [/id="add-btn"[^>]*title="Add \(Ctrl\/Cmd \+ Enter\)" aria-keyshortcuts="Control\+Enter Meta\+Enter"/, 'add'],
+      [/id="help-btn"[^>]*title="How to use this app \(\?\)" aria-keyshortcuts="\?"/, 'help'],
+    ]) assert.match(html, re, label);
+    assert.match(html, /id="prev-day"[^>]*aria-label="Previous day"/, 'aria-label kept');
+  });
+
+  it('the account menu Help item shows the ? key, and Help lists it', () => {
+    assert.match(html, /id="account-menu-help"[^>]*aria-keyshortcuts="\?"[^>]*>.*Help &amp; shortcuts<kbd class="account-menu-key" aria-hidden="true">\?<\/kbd><\/button>/);
+    assert.match(html, /\.account-menu-key \{[^}]*margin-left: auto;/);
+    assert.match(html, /<li><strong>Open Help at this list<\/strong> — \? \(when you aren't typing in a box\)<\/li>/);
+  });
+});
+
 describe('1.22.0 keyboard menus, add-box Esc, and phone toasts', () => {
   const menuFocus = () => {
     const doc = { activeElement: null };
@@ -1603,7 +1747,7 @@ function insightsSandbox(days, { templates = [], holidays = [] } = {}) {
   const deps = {
     state,
     loadRecurringTemplates: () => templates,
-    checkHoliday: (k) => ({ isHoliday: holidays.includes(k) }),
+    isDayOff: (k) => holidays.includes(k),
     plainTextPreview: (h) => String(h || '').replace(/<[^>]+>/g, '').trim(),
   };
   return new Function(...Object.keys(deps), src)(...Object.values(deps));
@@ -1622,8 +1766,10 @@ const seedTask = (createdKey, extra = {}) => ({
 });
 
 describe('1.23.0 carry stamps', () => {
-  const carry = () => new Function(`${['carryCountOf', 'stampCarry', 'clearCarryStamps', 'mergeCarryStamps'].map(fnSource).join('\n')}
-    return { carryCountOf, stampCarry, clearCarryStamps, mergeCarryStamps };`)();
+  const carry = (vacations = [], today = '2026-10-06') => new Function('vacations', 'today', `const state = { vacations };
+    const todayKey = () => today;
+    ${['vacationOn', 'carryCountOf', 'stampCarry', 'clearCarryStamps', 'mergeCarryStamps'].map(fnSource).join('\n')}
+    return { carryCountOf, stampCarry, clearCarryStamps, mergeCarryStamps };`)(vacations, today);
 
   it('each carry adds one, the first carry sets the start, and a pre-1.23.0 carry reads as one', () => {
     const { carryCountOf, stampCarry } = carry();
@@ -2485,8 +2631,9 @@ describe('Holiday-aware recurring in work-desk.html (HTML invariants)', () => {
     assert.match(html, /function checkHoliday\s*\(/);
   });
 
-  it('isDueToday gates on skipHolidays + checkHoliday', () => {
-    assert.match(html, /template\.skipHolidays && checkHoliday\(today\)\.isHoliday/);
+  it('isDueToday gates on skipHolidays + isDayOff (holidays and vacations)', () => {
+    assert.match(html, /template\.skipHolidays && isDayOff\(today\)/);
+    assert.match(fnSource('isDayOff'), /return checkHoliday\(dateKey\)\.isHoliday \|\| !!vacationOn\(state\.vacations, dateKey\);/);
   });
 
   it('recurring add form includes skip holidays checkbox', () => {
@@ -3063,7 +3210,7 @@ describe('Recurring templates (HTML invariants)', () => {
     assert.match(panel, /form\.append\(quickRow, schedulePicker\.options, skip\.label\);/);
     assert.match(panel, /toolbar\.remove\(\);/, 'no B / I / U toolbar');
     assert.match(panel, /buildRecurringRow\(t, today,/);
-    assert.match(panel, /note\.textContent = '\* skips holidays';/);
+    assert.match(panel, /note\.textContent = '\* skips holidays and vacations';/);
     const row = html.match(/function buildRecurringRow\([\s\S]*?\n    \}/)[0];
     assert.match(row, /item\.append\(main, schedule, next, moreWrap\);/);
     assert.match(row, /recurring-rule-badge/);
@@ -3284,19 +3431,20 @@ describe('splitCommentToItem (functional)', () => {
 // ═══════════════════════════════════════════════════════════════════════
 describe('Streaks (functional)', () => {
   // 2026-09-18 is a Friday; 2026-09-21 is a Monday
-  function runStreaks(activeKeys, { today, skipWeekends = true } = {}) {
+  function runStreaks(activeKeys, { today, skipWeekends = true, vacations = [] } = {}) {
     const days = Object.fromEntries(activeKeys.map(k => [k, { items: [{ id: k, type: 'task' }] }]));
-    return new Function('days', 'today', 'skip', `
-      const state = { data: { days }, streakSkipWeekends: skip };
+    return new Function('days', 'today', 'skip', 'vacations', `
+      const state = { data: { days }, streakSkipWeekends: skip, vacations };
       const todayKey = () => today;
       const yesterdayKey = () => '';
       ${fnSource('dateFromKey')}
       ${fnSource('formatDateKey')}
+      ${fnSource('vacationOn')}
       ${fnSource('isConsecutiveDay')}
       ${fnSource('isStreakConsecutive')}
       ${fnSource('computeStreaks')}
       return { computeStreaks, isStreakConsecutive };
-    `)(days, today, skipWeekends);
+    `)(days, today, skipWeekends, vacations);
   }
 
   const MON_TO_FRI = ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18'];
@@ -3347,6 +3495,7 @@ describe('Streaks (functional)', () => {
       const todayKey = () => '2026-09-21';
       ${fnSource('dateFromKey')}
       ${fnSource('formatDateKey')}
+      ${fnSource('vacationOn')}
       ${fnSource('isConsecutiveDay')}
       ${fnSource('isStreakConsecutive')}
       ${fnSource('computeStreaks')}
@@ -3766,7 +3915,7 @@ describe('v1.14.0 Unit themes and Dot Matrix rename (HTML invariants)', () => {
 describe('v1.15.0 Insights additions', () => {
   function fns(days = {}, extra = {}) {
     return new Function('days', 'extra', `
-      const state = { data: { days, deletedIds: {} }, selectedDate: null, highlightItemId: null };
+      const state = { data: { days, deletedIds: {} }, selectedDate: null, highlightItemId: null, vacations: extra.vacations || [] };
       const calls = { saved: 0, toasts: [], renders: 0 };
       const todayKey = () => extra.today || '2026-10-06';
       const saveData = () => { calls.saved++; };
@@ -3783,6 +3932,7 @@ describe('v1.15.0 Insights additions', () => {
       ${fnSource('normalizeTag')}
       ${fnSource('normalizeTagList')}
       ${fnSource('daysBetweenKeys')}
+      ${fnSource('vacationDaysBetween')}
       ${fnSource('isKeyInRange')}
       ${fnSource('summarizeRange')}
       ${fnSource('comparablePeriodRanges')}
@@ -4729,7 +4879,7 @@ describe('UI audit fixes (1.12.1)', () => {
   });
 
   it('calendar badges are amber, the recurring icon follows the theme, and the week strip snaps', () => {
-    assert.match(html, /\.cal-day-badge \{[^}]*background: color-mix\(in srgb, var\(--carried\) 20%, transparent\);[^}]*color: var\(--carried-ink\);/);
+    assert.match(html, /\.cal-day-badge \{[^}]*background: color-mix\(in srgb, var\(--cal-open, var\(--carried\)\) 20%, transparent\);[^}]*color: var\(--cal-open, var\(--carried-ink\)\);/);
     assert.doesNotMatch(html, /\u{1F501}/u, 'the always-blue emoji is gone');
     assert.match(html, /id="recurring-btn"[^>]*><svg class="icon-repeat"/);
     assert.match(mainScript, /badge\.innerHTML = REPEAT_ICON_SVG;/);
@@ -5360,7 +5510,7 @@ describe('v1.18.1 calendar legend sample', () => {
     assert.doesNotMatch(html, /<span class="cal-legend-badge">\d+<\/span>/);
   });
   it('the sample is a dot the size of the others, in the badge number color', () => {
-    assert.match(html, /\.cal-legend-badge \{ width: 5px; height: 5px; border-radius: 50%; background: var\(--carried-ink\); \}/);
+    assert.match(html, /\.cal-legend-badge \{ width: 5px; height: 5px; border-radius: 50%; background: var\(--cal-open, var\(--carried-ink\)\); \}/);
     assert.match(html, /\.cal-legend-dot \{ width: 5px; height: 5px;/);
   });
   it('real per-day badges still count open tasks on past days', () => {
@@ -5375,7 +5525,7 @@ describe('v1.18.2 Options list descriptions, Back, and spacing', () => {
     layout: '<span class="phone-hide">Sidebar side, calendar legend, progress</span><span class="phone-only">Tablets and computers</span>', effects: 'Card glow, gradient header',
     background: 'Board pattern and strength', tags: 'Tag colors',
     general: 'Start desk, launch view, week start, weekends, full screen', tasks: 'Delete, carry-forward, collapse, confetti',
-    projects: 'Long project notes', insights: 'Streak rules', holidays: 'US and custom holidays',
+    projects: 'Long project notes', insights: 'Streak rules', holidays: 'US and custom holidays, vacations',
   };
   it('every summary row has a description instead of a value', () => {
     for (const [id, desc] of Object.entries(DESC)) {
@@ -6479,7 +6629,7 @@ describe('v1.21.0 recurring schedules and Ctrl+Enter edits', () => {
   it('isDueToday uses the shared schedule check and still skips holidays', () => {
     const body = fnSource('isDueToday');
     assert.match(body, /recurringDueOn\(template, today\)/);
-    assert.match(body, /template\.skipHolidays && checkHoliday\(today\)\.isHoliday/);
+    assert.match(body, /template\.skipHolidays && isDayOff\(today\)/);
   });
 
   it('the picker validates each rule before saving', () => {
@@ -7121,6 +7271,11 @@ describe('1.25.0 theme picker logic', () => {
     assert.match(html, /if \(e\.composedPath\?\.\(\)\.includes\(popout\)\) return;/);
   });
 
+  it('season grids are three columns that fill the row', () => {
+    assert.match(html, /\.theme-picker-grid\.season-grid \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/);
+    assert.match(fnSource('renderThemeSwatches'), /\$\{s\.name\}`, 'season-grid'\)/);
+  });
+
   it('the controls the new picker replaced leave no CSS or markup behind', () => {
     for (const c of ['current-theme-btn', 'current-theme-jump', 'theme-season-label', 'theme-filter-row', 'custom-swatches-row', 'custom-swatch-delete', 'custom-preview-app']) {
       assert.doesNotMatch(html, new RegExp(`${c}(?![\\w-])`), c);
@@ -7166,5 +7321,214 @@ describe('functions no test ran before 1.25.0', () => {
     } finally {
       console.warn = warn;
     }
+  });
+});
+
+describe('1.26.0 vacations', () => {
+  // 2026-12-21 is a Monday; 2027-01-04 is a Monday
+  const TRIP = { start: '2026-12-21', end: '2027-01-04', label: 'Winter break' };
+  const pure = appFns(['normalizeVacations', 'vacationOn', 'vacationOverlap', 'vacationDaysBetween', 'vacationDayCount', 'formatVacationRange', 'vacationAddError']);
+  const withState = (names, vacations, extra = {}) => appFns(names, {
+    state: { ...appState, useFederalHolidays: false, customHolidays: [], streakSkipWeekends: false, vacations, ...extra.state },
+    todayKey: () => extra.today || '2026-12-22',
+    ...extra.globals,
+  });
+
+  it('keeps valid ranges, swaps a backward one, trims the label, and sorts by start', () => {
+    assert.deepEqual(pure.normalizeVacations(null), []);
+    assert.deepEqual(pure.normalizeVacations([
+      { start: '2027-03-10', end: '2027-03-05', label: '  Spring  ' },
+      { start: 'nope', end: '2027-01-01' },
+      null,
+      { start: '2026-12-21', end: '2027-01-04' },
+    ]), [
+      { start: '2026-12-21', end: '2027-01-04', label: '' },
+      { start: '2027-03-05', end: '2027-03-10', label: 'Spring' },
+    ]);
+    assert.equal(pure.normalizeVacations([{ start: '2027-01-01', end: '2027-01-01', label: 'x'.repeat(80) }])[0].label.length, 60);
+  });
+
+  it('a day is on vacation from the first through the last day off', () => {
+    assert.equal(pure.vacationOn([TRIP], '2026-12-20'), null);
+    assert.equal(pure.vacationOn([TRIP], '2026-12-21'), TRIP);
+    assert.equal(pure.vacationOn([TRIP], '2027-01-04'), TRIP);
+    assert.equal(pure.vacationOn([TRIP], '2027-01-05'), null);
+    assert.equal(pure.vacationOn(undefined, '2026-12-25'), null);
+    assert.equal(pure.vacationDayCount(TRIP), 15);
+  });
+
+  it('Add refuses a missing day, a backward range, and an overlap, but allows the next day', () => {
+    assert.equal(pure.vacationAddError([], '', '2027-01-04'), 'Pick the first and last day off');
+    assert.equal(pure.vacationAddError([], '2027-01-04', '2026-12-21'), 'The last day off is before the first');
+    assert.equal(pure.vacationAddError([TRIP], '2027-01-04', '2027-01-08'), 'That overlaps Winter break (Dec 21, 2026 – Jan 4, 2027)');
+    assert.equal(pure.vacationAddError([{ ...TRIP, label: '' }], '2026-12-01', '2027-02-01'), 'That overlaps a vacation (Dec 21, 2026 – Jan 4, 2027)');
+    assert.equal(pure.vacationAddError([TRIP], '2027-01-05', '2027-01-08'), null);
+    assert.equal(pure.vacationAddError([TRIP], '2026-12-20', '2026-12-20'), null);
+  });
+
+  it('formats a range compactly by month and year', () => {
+    assert.equal(pure.formatVacationRange(TRIP), 'Dec 21, 2026 – Jan 4, 2027');
+    assert.equal(pure.formatVacationRange({ start: '2026-12-21', end: '2026-12-31' }), 'Dec 21 – 31, 2026');
+    assert.equal(pure.formatVacationRange({ start: '2027-03-29', end: '2027-04-02' }), 'Mar 29 – Apr 2, 2027');
+    assert.equal(pure.formatVacationRange({ start: '2027-07-02', end: '2027-07-02' }), 'Jul 2, 2027');
+  });
+
+  it('counts vacation days after one day up to and including another', () => {
+    assert.equal(pure.vacationDaysBetween([TRIP], '2026-12-18', '2027-01-06'), 15);
+    assert.equal(pure.vacationDaysBetween([TRIP], '2026-12-21', '2026-12-24'), 3, 'the start day itself is not after it');
+    assert.equal(pure.vacationDaysBetween([TRIP], '2027-01-02', '2027-01-10'), 2);
+    assert.equal(pure.vacationDaysBetween([TRIP], '2027-01-04', '2027-01-10'), 0);
+    assert.equal(pure.vacationDaysBetween([], '2026-12-01', '2027-02-01'), 0);
+    assert.equal(pure.vacationDaysBetween([TRIP], '2027-01-06', '2026-12-18'), 0);
+  });
+
+  it('a daily template with Skip holidays is not added on a vacation day; one without it still is', () => {
+    const { isDueToday } = withState(['isDueToday'], [TRIP]);
+    assert.equal(isDueToday({ rule: 'daily', skipHolidays: true, lastInjectedDate: null }), false);
+    assert.equal(isDueToday({ rule: 'daily', skipHolidays: false, lastInjectedDate: null }), true);
+    const back = withState(['isDueToday'], [TRIP], { today: '2027-01-05' }).isDueToday;
+    assert.equal(back({ rule: 'daily', skipHolidays: true, lastInjectedDate: null }), true);
+  });
+
+  it('next due skips past the whole vacation for a Skip holidays template', () => {
+    const { recurringNextDue } = withState(['recurringNextDue'], [TRIP]);
+    assert.equal(recurringNextDue({ rule: 'weekdays', skipHolidays: true, lastInjectedDate: null }, '2026-12-18'), '2026-12-18');
+    assert.equal(recurringNextDue({ rule: 'weekdays', skipHolidays: true, lastInjectedDate: '2026-12-18' }, '2026-12-18'), '2027-01-05');
+    assert.equal(recurringNextDue({ rule: 'weekdays', lastInjectedDate: '2026-12-18' }, '2026-12-18'), '2026-12-21');
+  });
+
+  it('all three Skip holidays checks share isDayOff', () => {
+    assert.match(fnSource('isDueToday'), /template\.skipHolidays && isDayOff\(today\)/);
+    assert.match(fnSource('recurringNextDue'), /template\.skipHolidays && isDayOff\(key\)/);
+    assert.match(mainScript, /t\.skipHolidays && isDayOff\(k\)/);
+    assert.doesNotMatch(mainScript, /skipHolidays && checkHoliday\(/);
+  });
+
+  it('vacation weekdays keep a streak even with weekend skipping off; a missed day after the trip breaks it', () => {
+    const { isStreakConsecutive } = withState(['isStreakConsecutive'], [TRIP]);
+    assert.equal(isStreakConsecutive('2026-12-18', '2027-01-05'), false, 'Sat 19 and Sun 20 are not vacation');
+    assert.equal(isStreakConsecutive('2026-12-20', '2027-01-05'), true);
+    assert.equal(isStreakConsecutive('2026-12-20', '2027-01-06'), false);
+    const weekends = withState(['isStreakConsecutive'], [TRIP], { state: { streakSkipWeekends: true } }).isStreakConsecutive;
+    assert.equal(weekends('2026-12-18', '2027-01-05'), true, 'weekend then vacation then back');
+    assert.equal(withState(['isStreakConsecutive'], []).isStreakConsecutive('2026-12-20', '2027-01-05'), false);
+  });
+
+  it('Lingering Tasks does not count vacation days toward how long a task is open', () => {
+    const days = { '2026-12-18': { items: [{ id: 'a', type: 'task', content: 'Report', completed: false, shelved: false, createdAt: '2026-12-18T15:00:00Z' }] } };
+    const { findLingeringTasks } = withState(['findLingeringTasks'], [TRIP], { state: { data: { days } } });
+    assert.equal(findLingeringTasks('2027-01-06').items[0].age, 4, '19 days minus 15 away');
+    const none = withState(['findLingeringTasks'], [], { state: { data: { days } } }).findLingeringTasks;
+    assert.equal(none('2027-01-06').items[0].age, 19);
+  });
+
+  it('a carry onto a vacation day keeps the count; the carry onto the day back adds one', () => {
+    const away = withState(['stampCarry'], [TRIP], { today: '2026-12-28' }).stampCarry;
+    const task = { id: 't', carryCount: 1, carryStart: '2026-12-17', carriedFrom: '2026-12-17' };
+    away(task, '2026-12-18');
+    assert.deepEqual(task, { id: 't', carryCount: 1, carryStart: '2026-12-17', carriedFrom: '2026-12-18' });
+    withState(['stampCarry'], [TRIP], { today: '2027-01-05' }).stampCarry(task, '2026-12-28');
+    assert.equal(task.carryCount, 2);
+  });
+
+  it('vacations load from their own key, sync with prefs, and survive Reset Behavior', () => {
+    assert.match(mainScript, /const VACATIONS_KEY = 'work-desk-vacations';/);
+    assert.match(mainScript, /vacations: loadVacations\(\),\n\s+highlightItemId/);
+    assert.match(fnSource('readLocalPrefs'), /vacations: loadVacations\(\),/);
+    const apply = fnSource('applyCloudPrefs');
+    assert.match(apply, /if \(Array\.isArray\(prefs\.vacations\)\) \{\s+const next = normalizeVacations\(prefs\.vacations\);/);
+    assert.match(apply, /localStorage\.setItem\(VACATIONS_KEY, JSON\.stringify\(next\)\);\s+renderVacationsList\(\);\s+renderCalendar\(\);\s+changed = true;/);
+    assert.doesNotMatch(mainScript, /removeItem\(VACATIONS_KEY\)/);
+    assert.match(html, /data-options-reset="behavior" title="Custom holidays and vacations are kept"/);
+    assert.match(mainScript, /'Custom holidays and vacations are kept\.'/);
+  });
+
+  it('the Options summary counts only upcoming vacations', () => {
+    const { optionsSummaryText } = appFns(['optionsSummaryText']);
+    assert.equal(optionsSummaryText('holidays', { federalHolidays: true, customHolidays: 2, vacations: 1 }), 'US federal · 2 custom · 1 vacation');
+    assert.equal(optionsSummaryText('holidays', { federalHolidays: false, customHolidays: 0, vacations: 3 }), 'No federal · 3 vacations');
+    assert.equal(optionsSummaryText('holidays', { federalHolidays: true, customHolidays: 0, vacations: 0 }), 'US federal');
+    assert.match(mainScript, /vacations: \(state\.vacations \|\| \[\]\)\.filter\(v => v\.end >= todayKey\(\)\)\.length,/);
+  });
+
+  it('the calendar band rounds at the trip ends and at each week row edge, and the legend shows only with one in view', () => {
+    const cal = fnSource('renderCalendar');
+    assert.match(cal, /if \(dateKey === vac\.start \|\| i % 7 === 0\) btn\.classList\.add\('vac-start'\);/);
+    assert.match(cal, /if \(dateKey === vac\.end \|\| i % 7 === 6\) btn\.classList\.add\('vac-end'\);/);
+    assert.match(cal, /if \(!isOtherMonth\) monthHasVacation = true;/);
+    assert.match(cal, /monthHasVacation \? '<span class="cal-legend-item"><span class="cal-legend-band"><\/span>Vacation<\/span>' : ''/);
+    assert.match(cal, /const notes = \[hol\.isHoliday && hol\.label, vac && \(vac\.label \|\| 'Vacation'\)\]\.filter\(Boolean\);/);
+    assert.match(html, /\.cal-day\.vacation::before \{\s+content: '';\s+position: absolute;\s+inset: 3px -1px;\s+z-index: -1;/);
+    assert.match(html, /\.cal-day\.vacation \{ isolation: isolate; \}/);
+    assert.match(html, /\.cal-day\.vacation\.selected::before \{ display: none; \}/);
+  });
+
+  it('Options has the Vacations fields, and Holidays carries a 1.26.0 New tag', () => {
+    for (const id of ['vacations-section', 'vacations-list', 'vacation-label', 'vacation-start', 'vacation-end', 'vacation-add-btn']) {
+      assert.match(html, new RegExp(`id="${id}"`), id);
+    }
+    assert.match(html, /Holidays<span class="options-new-tag" data-new-in="1\.26\.0">New<\/span>/);
+    assert.match(html, /Vacations<span class="options-new-tag" data-new-in="1\.26\.0">New<\/span>/);
+  });
+});
+
+describe('1.26.0 vacations sync (runs applyCloudPrefs)', () => {
+  const TRIP = { start: '2026-12-21', end: '2027-01-04', label: 'Winter break' };
+  function syncHarness({ vacations = [], localStamp = null } = {}) {
+    const store = new Map();
+    if (localStamp) store.set('work-desk-prefs-updated-at', localStamp);
+    const calls = { list: 0, calendar: 0, holidays: 0 };
+    const state = { ...appState, vacations, customHolidays: [] };
+    const { applyCloudPrefs, PREFS_UPDATED_AT_KEY } = appFns(['applyCloudPrefs', 'PREFS_UPDATED_AT_KEY'], {
+      state,
+      localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) },
+      mergeRemoteTagShadeSlots: () => {},
+      renderVacationsList: () => { calls.list++; },
+      renderCalendar: () => { calls.calendar++; },
+      renderCustomHolidaysList: () => { calls.holidays++; },
+    });
+    return { applyCloudPrefs, state, store, calls, PREFS_UPDATED_AT_KEY };
+  }
+
+  it('applies newer remote vacations: cleaned up, saved, list and calendar redrawn, stamp kept', () => {
+    const h = syncHarness({ localStamp: '2026-11-01T00:00:00Z' });
+    const changed = h.applyCloudPrefs({
+      updatedAt: '2026-11-18T12:00:00Z',
+      vacations: [{ start: '2027-03-10', end: '2027-03-05', label: ' Spring ' }, TRIP, { start: 'bad', end: '2027-01-01' }],
+    });
+    const expected = [TRIP, { start: '2027-03-05', end: '2027-03-10', label: 'Spring' }];
+    assert.equal(changed, true);
+    assert.deepEqual(h.state.vacations, expected);
+    assert.deepEqual(JSON.parse(h.store.get('work-desk-vacations')), expected);
+    assert.deepEqual(h.calls, { list: 1, calendar: 1, holidays: 0 });
+    assert.equal(h.store.get(h.PREFS_UPDATED_AT_KEY), '2026-11-18T12:00:00Z');
+  });
+
+  it('the same vacations change nothing and redraw nothing', () => {
+    const h = syncHarness({ vacations: [TRIP], localStamp: '2026-11-01T00:00:00Z' });
+    assert.equal(h.applyCloudPrefs({ updatedAt: '2026-11-18T12:00:00Z', vacations: [{ ...TRIP }] }), false);
+    assert.deepEqual(h.calls, { list: 0, calendar: 0, holidays: 0 });
+    assert.equal(h.store.has('work-desk-vacations'), false);
+  });
+
+  it('remote removal empties the list', () => {
+    const h = syncHarness({ vacations: [TRIP], localStamp: '2026-11-01T00:00:00Z' });
+    assert.equal(h.applyCloudPrefs({ updatedAt: '2026-11-18T12:00:00Z', vacations: [] }), true);
+    assert.deepEqual(h.state.vacations, []);
+    assert.equal(h.store.get('work-desk-vacations'), '[]');
+  });
+
+  it('older remote prefs are ignored unless forced; a payload without vacations leaves them alone', () => {
+    const h = syncHarness({ vacations: [TRIP], localStamp: '2026-11-18T12:00:00Z' });
+    assert.equal(h.applyCloudPrefs({ updatedAt: '2026-11-01T00:00:00Z', vacations: [] }), false);
+    assert.deepEqual(h.state.vacations, [TRIP]);
+    assert.equal(h.applyCloudPrefs({ updatedAt: '2026-11-01T00:00:00Z', vacations: [] }, { force: true }), true);
+    assert.deepEqual(h.state.vacations, []);
+
+    const keep = syncHarness({ vacations: [TRIP], localStamp: '2026-11-01T00:00:00Z' });
+    keep.applyCloudPrefs({ updatedAt: '2026-11-18T12:00:00Z', vacations: 'nope' });
+    keep.applyCloudPrefs({ updatedAt: '2026-11-19T12:00:00Z' });
+    assert.deepEqual(keep.state.vacations, [TRIP]);
+    assert.equal(keep.calls.list, 0);
   });
 });
