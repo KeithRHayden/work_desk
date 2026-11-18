@@ -31,7 +31,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 ### Organization
 
 - **Work / Personal / Projects** — separate contexts
-- **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens). The calendar's selected day is a solid fill in the theme color; yellow number badges count tasks left open (rose on amber-accent themes, matching Insights *carried over*); a legend underneath explains *Has items · Left open · Holiday* (plus *Vacation* when the month shows one); a soft shaded band marks vacation days; and a *Today* chip appears when you've browsed to another month
+- **Date navigation** — sidebar calendar (desktop) and week strip (narrow screens). The calendar's selected day is a solid fill in the theme color; yellow number badges count tasks left open; a legend underneath explains *Has items · Left open · Holiday* (plus *Vacation* when the month shows one); a soft shaded band marks vacation days. Every theme, custom ones included, gets calendar colors checked to read on its sidebar and to look different from each other: *Has items* is a neutral gray, *Holiday* is the theme color made bright enough to read, and *Left open* switches to a different warm color (the theme's own red or pink when it has one) when amber would look too much like the theme color; and a *Today* chip appears when you've browsed to another month
 - **Quieter weekends** — Options → Behavior → General grays Sat/Sun on the sidebar calendar, dims them on the week strip, and leaves empty weekend days out of the Insights Month chart: *Off* (default), *Work only*, or *Both desks*
 - **Open desk** — Options → Behavior → General picks the desk the app starts on: *Last used* (default), *Work*, or *Personal*
 - **Calendar legend / Today's Progress switches** — Options → Appearance → Layout can hide the key under the sidebar calendar and the Today's Progress card (both on by default; tablets and computers only, since phones don't show the sidebar)
@@ -247,6 +247,9 @@ work-desk/
 | Reorder a project, note, or project task | `Alt + ↑` / `Alt + ↓` |
 | Move around a menu (card ⋮, recurring ⋮, account, project More) | `↑` / `↓` (`Home` / `End` for first / last) |
 | Cancel / close a menu, or leave the add box (never closes the installed app on Android) | `Escape` |
+| Open Help at Keyboard shortcuts (when not typing) | `?` |
+
+Hovering the day arrows, Task, Note, or Add shows its shortcut, and the account menu's Help & shortcuts item shows the `?` key.
 
 ## Data storage
 
