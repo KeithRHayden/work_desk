@@ -2013,6 +2013,11 @@ test.describe('Theme filter buttons', { tag: ['@options', '@themes'] }, () => {
     for (let i = 0; i < 4; i++) {
       await expect(grids.nth(i).locator('.theme-swatch')).toHaveCount(3);
       await expect(grids.nth(i)).toHaveAttribute('role', 'radiogroup');
+      // Three columns that fill the row, with no empty fourth column
+      expect(await grids.nth(i).evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(3);
+      const row = (await grids.nth(i).boundingBox())!;
+      const last = (await grids.nth(i).locator('.theme-tile-wrap').last().boundingBox())!;
+      expect(Math.abs(row.x + row.width - (last.x + last.width))).toBeLessThan(2);
     }
     expect(await page.locator('#customize-theme-grid .theme-swatch').evaluateAll((els) => els.map((el) => el.getAttribute('data-theme-id'))))
       .toEqual(SEASONAL.map(([id]) => id));
@@ -2935,7 +2940,7 @@ test.describe('Recurring Tasks layout 1.22.0', { tag: ['@recurring'] }, () => {
     await expect(row(page, 'Team sync').locator('.recurring-rule-badge')).toHaveText('Tue');
     await expect(row(page, 'Team sync').locator('.recurring-skip-mark')).toHaveText('*');
     await expect(row(page, 'Team sync').locator('.recurring-template-tags .tag-chip')).toHaveText(/ACE/);
-    await expect(modal(page).locator('.recurring-footnote')).toHaveText('* skips holidays');
+    await expect(modal(page).locator('.recurring-footnote')).toHaveText('* skips holidays and vacations');
   });
 
   test('each row shows its schedule and next due date in columns', async ({ page }) => {
@@ -2954,7 +2959,7 @@ test.describe('Recurring Tasks layout 1.22.0', { tag: ['@recurring'] }, () => {
     expect(new Set(xs).size).toBe(1);
     const sched = await modal(page).locator('.recurring-schedule-cell').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
     expect(new Set(sched).size).toBe(1);
-    await expect(row(page, 'Update the ACE').locator('.recurring-skip-mark')).toHaveAttribute('title', 'Skips holidays');
+    await expect(row(page, 'Update the ACE').locator('.recurring-skip-mark')).toHaveAttribute('title', 'Skips holidays and vacations');
     await expect(row(page, 'Submit timesheet').locator('.recurring-skip-mark')).toHaveCount(0);
   });
 
@@ -4522,9 +4527,19 @@ test.describe('Options menu 1.15.1 polish', { tag: ['@options'] }, () => {
     await openOptions(page, 'behavior', {}, 'holidays');
     const label = await page.locator('#custom-holiday-label').boundingBox();
     const date = await page.locator('#custom-holiday-date').boundingBox();
-    const row = await page.locator('.custom-holiday-add-row').boundingBox();
+    const row = await page.locator('#custom-holidays-section .custom-holiday-add-row').boundingBox();
     expect(label!.width).toBeGreaterThan(row!.width - 2);
     expect(date!.y).toBeGreaterThan(label!.y + label!.height - 1);
+
+    const vacRow = await page.locator('#vacations-section .vacation-add-row').boundingBox();
+    const [vLabel, vStart, vEnd, vAdd] = await Promise.all(['#vacation-label', '#vacation-start', '#vacation-end', '#vacation-add-btn']
+      .map((s) => page.locator(s).boundingBox()));
+    expect(vLabel!.width).toBeGreaterThan(vacRow!.width - 2);
+    expect(vStart!.y).toBeGreaterThan(vLabel!.y + vLabel!.height - 1);
+    expect(Math.abs(vStart!.y - vEnd!.y)).toBeLessThanOrEqual(1);
+    expect(vStart!.x + vStart!.width).toBeLessThanOrEqual(vEnd!.x);
+    expect(vEnd!.x + vEnd!.width).toBeLessThanOrEqual(vAdd!.x);
+    expect(vAdd!.x + vAdd!.width).toBeLessThanOrEqual(vacRow!.x + vacRow!.width + 1);
   });
 
   test('Reset Behavior: cancel changes nothing; confirm restores defaults and keeps custom holidays', async ({ page }) => {
@@ -4550,7 +4565,7 @@ test.describe('Options menu 1.15.1 polish', { tag: ['@options'] }, () => {
     expect(await controlSnapshot(page)).toEqual(changed);
 
     await page.locator('[data-options-reset="behavior"]').click();
-    expect(await answerAppDialog(page)).toContain('Custom holidays are kept');
+    expect(await answerAppDialog(page)).toContain('Custom holidays and vacations are kept');
     await expect(page.locator('#toast')).toContainText('Behavior reset to defaults');
     await expect(popout(page)).toBeVisible();
     expect(await controlSnapshot(page)).toEqual(fresh);
@@ -4863,8 +4878,9 @@ test.describe('Patterned background 1.16.1', { tag: ['@options'] }, () => {
   // Theme switches cross-fade the background; read it once the fade settles
   const mainTile = async (page: Page) => {
     const raw = () => page.locator('.main').evaluate(el => getComputedStyle(el).backgroundImage);
-    await expect.poll(async () => (await raw()).startsWith('cross-fade')).toBe(false);
-    return decodeURIComponent(await raw());
+    let settled = '';
+    await expect.poll(async () => (settled = await raw()).startsWith('cross-fade')).toBe(false);
+    return decodeURIComponent(settled);
   };
 
   test('off by default: just the toggle, no pattern on the page', async ({ page }) => {
@@ -5520,17 +5536,46 @@ test.describe('Options summary list 1.17.0', { tag: ['@options'] }, () => {
     await expect(page.locator(`#density-popout .options-new-tag:not([hidden]):not([data-new-in^="${minor}."])`)).toHaveCount(0);
   });
 
-  test('1.24.0: Background carries a New tag until its section is opened', async ({ page }) => {
+  test('every New tag in the running release shows until its section is opened, then stays gone', async ({ page }) => {
     await open117(page);
-    const minor = await page.evaluate(() => APP_VERSION.split('.').slice(0, 2).join('.'));
-    test.skip(minor !== '1.24', 'only new in 1.24.x');
-    await openTab(page, 'appearance');
-    const tag = page.locator('#options-pane-appearance [data-options-open="background"] .options-new-tag');
-    await expect(tag).toBeVisible();
-    await page.locator('#options-pane-appearance [data-options-open="background"]').click();
-    await expect(page.locator('[data-options-section="background"]')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(tag).toBeHidden();
+    const { minor, sections } = await page.evaluate(() => {
+      const minorOf = (v: string) => v.split('.').slice(0, 2).join('.');
+      const now = minorOf(APP_VERSION);
+      const found = new Map<string, { tab: string; section: string }>();
+      document.querySelectorAll<HTMLElement>('#density-popout [data-new-in]').forEach(el => {
+        if (minorOf(el.dataset.newIn!) !== now) return;
+        const tab = el.closest('.options-pane')!.id.replace('options-pane-', '');
+        const section = el.closest<HTMLElement>('[data-options-section]')?.dataset.optionsSection
+          || el.closest<HTMLElement>('[data-options-open]')!.dataset.optionsOpen!;
+        found.set(`${tab}/${section}`, { tab, section });
+      });
+      return { minor: now, sections: [...found.values()] };
+    });
+    test.info().annotations.push({ type: 'New tags', description: sections.map(s => `${s.tab}/${s.section}`).join(', ') || `none in ${minor}.x` });
+
+    const current = `[data-new-in^="${minor}."]`;
+    for (const { tab, section } of sections) {
+      await openTab(page, tab as 'appearance' | 'behavior');
+      const row = page.locator(`#options-pane-${tab} [data-options-open="${section}"]`);
+      if (await row.locator(current).count()) await expect(row.locator(current)).toBeVisible();
+      await row.click();
+      const inSection = page.locator(`[data-options-section="${section}"] ${current}`);
+      for (let i = 0; i < await inSection.count(); i++) await expect(inSection.nth(i)).toBeVisible();
+
+      while (await popout(page).isVisible()) await page.keyboard.press('Escape');
+      await openTab(page, tab as 'appearance' | 'behavior');
+      await expect(row.locator(`${current}:not([hidden])`)).toHaveCount(0);
+      const seen = await page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-seen-new-tags') || '[]'));
+      expect(seen.some((k: string) => k.startsWith(`${section}@${minor}.`))).toBe(true);
+      while (await popout(page).isVisible()) await page.keyboard.press('Escape');
+    }
+
+    await page.reload();
+    await dismissAuthModal(page);
+    for (const { tab, section } of sections) {
+      await openTab(page, tab as 'appearance' | 'behavior');
+      await expect(page.locator(`#options-pane-${tab} [data-options-open="${section}"] ${current}:not([hidden])`)).toHaveCount(0);
+    }
   });
   test('phone: sections and back work in the Options sheet', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -8711,11 +8756,13 @@ test.describe('Phone Options and week strip 1.23.3', { tag: ['@options', '@phone
         await page.locator('#sidebar-position-select').selectOption(pos);
         await expect(page.locator('html')).toHaveAttribute('data-sidebar-position', pos);
         await expect(popout(page)).toBeVisible();
-        const geo = await page.evaluate(() => {
+        const measure = () => page.evaluate(() => {
           const s = document.querySelector('.sidebar')!.getBoundingClientRect(), m = document.querySelector('.main')!.getBoundingClientRect();
           return { sx: s.left, sy: s.top, sw: s.width, sh: s.height, mx: m.left, my: m.top, mw: m.width, mh: m.height };
         });
-        expect(geo.mw, pos).toBeGreaterThan(vp.width * 0.55);
+        // The grid can take a frame or two to reflow after the position flips
+        await expect.poll(async () => (await measure()).mw, { message: pos }).toBeGreaterThan(vp.width * 0.55);
+        const geo = await measure();
         if (pos === 'right') expect(geo.sx, pos).toBeGreaterThan(geo.mx);
         if (pos === 'left') expect(geo.sx, pos).toBeLessThan(geo.mx);
         if (pos === 'top') expect(geo.sy + geo.sh, pos).toBeLessThanOrEqual(geo.my + 1);
@@ -9317,6 +9364,102 @@ test.describe('Keyboard shortcuts 1.22.0', { tag: ['@board', '@calendar'] }, () 
     await page.keyboard.press('Control+]');
     await expect(activeType(page)).toHaveAttribute('data-type', 'task');
     await expect(editor(page)).toHaveAttribute('data-placeholder', 'Add a task for today…');
+  });
+});
+
+test.describe('Shortcut hints and ? for Help 1.26.1', { tag: ['@board', '@docs', '@sidebar'] }, () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  const editor = (page: Page) => page.locator('#add-editor-host .rich-editor');
+  const blur = (page: Page) => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
+  test('? opens Help scrolled to Keyboard shortcuts, and Esc closes it', async ({ page }) => {
+    await openDesk(page);
+    await blur(page);
+    await page.keyboard.press('?');
+    const help = page.locator('#help-modal');
+    const section = page.locator('#help-shortcuts');
+    await expect(help).toBeVisible();
+    await expect(section).toHaveAttribute('open', '');
+    await expect(section.locator('summary')).toBeFocused();
+    await expect(section).toBeInViewport();
+    await expect(section).toContainText('Open Help at this list');
+    await page.keyboard.press('Escape');
+    await expect(help).toBeHidden();
+
+    await page.locator('#help-btn').click();
+    await expect(help).toBeVisible();
+    await expect(page.locator('#help-modal .help-modal-body')).toHaveJSProperty('scrollTop', 0);
+    await page.locator('#help-modal-dismiss').click();
+    await expect(help).toBeHidden();
+  });
+
+  test('? reopens the shortcuts section even after it was collapsed', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#help-btn').click();
+    await page.locator('#help-shortcuts summary').click();
+    await expect(page.locator('#help-shortcuts')).not.toHaveAttribute('open', '');
+    await page.locator('#help-modal-dismiss').click();
+    await blur(page);
+    await page.keyboard.press('?');
+    await expect(page.locator('#help-shortcuts')).toHaveAttribute('open', '');
+  });
+
+  test('? stays quiet while typing in the add box or with Options open', async ({ page }) => {
+    await openDesk(page);
+    await blur(page);
+    await page.keyboard.press('t');
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('What?');
+    await expect(editor(page)).toHaveText('What?');
+    await expect(page.locator('#help-modal')).toBeHidden();
+    await page.keyboard.press('Escape');
+
+    await page.locator('#density-toggle').click();
+    await expect(page.locator('#density-popout')).toBeVisible();
+    await page.keyboard.press('?');
+    await expect(page.locator('#help-modal')).toBeHidden();
+    await expect(page.locator('#density-popout')).toBeVisible();
+  });
+
+  test('the day arrows, Task, Note, and Add show their shortcut on hover and still work by click', async ({ page }) => {
+    await openDesk(page);
+    const prev = page.locator('#prev-day');
+    const next = page.locator('#next-day');
+    const task = page.locator('.type-btn[data-type="task"]');
+    const note = page.locator('.type-btn[data-type="note"]');
+    const add = page.locator('#add-btn');
+    await expect(prev).toHaveAttribute('title', 'Previous day ( [ )');
+    await expect(prev).toHaveAccessibleName('Previous day');
+    await expect(next).toHaveAttribute('title', 'Next day ( ] )');
+    await expect(task).toHaveAttribute('title', 'New task (T)');
+    await expect(note).toHaveAttribute('title', 'New note (N)');
+    await expect(add).toHaveAttribute('title', 'Add (Ctrl/Cmd + Enter)');
+    await expect(page.locator('#help-btn')).toHaveAttribute('title', 'How to use this app (?)');
+
+    await next.click();
+    await expect(editor(page)).toHaveAttribute('data-placeholder', 'Add a task for tomorrow…');
+    await prev.click();
+    await expect(editor(page)).toHaveAttribute('data-placeholder', 'Add a task for today…');
+    await note.click();
+    await expect(page.locator('.type-btn.active[data-type]')).toHaveAttribute('data-type', 'note');
+    await task.click();
+    await expect(page.locator('.type-btn.active[data-type]')).toHaveAttribute('data-type', 'task');
+    await editor(page).click();
+    await page.keyboard.type('Hinted task');
+    await add.click();
+    await expect(page.locator('.task-card', { hasText: 'Hinted task' })).toBeVisible();
+  });
+
+  test('the account menu Help item shows the ? key and opens Help', async ({ page }) => {
+    await openDesk(page);
+    await page.locator('#account-menu-btn').click();
+    const item = page.locator('#account-menu-help');
+    await expect(item).toBeVisible();
+    await expect(item.locator('kbd.account-menu-key')).toHaveText('?');
+    await expect(item).toHaveAccessibleName('Help & shortcuts');
+    await item.click();
+    await expect(page.locator('#help-modal')).toBeVisible();
+    await expect(page.locator('#account-menu')).toBeHidden();
   });
 });
 
@@ -10242,5 +10385,330 @@ test.describe('Phone Options sheet 1.25.0', { tag: ['@options', '@phone', '@them
     await page.evaluate(() => document.documentElement.style.setProperty('--keyboard-inset', '300px'));
     const dock = page.locator('#desk-view .add-form');
     await expect.poll(async () => Math.round(844 - ((await dock.boundingBox())!.y + (await dock.boundingBox())!.height))).toBeGreaterThanOrEqual(299);
+  });
+});
+
+// ── Vacations 1.26.0 ────────────────────────────────────────────────────
+test.describe('Calendar marks told apart on every theme 1.26.1', { tag: ['@calendar', '@themes'] }, () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  async function openCal(page: Page, theme = '') {
+    await page.clock.setFixedTime(new Date('2026-11-18T10:00:00'));
+    await page.addInitScript((t) => {
+      if (localStorage.getItem('marks-seeded')) return;
+      localStorage.setItem('marks-seeded', '1');
+      if (t) localStorage.setItem('work-desk-theme', t);
+      localStorage.setItem('work-desk-auto-carry-forward', 'false');
+      localStorage.setItem('work-desk-vacations', JSON.stringify([{ start: '2026-11-26', end: '2026-11-30', label: 'Trip' }]));
+      const task = (id: string) => ({ id, type: 'task', content: id, completed: false, boardColumn: 'new', comments: [], tags: [] });
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: {
+        '2026-11-10': { date: '2026-11-10', items: [task('left open')] },
+        '2026-11-19': { date: '2026-11-19', items: [task('upcoming')] },
+      }, deletedIds: {} }));
+    }, theme);
+    await openDesk(page);
+    await expect(page.locator('#sidebar-calendar .cal-legend')).toBeVisible();
+  }
+
+  const marks = (page: Page) => page.evaluate(() => {
+    const cs = getComputedStyle(document.getElementById('sidebar-calendar')!);
+    const v = (n: string) => cs.getPropertyValue(n).trim();
+    return { items: v('--cal-items'), open: v('--cal-open'), holiday: v('--cal-holiday'), vacation: v('--cal-vacation'), vacationDate: v('--cal-vacation-date') };
+  });
+
+  test('every theme: Has items, Left open, and Holiday read on the sidebar, look different, and dates on the vacation band read', async ({ page }) => {
+    await openCal(page);
+    const failures = await page.evaluate(async () => {
+      const w = window as unknown as { eval: (s: string) => any };
+      const themes: Array<{ id: string }> = w.eval('THEMES');
+      const contrast = w.eval('contrastRatio'), distance = w.eval('tagShadeDistance'), toHex = w.eval('cssColorToHex');
+      const cal = document.getElementById('sidebar-calendar')!;
+      const out: string[] = [];
+      for (const { id } of themes) {
+        document.documentElement.setAttribute('data-theme', id);
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const cs = getComputedStyle(cal);
+        const m = Object.fromEntries(['items', 'open', 'holiday', 'vacation', 'vacation-date'].map(k => [k, cs.getPropertyValue(`--cal-${k}`).trim()]));
+        const side = toHex(getComputedStyle(document.querySelector('.sidebar')!).backgroundColor);
+        if (Object.values(m).some(x => !/^#[0-9a-f]{6}$/.test(x))) { out.push(`${id}: missing marks`); continue; }
+        for (const k of ['items', 'open', 'holiday']) if (contrast(m[k], side) < 3) out.push(`${id}: ${k} ${contrast(m[k], side).toFixed(2)}:1`);
+        if (contrast(m['vacation-date'], m.vacation) < 3) out.push(`${id}: dates on the band`);
+        if (contrast(m.holiday, m.vacation) < 3) out.push(`${id}: holiday on the band`);
+        const gap = Math.min(distance(m.items, m.open), distance(m.items, m.holiday), distance(m.open, m.holiday));
+        if (gap < 0.1) out.push(`${id}: two marks alike (${gap.toFixed(3)})`);
+        const legend = (sel: string) => toHex(getComputedStyle(cal.querySelector(sel)!).backgroundColor);
+        if (legend('.cal-legend-dot:not(.holiday)') !== m.items || legend('.cal-legend-badge') !== m.open || legend('.cal-legend-dot.holiday') !== m.holiday) out.push(`${id}: legend doesn't use the marks`);
+      }
+      return out;
+    });
+    expect(failures).toEqual([]);
+  });
+
+  test('Everforest, picked in Options: Left open switches to Everforest red on the legend and the day badge', async ({ page }) => {
+    await openCal(page);
+    await page.locator('#density-toggle').click();
+    await page.locator('.theme-filter-btn[data-theme-filter="dark"]').click();
+    await page.locator('#customize-theme-grid .theme-swatch[data-theme-id="everforest-dark"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'everforest-dark');
+    await expect(page.locator('#density-popout')).toBeHidden();
+    await expect(page.locator('#sidebar-calendar .cal-legend-badge')).toHaveCSS('background-color', 'rgb(230, 126, 128)');
+    const badge = page.locator('#sidebar-calendar .cal-day-badge').first();
+    await expect(badge).toHaveText('1');
+    await expect(badge).toHaveCSS('color', 'rgb(230, 126, 128)');
+    await expect(page.locator('#sidebar-calendar .cal-legend-dot.holiday')).toHaveCSS('background-color', 'rgb(167, 192, 128)');
+  });
+
+  test('Gruvbox keeps its amber Left open', async ({ page }) => {
+    await openCal(page, 'gruvbox-dark');
+    await expect(page.locator('#sidebar-calendar .cal-legend-badge')).toHaveCSS('background-color', 'rgb(251, 191, 36)');
+    await expect(page.locator('#sidebar-calendar .cal-legend-dot.holiday')).toHaveCSS('background-color', 'rgb(254, 128, 25)');
+  });
+
+  test('Nord keeps the calendar marks after a reload, and its vacation dates are readable', async ({ page }) => {
+    await openCal(page, 'nord');
+    const nord = await marks(page);
+    expect(nord.open).toBe('#fbbf24');
+    const weekend = page.locator('#sidebar-calendar .cal-day.vacation', { hasText: /^29/ });
+    await expect(weekend).toHaveCSS('color', await page.evaluate((hex) => { const s = document.createElement('span'); s.style.color = hex; document.body.append(s); const c = getComputedStyle(s).color; s.remove(); return c; }, nord.vacationDate));
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'nord');
+    expect(await marks(page)).toEqual(nord);
+  });
+
+  test('a custom accent recomputes the marks: a gold accent moves Left open off amber, and clearing it brings amber back', async ({ page }) => {
+    await openCal(page, 'nord');
+    expect((await marks(page)).open).toBe('#fbbf24');
+    await page.evaluate(() => document.documentElement.style.setProperty('--accent', '#f5c518'));
+    await expect.poll(async () => (await marks(page)).open).not.toBe('#fbbf24');
+    await page.evaluate(() => document.documentElement.style.removeProperty('--accent'));
+    await expect.poll(async () => (await marks(page)).open).toBe('#fbbf24');
+  });
+
+  test('the marks stay on the sidebar calendar; the page root has none', async ({ page }) => {
+    await openCal(page);
+    const root = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--cal-holiday').trim());
+    expect(root).toBe('');
+    expect((await marks(page)).holiday).toMatch(/^#[0-9a-f]{6}$/);
+  });
+});
+
+test.describe('Vacations 1.26.0', { tag: ['@options', '@calendar', '@recurring', '@insights'] }, () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+  type Vac = { start: string; end: string; label: string };
+  type Seed = { vacations?: Vac[]; templates?: object[]; days?: Record<string, unknown>; skipWeekends?: boolean };
+  const TRIP: Vac = { start: '2026-12-21', end: '2027-01-04', label: 'Winter break' };
+
+  async function openAt(page: Page, today: string, seed: Seed = {}) {
+    await page.clock.setFixedTime(new Date(`${today}T10:00:00`));
+    await page.addInitScript((s) => {
+      if (localStorage.getItem('vac-seeded')) return;
+      localStorage.setItem('vac-seeded', '1');
+      localStorage.setItem('work-desk-list-context', 'work');
+      localStorage.setItem('work-desk-data-work', JSON.stringify({ days: s.days || {}, deletedIds: {} }));
+      localStorage.setItem('work-desk-data-personal', JSON.stringify({ days: {}, deletedIds: {} }));
+      if (s.vacations) localStorage.setItem('work-desk-vacations', JSON.stringify(s.vacations));
+      if (s.templates) localStorage.setItem('work-desk-recurring-work', JSON.stringify({ templates: s.templates, deletedIds: {} }));
+      if (s.skipWeekends === false) localStorage.setItem('work-desk-streak-skip-weekends', 'false');
+    }, seed);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+  }
+  async function openHolidays(page: Page) {
+    await page.locator('#density-toggle').click();
+    await expect(popout(page)).toBeVisible();
+    await page.locator('.options-nav-btn[data-options-tab="behavior"]').click();
+    await page.locator('#options-pane-behavior [data-options-open="holidays"]').click();
+    await expect(page.locator('#vacations-section')).toBeVisible();
+  }
+  const popout = (page: Page) => page.locator('#density-popout');
+  const rows = (page: Page) => page.locator('#vacations-list .vacation-item');
+  const stored = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('work-desk-vacations') || '[]'));
+  const calDay = (page: Page, longDate: string) => page.locator(`.sidebar-calendar .cal-day[title^="${longDate}"]`);
+
+  test('add a range, get turned away for a blank, backward, or overlapping one, then remove it; the menu stays open', async ({ page }) => {
+    await openAt(page, '2026-12-01');
+    await openHolidays(page);
+    await expect(page.locator('#vacations-list .custom-holidays-empty')).toHaveText('None added yet');
+    await expect(page.locator('#vacations-section .options-new-tag')).toHaveText('New');
+
+    await page.locator('#vacation-add-btn').click();
+    await expect(page.locator('#toast')).toContainText('Pick the first and last day off');
+    await expect(popout(page)).toBeVisible();
+
+    await page.locator('#vacation-label').fill('Winter break');
+    await page.locator('#vacation-start').fill('2026-12-21');
+    await expect(page.locator('#vacation-end')).toHaveValue('2026-12-21');
+    await expect(page.locator('#vacation-end')).toHaveAttribute('min', '2026-12-21');
+    await page.locator('#vacation-end').fill('2027-01-04');
+    await page.locator('#vacation-add-btn').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page).locator('.holiday-date')).toHaveText('Dec 21, 2026 – Jan 4, 2027');
+    await expect(rows(page).locator('.vacation-days')).toHaveText('15 days');
+    await expect(rows(page).locator('.holiday-label')).toHaveText('Winter break');
+    for (const id of ['#vacation-label', '#vacation-start', '#vacation-end']) await expect(page.locator(id)).toHaveValue('');
+    expect(await stored(page)).toEqual([TRIP]);
+    await expect(page.locator('#options-pane-behavior [data-options-open="holidays"]')).toHaveAttribute('title', /1 vacation$/);
+
+    await page.locator('#vacation-start').fill('2027-01-01');
+    await page.locator('#vacation-end').fill('2027-01-10');
+    await page.locator('#vacation-add-btn').click();
+    await expect(page.locator('#toast')).toContainText('That overlaps Winter break (Dec 21, 2026 – Jan 4, 2027)');
+    await expect(rows(page)).toHaveCount(1);
+
+    await page.locator('#vacation-start').fill('2027-02-10');
+    await page.locator('#vacation-end').fill('2027-02-01');
+    await page.locator('#vacation-add-btn').click();
+    await expect(page.locator('#toast')).toContainText('The last day off is before the first');
+    await expect(rows(page)).toHaveCount(1);
+
+    await page.locator('#vacation-label').fill('');
+    await page.locator('#vacation-start').fill('2027-01-05');
+    await page.locator('#vacation-end').fill('2027-01-05');
+    await page.locator('#vacation-add-btn').click();
+    await expect(rows(page)).toHaveCount(2);
+    await expect(rows(page).nth(1).locator('.vacation-days')).toHaveText('1 day');
+    await expect(rows(page).nth(1).locator('.holiday-label')).toHaveText('(no label)');
+
+    await rows(page).first().locator('.holiday-remove').click();
+    await expect(popout(page)).toBeVisible();
+    await rows(page).first().locator('.holiday-remove').click();
+    await expect(popout(page)).toBeVisible();
+    await expect(page.locator('#vacations-list .custom-holidays-empty')).toHaveText('None added yet');
+    expect(await stored(page)).toEqual([]);
+  });
+
+  test('a past trip hides behind Show past; with only past trips it says No upcoming vacations', async ({ page }) => {
+    await openAt(page, '2026-12-01', { vacations: [{ start: '2026-10-01', end: '2026-10-03', label: 'Fall trip' }, TRIP] });
+    await openHolidays(page);
+    await expect(rows(page)).toHaveCount(1);
+    const past = page.locator('#vacations-list .custom-holidays-past-btn');
+    await expect(past).toHaveText('Show past (1)');
+    await past.click();
+    await expect(popout(page)).toBeVisible();
+    await expect(rows(page)).toHaveCount(2);
+    await expect(rows(page).first()).toHaveClass(/is-past/);
+    await expect(rows(page).first().locator('.holiday-date')).toHaveText('Oct 1 – 3, 2026');
+    await page.locator('#vacations-list .custom-holidays-past-btn').click();
+    await expect(page.locator('#vacations-list .custom-holidays-past-btn')).toHaveText('Show past (1)');
+    await expect(rows(page)).toHaveCount(1);
+
+    await rows(page).first().locator('.holiday-remove').click();
+    await expect(page.locator('#vacations-list .custom-holidays-empty')).toHaveText('No upcoming vacations');
+    await expect(rows(page)).toHaveCount(0);
+    await page.locator('#vacations-list .custom-holidays-past-btn').click();
+    await expect(rows(page)).toHaveCount(1);
+  });
+
+  test('adding a trip that already ended opens Show past so the new row is visible', async ({ page }) => {
+    await openAt(page, '2026-12-01');
+    await openHolidays(page);
+    await page.locator('#vacation-start').fill('2026-11-02');
+    await page.locator('#vacation-end').fill('2026-11-06');
+    await page.locator('#vacation-add-btn').click();
+    await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page).first()).toHaveClass(/is-past/);
+    await expect(page.locator('#vacations-list .custom-holidays-past-btn')).toHaveText('Hide past');
+  });
+
+  test('Reset Behavior keeps vacations', async ({ page }) => {
+    await openAt(page, '2026-12-01', { vacations: [TRIP] });
+    await openHolidays(page);
+    await page.locator('[data-options-reset="behavior"]').click();
+    expect(await answerAppDialog(page)).toContain('Custom holidays and vacations are kept');
+    expect(await stored(page)).toEqual([TRIP]);
+    await expect(rows(page)).toHaveCount(1);
+  });
+
+  test('the calendar shades the trip as one band per week row, holidays keep their dot, and the legend adds Vacation', async ({ page }) => {
+    await openAt(page, '2026-12-15', { vacations: [TRIP] });
+    await expect(calDay(page, 'December 20, 2026')).not.toHaveClass(/vacation/);
+    await expect(calDay(page, 'December 21, 2026')).toHaveClass(/vacation.*vac-start|vac-start.*vacation/);
+    await expect(calDay(page, 'December 21, 2026')).toHaveAttribute('title', 'December 21, 2026 — Winter break');
+    const xmas = calDay(page, 'December 25, 2026');
+    await expect(xmas).toHaveClass(/holiday/);
+    await expect(xmas).toHaveClass(/vacation/);
+    await expect(xmas.locator('.cal-holiday-dot')).toHaveCount(1);
+    await expect(xmas).toHaveAttribute('title', 'December 25, 2026 — Christmas Day · Winter break');
+    await expect(page.locator('.sidebar-calendar .cal-legend .cal-legend-item').last()).toHaveText('Vacation');
+
+    const shape = await page.evaluate(() => {
+      const cells = [...document.querySelectorAll('.sidebar-calendar .cal-grid .cal-day')];
+      const bad: string[] = [];
+      cells.forEach((c, i) => {
+        if (!c.classList.contains('vacation')) return;
+        const prev = cells[i - 1], next = cells[i + 1];
+        const startsRow = i % 7 === 0 || !prev?.classList.contains('vacation');
+        const endsRow = i % 7 === 6 || !next?.classList.contains('vacation');
+        if (startsRow !== c.classList.contains('vac-start') || endsRow !== c.classList.contains('vac-end')) bad.push(c.getAttribute('title')!);
+      });
+      const band = (t: string) => {
+        const el = [...cells].find((c) => c.getAttribute('title')!.startsWith(t))!;
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el, '::before');
+        return { left: r.left, right: r.right, before: s.content, bg: s.backgroundColor, l: parseFloat(s.left), rt: parseFloat(s.right) };
+      };
+      return { bad, mid: band('December 23, 2026'), first: band('December 21, 2026') };
+    });
+    expect(shape.bad).toEqual([]);
+    expect(shape.mid.before).toBe('""');
+    expect(shape.mid.bg).not.toBe('rgba(0, 0, 0, 0)');
+    expect(shape.mid.l).toBe(-1);
+    expect(shape.mid.rt).toBe(-1);
+    expect(shape.first.l).toBe(2);
+
+    await calDay(page, 'December 23, 2026').click();
+    await expect(calDay(page, 'December 23, 2026')).toHaveClass(/selected/);
+    expect(await calDay(page, 'December 23, 2026').evaluate((el) => getComputedStyle(el, '::before').display)).toBe('none');
+
+    await page.locator('.sidebar-calendar [aria-label="Previous month"]').click();
+    await page.locator('.sidebar-calendar [aria-label="Previous month"]').click();
+    await expect(page.locator('.sidebar-calendar .cal-legend')).not.toContainText('Vacation');
+    await expect(page.locator('.sidebar-calendar .cal-day.vacation')).toHaveCount(0);
+  });
+
+  test('on a vacation day a Skip holidays template stays off the desk, and its next due is the day back', async ({ page }) => {
+    const tpl = (id: string, content: string, extra: object = {}) =>
+      ({ id, content, rule: 'daily', days: null, createdAt: '2026-12-01T09:00:00', lastInjectedDate: '2026-12-21', ...extra });
+    await openAt(page, '2026-12-22', {
+      vacations: [TRIP],
+      templates: [tpl('skip', 'Standup notes', { skipHolidays: true }), tpl('keep', 'Water the plant')],
+    });
+    await expect(page.locator('.item-card', { hasText: 'Water the plant' })).toBeVisible();
+    await expect(page.locator('.item-card', { hasText: 'Standup notes' })).toHaveCount(0);
+
+    await page.locator('#recurring-btn').click();
+    const modal = page.locator('#recurring-modal');
+    await expect(modal).not.toHaveClass(/hidden/);
+    const row = (text: string) => modal.locator('.recurring-template-item', { hasText: text });
+    await expect(row('Standup notes').locator('.recurring-next-due')).toHaveText('Jan 5, 2027');
+    await expect(row('Standup notes').locator('.recurring-skip-mark')).toHaveAttribute('title', 'Skips holidays and vacations');
+    await expect(modal.locator('.recurring-footnote')).toHaveText('* skips holidays and vacations');
+  });
+
+  test('Insights: weekdays on vacation keep the streak, even with weekend skipping off', async ({ page }) => {
+    const done = (key: string) => ({ date: key, items: [{ id: `s-${key}`, type: 'task', content: `Done ${key}`, completed: true, shelved: false, boardColumn: 'active', createdAt: `${key}T09:00:00` }] });
+    const days = Object.fromEntries(['2026-12-19', '2026-12-20', '2027-01-05', '2027-01-06'].map((k) => [k, done(k)]));
+    await openAt(page, '2027-01-06', { vacations: [TRIP], days, skipWeekends: false });
+    expect(await readStreaks(page)).toEqual({ current: 4, longest: 4 });
+  });
+
+  test('Insights: without the vacation, the same days break the streak', async ({ page }) => {
+    const done = (key: string) => ({ date: key, items: [{ id: `s-${key}`, type: 'task', content: `Done ${key}`, completed: true, shelved: false, boardColumn: 'active', createdAt: `${key}T09:00:00` }] });
+    const days = Object.fromEntries(['2026-12-19', '2026-12-20', '2027-01-05', '2027-01-06'].map((k) => [k, done(k)]));
+    await openAt(page, '2027-01-06', { days, skipWeekends: false });
+    expect(await readStreaks(page)).toEqual({ current: 2, longest: 2 });
+  });
+
+  test('Insights: Lingering Tasks leaves the trip out of how long a task has been open', async ({ page }) => {
+    const days = {
+      '2026-12-18': { date: '2026-12-18', items: [{ id: 'l1', type: 'task', content: 'Quarterly report', completed: false, shelved: false, boardColumn: 'active', createdAt: '2026-12-18T09:00:00' }] },
+      '2027-01-06': { date: '2027-01-06', items: [{ id: 'd1', type: 'task', content: 'Inbox zero', completed: true, shelved: false, boardColumn: 'active', createdAt: '2027-01-06T09:00:00' }] },
+    };
+    await openAt(page, '2027-01-06', { vacations: [TRIP], days });
+    await page.locator('#tab-insights').click();
+    const card = page.locator('.lingering-card');
+    await expect(card).toBeVisible();
+    await expect(card.locator('.insight-task-row', { hasText: 'Quarterly report' })).toContainText('Open 4 days');
   });
 });
