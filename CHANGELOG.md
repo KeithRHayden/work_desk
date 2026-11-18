@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.26.2] — 2026-11-18
+
+### Fixed
+
+- Nord: the sidebar's text and calendar dates were much dimmer than on any other theme (2.2:1 against a 6.5:1 median). They're now as easy to read as the rest, still in Nord's blue-gray. Nord Light's faint sidebar labels are brighter too
+- Insights "carried over" matches the calendar's Left open color again on themes where 1.26.1 moved Left open off amber, and the charts (daily line, bars, pie, and their tooltips) now use the theme's carried color instead of always drawing amber. Where the calendar shade would sit too close to Completed, Shelved, or Open (new), Insights uses a lighter or deeper shade of the same color
+
 ## [1.26.1] — 2026-11-18
 
 ### Improved
