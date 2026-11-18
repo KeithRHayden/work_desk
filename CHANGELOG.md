@@ -6,6 +6,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.26.1] — 2026-11-18
+
+### Improved
+
+- Press `?` (when you aren't typing in a box) to open Help right at Keyboard shortcuts. The account menu's Help & shortcuts item shows the `?` key
+- Hovering the day arrows, Task, Note, or Add now shows its keyboard shortcut, so you can find them without opening Help
+- Calendar colors are easier to tell apart on every theme. Has items is a neutral gray, Holiday is bright enough to read on the sidebar, and Left open moves off amber where it looked like the theme color (Everforest, Solarized Mid, Monokai Pro, Kanagawa, Rosewood, Sand, and other gold or orange themes), using the theme's own red or pink when it has one. Custom themes get the same check
+
+### Fixed
+
+- Help always opens at the top again, instead of where you last scrolled
+- On Nord, Dracula, and Cyberpunk the Has items dots were nearly invisible, and on Nord the dates inside a vacation band could disappear. On Paper, Sage, Harvest, and other themes with a dark accent, holidays were hard to see on the sidebar
+
 ## [1.26.0] — 2026-11-16
 
 ### Added
