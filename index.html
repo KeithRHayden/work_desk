@@ -3265,6 +3265,10 @@
     }
     .account-menu-ic { width: 16px; text-align: center; color: var(--text-muted); font-size: 0.8rem; }
     .account-menu-item .version-new-dot { margin-left: auto; }
+    .account-menu-key {
+      margin-left: auto; min-width: 18px; padding: 0 5px; border: 1px solid var(--border); border-radius: 4px;
+      font: inherit; font-size: 0.7rem; line-height: 16px; text-align: center; color: var(--text-muted);
+    }
     .account-menu .sidebar-backup-btns { display: flex; flex-direction: column; gap: 1px; width: 100%; }
     .account-menu .backup-btn::after { content: '›'; margin-left: auto; color: var(--text-muted); }
     .account-menu .backup-dropdown { position: static; margin: 1px 0 3px 26px; border-radius: 6px; box-shadow: none; }
@@ -3437,7 +3441,7 @@
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: var(--sidebar-muted);
+      background: var(--cal-items, var(--sidebar-muted));
     }
     /* Up in the corner, clear of a two-digit date at the Large text size */
     .cal-day-badge {
@@ -3452,8 +3456,8 @@
       font-weight: 700;
       line-height: 13px;
       text-align: center;
-      background: color-mix(in srgb, var(--carried) 20%, transparent);
-      color: var(--carried-ink);
+      background: color-mix(in srgb, var(--cal-open, var(--carried)) 20%, transparent);
+      color: var(--cal-open, var(--carried-ink));
     }
     .cal-today-chip {
       flex-shrink: 0;
@@ -3479,13 +3483,13 @@
       gap: 4px 10px;
       margin-top: 2px;
       font-size: 0.6rem;
-      color: var(--sidebar-muted);
+      color: var(--cal-items, var(--sidebar-muted));
     }
     .cal-legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-    .cal-legend-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sidebar-muted); }
-    .cal-legend-dot.holiday { background: var(--accent); }
+    .cal-legend-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--cal-items, var(--sidebar-muted)); }
+    .cal-legend-dot.holiday { background: var(--cal-holiday, var(--accent)); }
     /* Same color as the numbers on .cal-day-badge, the part of the badge you actually see */
-    .cal-legend-badge { width: 5px; height: 5px; border-radius: 50%; background: var(--carried-ink); }
+    .cal-legend-badge { width: 5px; height: 5px; border-radius: 50%; background: var(--cal-open, var(--carried-ink)); }
     .cal-legend-band { width: 12px; height: 6px; border-radius: 999px; }
 
     /* Vacation band: reaches 1px into the grid gap on each side so neighbors join into one bar */
@@ -3497,12 +3501,13 @@
       z-index: -1;
     }
     .cal-day.vacation::before,
-    .cal-legend-band { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+    .cal-legend-band { background: var(--cal-vacation, color-mix(in srgb, var(--accent) 22%, transparent)); }
+    #sidebar-calendar .cal-day.vacation:not(.selected):not(.holiday):not(.other-month) { color: var(--cal-vacation-date, var(--sidebar-text)); }
     .cal-day.vac-start::before { left: 2px; border-radius: 999px 0 0 999px; }
     .cal-day.vac-end::before { right: 2px; border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
     .cal-day.vacation.selected::before { display: none; }
 
-    .cal-day.holiday { color: var(--accent); font-weight: 600; }
+    .cal-day.holiday { color: var(--cal-holiday, var(--accent)); font-weight: 600; }
     .cal-day.holiday.has-data:not(.selected)::after { display: none; }
     .cal-holiday-dot {
       position: absolute;
@@ -3512,7 +3517,7 @@
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: var(--accent);
+      background: var(--cal-holiday, var(--accent));
     }
 
 
@@ -8539,7 +8544,7 @@
           <h1 class="logo">Work Desk</h1>
           <p id="logo-sub" class="logo-sub">
             <span id="logo-sub-text"></span>
-            <button id="help-btn" class="logo-help-btn" type="button" aria-label="How to use this app" title="How to use this app">?</button>
+            <button id="help-btn" class="logo-help-btn" type="button" aria-label="How to use this app" title="How to use this app (?)" aria-keyshortcuts="?">?</button>
           </p>
           <button id="whats-new-link" class="whats-new-link hidden" type="button">What's new<span id="version-new-dot" class="version-new-dot"></span></button>
         </div>
@@ -8622,7 +8627,7 @@
         <div id="account-menu" class="account-menu hidden" role="menu" aria-label="Account menu">
           <div class="account-menu-app">
             <button id="account-menu-options" class="account-menu-item" type="button" role="menuitem"><span class="account-menu-ic" aria-hidden="true">⚙</span>Options</button>
-            <button id="account-menu-help" class="account-menu-item" type="button" role="menuitem"><span class="account-menu-ic" aria-hidden="true">?</span>Help &amp; shortcuts</button>
+            <button id="account-menu-help" class="account-menu-item" type="button" role="menuitem" aria-keyshortcuts="?" title="Press ? anywhere to open Help at the shortcuts"><span class="account-menu-ic" aria-hidden="true">?</span>Help &amp; shortcuts<kbd class="account-menu-key" aria-hidden="true">?</kbd></button>
             <button id="account-menu-whatsnew" class="account-menu-item" type="button" role="menuitem"><span class="account-menu-ic" aria-hidden="true">✦</span>What's new<span id="account-menu-new-dot" class="version-new-dot hidden"></span></button>
           </div>
         <div class="sidebar-backup">
@@ -8683,7 +8688,7 @@
         <div class="desk-sticky">
           <header>
             <div class="date-nav-row">
-              <button id="prev-day" class="nav-arrow" aria-label="Previous day">←</button>
+              <button id="prev-day" class="nav-arrow" aria-label="Previous day" title="Previous day ( [ )" aria-keyshortcuts="[">←</button>
               <div class="date-title-block">
                 <h2 id="date-title" class="date-title"></h2>
                 <span id="context-badge" class="context-badge">Work</span>
@@ -8693,7 +8698,7 @@
                 </button>
                 <span id="today-badge" class="today-badge hidden">Today</span>
               </div>
-              <button id="next-day" class="nav-arrow" aria-label="Next day">→</button>
+              <button id="next-day" class="nav-arrow" aria-label="Next day" title="Next day ( ] )" aria-keyshortcuts="]">→</button>
               <div class="density-wrap">
                 <button id="density-toggle" class="density-toggle" type="button" aria-label="Settings" aria-haspopup="true" aria-expanded="false" title="Settings">
                   <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -9097,15 +9102,15 @@
 
           <form id="add-form" class="add-form">
             <div class="type-toggle">
-              <button type="button" class="type-btn active" data-type="task">Task</button>
-              <button type="button" class="type-btn" data-type="note">Note</button>
+              <button type="button" class="type-btn active" data-type="task" title="New task (T)" aria-keyshortcuts="T">Task</button>
+              <button type="button" class="type-btn" data-type="note" title="New note (N)" aria-keyshortcuts="N">Note</button>
               <span class="type-toggle-divider" aria-hidden="true"></span>
               <button type="button" id="recurring-btn" class="type-btn type-btn-recurring" title="Manage recurring task templates"><svg class="icon-repeat" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg> Recurring</button>
             </div>
             <div class="add-row">
               <div id="add-editor-host"></div>
               <button id="format-toggle-btn" class="format-toggle-btn" type="button" title="Text formatting (bold, italic, underline, bullets)">Aa</button>
-              <button id="add-btn" class="add-btn" type="submit" disabled>Add</button>
+              <button id="add-btn" class="add-btn" type="submit" title="Add (Ctrl/Cmd + Enter)" aria-keyshortcuts="Control+Enter Meta+Enter" disabled>Add</button>
             </div>
           </form>
         </div>
@@ -9349,6 +9354,8 @@
             <li><strong>Reorder a project, note, or project task</strong> — Alt + ↑ / ↓</li>
             <li><strong>Move around a menu</strong> — ↑ / ↓</li>
             <li><strong>Cancel an edit, close a menu, or leave the add box</strong> — Escape</li>
+            <li><strong>Open Help at this list</strong> — ? (when you aren't typing in a box)</li>
+            <li>Hover the day arrows, Task, Note, or Add to see their shortcut.</li>
           </ul>
         </details>
 
@@ -9528,12 +9535,27 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.26.0';
+    const APP_VERSION = '1.26.1';
     const CHANGELOG = [
+      {
+        version: '1.26.1',
+        date: 'Nov 18, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Improved', items: [
+            'Press ? (when you aren\'t typing in a box) to open Help right at Keyboard shortcuts. The account menu\'s Help & shortcuts item shows the ? key',
+            'Hovering the day arrows, Task, Note, or Add now shows its keyboard shortcut, so you can find them without opening Help',
+            'Calendar colors are easier to tell apart on every theme. Has items is a neutral gray, Holiday is bright enough to read on the sidebar, and Left open moves off amber where it looked like the theme color (Everforest, Solarized Mid, Monokai Pro, Kanagawa, Rosewood, Sand, and other gold or orange themes), using the theme\'s own red or pink when it has one',
+          ] },
+          { label: 'Fixed', items: [
+            'Help always opens at the top again, instead of where you last scrolled',
+            'On Nord, Dracula, and Cyberpunk the Has items dots were nearly invisible, and on Nord the dates inside a vacation band could disappear. On Paper, Sage, Harvest, and other themes with a dark accent, holidays were hard to see on the sidebar',
+          ] },
+        ],
+      },
       {
         version: '1.26.0',
         date: 'Nov 16, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Added', items: [
             'Vacations in Options → Behavior → Holidays: add a first and last day off (with an optional label) instead of one holiday at a time. The list shows each range and how many days it covers, with ✕ to remove one and Show past for finished trips',
@@ -14710,6 +14732,7 @@
       tagShadeFrame = requestAnimationFrame(() => {
         tagShadeFrame = 0;
         refreshTagShades();
+        refreshCalendarMarks();
       });
     }
 
@@ -14757,6 +14780,87 @@
       new MutationObserver(scheduleTagShadeRefresh)
         .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style', 'data-tag-colors'] });
       refreshTagShades();
+      refreshCalendarMarks();
+    }
+
+    // ── Calendar marks: Has items, Left open, Holiday, and the vacation band, told apart on every theme ──
+    const CAL_OPEN_FALLBACKS = ['#fda4af', '#fbbf24', '#fb923c', '#f87171', '#f472b6'];
+    const CAL_MARK_MIN_GAP = 0.15;
+    const CAL_MARK_FLOOR = 0.1;
+    const CAL_VACATION_TINT = 24;
+
+    // Step lightness away from the sidebar until the color reaches minContrast on every background
+    function liftCalendarColor(hex, minContrast, backgrounds, towardLight) {
+      const { c, h } = hexToOklch(hex);
+      let { l } = hexToOklch(hex);
+      let out = hex;
+      for (let i = 0; i < 48 && backgrounds(out).some(bg => contrastRatio(out, bg) < minContrast); i++) {
+        l = Math.min(0.98, Math.max(0.04, l + (towardLight ? 0.02 : -0.02)));
+        out = oklchToHex(l, c, h);
+      }
+      return out;
+    }
+
+    // Left open stays a warm "needs attention" color: reds, pinks, oranges, ambers
+    function isWarmCalendarColor(hex) {
+      const { c, h } = hexToOklch(hex);
+      return c >= 0.08 && (h <= 110 || h >= 330);
+    }
+
+    function buildCalendarMarks({ sidebar, text, muted, accent, carried, palette = null }) {
+      const towardLight = relativeLuminance(text) > relativeLuminance(sidebar);
+      const lift = (hex, min, bgs = () => [sidebar]) => liftCalendarColor(hex, min, bgs, towardLight);
+      const band = (hex) => mixHex(hex, sidebar, 100 - CAL_VACATION_TINT);
+      const m = hexToOklch(muted);
+      const items = lift(oklchToHex(m.l, Math.min(m.c, 0.02), m.h), 3);
+      let holiday = lift(accent, 3, (x) => [sidebar, band(x)]);
+      // A gray accent can't differ from Has items by hue, so it differs by lightness
+      if (tagShadeDistance(holiday, items) < 0.1) holiday = lift(holiday, contrastRatio(items, sidebar) + 3);
+      const gap = (hex) => Math.min(tagShadeDistance(hex, holiday), tagShadeDistance(hex, items));
+      let open = lift(carried, 3);
+      // Too close to Holiday or Has items: a theme with a known palette only trades for one of its own
+      // warm colors, and keeps its color if none is clearly better and it isn't below the floor
+      if (gap(open) < CAL_MARK_MIN_GAP) {
+        const clear = (hex) => gap(hex) >= CAL_MARK_MIN_GAP;
+        const own = (palette || []).filter(isWarmCalendarColor).map(hex => lift(hex, 3));
+        const stock = CAL_OPEN_FALLBACKS.map(hex => lift(hex, 3));
+        const keep = gap(open) >= CAL_MARK_FLOOR;
+        open = own.find(clear)
+          || (palette && keep ? open : stock.find(clear))
+          || (keep ? open : [...own, ...stock].reduce((best, hex) => (gap(hex) > gap(best) ? hex : best), open));
+      }
+      const vacation = band(holiday);
+      return { items, open, holiday, vacation, vacationDate: lift(text, 3, () => [vacation]) };
+    }
+
+    let calendarMarksKey = '';
+
+    function refreshCalendarMarks() {
+      if (typeof getComputedStyle !== 'function') return;
+      const probe = document.createElement('span');
+      probe.style.cssText = 'position:absolute;visibility:hidden;background-color:var(--sidebar);color:var(--sidebar-text);'
+        + 'border-top:1px solid var(--sidebar-muted);border-right:1px solid var(--accent);border-bottom:1px solid var(--carried-ink)';
+      document.body.appendChild(probe);
+      const cs = getComputedStyle(probe);
+      const colors = {
+        sidebar: cssColorToHex(cs.backgroundColor), text: cssColorToHex(cs.color), muted: cssColorToHex(cs.borderTopColor),
+        accent: cssColorToHex(cs.borderRightColor), carried: cssColorToHex(cs.borderBottomColor),
+      };
+      probe.remove();
+      if (Object.values(colors).some(v => !v)) return;
+      const themeId = getCurrentThemeId();
+      const key = [themeId, ...Object.values(colors)].join('|');
+      if (key === calendarMarksKey) return;
+      calendarMarksKey = key;
+      const marks = buildCalendarMarks({ ...colors, palette: THEME_TAG_PALETTES[themeId] || null });
+      let style = document.getElementById('cal-mark-vars');
+      if (!style) {
+        style = document.createElement('style');
+        style.id = 'cal-mark-vars';
+        document.head.appendChild(style);
+      }
+      style.textContent = `#sidebar-calendar { --cal-items: ${marks.items}; --cal-open: ${marks.open}; --cal-holiday: ${marks.holiday}; `
+        + `--cal-vacation: ${marks.vacation}; --cal-vacation-date: ${marks.vacationDate}; }`;
     }
 
     function normalizeTagShadeSlots(obj) {
@@ -24947,6 +25051,9 @@
         if (!arrow.getClientRects().length) return;
         e.preventDefault();
         arrow.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        openHelpAtShortcuts();
       }
     }
     document.addEventListener('keydown', handleDeskShortcut);
@@ -25094,8 +25201,16 @@
     function openHelpModal() {
       helpSearch.value = '';
       filterHelp('');
-      els.helpModal.querySelector('.help-modal-body').scrollTop = 0;
       els.helpModal.classList.remove('hidden');
+      els.helpModal.querySelector('.help-modal-body').scrollTop = 0;
+    }
+
+    function openHelpAtShortcuts() {
+      openHelpModal();
+      const section = document.getElementById('help-shortcuts');
+      section.open = true;
+      section.scrollIntoView({ block: 'start' });
+      section.querySelector('summary').focus({ preventScroll: true });
     }
 
     function closeHelpModal() {
