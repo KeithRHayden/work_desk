@@ -1099,8 +1099,8 @@
     /* Nord */
     [data-theme="nord"] {
       --bg: #242933; --surface: #2e3440; --panel-bg: #1e2430; --input-bg: #2e3440;
-      --sidebar: #1b1f27; --sidebar-text: #4c566a; --sidebar-active: #eceff4;
-      --sidebar-muted: #3b4252; --sidebar-border: rgba(136,192,208,.1);
+      --sidebar: #1b1f27; --sidebar-text: #9aa4b6; --sidebar-active: #eceff4;
+      --sidebar-muted: #616e88; --sidebar-border: rgba(136,192,208,.1);
       --sidebar-hover: rgba(136,192,208,.07); --sidebar-btn-border: rgba(136,192,208,.15);
       --accent: #88c0d0; --accent-hover: #5e81ac; --accent-light: #2a3447;
       --border: #3b4252; --tooltip-bg: #2e3440;
@@ -2095,7 +2095,7 @@
     [data-theme="nord-light"] {
       --bg: #eceff4; --surface: #ffffff; --panel-bg: #e5e9f0; --input-bg: #ffffff;
       --sidebar: #2e3440; --sidebar-text: #d8dee9; --sidebar-active: #eceff4;
-      --sidebar-muted: #4c566a; --sidebar-border: rgba(255,255,255,.08);
+      --sidebar-muted: #7b88a1; --sidebar-border: rgba(255,255,255,.08);
       --sidebar-hover: rgba(255,255,255,.06); --sidebar-btn-border: rgba(255,255,255,.12);
       --accent: #5e81ac; --accent-hover: #81a1c1; --accent-light: #d8e5f2;
       --text: #2e3440; --text-muted: #4c566a;
@@ -5224,7 +5224,7 @@
     .legend-swatch.completed { background: var(--accent); }
     .legend-swatch.shelved { background: var(--shelved-label); }
     .legend-swatch.unfinished { background: #94a3b8; }
-    .legend-swatch.carried { background: var(--carried); }
+    .legend-swatch.carried { background: var(--insight-carried, var(--carried)); }
     .legend-swatch.created { background: #22c55e; }
 
     .insight-bars { display: flex; flex-direction: column; gap: 10px; }
@@ -5264,7 +5264,7 @@
     .insight-bar-seg.completed { background: var(--accent); }
     .insight-bar-seg.shelved { background: var(--shelved-label); }
     .insight-bar-seg.unfinished { background: #94a3b8; }
-    .insight-bar-seg.carried { background: var(--carried); }
+    .insight-bar-seg.carried { background: var(--insight-carried, var(--carried)); }
 
     .insight-table-wrap { overflow-x: auto; }
 
@@ -5545,7 +5545,7 @@
     .carryover-day-fill {
       width: var(--fill, 0%);
       height: 100%;
-      background: #f59e0b;
+      background: var(--insight-carried, var(--carried));
       transition: width 0.3s ease;
     }
 
@@ -5808,7 +5808,7 @@
       border-radius: 999px;
       font-size: 0.68rem;
       font-weight: 600;
-      background: color-mix(in srgb, var(--carried) 28%, transparent);
+      background: color-mix(in srgb, var(--insight-carried, var(--carried)) 28%, transparent);
       color: var(--text);
     }
     .recurring-open { display: block; }
@@ -5818,7 +5818,7 @@
     .chains-stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
     .chains-stat-label { font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
     .chain-dots { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
-    .chain-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--carried); }
+    .chain-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--insight-carried, var(--carried)); }
     .chain-dot.done { background: var(--accent); }
     .insight-task-btn.shelve { background: var(--accent-light); border-color: transparent; color: var(--accent); font-weight: 600; }
 
@@ -9535,12 +9535,22 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.26.1';
+    const APP_VERSION = '1.26.2';
     const CHANGELOG = [
+      {
+        version: '1.26.2',
+        date: 'Nov 18, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Nord: the sidebar\'s text and calendar dates were much dimmer than on any other theme. They\'re now as easy to read as the rest, still in Nord\'s blue-gray. Nord Light\'s faint sidebar labels are brighter too',
+            'Insights "carried over" matches the calendar\'s Left open color again on themes where 1.26.1 moved Left open off amber, and the charts (daily line, bars, pie, and their tooltips) now use the theme\'s carried color instead of always drawing amber. Where the calendar shade would sit too close to Completed, Shelved, or Open (new), Insights uses a lighter or deeper shade of the same color',
+          ] },
+        ],
+      },
       {
         version: '1.26.1',
         date: 'Nov 18, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Improved', items: [
             'Press ? (when you aren\'t typing in a box) to open Help right at Keyboard shortcuts. The account menu\'s Help & shortcuts item shows the ? key',
@@ -14788,6 +14798,7 @@
     const CAL_MARK_MIN_GAP = 0.15;
     const CAL_MARK_FLOOR = 0.1;
     const CAL_VACATION_TINT = 24;
+    const INSIGHT_OPEN_NEW = '#94a3b8';
 
     // Step lightness away from the sidebar until the color reaches minContrast on every background
     function liftCalendarColor(hex, minContrast, backgrounds, towardLight) {
@@ -14807,7 +14818,7 @@
       return c >= 0.08 && (h <= 110 || h >= 330);
     }
 
-    function buildCalendarMarks({ sidebar, text, muted, accent, carried, palette = null }) {
+    function buildCalendarMarks({ sidebar, text, muted, accent, carried, carriedFill = null, shelved = null, palette = null }) {
       const towardLight = relativeLuminance(text) > relativeLuminance(sidebar);
       const lift = (hex, min, bgs = () => [sidebar]) => liftCalendarColor(hex, min, bgs, towardLight);
       const band = (hex) => mixHex(hex, sidebar, 100 - CAL_VACATION_TINT);
@@ -14817,7 +14828,8 @@
       // A gray accent can't differ from Has items by hue, so it differs by lightness
       if (tagShadeDistance(holiday, items) < 0.1) holiday = lift(holiday, contrastRatio(items, sidebar) + 3);
       const gap = (hex) => Math.min(tagShadeDistance(hex, holiday), tagShadeDistance(hex, items));
-      let open = lift(carried, 3);
+      const kept = lift(carried, 3);
+      let open = kept;
       // Too close to Holiday or Has items: a theme with a known palette only trades for one of its own
       // warm colors, and keeps its color if none is clearly better and it isn't below the floor
       if (gap(open) < CAL_MARK_MIN_GAP) {
@@ -14830,7 +14842,26 @@
           || (keep ? open : [...own, ...stock].reduce((best, hex) => (gap(hex) > gap(best) ? hex : best), open));
       }
       const vacation = band(holiday);
-      return { items, open, holiday, vacation, vacationDate: lift(text, 3, () => [vacation]) };
+      // Insights "carried over" follows a swapped Left open: same hue, at the lightness of the theme's own carried color,
+      // moved to the nearest lightness that stays clear of the other chart colors when that one doesn't
+      let insightCarried = null;
+      if (open !== kept && carriedFill) {
+        const o = hexToOklch(open);
+        const fillL = hexToOklch(carriedFill).l;
+        const chart = [accent, INSIGHT_OPEN_NEW, shelved].filter(Boolean);
+        const chartGap = (hex) => Math.min(...chart.map(c => tagShadeDistance(hex, c)));
+        const shades = [];
+        for (let l = 0.44; l <= 0.9; l += 0.02) shades.push(oklchToHex(l, o.c, o.h));
+        const nearest = (list) => list.reduce((best, hex) =>
+          (Math.abs(hexToOklch(hex).l - fillL) < Math.abs(hexToOklch(best).l - fillL) ? hex : best));
+        insightCarried = oklchToHex(fillL, o.c, o.h);
+        if (chartGap(insightCarried) < CAL_MARK_MIN_GAP) {
+          const clear = shades.filter(hex => chartGap(hex) >= CAL_MARK_MIN_GAP);
+          insightCarried = clear.length ? nearest(clear)
+            : shades.reduce((best, hex) => (chartGap(hex) > chartGap(best) ? hex : best), insightCarried);
+        }
+      }
+      return { items, open, holiday, vacation, vacationDate: lift(text, 3, () => [vacation]), insightCarried };
     }
 
     let calendarMarksKey = '';
@@ -14839,12 +14870,14 @@
       if (typeof getComputedStyle !== 'function') return;
       const probe = document.createElement('span');
       probe.style.cssText = 'position:absolute;visibility:hidden;background-color:var(--sidebar);color:var(--sidebar-text);'
-        + 'border-top:1px solid var(--sidebar-muted);border-right:1px solid var(--accent);border-bottom:1px solid var(--carried-ink)';
+        + 'border-top:1px solid var(--sidebar-muted);border-right:1px solid var(--accent);border-bottom:1px solid var(--carried-ink);'
+        + 'border-left:1px solid var(--carried);outline:1px solid var(--shelved-label)';
       document.body.appendChild(probe);
       const cs = getComputedStyle(probe);
       const colors = {
         sidebar: cssColorToHex(cs.backgroundColor), text: cssColorToHex(cs.color), muted: cssColorToHex(cs.borderTopColor),
-        accent: cssColorToHex(cs.borderRightColor), carried: cssColorToHex(cs.borderBottomColor),
+        accent: cssColorToHex(cs.borderRightColor), carried: cssColorToHex(cs.borderBottomColor), carriedFill: cssColorToHex(cs.borderLeftColor),
+        shelved: cssColorToHex(cs.outlineColor),
       };
       probe.remove();
       if (Object.values(colors).some(v => !v)) return;
@@ -14860,7 +14893,13 @@
         document.head.appendChild(style);
       }
       style.textContent = `#sidebar-calendar { --cal-items: ${marks.items}; --cal-open: ${marks.open}; --cal-holiday: ${marks.holiday}; `
-        + `--cal-vacation: ${marks.vacation}; --cal-vacation-date: ${marks.vacationDate}; }`;
+        + `--cal-vacation: ${marks.vacation}; --cal-vacation-date: ${marks.vacationDate}; }`
+        + (marks.insightCarried ? ` :root { --insight-carried: ${marks.insightCarried}; }` : '');
+    }
+
+    function insightCarriedColor() {
+      const cs = getComputedStyle(document.body);
+      return cs.getPropertyValue('--insight-carried').trim() || cs.getPropertyValue('--carried').trim() || '#f59e0b';
     }
 
     function normalizeTagShadeSlots(obj) {
@@ -22255,7 +22294,7 @@
       drawLine(completed, getComputedStyle(document.body).getPropertyValue('--accent').trim());
       drawLine(shelved, '#9ca3af');
       drawLine(openNew, '#94a3b8');
-      drawLine(openCarried, '#f59e0b');
+      drawLine(openCarried, insightCarriedColor());
       
       // Draw labels
       ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-muted').trim();
@@ -22314,7 +22353,7 @@
               <span>Open (new): ${seg.openNew}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-              <span style="display: inline-block; width: 10px; height: 10px; background: #f59e0b; border-radius: 2px;"></span>
+              <span style="display: inline-block; width: 10px; height: 10px; background: ${insightCarriedColor()}; border-radius: 2px;"></span>
               <span>Open (carried): ${seg.openCarried}</span>
             </div>
           `;
@@ -22379,7 +22418,7 @@
           { val: seg.completed, color: getComputedStyle(document.body).getPropertyValue('--accent').trim() },
           { val: seg.shelved, color: '#9ca3af' },
           { val: seg.openNew, color: '#94a3b8' },
-          { val: seg.openCarried, color: '#f59e0b' },
+          { val: seg.openCarried, color: insightCarriedColor() },
         ];
         
         categories.forEach(cat => {
@@ -22445,7 +22484,7 @@
               <span>Open (new): ${seg.openNew}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-              <span style="display: inline-block; width: 10px; height: 10px; background: #f59e0b; border-radius: 2px;"></span>
+              <span style="display: inline-block; width: 10px; height: 10px; background: ${insightCarriedColor()}; border-radius: 2px;"></span>
               <span>Open (carried): ${seg.openCarried}</span>
             </div>
           `;
@@ -22501,7 +22540,7 @@
         getComputedStyle(document.body).getPropertyValue('--accent').trim(),
         '#9ca3af',
         '#94a3b8',
-        '#f59e0b',
+        insightCarriedColor(),
       ];
       const labels = ['Completed', 'Shelved', 'Open (new)', 'Open (carried)'];
       const values = [totals.completed, totals.shelved, totals.openNew, totals.openCarried];
