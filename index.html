@@ -9301,7 +9301,7 @@
             <li><strong>Carry Chains</strong> lists tasks carried forward 3 or more times, with <em>Shelve</em> to park one that keeps slipping. Carries are counted from 1.23.0 on, except onto a vacation day</li>
             <li><strong>Tag Trend</strong> compares each tag's share of your tasks with the period before (to the same point if this one isn't over). It needs 10 tasks on each side before showing arrows</li>
             <li><strong>Carry-over analysis</strong> shows when tasks were left unfinished, with the dates behind each weekday (e.g. Wed: Sep 9 (2) · Sep 23 (1))</li>
-            <li><strong>Streaks</strong> come with a heatmap. <strong>Weekends don't break streaks</strong> unless you turn that off in Options → Behavior → Insights, and vacation days never do</li>
+            <li><strong>Streaks</strong> come with a heatmap. <strong>Weekends don't break streaks</strong> unless you turn that off in Options → Behavior → Insights, and vacation days never do. Tasks planned for later dates don't count until the day arrives</li>
             <li><strong>Charts</strong> switch between bar, line, stacked, and pie. Click a day in the table, chart, or heatmap to open it on the desk</li>
             <li>The <strong>Month</strong> chart stops at today, and with <strong>Quieter weekends</strong> on for that desk it leaves out empty Saturdays and Sundays; a note under the legend says how many and links to the setting</li>
           </ul>
@@ -9535,12 +9535,21 @@
     ];
     const LAST_SEEN_VERSION_KEY = 'work-desk-last-seen-version';
 
-    const APP_VERSION = '1.26.2';
+    const APP_VERSION = '1.26.3';
     const CHANGELOG = [
+      {
+        version: '1.26.3',
+        date: 'Nov 19, 2026',
+        tag: 'latest',
+        sections: [
+          { label: 'Fixed', items: [
+            'Insights: a task placed on a later date no longer resets your current streak (or adds a day before it arrives). Streaks count only today and earlier, and since they\'re worked out from your desk each time, yours is corrected as soon as you update',
+          ] },
+        ],
+      },
       {
         version: '1.26.2',
         date: 'Nov 18, 2026',
-        tag: 'latest',
         sections: [
           { label: 'Fixed', items: [
             'Nord: the sidebar\'s text and calendar dates were much dimmer than on any other theme. They\'re now as easy to read as the rest, still in Nord\'s blue-gray. Nord Light\'s faint sidebar labels are brighter too',
@@ -22107,16 +22116,17 @@
 
     // Compute streak data
     function computeStreaks() {
+      const today = todayKey();
+      // Tasks planned for later days haven't been kept yet
       const activeDays = Object.keys(state.data.days || {})
-        .filter(k => (state.data.days[k]?.items || []).length > 0)
+        .filter(k => k <= today && (state.data.days[k]?.items || []).length > 0)
         .sort();
       if (activeDays.length === 0) return { current: 0, longest: 0 };
 
       let currentStreak = 0;
       let longestStreak = 0;
       let streak = 0;
-      const today = todayKey();
-      
+
       // Calculate streaks (weekend-aware when setting is on)
       for (let i = 0; i < activeDays.length; i++) {
         if (i === 0 || isStreakConsecutive(activeDays[i - 1], activeDays[i])) {
