@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 
 ---
 
+## [1.26.3] — 2026-11-19
+
+### Fixed
+
+- Insights: a task placed on a later date no longer resets your current streak (or adds a day before it arrives). Streaks count only today and earlier, and since they're worked out from your desk each time, yours is corrected as soon as you update
+
 ## [1.26.2] — 2026-11-18
 
 ### Fixed
