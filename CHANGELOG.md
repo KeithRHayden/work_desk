@@ -11,6 +11,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semantic v
 ### Fixed
 
 - Insights: a task placed on a later date no longer resets your current streak (or adds a day before it arrives). Streaks count only today and earlier, and since they're worked out from your desk each time, yours is corrected as soon as you update
+- Insights: tasks planned for later days no longer lower your Completion Rate, Avg Daily Completions, or Carry-Over Rate, don't count as Active days, and don't sway Most Productive Day. Still open shows them underneath as "+ N planned", and Tasks by Tag lists them as planned. Finishing a planned task early still counts as completed
+- Insights: Week-over-Week now compares the week so far with the same days last week, as Month and Year already did, instead of measuring a Tuesday against all of last week
 
 ## [1.26.2] — 2026-11-18
 
