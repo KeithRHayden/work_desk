@@ -47,10 +47,11 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Layout** — the 8 stat tiles sit at the top, then the cards in reading order: Summary, period comparison, Streak Tracking, breakdown chart, Carry-Over, Tags, Lingering, Shelved, Recurring, Carry Chains, Tag Trend. Day-by-day detail (and the Year heatmap) stay full width at the bottom
 - **Wide screens** — when Insights has 1500px or more, the cards split into two columns, each card at its own height and placed in whichever column is shorter so the columns end close together; it rebalances when the window or sidebar changes. Narrower screens keep one column
 - **Productivity summary** — completion rate, average daily completions, carry-over rate, most productive day (the weekday with the highest average completions across the days of it that had tasks)
+- **Planned tasks** — open tasks on days after today show as *+ N planned* under Still open (and as *planned* in Tasks by Tag). They aren't Active days and don't lower the rates; one finished early still counts as completed
 - **Click a day to open it** — Day-by-day rows, breakdown bars, and heatmap squares jump to that day on the Desk; in Year view a month bar opens that month
 - **This week / month / year** button returns to the current period after stepping away
-- **Week-over-week, month-over-month, year-over-year** comparisons; an in-progress month or year is compared with the same days at the start of the previous one
-- **Tasks by Tag** — done / open / shelved / carried per tag for the period
+- **Week-over-week, month-over-month, year-over-year** comparisons; an in-progress week, month, or year is compared with the same days at the start of the previous one
+- **Tasks by Tag** — done / open / shelved / carried / planned per tag for the period
 - **Lingering Tasks** — the five oldest open tasks right now, with days open (not counting vacation days) and a jump link
 - **Shelved Review** — shelved tasks in the period with *Bring back* (to today's Active column) and *Open*, plus an all-time shelved count
 - **Recurring Follow-through** — per recurring task, Done / Still open / Missed on the days it came up, lowest rate first; *Rarely done* flags under 50% after 3+ chances
