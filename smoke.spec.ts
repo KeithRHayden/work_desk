@@ -3510,6 +3510,24 @@ test.describe('Streak weekend handling', { tag: ['@insights'] }, () => {
     await openSettingsBehavior(page);
     await expect(page.locator('#streak-skip-weekends-toggle')).not.toBeChecked();
   });
+
+  test('tasks added for tomorrow and for next week leave the current streak alone (1.26.3)', async ({ page }) => {
+    await seedWorkDays(page, WEEKDAYS_ONLY);
+    await page.goto(DESK_URL);
+    await dismissAuthModal(page);
+    const before = await readStreaks(page);
+    expect(before.current).toBeGreaterThanOrEqual(6);
+
+    await page.locator('#next-day').click();
+    await addTask(page, 'Planned for tomorrow');
+    await page.locator('#header-today-btn').click();
+    expect(await readStreaks(page)).toEqual(before);
+
+    for (let i = 0; i < 9; i++) await page.locator('#next-day').click();
+    await addTask(page, 'Planned for next week');
+    await page.locator('#header-today-btn').click();
+    expect(await readStreaks(page)).toEqual(before);
+  });
 });
 
 // ── Desk vs Projects separation ────────────────────────────────────────
@@ -3805,7 +3823,12 @@ test.describe('Rendered text has no mojibake', { tag: ['@docs'] }, () => {
     await page.locator('#version-btn').click();
     await expect(page.locator('#changelog-modal')).toBeVisible();
     // The newest entries render word for word, non-ASCII characters (→ ‹ ⋮ — ’) included, whatever the release
-    const newest = await page.evaluate(() => CHANGELOG.slice(0, 3).flatMap((v: { sections: { items: string[] }[] }) => v.sections.flatMap((s) => s.items)));
+    const newest = await page.evaluate(() => {
+      const items = (vs: { sections: { items: string[] }[] }[]) => vs.flatMap((v) => v.sections.flatMap((s) => s.items));
+      const recent = items(CHANGELOG.slice(0, 3));
+      const nonAscii = /[^\x00-\x7f]/;
+      return recent.some((t) => nonAscii.test(t)) ? recent : [...recent, items(CHANGELOG).find((t) => nonAscii.test(t))];
+    });
     expect(newest.join('')).toMatch(/[^\x00-\x7f]/);
     for (const item of newest) await expect(page.locator('#changelog-body')).toContainText(item);
     await expectClean(page, '#changelog-body');
@@ -9015,6 +9038,52 @@ test.describe('Insights Recurring, Carry Chains, Tag Trend 1.23.0', { tag: ['@in
   const rowsText = (page: Page, card: string, row: string) =>
     page.locator(`.${card} ${row}`).evaluateAll((els) => els.map((e) => (e as HTMLElement).innerText.replace(/\s+/g, ' ').trim()));
 
+  test.describe('carried-over color 1.26.2', { tag: ['@themes', '@calendar'] }, () => {
+    const withTheme = (page: Page, theme: string) => page.addInitScript((t) => localStorage.setItem('work-desk-theme', t), theme);
+    const css = (page: Page, hex: string) => page.evaluate((h) => { const s = document.createElement('span'); s.style.color = h; document.body.append(s); const c = getComputedStyle(s).color; s.remove(); return c; }, hex);
+    const chartColor = (page: Page) => page.evaluate(() => (window as unknown as { eval: (s: string) => () => string }).eval('insightCarriedColor')());
+    const AMBER = 'rgb(245, 158, 11)';
+
+    test('Everforest: Carry Chains dots, the carry bars, and the charts follow the calendar\'s Left open hue instead of amber; switching to Gruvbox brings amber back', async ({ page }) => {
+      await withTheme(page, 'everforest-dark');
+      await openInsights(page);
+      const dot = page.locator('.chains-card .chain-dot:not(.done)').first();
+      await expect(dot).toBeVisible();
+      const insight = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--insight-carried').trim());
+      expect(insight).toMatch(/^#[0-9a-f]{6}$/);
+      await expect(dot).toHaveCSS('background-color', await css(page, insight));
+      expect(await chartColor(page)).toBe(insight);
+      const hues = await page.evaluate((h) => {
+        const oklch = (window as unknown as { eval: (s: string) => (x: string) => { h: number } }).eval('hexToOklch');
+        const open = getComputedStyle(document.getElementById('sidebar-calendar')!).getPropertyValue('--cal-open').trim();
+        return { insight: oklch(h).h, open: oklch(open).h, open_hex: open };
+      }, insight);
+      expect(hues.open_hex).toBe('#e67e80');
+      expect(Math.abs(hues.insight - hues.open)).toBeLessThan(3);
+
+      await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'gruvbox-dark'));
+      await expect(dot).toHaveCSS('background-color', AMBER);
+      expect(await chartColor(page)).toBe('#f59e0b');
+    });
+
+    test('Warm: the charts draw the theme\'s carried color, not amber', async ({ page }) => {
+      await withTheme(page, 'warm');
+      await openInsights(page);
+      const dot = page.locator('.chains-card .chain-dot:not(.done)').first();
+      await expect(dot).toBeVisible();
+      const chart = await chartColor(page);
+      expect(chart).not.toBe('#f59e0b');
+      await expect(dot).toHaveCSS('background-color', await css(page, chart));
+    });
+
+    test('the default theme keeps amber for carried over', async ({ page }) => {
+      await openInsights(page);
+      await expect(page.locator('.chains-card .chain-dot:not(.done)').first()).toHaveCSS('background-color', AMBER);
+      expect(await chartColor(page)).toBe('#f59e0b');
+      expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--insight-carried').trim())).toBe('');
+    });
+  });
+
   test('Recurring Follow-through: lowest rate first, Rarely done flag, and Open Recurring tasks opens the list', async ({ page }) => {
     await openInsights(page);
     const card = page.locator('.recurring-card');
@@ -10462,6 +10531,21 @@ test.describe('Calendar marks told apart on every theme 1.26.1', { tag: ['@calen
     await openCal(page, 'gruvbox-dark');
     await expect(page.locator('#sidebar-calendar .cal-legend-badge')).toHaveCSS('background-color', 'rgb(251, 191, 36)');
     await expect(page.locator('#sidebar-calendar .cal-legend-dot.holiday')).toHaveCSS('background-color', 'rgb(254, 128, 25)');
+  });
+
+  test('Nord: sidebar text, calendar dates, and weekday labels are as readable as other themes (1.26.2)', async ({ page }) => {
+    await openCal(page, 'nord');
+    await expect(page.locator('#sidebar-calendar .cal-day:not(.other-month):not(.selected):not(.holiday):not(.vacation):not(.weekend)', { hasText: /^9$/ })).toHaveCSS('color', 'rgb(154, 164, 182)');
+    await expect(page.locator('#sidebar-calendar .cal-weekday').first()).toHaveCSS('color', 'rgb(97, 110, 136)');
+    const ratios = await page.evaluate(() => {
+      const w = window as unknown as { eval: (s: string) => any };
+      const contrast = w.eval('contrastRatio'), hex = w.eval('cssColorToHex');
+      const side = hex(getComputedStyle(document.querySelector('.sidebar')!).backgroundColor);
+      const of = (sel: string) => contrast(hex(getComputedStyle(document.querySelector(sel)!).color), side);
+      return { weekday: of('#sidebar-calendar .cal-weekday'), legend: of('#sidebar-calendar .cal-legend') };
+    });
+    expect(ratios.weekday).toBeGreaterThanOrEqual(3);
+    expect(ratios.legend).toBeGreaterThanOrEqual(3);
   });
 
   test('Nord keeps the calendar marks after a reload, and its vacation dates are readable', async ({ page }) => {
