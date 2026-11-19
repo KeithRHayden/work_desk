@@ -1271,7 +1271,7 @@ describe('1.26.1 calendar marks are told apart on every theme', () => {
     assert.equal(buildCalendarMarks(nord).open, '#fbbf24');
   });
 
-  it('Nord: the near-invisible Has items dot and dates on the vacation band are lifted to 3:1', () => {
+  it('a dim palette (Nord\'s colors before 1.26.2, or a custom theme like it): Has items and dates on the vacation band are lifted to 3:1', () => {
     const nord = { sidebar: '#1b1f27', text: '#4c566a', muted: '#3b4252', accent: '#88c0d0', carried: '#fbbf24' };
     assert.ok(contrastRatio(nord.muted, nord.sidebar) < 2, 'precondition');
     const m = buildCalendarMarks(nord);
@@ -1316,6 +1316,85 @@ describe('1.26.1 calendar marks are told apart on every theme', () => {
     ]) assert.match(html, re);
     assert.match(fnSource('scheduleTagShadeRefresh'), /refreshTagShades\(\);\s*refreshCalendarMarks\(\);/);
     assert.match(fnSource('initTagShades'), /refreshCalendarMarks\(\);/);
+  });
+});
+
+describe('1.26.2 Nord sidebar and Insights carried over', () => {
+  const { buildCalendarMarks, contrastRatio, hexToOklch } = appFns(['buildCalendarMarks', 'contrastRatio', 'hexToOklch'], {});
+  const themeBlock = (id) => html.match(new RegExp(`\\n    \\[data-theme="${id}"\\] \\{[\\s\\S]*?\\n    \\}`))[0];
+  const varOf = (block, name) => block.match(new RegExp(`${name}: (#[0-9a-f]{6})`, 'i'))[1];
+
+  it('Nord\'s sidebar text and muted color read like the other themes (text near the 6.5:1 median, muted past 3:1)', () => {
+    const nord = themeBlock('nord');
+    const side = varOf(nord, '--sidebar');
+    assert.equal(varOf(nord, '--sidebar-text'), '#9aa4b6');
+    assert.equal(varOf(nord, '--sidebar-muted'), '#616e88');
+    assert.ok(contrastRatio(varOf(nord, '--sidebar-text'), side) >= 6);
+    assert.ok(contrastRatio(varOf(nord, '--sidebar-muted'), side) >= 3);
+    assert.ok(contrastRatio(varOf(nord, '--sidebar-active'), side) > contrastRatio(varOf(nord, '--sidebar-text'), side) + 4, 'active still stands out from plain text');
+  });
+
+  it('Nord Light\'s muted sidebar labels pass 3:1', () => {
+    const light = themeBlock('nord-light');
+    assert.equal(varOf(light, '--sidebar-muted'), '#7b88a1');
+    assert.ok(contrastRatio('#7b88a1', varOf(light, '--sidebar')) >= 3);
+  });
+
+  it('a swapped Left open gives Insights the same hue at the lightness of the theme\'s carried color; an unswapped one gives nothing', () => {
+    const everforest = { sidebar: '#232a2e', text: '#9da9a0', muted: '#7a8478', accent: '#a7c080', carried: '#fbbf24', carriedFill: '#f59e0b',
+      palette: ['#a7c080', '#e67e80', '#7fbbb3', '#dbbc7f', '#d699b6', '#e69875', '#d3c6aa', '#83c092'] };
+    const m = buildCalendarMarks(everforest);
+    assert.equal(m.open, '#e67e80');
+    const ins = hexToOklch(m.insightCarried), open = hexToOklch(m.open), fill = hexToOklch('#f59e0b');
+    assert.ok(Math.abs(ins.l - fill.l) < 0.01, 'lightness of --carried');
+    assert.ok(Math.abs(ins.h - open.h) < 3, 'hue of the calendar\'s Left open');
+    const gruvbox = { sidebar: '#1d2021', text: '#a89984', muted: '#928374', accent: '#fe8019', carried: '#fbbf24', carriedFill: '#f59e0b',
+      palette: ['#fe8019', '#83a598', '#b8bb26', '#fb4934', '#d3869b', '#fabd2f', '#8ec07c', '#ebdbb2'] };
+    assert.equal(buildCalendarMarks(gruvbox).insightCarried, null);
+    assert.equal(buildCalendarMarks({ ...everforest, carriedFill: null }).insightCarried, null, 'no fill read, no override');
+  });
+
+  it('Insights carried over keeps the Left open hue but moves its lightness clear of Completed, Shelved and Open (new)', () => {
+    const { tagShadeDistance, CAL_MARK_MIN_GAP } = appFns(['tagShadeDistance', 'CAL_MARK_MIN_GAP'], {});
+    const everforest = { sidebar: '#232a2e', text: '#9da9a0', muted: '#7a8478', accent: '#a7c080', carried: '#fbbf24', carriedFill: '#f59e0b',
+      shelved: '#d699b6', palette: ['#a7c080', '#e67e80', '#7fbbb3', '#dbbc7f', '#d699b6', '#e69875', '#d3c6aa', '#83c092'] };
+    const m = buildCalendarMarks(everforest);
+    const gapTo = (c) => tagShadeDistance(m.insightCarried, c);
+    assert.ok(Math.min(gapTo('#a7c080'), gapTo('#94a3b8'), gapTo('#d699b6')) >= CAL_MARK_MIN_GAP, 'clear of every other chart color');
+    assert.ok(Math.abs(hexToOklch(m.insightCarried).h - hexToOklch(m.open).h) < 4, 'still the calendar\'s Left open hue');
+    assert.ok(tagShadeDistance(buildCalendarMarks({ ...everforest, shelved: null }).insightCarried, '#d699b6') < CAL_MARK_MIN_GAP,
+      'without Shelved in view the theme\'s own lightness is kept, which is what sat too close');
+    assert.match(fnSource('refreshCalendarMarks'), /shelved: cssColorToHex\(cs\.outlineColor\)/);
+    assert.match(fnSource('refreshCalendarMarks'), /outline:1px solid var\(--shelved-label\)/);
+  });
+
+  it('refreshCalendarMarks writes --insight-carried on :root only when Left open was swapped', () => {
+    const fn = fnSource('refreshCalendarMarks');
+    assert.match(fn, /border-left:1px solid var\(--carried\)/);
+    assert.match(fn, /carriedFill: cssColorToHex\(cs\.borderLeftColor\)/);
+    assert.match(fn, /\(marks\.insightCarried \? ` :root \{ --insight-carried: \$\{marks\.insightCarried\}; \}` : ''\)/);
+  });
+
+  it('every Insights carried-over color reads --insight-carried, falling back to --carried; no chart hard-codes amber', () => {
+    for (const sel of ['\\.legend-swatch\\.carried \\{', '\\.insight-bar-seg\\.carried \\{', '\\.chain-dot \\{', '\\.carryover-day-fill \\{', '\\.recurring-flag \\{']) {
+      assert.match(html, new RegExp(`${sel}[^}]*var\\(--insight-carried, var\\(--carried\\)\\)`), sel);
+    }
+    assert.match(mainScript, /drawLine\(openCarried, insightCarriedColor\(\)\);/);
+    assert.match(mainScript, /\{ val: seg\.openCarried, color: insightCarriedColor\(\) \}/);
+    assert.equal((mainScript.match(/background: \$\{insightCarriedColor\(\)\}; border-radius: 2px;/g) || []).length, 2, 'both chart tooltips');
+    assert.match(mainScript, /'#94a3b8',\s*insightCarriedColor\(\),\s*\];\s*const labels = \['Completed', 'Shelved', 'Open \(new\)', 'Open \(carried\)'\];/, 'pie slice');
+    assert.doesNotMatch(mainScript, /background: #f59e0b|color: '#f59e0b'|drawLine\([^)]*'#f59e0b'\)|'#94a3b8',\s*'#f59e0b'/);
+    assert.doesNotMatch(html, /\.carryover-day-fill \{[^}]*#f59e0b/);
+  });
+
+  it('insightCarriedColor prefers --insight-carried, then --carried, then amber', () => {
+    const run = (vars) => appFns(['insightCarriedColor'], {
+      getComputedStyle: () => ({ getPropertyValue: (n) => vars[n] || '' }),
+      document: { body: {} },
+    }).insightCarriedColor();
+    assert.equal(run({ '--insight-carried': ' #e8908f ', '--carried': '#f59e0b' }), '#e8908f');
+    assert.equal(run({ '--carried': '#fb7185' }), '#fb7185');
+    assert.equal(run({}), '#f59e0b');
   });
 });
 
@@ -3502,6 +3581,21 @@ describe('Streaks (functional)', () => {
       return computeStreaks();
     `)();
     assert.deepEqual(h, { current: 0, longest: 0 });
+  });
+
+  it('a task planned for a later day does not reset the current streak (1.26.3)', () => {
+    const keys = [...MON_TO_FRI, '2026-09-28'];
+    assert.deepEqual(runStreaks(keys, { today: '2026-09-18' }).computeStreaks(), { current: 5, longest: 5 });
+  });
+
+  it('a task planned for tomorrow does not add a day before it is reached (1.26.3)', () => {
+    const keys = [...MON_TO_FRI.slice(0, 3), '2026-09-17'];
+    assert.deepEqual(runStreaks(keys, { today: '2026-09-16' }).computeStreaks(), { current: 3, longest: 3 });
+  });
+
+  it('only future days with items give no streak, and the planned day counts once it arrives (1.26.3)', () => {
+    assert.deepEqual(runStreaks(['2026-09-28'], { today: '2026-09-18' }).computeStreaks(), { current: 0, longest: 0 });
+    assert.deepEqual(runStreaks([...MON_TO_FRI, '2026-09-21'], { today: '2026-09-21' }).computeStreaks(), { current: 6, longest: 6 });
   });
 });
 
