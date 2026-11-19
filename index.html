@@ -5173,6 +5173,7 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
+    .stat-card-sub { margin-top: 2px; font-size: 0.72rem; color: var(--text-muted); }
 
     .insight-section {
       background: var(--surface);
@@ -9295,7 +9296,7 @@
           <ul>
             <li>Pick <strong>Week</strong>, <strong>Month</strong>, or <strong>Year</strong>; the arrows step back, and <em>This week</em> (or month or year) returns</li>
             <li>The <strong>stat tiles</strong> (completed, shelved, still open, and more) sit at the top. On a large monitor the cards below split into two balanced columns; Day-by-day detail stays full width</li>
-            <li><strong>Summary</strong> — completion rate, average completions, carry-over rate, most productive day (the weekday with the most completions per day you had tasks), and a comparison with the period before</li>
+            <li><strong>Summary</strong> — completion rate, average completions, carry-over rate, most productive day (the weekday with the most completions per day you had tasks), and a comparison with the same days of the period before. Tasks planned for later days show as <em>+ N planned</em> and don't lower these numbers</li>
             <li><strong>Tasks by Tag</strong>, <strong>Lingering Tasks</strong> (oldest open, not counting vacation days), and <strong>Shelved Review</strong>, where <em>Bring back</em> moves a task to today's Active column</li>
             <li><strong>Recurring Follow-through</strong> shows how often each recurring task got done on the days it came up (days you didn't open the desk don't count); under 50% after 3 or more chances gets a <em>Rarely done</em> flag</li>
             <li><strong>Carry Chains</strong> lists tasks carried forward 3 or more times, with <em>Shelve</em> to park one that keeps slipping. Carries are counted from 1.23.0 on, except onto a vacation day</li>
@@ -9544,6 +9545,8 @@
         sections: [
           { label: 'Fixed', items: [
             'Insights: a task placed on a later date no longer resets your current streak (or adds a day before it arrives). Streaks count only today and earlier, and since they\'re worked out from your desk each time, yours is corrected as soon as you update',
+            'Insights: tasks planned for later days no longer lower your Completion Rate, Avg Daily Completions, or Carry-Over Rate, don\'t count as Active days, and don\'t sway Most Productive Day. Still open shows them underneath as "+ N planned", and Tasks by Tag lists them as planned. Finishing a planned task early still counts as completed',
+            'Insights: Week-over-Week now compares the week so far with the same days last week, as Month and Year already did, instead of measuring a Tuesday against all of last week',
           ] },
         ],
       },
@@ -21611,7 +21614,9 @@
       };
     }
 
-    function computeInsights(period, anchorKey) {
+    // Days after today aren't active days, and their open tasks count as planned instead of open,
+    // so planning ahead doesn't lower the rates. Anything already finished on them still counts.
+    function computeInsights(period, anchorKey, today = todayKey()) {
       const range = getPeriodRange(period, anchorKey);
       const daily = [];
       const totals = {
@@ -21620,6 +21625,7 @@
         completed: 0,
         shelved: 0,
         unfinished: 0,
+        planned: 0,
         openNew: 0,
         openCarried: 0,
         carriedOver: 0,
@@ -21633,13 +21639,18 @@
         const items = day ? day.items : [];
         const stats = analyzeDayItems(dayKey, items);
         daily.push(stats);
-        if (stats.hasActivity) totals.activeDays++;
-        totals.tasks += stats.tasks;
         totals.completed += stats.completed;
         totals.shelved += stats.shelved;
-        totals.unfinished += stats.unfinished;
-        totals.openNew += stats.openNew;
-        totals.openCarried += stats.openCarried;
+        if (dayKey > today) {
+          totals.planned += stats.unfinished;
+          totals.tasks += stats.tasks - stats.unfinished;
+        } else {
+          if (stats.hasActivity) totals.activeDays++;
+          totals.tasks += stats.tasks;
+          totals.unfinished += stats.unfinished;
+          totals.openNew += stats.openNew;
+          totals.openCarried += stats.openCarried;
+        }
         totals.carriedOver += stats.carriedOver;
         totals.createdToday += stats.createdToday;
         totals.notes += stats.notes;
@@ -21720,26 +21731,6 @@
         return false;
       });
       return { segments: kept, hiddenWeekends };
-    }
-
-    // Compute week-over-week comparison
-    function computeWeekComparison(currentData, anchorKey) {
-      const lastWeekAnchor = (() => {
-        const d = dateFromKey(anchorKey);
-        d.setDate(d.getDate() - 7);
-        return formatDateKey(d);
-      })();
-      const lastWeekData = computeInsights('week', lastWeekAnchor);
-      
-      return {
-        current: currentData.totals,
-        previous: lastWeekData.totals,
-        change: {
-          completed: currentData.totals.completed - lastWeekData.totals.completed,
-          carriedOver: currentData.totals.carriedOver - lastWeekData.totals.carriedOver,
-          completionRate: currentData.completionRate - (lastWeekData.completionRate || 0),
-        },
-      };
     }
 
     // Analyze carry-over patterns
@@ -21882,9 +21873,10 @@
     }
 
     // Tasks on days in the range, grouped by tag. A task with two tags counts under both.
-    function computeTagBreakdown(range) {
+    // Open tasks on days after today are planned, kept out of the total and the bar.
+    function computeTagBreakdown(range, today = todayKey()) {
       const byTag = new Map();
-      const blank = (tag) => ({ tag, total: 0, done: 0, open: 0, shelved: 0, carried: 0 });
+      const blank = (tag) => ({ tag, total: 0, done: 0, open: 0, shelved: 0, carried: 0, planned: 0 });
       const untagged = blank(null);
       eachDateInRange(range.startKey, range.endKey, (dayKey) => {
         for (const item of state.data.days[dayKey]?.items || []) {
@@ -21893,7 +21885,9 @@
           const rows = tags.length
             ? tags.map((t) => { if (!byTag.has(t)) byTag.set(t, blank(t)); return byTag.get(t); })
             : [untagged];
+          const planned = dayKey > today && !item.completed && !item.shelved;
           for (const row of rows) {
+            if (planned) { row.planned++; continue; }
             row.total++;
             if (item.completed) row.done++;
             else if (item.shelved) row.shelved++;
@@ -21902,8 +21896,8 @@
           }
         }
       });
-      const rows = [...byTag.values()].sort((a, b) => b.total - a.total || a.tag.localeCompare(b.tag));
-      return { rows, untagged: untagged.total ? untagged : null };
+      const rows = [...byTag.values()].sort((a, b) => b.total - a.total || b.planned - a.planned || a.tag.localeCompare(b.tag));
+      return { rows, untagged: untagged.total || untagged.planned ? untagged : null };
     }
 
     // How often each recurring task got done on the days it came up, lowest rate first.
@@ -22918,6 +22912,7 @@
         const parts = [`${r.done} done`, `${r.open} open`];
         if (r.shelved) parts.push(`${r.shelved} shelved`);
         if (r.carried) parts.push(`${r.carried} carried`);
+        if (r.planned) parts.push(`${r.planned} planned`);
         counts.textContent = parts.join(' · ');
         track.title = `${r.total} task${r.total === 1 ? '' : 's'}: ${parts.join(', ')}`;
         row.append(name, track, counts);
@@ -23204,7 +23199,7 @@
     function renderInsights() {
       const data = computeInsights(state.insightsPeriod, state.insightsAnchor);
       const { range, totals, daily, segments, completionRate } = data;
-      const hasData = totals.activeDays > 0;
+      const hasData = totals.activeDays > 0 || totals.planned > 0 || totals.completed > 0;
 
       els.insightsView.innerHTML = '';
       const panel = document.createElement('div');
@@ -23336,7 +23331,7 @@
         ? Math.round((totals.carriedOver / totals.tasks) * 100)
         : 0;
       
-      const bestDay = mostProductiveWeekday(daily);
+      const bestDay = mostProductiveWeekday(daily, todayKey());
 
       metricsCard.innerHTML = `
         <h3 class="metrics-card-title">Productivity Summary</h3>
@@ -23364,7 +23359,7 @@
       const statCards = [
         { value: totals.completed, label: 'Completed' },
         { value: totals.shelved, label: 'Shelved' },
-        { value: totals.unfinished, label: 'Still open' },
+        { value: totals.unfinished, label: 'Still open', sub: totals.planned ? `+ ${totals.planned} planned` : '' },
         { value: totals.carriedOver, label: 'Carried over' },
         { value: totals.createdToday, label: 'Newly created' },
         { value: totals.notes, label: 'Notes' },
@@ -23376,7 +23371,8 @@
         el.className = 'stat-card';
         el.innerHTML =
           `<div class="stat-card-value">${escapeHtml(String(card.value))}</div>` +
-          `<div class="stat-card-label">${escapeHtml(card.label)}</div>`;
+          `<div class="stat-card-label">${escapeHtml(card.label)}</div>` +
+          (card.sub ? `<div class="stat-card-sub" title="Open tasks on days after today">${escapeHtml(card.sub)}</div>` : '');
         statGrid.appendChild(el);
       }
       panel.appendChild(statGrid);
@@ -23401,16 +23397,7 @@
       // Period-over-period comparison
       if (totals.activeDays > 0) {
         const period = state.insightsPeriod;
-        const rateOf = (t) => (t.completed + t.shelved + t.unfinished > 0
-          ? Math.round((t.completed / (t.completed + t.shelved + t.unfinished)) * 100) : 0);
-        let comparison;
-        if (period === 'week') {
-          comparison = computeWeekComparison(data, state.insightsAnchor);
-          comparison.currentRate = rateOf(comparison.current);
-          comparison.previousRate = rateOf(comparison.previous);
-        } else {
-          comparison = computePeriodComparison(period, state.insightsAnchor, todayKey());
-        }
+        const comparison = computePeriodComparison(period, state.insightsAnchor, todayKey());
         const titles = { week: 'Week-over-Week', month: 'Month-over-Month', year: 'Year-over-Year' };
         const prev = comparison.toDate ? `by this point last ${period}` : `last ${period}`;
         const shortDate = (k) => dateFromKey(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -23704,10 +23691,11 @@
 
     // Average completions on the days of each weekday that had tasks, so one tidy Saturday can't outrank a full week.
     // Ties go to the weekday with more completions overall.
-    function mostProductiveWeekday(daily) {
+    function mostProductiveWeekday(daily, today = null) {
       const byWeekday = {};
       for (const day of daily) {
         if (!day.tasks) continue;
+        if (today && day.dayKey > today && !day.completed) continue;
         const name = dateFromKey(day.dayKey).toLocaleDateString('en-US', { weekday: 'long' });
         const s = byWeekday[name] || (byWeekday[name] = { completed: 0, days: 0 });
         s.completed += day.completed;
