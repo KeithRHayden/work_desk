@@ -57,7 +57,7 @@ A personal daily desk for tasks, notes, and light project tracking — with opti
 - **Carry Chains** — tasks carried forward 3 or more times, oldest first, with *Shelve* and *Open*
 - **Tag Trend** — each tag's share of tasks vs the previous period, with ▲ / ▼ for moves of 5 points or more
 - **Carry-over analysis** — counted on the day each task was left unfinished; Month/Year views add a by-week / by-month trend chart (Year stops at the current month) and show the specific dates behind each weekday bar inline (hover a row for the full list)
-- **Streak tracking** — current/longest streaks based on days with desk activity, with a heatmap matched to the selected period, labeled by weekday, date, or month
+- **Streak tracking** — current/longest streaks based on days with desk activity up to today (tasks planned for later dates don't count until the day arrives), with a heatmap matched to the selected period, labeled by weekday, date, or month
 - **Weekends don't break streaks** — Options → Behavior toggle (on by default); Fri → Mon stays consecutive; active weekend days still count, idle weekends do not reset the streak. Vacation days never break a streak, whatever this is set to
 - **Charts** — bar, line, stacked, and pie, each with hover tooltips
 - Activity heatmap (year view) and a day-by-day progress breakdown table (real date labels; today marked e.g. `Tue, Sep 22 (Today)`)
